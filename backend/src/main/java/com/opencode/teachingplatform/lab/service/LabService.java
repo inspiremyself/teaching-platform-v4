@@ -15,6 +15,7 @@ import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.common.file.LocalFileStorageService;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.entity.ExperimentBlankAnswerOverride;
 import com.opencode.teachingplatform.lab.entity.Lab;
@@ -34,9 +35,13 @@ import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -76,6 +81,8 @@ public class LabService {
     private final LabScoringSupport labScoringSupport;
     private final ScoreRecordRepository scoreRecordRepository;
     private final ObjectMapper objectMapper;
+    private final LocalFileStorageService localFileStorageService;
+    private final Path storageRoot;
 
     public LabService(LabRepository labRepository,
                       LabStepRepository labStepRepository,
@@ -89,7 +96,9 @@ public class LabService {
                       SysUserRepository sysUserRepository,
                       LabScoringSupport labScoringSupport,
                       ScoreRecordRepository scoreRecordRepository,
-                      ObjectMapper objectMapper) {
+                      ObjectMapper objectMapper,
+                      LocalFileStorageService localFileStorageService,
+                      @Value("${app.file-storage-root}") String storageRoot) {
         this.labRepository = labRepository;
         this.labStepRepository = labStepRepository;
         this.labSubmissionRepository = labSubmissionRepository;
@@ -103,6 +112,11 @@ public class LabService {
         this.labScoringSupport = labScoringSupport;
         this.scoreRecordRepository = scoreRecordRepository;
         this.objectMapper = objectMapper;
+        this.localFileStorageService = localFileStorageService;
+        this.storageRoot = Path.of(storageRoot).toAbsolutePath().normalize();
+    }
+
+    public record PreviewAnswerImageResult(String contentType, byte[] bytes) {
     }
 
     @Transactional(readOnly = true)
@@ -437,31 +451,23 @@ public class LabService {
         if (!step.getLabId().equals(labId)) {
             throw new BusinessException(40000, "实验步骤不属于该实验");
         }
-        // 一名学生在一项实验下只有一条主提交记录；首次保存答案时会自动创建它。
-        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, currentUser.id()).orElseGet(() -> {
-            LabSubmission created = new LabSubmission();
-            created.setLabId(labId);
-            created.setStudentId(currentUser.id());
-            created.setSubmitStatus(SubmissionStatus.SAVED);
-            created.setPlagiarismRate(0D);
-            created.setTotalScore(0D);
-            return labSubmissionRepository.save(created);
-        });
-        if (submission.getSubmitStatus() == SubmissionStatus.SUBMITTED || submission.getSubmitStatus() == SubmissionStatus.GRADED) {
-            throw new BusinessException(40000, "实验已提交，不能继续修改");
+        LabSubmission submission = ensureEditableSubmission(currentUser, labId);
+        LabStepAnswer answer = prepareStepAnswer(submission, step);
+        String answerText = request.answerText() == null ? "" : request.answerText();
+        String answerPayloadJson = request.answerPayloadJson();
+        if (LabAnswerImageSupport.allowsImages(step.getQuestionType())) {
+            LabAnswerImageSupport.TextAnswerPayload payload = LabAnswerImageSupport.parseTextPayload(objectMapper, answerPayloadJson);
+            payload = new LabAnswerImageSupport.TextAnswerPayload(answerText, payload.images());
+            LabAnswerImageSupport.validateImagesForSave(step.getQuestionType(), payload.images(), localFileStorageService, storageRoot);
+            answerPayloadJson = LabAnswerImageSupport.canonicalizeTextPayload(objectMapper, answerText, payload);
+        } else {
+            LabAnswerImageSupport.TextAnswerPayload payload = LabAnswerImageSupport.parseTextPayload(objectMapper, answerPayloadJson);
+            if (!payload.images().isEmpty()) {
+                throw new BusinessException(40000, "当前题型不支持图片作答");
+            }
         }
-        submission.setSubmitStatus(SubmissionStatus.SAVED);
-        labSubmissionRepository.save(submission);
-
-        // 每个步骤答案单独落一条 experiment_answer，便于自动评分与教师逐步确认。
-        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submission.getId(), stepId).orElseGet(LabStepAnswer::new);
-        answer.setLabSubmissionId(submission.getId());
-        answer.setLabStepId(stepId);
-        answer.setQuestionId(step.getQuestionId());
-        answer.setQuestionSnapshotJson(defaultString(step.getQuestionSnapshotJson()));
-        answer.setEditorLanguage(defaultString(step.getEditorLanguage()));
-        answer.setAnswerText(request.answerText());
-        answer.setAnswerJson(request.answerPayloadJson());
+        answer.setAnswerText(answerText);
+        answer.setAnswerJson(answerPayloadJson);
         if (answer.getScore() == null) {
             answer.setScore(0D);
         }
@@ -472,6 +478,88 @@ public class LabService {
                 "answerId", saved.getId(),
                 "submissionStatus", submission.getSubmitStatus().name()
         );
+    }
+
+    @Transactional
+    public Map<String, Object> uploadAnswerImage(CurrentUser currentUser,
+                                                 Long labId,
+                                                 Long stepId,
+                                                 MultipartFile file) {
+        requireStudent(currentUser);
+        Lab lab = accessiblePublishedLab(currentUser, labId);
+        if (lab.getStatus() == ActivityStatus.CLOSED) {
+            throw new BusinessException(40000, "实验已关闭，不能上传");
+        }
+        LabStep step = labStepRepository.findById(stepId).orElseThrow(() -> new BusinessException(40400, "实验步骤不存在"));
+        if (!step.getLabId().equals(labId)) {
+            throw new BusinessException(40000, "实验步骤不属于该实验");
+        }
+        if (!LabAnswerImageSupport.allowsImages(step.getQuestionType())) {
+            throw new BusinessException(40000, "当前题型不支持图片作答");
+        }
+        LabSubmission submission = ensureEditableSubmission(currentUser, labId);
+        LabStepAnswer answer = prepareStepAnswer(submission, step);
+        LabAnswerImageSupport.TextAnswerPayload currentPayload = LabAnswerImageSupport.parseTextPayload(
+                objectMapper,
+                answer.getAnswerJson()
+        );
+        LabAnswerImageSupport.ensureUploadQuota(currentPayload);
+        String contentType = file == null ? "" : defaultString(file.getContentType());
+        long size = file == null ? 0L : file.getSize();
+        String normalizedType = LabAnswerImageSupport.normalizeContentType(contentType);
+        LabAnswerImageSupport.validateUpload(normalizedType, size);
+        String folder = "lab-answers/" + LocalDate.now(ZoneId.of("Asia/Shanghai"));
+        String storedPath = localFileStorageService.store(folder, file);
+        String originalFilename = file.getOriginalFilename();
+        String displayName = originalFilename == null || originalFilename.isBlank()
+                ? "image.bin"
+                : Path.of(originalFilename).getFileName().toString();
+        long storedSize;
+        try {
+            storedSize = Files.size(storageRoot.resolve(storedPath).normalize());
+        } catch (Exception ex) {
+            throw new BusinessException(50000, "文件保存失败");
+        }
+        LabAnswerImageSupport.ImageMeta uploadedImage = new LabAnswerImageSupport.ImageMeta(
+                storedPath,
+                displayName,
+                normalizedType,
+                storedSize
+        );
+        String answerText = defaultString(answer.getAnswerText());
+        LabAnswerImageSupport.TextAnswerPayload updatedPayload = LabAnswerImageSupport.appendImage(currentPayload, uploadedImage);
+        answer.setAnswerText(answerText);
+        answer.setAnswerJson(LabAnswerImageSupport.canonicalizeTextPayload(objectMapper, answerText, updatedPayload));
+        if (answer.getScore() == null) {
+            answer.setScore(0D);
+        }
+        labStepAnswerRepository.save(answer);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("path", storedPath);
+        result.put("name", displayName);
+        result.put("contentType", normalizedType);
+        result.put("size", storedSize);
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public PreviewAnswerImageResult previewAnswerImage(CurrentUser currentUser, String path) {
+        String normalizedPath = LabAnswerImageSupport.normalizeRelativePath(path);
+        if (!normalizedPath.matches("^lab-answers/\\d{4}-\\d{2}-\\d{2}/.+")) {
+            throw new BusinessException(40000, "图片路径不合法");
+        }
+        Path targetPath = storageRoot.resolve(normalizedPath).normalize();
+        if (!targetPath.startsWith(storageRoot)) {
+            throw new BusinessException(40000, "图片路径不合法");
+        }
+        LabStepAnswer answer = findAnswerOwningImagePath(normalizedPath);
+        LabSubmission submission = labSubmissionRepository.findById(answer.getLabSubmissionId())
+                .orElseThrow(() -> new BusinessException(40400, "实验提交不存在"));
+        Lab lab = labRepository.findById(submission.getLabId()).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
+        requireAnswerImageAccess(currentUser, submission, lab);
+        byte[] bytes = localFileStorageService.read(normalizedPath);
+        String contentType = resolveImageContentType(answer.getAnswerJson(), normalizedPath);
+        return new PreviewAnswerImageResult(contentType, bytes);
     }
 
     private void appendAnswerSnapshot(LabStepAnswer answer) {
@@ -620,6 +708,79 @@ public class LabService {
         if (currentUser.role() != UserRole.STUDENT) {
             throw new BusinessException(40300, "无学生权限");
         }
+    }
+
+    private void requireAnswerImageAccess(CurrentUser currentUser, LabSubmission submission, Lab lab) {
+        if (currentUser.role() == UserRole.STUDENT) {
+            if (!Objects.equals(submission.getStudentId(), currentUser.id())) {
+                throw new BusinessException(40300, "无权限访问该图片");
+            }
+            return;
+        }
+        if (currentUser.role() == UserRole.TEACHER) {
+            ownedLab(currentUser, lab.getId());
+            return;
+        }
+        throw new BusinessException(40300, "无权限访问该图片");
+    }
+
+    private LabSubmission ensureEditableSubmission(CurrentUser currentUser, Long labId) {
+        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, currentUser.id()).orElseGet(() -> {
+            LabSubmission created = new LabSubmission();
+            created.setLabId(labId);
+            created.setStudentId(currentUser.id());
+            created.setSubmitStatus(SubmissionStatus.SAVED);
+            created.setPlagiarismRate(0D);
+            created.setTotalScore(0D);
+            return labSubmissionRepository.save(created);
+        });
+        if (submission.getSubmitStatus() == SubmissionStatus.SUBMITTED || submission.getSubmitStatus() == SubmissionStatus.GRADED) {
+            throw new BusinessException(40000, "实验已提交，不能继续修改");
+        }
+        submission.setSubmitStatus(SubmissionStatus.SAVED);
+        return labSubmissionRepository.save(submission);
+    }
+
+    private LabStepAnswer prepareStepAnswer(LabSubmission submission, LabStep step) {
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submission.getId(), step.getId()).orElseGet(LabStepAnswer::new);
+        answer.setLabSubmissionId(submission.getId());
+        answer.setLabStepId(step.getId());
+        answer.setQuestionId(step.getQuestionId());
+        answer.setQuestionSnapshotJson(defaultString(step.getQuestionSnapshotJson()));
+        answer.setEditorLanguage(defaultString(step.getEditorLanguage()));
+        return answer;
+    }
+
+    private LabStepAnswer findAnswerOwningImagePath(String normalizedPath) {
+        List<LabStepAnswer> candidates = labStepAnswerRepository.findByAnswerJsonContaining(normalizedPath);
+        for (LabStepAnswer candidate : candidates) {
+            if (LabAnswerImageSupport.pathMatchesStoredImage(candidate.getAnswerJson(), normalizedPath, objectMapper)) {
+                return candidate;
+            }
+        }
+        throw new BusinessException(40400, "图片不存在");
+    }
+
+    private String resolveImageContentType(String answerJson, String normalizedPath) {
+        return LabAnswerImageSupport.extractImages(answerJson, objectMapper).stream()
+                .filter(image -> LabAnswerImageSupport.normalizeRelativePath(image.path()).equals(normalizedPath))
+                .map(LabAnswerImageSupport.ImageMeta::contentType)
+                .filter(contentType -> contentType != null && !contentType.isBlank())
+                .findFirst()
+                .orElse("application/octet-stream");
+    }
+
+    private List<Map<String, Object>> toAnswerImageViews(String answerJson) {
+        return LabAnswerImageSupport.extractImages(answerJson, objectMapper).stream()
+                .map(image -> {
+                    Map<String, Object> view = new LinkedHashMap<>();
+                    view.put("path", image.path());
+                    view.put("name", image.name());
+                    view.put("contentType", image.contentType());
+                    view.put("size", image.size());
+                    return view;
+                })
+                .toList();
     }
 
     private Lab accessiblePublishedLab(CurrentUser currentUser, Long labId) {
@@ -920,6 +1081,8 @@ public class LabService {
         item.put("questionType", step.getQuestionType());
         item.put("answerId", answer == null ? null : answer.getId());
         item.put("answerText", answer == null ? "" : defaultString(answer.getAnswerText()));
+        item.put("answerPayloadJson", answer == null ? null : answer.getAnswerJson());
+        item.put("images", answer == null ? List.of() : toAnswerImageViews(answer.getAnswerJson()));
         item.put("score", answer == null ? null : answer.getScore());
         item.put("autoScore", answer == null ? null : answer.getAutoScore());
         item.put("suggestedScore", answer == null ? null : answer.getSuggestedScore());

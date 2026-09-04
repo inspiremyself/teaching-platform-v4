@@ -12,8 +12,17 @@ export type LabAnswerDraft =
   | { kind: 'multiple'; selectedKeys: string[] }
   | { kind: 'judge'; value: LabAnswerJudgeValue | null }
   | { kind: 'fill'; blanks: LabAnswerBlankDraft[] }
-  | { kind: 'text'; text: string }
+  | { kind: 'text'; text: string; images: LabAnswerImageDraftMeta[] }
   | { kind: 'code'; code: string; language: string | null };
+
+export interface LabAnswerImageDraftMeta {
+  path: string;
+  name: string;
+  contentType: string;
+  size: number;
+  compressed?: boolean;
+  originalSize?: number;
+}
 
 export type StudentAnswerQuestionType =
   | 'TEXT'
@@ -75,7 +84,7 @@ export const createEmptyDraftForStep = (item: StudentLabStepItem): LabAnswerDraf
     };
   }
 
-  return { kind: 'text', text: '' };
+  return { kind: 'text', text: '', images: [] };
 };
 
 export const isDraftAnswered = (draft: LabAnswerDraft): boolean => {
@@ -99,7 +108,7 @@ export const isDraftAnswered = (draft: LabAnswerDraft): boolean => {
     return Boolean(draft.code.trim());
   }
 
-  return Boolean(draft.text.trim());
+  return Boolean(draft.text.trim()) || draft.images.some(image => image.path);
 };
 
 export const cloneLabAnswerDraft = (draft: LabAnswerDraft): LabAnswerDraft => {
@@ -130,5 +139,5 @@ export const cloneLabAnswerDraft = (draft: LabAnswerDraft): LabAnswerDraft => {
     };
   }
 
-  return { kind: 'text', text: draft.text };
+  return { kind: 'text', text: draft.text, images: draft.images.map(image => ({ ...image })) };
 };

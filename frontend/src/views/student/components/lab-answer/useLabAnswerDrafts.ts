@@ -38,7 +38,7 @@ export const useLabAnswerDrafts = () => {
     if (!draft) {
       return {
         answerText: '',
-        answerPayloadJson: JSON.stringify({ kind: 'text', text: '' }),
+        answerPayloadJson: JSON.stringify({ kind: 'text', text: '', images: [] }),
       };
     }
 

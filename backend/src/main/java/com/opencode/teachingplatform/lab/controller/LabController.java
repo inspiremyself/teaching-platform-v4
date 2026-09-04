@@ -6,8 +6,12 @@ import com.opencode.teachingplatform.common.api.ApiResponse;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.service.LabService;
 import jakarta.validation.Valid;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -168,6 +172,25 @@ public class LabController {
     public ApiResponse<?> saveAnswer(@PathVariable Long id, @PathVariable Long stepId, @Valid @RequestBody LabRequests.SaveStepAnswerRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(labService.saveAnswer(currentUser, id, stepId, request));
+    }
+
+    @PostMapping(value = "/student/labs/{id}/answers/{stepId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('STUDENT')")
+    public ApiResponse<?> uploadAnswerImage(@PathVariable Long id,
+                                            @PathVariable Long stepId,
+                                            @RequestPart("file") MultipartFile file) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.uploadAnswerImage(currentUser, id, stepId, file));
+    }
+
+    @GetMapping("/labs/answer-images")
+    public ResponseEntity<ByteArrayResource> previewAnswerImage(@RequestParam("path") String path) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        LabService.PreviewAnswerImageResult result = labService.previewAnswerImage(currentUser, path);
+        MediaType mediaType = MediaType.parseMediaType(result.contentType());
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .body(new ByteArrayResource(result.bytes()));
     }
 
     @PostMapping("/teacher/lab-reports/{id}/grade")

@@ -3,6 +3,10 @@ spring:
     name: teaching-platform
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  servlet:
+    multipart:
+      max-file-size: 1MB
+      max-request-size: 8MB
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:teaching_platform}?useSSL=false&serverTimezone=UTC&characterEncoding=utf8
     username: ${DB_USER:root}

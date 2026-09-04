@@ -10,4 +10,5 @@ public interface LabStepAnswerRepository extends JpaRepository<LabStepAnswer, Lo
     List<LabStepAnswer> findByLabSubmissionId(Long labSubmissionId);
     Optional<LabStepAnswer> findByLabSubmissionIdAndLabStepId(Long labSubmissionId, Long labStepId);
     List<LabStepAnswer> findByLabSubmissionIdInAndLabStepId(List<Long> labSubmissionIds, Long labStepId);
+    List<LabStepAnswer> findByAnswerJsonContaining(String fragment);
 }

@@ -7,6 +7,7 @@ import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.common.file.LocalFileStorageService;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.entity.Lab;
 import com.opencode.teachingplatform.lab.entity.LabStep;
@@ -31,14 +32,19 @@ import com.opencode.teachingplatform.grading.strategy.SubjectiveRecommendationSt
 import com.opencode.teachingplatform.grading.strategy.TrueFalseScoringStrategy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +57,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({LabService.class, LabScoringSupport.class, LabServiceTests.TestBeans.class})
 @ActiveProfiles("test")
 class LabServiceTests {
+
+    @TempDir
+    static Path storageRoot;
 
     private static final long JS_SAFE_INTEGER_MAX = 9_007_199_254_740_991L;
     private static final long SEEDED_PLAYWRIGHT_LAB_ID = 1003L;
@@ -89,6 +98,269 @@ class LabServiceTests {
 
     @Autowired
     private ScoreRecordRepository scoreRecordRepository;
+
+    @DynamicPropertySource
+    static void registerProperties(DynamicPropertyRegistry registry) {
+        registry.add("app.file-storage-root", () -> storageRoot.toString());
+    }
+
+    @Test
+    void uploadAnswerImageStoresFileAndReturnsMetadata() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "shot1.png",
+                "image/png",
+                new byte[] {1, 2, 3, 4}
+        );
+
+        Map<String, Object> result = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+
+        assertThat(result.get("path")).asString().matches("lab-answers/\\d{4}-\\d{2}-\\d{2}/.+");
+        assertThat(result.get("name")).isEqualTo("shot1.png");
+        assertThat(result.get("contentType")).isEqualTo("image/png");
+        assertThat(result.get("size")).isEqualTo(4L);
+    }
+
+    @Test
+    void uploadAnswerImageRejectsOversizedFile() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        byte[] oversized = new byte[1_048_577];
+        MockMultipartFile file = new MockMultipartFile("file", "big.png", "image/png", oversized);
+
+        assertThatThrownBy(() -> labService.uploadAnswerImage(studentUser(), labId, stepId, file))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("图片过大");
+    }
+
+    @Test
+    void uploadAnswerImageRejectsWhenAnswerAlreadyHasFiveImages() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        for (int index = 0; index < 5; index++) {
+            MockMultipartFile file = new MockMultipartFile("file", "shot" + index + ".png", "image/png", new byte[] {(byte) index});
+            labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        }
+
+        MockMultipartFile sixthFile = new MockMultipartFile("file", "shot6.png", "image/png", new byte[] {6});
+        assertThatThrownBy(() -> labService.uploadAnswerImage(studentUser(), labId, stepId, sixthFile))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("单题最多上传 5 张图片");
+    }
+
+    @Test
+    void saveAnswerRejectsMismatchedImageSize() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+
+        assertThatThrownBy(() -> labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "",
+                        "{\"kind\":\"text\",\"text\":\"\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":999}]}"
+                )
+        )).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不一致");
+    }
+
+    @Test
+    void saveAnswerRejectsDisallowedImageContentType() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+
+        assertThatThrownBy(() -> labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "",
+                        "{\"kind\":\"text\",\"text\":\"\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.gif\",\"contentType\":\"image/gif\",\"size\":3}]}"
+                )
+        )).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("仅支持 png、jpeg、webp 图片");
+    }
+
+    @Test
+    void previewAnswerImageRejectsTeacherWhoDidNotCreateLab() {
+        Long ownerTeacherId = teacherUser().id();
+        Long coTeacherId = ownerTeacherId + 100L;
+        CurrentUser coTeacher = new CurrentUser(coTeacherId, "co-teacher", "共班教师", UserRole.TEACHER);
+        seedStudentAccount(coTeacher);
+
+        Long classId = seedClass(ownerTeacherId);
+        jdbcTemplate.update(
+                "UPDATE class_room SET teacher_user_id = ? WHERE id = ?",
+                coTeacherId,
+                classId
+        );
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, ownerTeacherId);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "",
+                        "{\"kind\":\"text\",\"text\":\"\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        );
+
+        assertThatThrownBy(() -> labService.previewAnswerImage(coTeacher, path))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限");
+    }
+
+    @Test
+    void saveAnswerCanonicalizesTextPayloadAndPersistsImages() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {9, 8, 7});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "最终文字",
+                        "{\"kind\":\"text\",\"text\":\"旧文字\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        );
+
+        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, studentUser().id()).orElseThrow();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submission.getId(), stepId).orElseThrow();
+        assertThat(answer.getAnswerText()).isEqualTo("最终文字");
+        assertThat(answer.getAnswerJson()).contains("\"text\":\"最终文字\"");
+        assertThat(answer.getAnswerJson()).contains(path);
+        assertThat(answer.getAnswerFilePath()).isNull();
+    }
+
+    @Test
+    void saveAnswerRejectsForgedImagePath() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        assertThatThrownBy(() -> labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "说明",
+                        "{\"kind\":\"text\",\"text\":\"说明\",\"images\":[{\"path\":\"lab-answers/2026-09-04/missing.png\",\"name\":\"missing.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        )).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void saveAnswerRejectsImagesOnNonTextQuestionType() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "SINGLE_CHOICE", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        assertThatThrownBy(() -> labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "A",
+                        "{\"kind\":\"text\",\"text\":\"A\",\"images\":[{\"path\":\"lab-answers/2026-09-04/a.png\",\"name\":\"a.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        )).isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不支持图片");
+    }
+
+    @Test
+    void previewAnswerImageAllowsOwnerStudentAndClassTeacher() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "",
+                        "{\"kind\":\"text\",\"text\":\"\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        );
+
+        LabService.PreviewAnswerImageResult studentPreview = labService.previewAnswerImage(studentUser(), path);
+        assertThat(studentPreview.bytes()).hasSize(3);
+
+        LabService.PreviewAnswerImageResult teacherPreview = labService.previewAnswerImage(teacherUser(), path);
+        assertThat(teacherPreview.bytes()).hasSize(3);
+    }
+
+    @Test
+    void previewAnswerImageRejectsUnauthorizedUser() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "",
+                        "{\"kind\":\"text\",\"text\":\"\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        );
+
+        CurrentUser otherStudent = new CurrentUser(9999L, "other", "其他学生", UserRole.STUDENT);
+        seedStudentAccount(otherStudent);
+        seedMembership(classId, otherStudent.id());
+
+        assertThatThrownBy(() -> labService.previewAnswerImage(otherStudent, path))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限");
+    }
 
     @Test
     void experimentTablePreservesLegacyColumnsAndOnlyAddsNewColumns() throws SQLException {
@@ -1518,6 +1790,11 @@ class LabServiceTests {
                     new TrueFalseScoringStrategy(),
                     new SubjectiveRecommendationStrategy()
             ));
+        }
+
+        @Bean
+        LocalFileStorageService localFileStorageService() {
+            return new LocalFileStorageService(storageRoot.toString());
         }
 
     }

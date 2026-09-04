@@ -59,6 +59,15 @@ export type LabAdvancedRuleConfig = FillBlankRuleConfig | CodeQuestionRuleConfig
 
 export type LabReportStatus = 'SAVED' | 'SUBMITTED' | 'GRADED' | string;
 
+export interface LabAnswerImageMeta {
+  path: string;
+  name: string;
+  contentType: string;
+  size: number;
+  compressed?: boolean;
+  originalSize?: number;
+}
+
 export const LAB_EXPERIMENT_TYPE_LABELS: Record<number, string> = {
   1: '基础实验',
   2: '验证实验',
@@ -160,6 +169,8 @@ export interface LabReportAnswerItem {
   title?: string;
   questionType?: LabQuestionType;
   answerText?: string;
+  answerPayloadJson?: string | null;
+  images?: LabAnswerImageMeta[];
   answerFilePath?: string | null;
   answerFileUrl?: string | null;
   standardAnswer?: string | null;

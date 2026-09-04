@@ -5,6 +5,7 @@ import type {
   CreateLabPayload,
   CreateLabStepPayload,
   GradeLabReportPayload,
+  LabAnswerImageMeta,
   LabItem,
   LabReportDetail,
   LabReportItem,
@@ -79,6 +80,14 @@ export const getStudentLabDetail = (labId: number | string) => request.get<Stude
 
 export const saveStudentLabAnswer = (labId: number | string, stepId: number | string, data: SaveLabAnswerPayload) =>
   request.post<SaveLabAnswerResult>(`/student/labs/${labId}/answers/${stepId}`, data);
+
+export const uploadStudentLabAnswerImage = (labId: number | string, stepId: number | string, file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request.post<LabAnswerImageMeta>(`/student/labs/${labId}/answers/${stepId}/images`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
 
 export const submitStudentLab = (labId: number | string, data: SubmitLabPayload) =>
   request.post<SubmitLabResult>(`/student/labs/${labId}/submit`, data);

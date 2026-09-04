@@ -173,21 +173,29 @@
                   <TextAnswerEditor
                     v-else-if="currentQuestionType === 'SHORT_ANSWER'"
                     :model-value="currentDraft"
+                    :lab-id="labId"
+                    :step-id="currentItem.id"
+                    enable-images
                     :rows="7"
                     :maxlength="3000"
                     :disabled="readonly"
                     placeholder="请输入简答内容"
                     @update:model-value="updateCurrentDraft"
+                    @images-removed="syncImagesAfterRemove"
                   />
 
                   <TextAnswerEditor
                     v-else
                     :model-value="currentDraft"
+                    :lab-id="labId"
+                    :step-id="currentItem.id"
+                    enable-images
                     :rows="12"
                     :maxlength="5000"
                     :disabled="readonly"
                     placeholder="请输入本题作答内容"
                     @update:model-value="updateCurrentDraft"
+                    @images-removed="syncImagesAfterRemove"
                   />
                 </QuestionAnswerShell>
               </div>
@@ -364,6 +372,10 @@ const updateCurrentDraft = (value: LabAnswerDraft) => {
   patchDraft(currentItem.value.id, value);
 };
 
+const syncImagesAfterRemove = () => {
+  void persistCurrentItem({ silent: true });
+};
+
 const fetchData = async () => {
   loading.value = true;
   try {
@@ -473,11 +485,11 @@ const persistItem = (item: StudentLabStepItem, options: { silent?: boolean } = {
     return true;
   }
 
-  ensureDraft(item);
+  const draft = ensureDraft(item);
   const payload = buildSavePayload(item.id);
   const savedPayloadJson = buildAnswerPayloadJson(savedDraftOf(item));
 
-  if (!payload.answerText.trim() && !hasSavedAnswer(item)) {
+  if (!isDraftAnswered(draft) && !hasSavedAnswer(item)) {
     itemAutosaveStates[item.id] = 'idle';
     return true;
   }
@@ -536,9 +548,9 @@ const saveCurrent = async () => {
     return;
   }
 
-  const payload = buildSavePayload(currentItem.value.id);
-  if (!payload.answerText.trim()) {
-    ElMessage.warning('请输入当前题项答案后再保存');
+  const draft = ensureDraft(currentItem.value);
+  if (!isDraftAnswered(draft)) {
+    ElMessage.warning('请输入文字或上传图片后再保存');
     return;
   }
 

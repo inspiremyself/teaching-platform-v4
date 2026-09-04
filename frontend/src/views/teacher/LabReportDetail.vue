@@ -120,10 +120,10 @@
               <section class="answer-pane">
                 <div class="pane-title">学生答案</div>
                 <div class="answer-text">{{ item.answerText || item.studentAnswer || '暂无作答内容' }}</div>
-                <div v-if="item.answerFileUrl || item.answerFilePath" class="pane-file-row">
-                  <span>附件：</span>
-                  <a :href="item.answerFileUrl || item.answerFilePath || '#'" target="_blank" rel="noreferrer">查看附件</a>
-                </div>
+                <LabAnswerImageGallery
+                  v-if="reportImages(item).length"
+                  :images="reportImages(item)"
+                />
               </section>
 
               <section class="insight-grid">
@@ -193,7 +193,9 @@ import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReports } from '@/api/labs';
+import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
+import { extractReportImages } from '@/utils/labReportImages';
 
 const route = useRoute();
 const router = useRouter();
@@ -208,6 +210,9 @@ const pendingScrollContext = ref<{ anchorId: string | null; offset: number; scro
 const reportId = computed(() => Number(route.params.id));
 
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
+
+const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
+
 const computedTotalScore = computed(() => answerItems.value.reduce((sum, item) => sum + (gradeFormMap[gradeKey(item)]?.score ?? 0), 0));
 const summaryStatusLabel = computed(() => detail.value?.summaryText?.trim() ? '已填写实验小结' : '未填写实验小结');
 const summaryPreview = computed(() => detail.value?.summaryText?.trim() || '学生未填写实验小结。');

@@ -378,7 +378,7 @@ const currentQuestion = computed(() => detail.value?.questions?.[currentQuestion
 const currentQuestionDraft = computed(() => (currentQuestion.value ? ensureQuestionDraft(currentQuestion.value) : null));
 const currentQuestionType = computed(() => normalizeStudentAnswerQuestionType(currentQuestion.value?.type));
 const currentQuestionOptions = computed(() => resolveQuestionOptions(currentQuestion.value));
-const textHomeworkDraft = computed<LabAnswerDraft>(() => ({ kind: 'text', text: form.answerText || '' }));
+const textHomeworkDraft = computed<LabAnswerDraft>(() => ({ kind: 'text', text: form.answerText || '', images: [] }));
 const answeredQuestionCount = computed(() => detail.value?.questions?.filter(question => isQuestionAnswered(question)).length || 0);
 const homeworkProgressPercent = computed(() => {
   const total = detail.value?.questions?.length || 0;

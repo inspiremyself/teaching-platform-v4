@@ -117,6 +117,14 @@ const canonicalizeDraft = (draft: LabAnswerDraft): LabAnswerDraft => {
   return {
     kind: 'text',
     text: String(draft.text ?? ''),
+    images: (draft.images ?? []).map(image => ({
+      path: String(image.path ?? ''),
+      name: String(image.name ?? ''),
+      contentType: String(image.contentType ?? ''),
+      size: Number(image.size ?? 0),
+      compressed: image.compressed ?? false,
+      originalSize: image.originalSize,
+    })),
   };
 };
 
@@ -194,6 +202,22 @@ const hydrateFromPayloadObject = (item: StudentLabStepItem, payload: unknown): L
   return canonicalizeDraft({
     kind: 'text',
     text: String(record.text ?? record.answer ?? record.answerText ?? record.value ?? ''),
+    images: Array.isArray(record.images)
+      ? record.images.map((image) => {
+          if (!image || typeof image !== 'object') {
+            return null;
+          }
+          const imageRecord = image as Record<string, unknown>;
+          return {
+            path: String(imageRecord.path ?? ''),
+            name: String(imageRecord.name ?? ''),
+            contentType: String(imageRecord.contentType ?? ''),
+            size: Number(imageRecord.size ?? 0),
+            compressed: Boolean(imageRecord.compressed),
+            originalSize: imageRecord.originalSize == null ? undefined : Number(imageRecord.originalSize),
+          };
+        }).filter((image): image is NonNullable<typeof image> => Boolean(image?.path))
+      : [],
   });
 };
 
@@ -234,7 +258,7 @@ export const hydrateDraftFromAnswerText = (item: StudentLabStepItem, answerText?
     });
   }
 
-  return canonicalizeDraft({ kind: 'text', text: value });
+  return canonicalizeDraft({ kind: 'text', text: value, images: [] });
 };
 
 export const hydrateDraftFromStep = (item: StudentLabStepItem): LabAnswerDraft => {

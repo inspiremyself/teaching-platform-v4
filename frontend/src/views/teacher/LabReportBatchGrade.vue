@@ -46,8 +46,16 @@
             </button>
           </template>
         </el-table-column>
-        <el-table-column label="学生答案" min-width="260" show-overflow-tooltip>
-          <template #default="scope">{{ scope.row.answerText || scope.row.studentAnswer || '暂无作答内容' }}</template>
+        <el-table-column label="学生答案" min-width="320">
+          <template #default="scope">
+            <div class="batch-answer-cell">
+              <div class="batch-answer-text">{{ scope.row.answerText || scope.row.studentAnswer || '暂无作答内容' }}</div>
+              <LabAnswerImageGallery
+                v-if="reportImages(scope.row).length"
+                :images="reportImages(scope.row)"
+              />
+            </div>
+          </template>
         </el-table-column>
         <el-table-column label="参考" width="120">
           <template #default="scope">{{ displaySuggestedScore(scope.row) }}</template>
@@ -94,7 +102,9 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReports } from '@/api/labs';
+import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem } from '@/types/lab';
+import { extractReportImages } from '@/utils/labReportImages';
 
 const route = useRoute();
 const router = useRouter();
@@ -108,6 +118,7 @@ const gradeFormMap = reactive<Record<string, { answerId: number; score: number; 
 
 const reportId = computed(() => Number(route.params.id));
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
+const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
 const computedTotalScore = computed(() => answerItems.value.reduce((sum, item) => sum + (gradeFormMap[gradeKey(item)]?.score ?? 0), 0));
 const reportQueue = computed(() => sortReports(reports.value));
 const currentReportIndex = computed(() => reportQueue.value.findIndex((row) => row.id === reportId.value));
@@ -395,6 +406,38 @@ fetchData();
   color: var(--batch-text);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.batch-answer-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.batch-answer-text {
+  color: var(--batch-text);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.batch-answer-cell :deep(.lab-answer-image-gallery) {
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.batch-answer-cell :deep(.lab-answer-image-gallery__item) {
+  width: 72px;
+}
+
+.batch-answer-cell :deep(.lab-answer-image-gallery__image) {
+  width: 72px;
+  height: 72px;
+}
+
+.batch-answer-cell :deep(.lab-answer-image-gallery__caption) {
+  display: none;
 }
 
 @media (max-width: 900px) {
