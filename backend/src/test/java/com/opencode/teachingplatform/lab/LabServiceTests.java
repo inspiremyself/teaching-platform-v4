@@ -363,6 +363,146 @@ class LabServiceTests {
     }
 
     @Test
+    void submissionOverviewIncludesAllClassMembersAndAnswerCells() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedStep(labId, 2, "TEXT", "{}", 10);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        Long otherStudentId = 201L;
+        CurrentUser otherStudent = new CurrentUser(otherStudentId, "student-201", "未交学生", UserRole.STUDENT);
+        seedStudentAccount(otherStudent);
+        seedMembership(classId, otherStudentId);
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "文字说明",
+                        "{\"kind\":\"text\",\"text\":\"文字说明\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        );
+
+        Map<String, Object> overview = labService.getSubmissionOverview(teacherUser(), labId);
+
+        assertThat(overview.get("labId")).isEqualTo(labId);
+        assertThat(overview.get("items")).asList().hasSize(2);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> students = (List<Map<String, Object>>) overview.get("students");
+        assertThat(students).hasSize(2);
+
+        Map<String, Object> answeredStudent = students.stream()
+                .filter(row -> java.util.Objects.equals(row.get("studentId"), studentUser().id()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(answeredStudent.get("submissionId")).isNotNull();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> answeredCells = (List<Map<String, Object>>) answeredStudent.get("cells");
+        assertThat(answeredCells.get(0).get("answered")).isEqualTo(true);
+        assertThat(answeredCells.get(0).get("hasText")).isEqualTo(true);
+        assertThat(answeredCells.get(0).get("imageCount")).isEqualTo(1);
+        assertThat(answeredCells.get(1).get("answered")).isEqualTo(false);
+
+        Map<String, Object> absentStudent = students.stream()
+                .filter(row -> java.util.Objects.equals(row.get("studentId"), otherStudentId))
+                .findFirst()
+                .orElseThrow();
+        assertThat(absentStudent.get("submissionId")).isNull();
+        assertThat(absentStudent.get("submitStatus")).isNull();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> absentCells = (List<Map<String, Object>>) absentStudent.get("cells");
+        assertThat(absentCells).allSatisfy(cell -> {
+            assertThat(cell.get("answered")).isEqualTo(false);
+            assertThat(cell.get("imageCount")).isEqualTo(0);
+        });
+    }
+
+    @Test
+    void submissionOverviewWorksWhenNoStudentHasSubmitted() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedStep(labId, 1, "TEXT", "{}", 10);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        Map<String, Object> overview = labService.getSubmissionOverview(teacherUser(), labId);
+
+        assertThat(overview.get("labId")).isEqualTo(labId);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> students = (List<Map<String, Object>>) overview.get("students");
+        assertThat(students).hasSize(1);
+        assertThat(students.get(0).get("submissionId")).isNull();
+        assertThat(students.get(0).get("submitStatus")).isNull();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> cells = (List<Map<String, Object>>) students.get(0).get("cells");
+        assertThat(cells).allSatisfy(cell -> assertThat(cell.get("answered")).isEqualTo(false));
+    }
+
+    @Test
+    void listStudentLabSubmissionsReturnsTeacherVisibleRecords() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("答案", null));
+
+        List<Map<String, Object>> submissions = labService.listStudentLabSubmissions(teacherUser(), studentUser().id());
+
+        assertThat(submissions).hasSize(1);
+        assertThat(submissions.get(0).get("labId")).isEqualTo(labId);
+        assertThat(submissions.get(0).get("submissionId")).isNotNull();
+    }
+
+    @Test
+    void listStudentLabSubmissionsRejectsUnauthorizedTeacher() {
+        Long classId = seedClass(teacherUser().id());
+        seedMembership(classId, studentUser().id());
+        CurrentUser outsider = new CurrentUser(888L, "outsider", "外部教师", UserRole.TEACHER);
+        seedStudentAccount(outsider);
+
+        assertThatThrownBy(() -> labService.listStudentLabSubmissions(outsider, studentUser().id()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限");
+    }
+
+    @Test
+    void getLabItemAnswersReturnsClassAnswersWithImages() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "截图题",
+                        "{\"kind\":\"text\",\"text\":\"截图题\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        );
+
+        Map<String, Object> wall = labService.getLabItemAnswers(teacherUser(), labId, stepId);
+
+        assertThat(wall.get("itemId")).isEqualTo(stepId);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> answers = (List<Map<String, Object>>) wall.get("answers");
+        assertThat(answers).hasSize(1);
+        assertThat(answers.get(0).get("answerText")).isEqualTo("截图题");
+        assertThat(answers.get(0).get("images")).asList().hasSize(1);
+    }
+
+    @Test
     void experimentTablePreservesLegacyColumnsAndOnlyAddsNewColumns() throws SQLException {
         try (var connection = jdbcTemplate.getDataSource().getConnection();
              var resultSet = connection.getMetaData().getColumns(null, null, "T_EXPERIMENT", null)) {

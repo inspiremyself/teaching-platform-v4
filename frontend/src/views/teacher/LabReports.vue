@@ -5,7 +5,7 @@
         <div class="reports-header__main">
           <div class="reports-header__eyebrow">教师后台 / 实验报告批改</div>
           <h1>实验报告批改队列</h1>
-          <p>按实验、学生与状态筛出待处理报告。</p>
+          <p>按实验、学生与状态筛出待处理报告；每条报告行可进入该实验的提交总览。</p>
         </div>
         <div class="reports-header__actions">
           <el-button plain @click="resetFilters">重置筛选</el-button>
@@ -77,9 +77,9 @@
              <el-option label="全部实验" value="" />
              <el-option
                v-for="item in labOptions"
-               :key="`lab-${item.labId}`"
-               :label="item.labTitle || `实验 #${item.labId}`"
-               :value="String(item.labId)"
+               :key="`lab-${item.id}`"
+               :label="item.title || `实验 #${item.id}`"
+               :value="String(item.id)"
              />
            </el-select>
            <el-select v-model="query.status" placeholder="全部状态" clearable>
@@ -145,6 +145,14 @@
               <el-button type="primary" plain @click="goBatchGrade(row.id)">
                 {{ row.submitStatus === 'GRADED' ? '查看批量评分' : '进入批量批改' }}
               </el-button>
+              <el-button
+                type="primary"
+                plain
+                :disabled="!row.labId"
+                @click="goSubmissionOverview(row.labId)"
+              >
+                提交总览
+              </el-button>
               <el-button plain @click="goBlankRegradeBatch(row.labId)">批量重判（填空）</el-button>
             </div>
           </article>
@@ -158,12 +166,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { listTeacherLabReports } from '@/api/labs';
-import type { LabReportItem, LabReportStatus } from '@/types/lab';
+import { listTeacherLabReports, listTeacherLabs } from '@/api/labs';
+import type { LabItem, LabReportItem, LabReportStatus } from '@/types/lab';
 
 const router = useRouter();
 const loading = ref(false);
 const rows = ref<LabReportItem[]>([]);
+const teacherLabs = ref<LabItem[]>([]);
 const query = reactive({
   keyword: '',
   status: '',
@@ -176,19 +185,13 @@ const gradedCount = computed(() => rows.value.filter(row => row.submitStatus ===
 const activeStatusLabel = computed(() => statusLabel(query.status || undefined));
 const keywordLabel = computed(() => query.keyword.trim() ? `关键词“${query.keyword.trim()}”` : '未使用关键词');
 const priorityDescription = computed(() => query.status === 'SUBMITTED' ? '待批改报告' : query.labId ? '单实验报告队列' : '实验报告全队列');
-const labOptions = computed(() => {
-  const deduped = new Map<number, LabReportItem>();
-  rows.value.forEach((row) => {
-    if (typeof row.labId === 'number' && !deduped.has(row.labId)) {
-      deduped.set(row.labId, row);
-    }
-  });
-  return [...deduped.values()].sort((left, right) => {
-    const leftTitle = left.labTitle || '';
-    const rightTitle = right.labTitle || '';
-    return leftTitle.localeCompare(rightTitle, 'zh-CN');
-  });
-});
+const labOptions = computed(() =>
+  [...teacherLabs.value].sort((left, right) => left.title.localeCompare(right.title, 'zh-CN')),
+);
+
+const fetchTeacherLabs = async () => {
+  teacherLabs.value = await listTeacherLabs();
+};
 
 const fetchData = async () => {
   loading.value = true;
@@ -229,6 +232,13 @@ const goBlankRegradeBatch = (labId?: number) => {
     return;
   }
   router.push(`/teacher/labs/${labId}/blank-regrade/batch`);
+};
+
+const goSubmissionOverview = (labId?: number) => {
+  if (!labId) {
+    return;
+  }
+  router.push({ name: 'teacher-lab-submission-overview', params: { labId } });
 };
 
 const openReportView = (row: LabReportItem) => {
@@ -292,7 +302,8 @@ onMounted(() => {
   const initialKeyword = router.currentRoute.value.query.keyword;
   query.labId = typeof initialLabId === 'string' ? initialLabId : '';
   query.keyword = typeof initialKeyword === 'string' ? initialKeyword : '';
-  fetchData();
+  void fetchTeacherLabs();
+  void fetchData();
 });
 </script>
 
@@ -563,13 +574,20 @@ onMounted(() => {
 
 .report-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) 0.9fr 0.9fr 0.8fr auto;
+  grid-template-columns: minmax(0, 2fr) 0.85fr 0.85fr 0.75fr minmax(280px, auto);
   gap: 10px;
   align-items: center;
   padding: 10px 12px;
   border: 1px solid var(--reports-border);
   border-radius: 12px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.report-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .report-row__identity {
@@ -686,6 +704,10 @@ onMounted(() => {
 
   .toolbar-filters .el-select {
     width: 100%;
+  }
+
+  .report-row__actions {
+    justify-content: flex-start;
   }
 }
 </style>

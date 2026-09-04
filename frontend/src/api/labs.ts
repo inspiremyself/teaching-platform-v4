@@ -7,9 +7,12 @@ import type {
   GradeLabReportPayload,
   LabAnswerImageMeta,
   LabItem,
+  LabItemAnswerWall,
   LabReportDetail,
   LabReportItem,
   LabReportQuery,
+  LabSubmissionOverview,
+  StudentLabSubmissionItem,
   TeacherLabReportView,
   LabStepItem,
   SaveLabAnswerPayload,
@@ -64,6 +67,15 @@ export const getTeacherLabReportDetail = (reportId: number | string) =>
 
 export const getTeacherLabReportView = (labId: number | string, studentId: number | string) =>
   request.get<TeacherLabReportView>(`/teacher/labs/${labId}/report-view/${studentId}`);
+
+export const getTeacherLabSubmissionOverview = (labId: number | string) =>
+  request.get<LabSubmissionOverview>(`/teacher/labs/${labId}/submission-overview`);
+
+export const listTeacherStudentLabSubmissions = (studentId: number | string) =>
+  request.get<StudentLabSubmissionItem[]>(`/teacher/students/${studentId}/lab-submissions`);
+
+export const getTeacherLabItemAnswers = (labId: number | string, itemId: number | string) =>
+  request.get<LabItemAnswerWall>(`/teacher/labs/${labId}/items/${itemId}/answers`);
 
 export const gradeTeacherLabReport = (reportId: number | string, data: GradeLabReportPayload) =>
   request.post<void>(`/teacher/lab-reports/${reportId}/grade`, data);

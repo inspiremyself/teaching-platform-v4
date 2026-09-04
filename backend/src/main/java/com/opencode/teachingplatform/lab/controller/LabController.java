@@ -133,6 +133,27 @@ public class LabController {
         return ApiResponse.ok(labService.getTeacherLabReportView(currentUser, labId, studentId));
     }
 
+    @GetMapping("/teacher/labs/{labId}/submission-overview")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> getSubmissionOverview(@PathVariable Long labId) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.getSubmissionOverview(currentUser, labId));
+    }
+
+    @GetMapping("/teacher/students/{studentId}/lab-submissions")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> listStudentLabSubmissions(@PathVariable Long studentId) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.listStudentLabSubmissions(currentUser, studentId));
+    }
+
+    @GetMapping("/teacher/labs/{labId}/items/{itemId}/answers")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> getLabItemAnswers(@PathVariable Long labId, @PathVariable Long itemId) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.getLabItemAnswers(currentUser, labId, itemId));
+    }
+
     @GetMapping("/student/labs")
     @PreAuthorize("hasRole('STUDENT')")
     public ApiResponse<?> listStudentLabs() {

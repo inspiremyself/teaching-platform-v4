@@ -419,6 +419,131 @@ public class LabService {
     }
 
     @Transactional(readOnly = true)
+    public Map<String, Object> getSubmissionOverview(CurrentUser currentUser, Long labId) {
+        requireTeacher(currentUser);
+        Lab lab = ownedLab(currentUser, labId);
+        List<LabStep> steps = labStepRepository.findByLabIdOrderByStepNoAsc(labId);
+        List<ClassMember> members = classMemberRepository.findByClassId(lab.getClassId());
+        Map<Long, LabSubmission> submissionByStudentId = indexSubmissionsByStudentId(labSubmissionRepository.findByLabId(labId));
+
+        List<Map<String, Object>> items = steps.stream().map(step -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("stepId", step.getId());
+            item.put("stepNo", step.getStepNo());
+            item.put("title", step.getTitle());
+            return item;
+        }).toList();
+
+        List<Map<String, Object>> students = new ArrayList<>();
+        for (ClassMember member : members) {
+            SysUser student = sysUserRepository.findById(member.getStudentUserId()).orElse(null);
+            if (student == null) {
+                continue;
+            }
+            LabSubmission submission = submissionByStudentId.get(student.getId());
+            List<LabStepAnswer> answers = submission == null
+                    ? List.of()
+                    : labStepAnswerRepository.findByLabSubmissionId(submission.getId());
+            Map<Long, LabStepAnswer> answerByStepId = indexAnswersByStepId(answers);
+
+            List<Map<String, Object>> cells = steps.stream()
+                    .map(step -> buildOverviewCell(step.getId(), answerByStepId.get(step.getId())))
+                    .toList();
+
+            Map<String, Object> studentRow = new LinkedHashMap<>();
+            studentRow.put("studentId", student.getId());
+            studentRow.put("studentNo", student.getUsername());
+            studentRow.put("studentName", student.getDisplayName());
+            studentRow.put("submissionId", submission == null ? null : submission.getId());
+            studentRow.put("submitStatus", submission == null ? null : submission.getSubmitStatus().name());
+            studentRow.put("submittedAt", submission == null ? null : submission.getSubmittedAt());
+            studentRow.put("cells", cells);
+            students.add(studentRow);
+        }
+        students.sort(Comparator.comparing(row -> normalize(row.get("studentNo"))));
+
+        Map<String, Object> overview = new LinkedHashMap<>();
+        overview.put("labId", lab.getId());
+        overview.put("labTitle", lab.getTitle());
+        overview.put("classId", lab.getClassId());
+        overview.put("items", items);
+        overview.put("students", students);
+        return overview;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listStudentLabSubmissions(CurrentUser currentUser, Long studentId) {
+        requireTeacher(currentUser);
+        requireTeacherStudentAccess(currentUser, studentId);
+        List<Long> ownedLabIds = labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+                .map(Lab::getId)
+                .toList();
+        if (ownedLabIds.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> ownedLabIdSet = new HashSet<>(ownedLabIds);
+        return labSubmissionRepository.findByStudentId(studentId).stream()
+                .filter(submission -> ownedLabIdSet.contains(submission.getLabId()))
+                .sorted(Comparator.comparing(LabSubmission::getSubmittedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(submission -> toStudentLabSubmissionView(submission))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getLabItemAnswers(CurrentUser currentUser, Long labId, Long itemId) {
+        requireTeacher(currentUser);
+        Lab lab = ownedLab(currentUser, labId);
+        LabStep step = labStepRepository.findById(itemId).orElseThrow(() -> new BusinessException(40400, "实验步骤不存在"));
+        if (!Objects.equals(step.getLabId(), labId)) {
+            throw new BusinessException(40000, "实验步骤不属于该实验");
+        }
+
+        List<ClassMember> members = classMemberRepository.findByClassId(lab.getClassId());
+        List<LabSubmission> submissions = labSubmissionRepository.findByLabId(labId);
+        Map<Long, LabSubmission> submissionByStudentId = indexSubmissionsByStudentId(submissions);
+        List<Long> submissionIds = submissions.stream().map(LabSubmission::getId).toList();
+        Map<Long, LabStepAnswer> answerBySubmissionId = indexAnswersBySubmissionId(
+                submissionIds.isEmpty()
+                        ? List.of()
+                        : labStepAnswerRepository.findByLabSubmissionIdInAndLabStepId(submissionIds, itemId)
+        );
+
+        List<Map<String, Object>> answers = new ArrayList<>();
+        for (ClassMember member : members) {
+            SysUser student = sysUserRepository.findById(member.getStudentUserId()).orElse(null);
+            if (student == null) {
+                continue;
+            }
+            LabSubmission submission = submissionByStudentId.get(student.getId());
+            LabStepAnswer answer = submission == null ? null : answerBySubmissionId.get(submission.getId());
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("studentId", student.getId());
+            row.put("studentNo", student.getUsername());
+            row.put("studentName", student.getDisplayName());
+            row.put("submissionId", submission == null ? null : submission.getId());
+            row.put("submitStatus", submission == null ? null : submission.getSubmitStatus().name());
+            row.put("answerText", answer == null ? "" : resolveStudentAnswerText(answer));
+            row.put("images", answer == null ? List.of() : toAnswerImageViews(answer.getAnswerJson()));
+            row.put("score", answer == null ? null : answer.getScore());
+            row.put("teacherComment", answer == null ? null : answer.getTeacherComment());
+            answers.add(row);
+        }
+        answers.sort(Comparator.comparing(row -> normalize(row.get("studentNo"))));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("labId", lab.getId());
+        result.put("labTitle", lab.getTitle());
+        result.put("itemId", step.getId());
+        result.put("stepNo", step.getStepNo());
+        result.put("title", step.getTitle());
+        result.put("content", defaultString(step.getContent()));
+        result.put("answers", answers);
+        return result;
+    }
+
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> listStudentLabs(CurrentUser currentUser) {
         requireStudent(currentUser);
         List<Long> classIds = classMemberRepository.findByStudentUserId(currentUser.id()).stream()
@@ -801,6 +926,80 @@ public class LabService {
         classRoomRepository.findByIdAndTeacherUserId(lab.getClassId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该班级"));
         return lab;
+    }
+
+    private void requireTeacherStudentAccess(CurrentUser currentUser, Long studentId) {
+        List<Long> teacherClassIds = classRoomRepository.findByTeacherUserId(currentUser.id()).stream()
+                .map(ClassRoom::getId)
+                .toList();
+        if (teacherClassIds.isEmpty()) {
+            throw new BusinessException(40300, "无权限访问该学生");
+        }
+        boolean enrolled = classMemberRepository.findByClassIdIn(teacherClassIds).stream()
+                .anyMatch(member -> Objects.equals(member.getStudentUserId(), studentId));
+        if (!enrolled) {
+            throw new BusinessException(40300, "无权限访问该学生");
+        }
+    }
+
+    private Map<Long, LabSubmission> indexSubmissionsByStudentId(List<LabSubmission> submissions) {
+        Map<Long, LabSubmission> indexed = new LinkedHashMap<>();
+        for (LabSubmission submission : submissions) {
+            indexed.putIfAbsent(submission.getStudentId(), submission);
+        }
+        return indexed;
+    }
+
+    private Map<Long, LabStepAnswer> indexAnswersByStepId(List<LabStepAnswer> answers) {
+        Map<Long, LabStepAnswer> indexed = new LinkedHashMap<>();
+        for (LabStepAnswer answer : answers) {
+            indexed.putIfAbsent(answer.getLabStepId(), answer);
+        }
+        return indexed;
+    }
+
+    private Map<Long, LabStepAnswer> indexAnswersBySubmissionId(List<LabStepAnswer> answers) {
+        Map<Long, LabStepAnswer> indexed = new LinkedHashMap<>();
+        for (LabStepAnswer answer : answers) {
+            indexed.putIfAbsent(answer.getLabSubmissionId(), answer);
+        }
+        return indexed;
+    }
+
+    private Map<String, Object> buildOverviewCell(Long stepId, LabStepAnswer answer) {
+        Map<String, Object> cell = new LinkedHashMap<>();
+        cell.put("stepId", stepId);
+        if (answer == null) {
+            cell.put("answered", false);
+            cell.put("hasText", false);
+            cell.put("imageCount", 0);
+            return cell;
+        }
+        String answerText = defaultString(answer.getAnswerText());
+        boolean hasText = !answerText.isBlank();
+        int imageCount = LabAnswerImageSupport.extractImages(answer.getAnswerJson(), objectMapper).size();
+        cell.put("answered", hasText || imageCount > 0);
+        cell.put("hasText", hasText);
+        cell.put("imageCount", imageCount);
+        return cell;
+    }
+
+    private Map<String, Object> toStudentLabSubmissionView(LabSubmission submission) {
+        Lab lab = labRepository.findById(submission.getLabId()).orElse(null);
+        if (lab == null) {
+            return null;
+        }
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("submissionId", submission.getId());
+        view.put("labId", lab.getId());
+        view.put("labTitle", lab.getTitle());
+        view.put("classId", lab.getClassId());
+        view.put("className", resolveClassName(lab.getClassId()));
+        view.put("submitStatus", submission.getSubmitStatus().name());
+        view.put("totalScore", submission.getTotalScore());
+        view.put("submittedAt", submission.getSubmittedAt());
+        view.put("gradedAt", submission.getGradedAt());
+        return view;
     }
 
     private ActivityStatus parseStatus(String value) {

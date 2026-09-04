@@ -377,3 +377,68 @@ export interface LabReportQuery {
   keyword?: string;
   status?: string;
 }
+
+export interface LabSubmissionOverviewItem {
+  stepId: number;
+  stepNo: number;
+  title: string;
+}
+
+export interface LabSubmissionOverviewCell {
+  stepId: number;
+  answered: boolean;
+  hasText: boolean;
+  imageCount: number;
+}
+
+export interface LabSubmissionOverviewStudent {
+  studentId: number;
+  studentNo: string;
+  studentName: string;
+  submissionId?: number | null;
+  submitStatus?: LabReportStatus | null;
+  submittedAt?: string | null;
+  cells: LabSubmissionOverviewCell[];
+}
+
+export interface LabSubmissionOverview {
+  labId: number;
+  labTitle: string;
+  classId: number;
+  items: LabSubmissionOverviewItem[];
+  students: LabSubmissionOverviewStudent[];
+}
+
+export interface StudentLabSubmissionItem {
+  submissionId: number;
+  labId: number;
+  labTitle: string;
+  classId?: number;
+  className?: string;
+  submitStatus: LabReportStatus;
+  totalScore?: number | null;
+  submittedAt?: string | null;
+  gradedAt?: string | null;
+}
+
+export interface LabItemAnswerWallEntry {
+  studentId: number;
+  studentNo: string;
+  studentName: string;
+  submissionId?: number | null;
+  submitStatus?: LabReportStatus | null;
+  answerText: string;
+  images: LabAnswerImageMeta[];
+  score?: number | null;
+  teacherComment?: string | null;
+}
+
+export interface LabItemAnswerWall {
+  labId: number;
+  labTitle: string;
+  itemId: number;
+  stepNo: number;
+  title: string;
+  content: string;
+  answers: LabItemAnswerWallEntry[];
+}
