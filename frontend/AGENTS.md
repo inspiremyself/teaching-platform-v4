@@ -53,9 +53,12 @@ frontend/
 ## COMMANDS
 
 ```bash
+# 推荐：仓库根目录
+../scripts/path-b/frontend.sh
+
 npm install
 npm run dev
 npm run build
 npm run preview
-cmd /c "set VITE_API_TARGET=http://127.0.0.1:18080 && npm run dev -- --host 127.0.0.1 --port 18081"
+VITE_API_TARGET=http://127.0.0.1:18080 npm run dev -- --host 127.0.0.1 --port 18081
 ```

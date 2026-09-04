@@ -37,32 +37,40 @@
 
 ## 快速开始
 
-### 方式一：Docker Compose（推荐）
+详细运维说明见 [`docs/运维文档/`](docs/运维文档/)。推荐优先用仓库脚本。
+
+### 方式一：Docker Compose（路径 A）
 
 ```bash
-docker-compose up --build
+./scripts/path-a/up.sh
+./scripts/common/healthcheck-login.sh
 ```
 
 启动后访问：
 - 前端：http://localhost:5173
 - 后端 API：http://localhost:8080/api/v1
 
-### 方式二：本地开发
+停止：`./scripts/path-a/down.sh`（加 `--volumes` 会清空 MySQL / 上传文件卷）
 
-**后端**
+### 方式二：本地开发（路径 B，推荐日常联调）
+
+H2 **文件库**（仓库根 `data/h2/`），无需 MySQL，**重启数据保留**。清空可删该目录后重启。上传文件在 `data/files/`（答题图：`data/files/lab-answers/{yyyy-MM-dd}/`）。
 
 ```bash
-cd backend
-# 使用 H2 内存数据库，无需 MySQL
-./mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=test
+# 两个终端
+./scripts/path-b/backend.sh
+./scripts/path-b/frontend.sh
 ```
 
-**前端**
+等价手工命令（仍建议用脚本，脚本会注入仓库根绝对路径）：
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd backend && \
+  SPRING_PROFILES_ACTIVE=test \
+  H2_FILE="$(pwd)/../data/h2/teaching_platform" \
+  FILE_STORAGE_ROOT="$(pwd)/../data/files" \
+  ./mvnw spring-boot:run
+cd frontend && npm install && npm run dev
 ```
 
 ### 演示账号
@@ -72,12 +80,14 @@ npm run dev
 | 教师 | t9001 | 123456 |
 | 学生 | 20260001 | 123456 |
 
-演示班级：`SE2026-1`
+演示班级：`SE2026-1`  
+登录须选择对应身份（教师 / 学生）。
 
 ## 项目结构
 
 ```
 teaching-platform-v4/
+├── data/                             # 路径 B 本地数据（gitignore）：h2/、files/
 ├── backend/                          # Spring Boot 后端
 │   └── src/main/java/com/opencode/teachingplatform/
 │       ├── auth/                     # JWT 认证、安全配置

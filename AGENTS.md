@@ -27,7 +27,10 @@ teaching-platform/
 │  └─ src/test/              # 按业务包镜像组织的测试
 ├─ design/                   # 原型索引、设计系统、实现映射、证据说明
 ├─ design-prototypes/        # 本阶段核心原型资产输入（HTML/PNG/manifest）
-├─ docker-compose.yml        # 本地整站联调入口
+├─ docker-compose.yml        # 本地整站联调入口（路径 A）
+├─ data/                     # 路径 B 本地持久化（gitignore）：h2/、files/
+├─ scripts/                  # 运维脚本：path-a / path-b / common
+├─ docs/运维文档/            # 路径 A/B 启动与探活说明（日期前缀）
 └─ README.md                 # 运行方式、默认账号、环境变量
 ```
 
@@ -49,6 +52,8 @@ teaching-platform/
 | 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像 |
 | 原型资产清单 | `design-prototypes/manifest.csv` | 页面标题与 HTML/PNG 资产总表 |
 | 原型到实现映射 | `design/frontend-implementation-guide.md` | 页面模式、角色差异、落地优先级 |
+| 本地启动（路径 A/B） | `docs/运维文档/`、`scripts/` | Compose / H2 文件库联调、探活脚本 |
+| 路径 B H2 配置 | `backend/src/main/resources/application-test.yml` | 文件库仓库根 `data/h2/`（`H2_FILE`）；UT 仍用 test/resources mem |
 
 ## CODE MAP
 
@@ -70,7 +75,7 @@ teaching-platform/
 
 - 当前阶段优先级：**前端原型 / 产品交互目标 > 旧规范书细节 > 旧实现形态**。
 - 仍必须保持真实系统约束：真实前后端、真实数据库、真实权限、真实测试，不允许 mock 页面、假 API、假数据闭环。
-- 调试与 E2E 联调优先使用 **H2 + `test` profile + Flyway 种子数据**；这套组合目前已验证能稳定支撑教师 `t9001/123456`、学生 `20260001/123456` 的真实链路测试。
+- 调试与 E2E 联调优先使用 **H2 文件库 + `test` profile + Flyway 种子数据**（数据目录仓库根 `data/h2/`，上传 `data/files/`，重启保留）；这套组合目前已验证能稳定支撑教师 `t9001/123456`、学生 `20260001/123456` 的真实链路测试。
 - 若需要并行跑多套前后端实例，后端优先改 `SERVER_PORT`，前端通过 `VITE_API_TARGET` 定向代理到该后端，不要硬绑定唯一的 `8080/5173` 组合。
 - 接口统一前缀仍是 `/api/v1`；统一响应仍是 `code`、`message`、`data`、`timestamp`。
 - 前端统一通过 `frontend/src/utils/request.ts` 访问后端；不要在页面里直接手写 Axios 实例。
@@ -99,18 +104,24 @@ teaching-platform/
 ## COMMANDS
 
 ```bash
-# backend
+# 路径 A（Docker Compose）
+./scripts/path-a/up.sh
+./scripts/common/healthcheck-login.sh
+./scripts/path-a/down.sh
+
+# 路径 B（本地 H2 文件库，推荐联调；两个终端）
+./scripts/path-b/backend.sh
+./scripts/path-b/frontend.sh
+
+# backend（仓库根目录先 cd backend；裸跑默认 local=MySQL）
 ./mvnw test
-./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=test ./mvnw spring-boot:run
 
 # frontend
-npm install
-npm run dev
-npm run build
-
-# full stack
-docker compose up -d --build
+cd frontend && npm install && npm run dev && npm run build
 ```
+
+运维细节：`docs/运维文档/2026-09-04-路径A-Docker-Compose整站启动.md`、`docs/运维文档/2026-09-04-路径B-本地开发H2启动.md`。
 
 ## NOTES
 

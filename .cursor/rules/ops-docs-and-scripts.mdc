@@ -1,0 +1,35 @@
+---
+description: 运维文档与 scripts 目录约定
+globs: scripts/**/*,docs/运维文档/**/*,docker-compose.yml,**/application*.yml,README.md
+alwaysApply: false
+---
+
+# 运维文档与脚本
+
+## 目录结构
+
+```text
+scripts/
+  path-a/     # Docker Compose：up.sh / down.sh / logs.sh
+  path-b/     # 本地 H2：backend.sh / frontend.sh
+  common/     # 共用：healthcheck-login.sh
+docs/运维文档/
+  README.md                 # 索引
+  YYYY-MM-DD-<主题>.md      # 创建日期作文件名前缀
+```
+
+## 编写约定
+
+- 新增启动/停止/探活能力：优先补 `scripts/` 脚本，文档只引用脚本路径，避免散落手工命令。
+- 路径 A / 路径 B 分文档维护；文首保留「配套脚本」+「示例用法」代码块。
+- 脚本内定位仓库根目录用 `$(dirname "${BASH_SOURCE[0]}")/../..`（脚本在 `scripts/<子目录>/` 下）。
+- `path-a/down.sh` 默认保留卷；清空数据须显式 `--volumes`。
+- `path-b/backend.sh` 默认导出 `SPRING_PROFILES_ACTIVE=test`；不要改成默认 `local`。
+- 文档中的 curl 登录示例须含 `role`；运维探活脚本默认 `forceLogin=true`。
+
+## 反例
+
+- ❌ 把脚本平铺回 `scripts/*.sh` 或写回旧路径 `path-a-up.sh`
+- ❌ 运维文档无日期前缀、或只写 Docker 命令不指向脚本
+- ❌ 把路径 B 写成 mem 内存库、或暗示可从 H2 文件一键迁到 MySQL
+- ❌ 改 `src/test/resources/application-test.yml` 为文件库（测试应保持 mem）

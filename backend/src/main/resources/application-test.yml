@@ -1,6 +1,8 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:teaching_platform_test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    # 路径 B：文件模式持久化。默认相对 backend/ 的 ../data/h2（即仓库根 data/h2/）。
+    # scripts/path-b/backend.sh 会注入绝对路径 H2_FILE；单元测试仍用 src/test/resources mem。
+    url: jdbc:h2:file:${H2_FILE:../data/h2/teaching_platform};MODE=MySQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=FALSE;DB_CLOSE_DELAY=-1
     username: sa
     password:
     driver-class-name: org.h2.Driver
