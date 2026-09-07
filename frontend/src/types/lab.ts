@@ -318,6 +318,13 @@ export interface SubmitLabResult {
   status: LabReportStatus;
 }
 
+export interface ReturnLabReportResult {
+  submissionId: number;
+  status: LabReportStatus;
+  labId: number;
+  studentId: number;
+}
+
 export interface TeacherLabBlankItem {
   id: number;
   labId: number;

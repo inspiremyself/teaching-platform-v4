@@ -214,6 +214,16 @@ public class LabController {
                 .body(new ByteArrayResource(result.bytes()));
     }
 
+    /**
+     * 教师将单条已提交实验报告打回，使学生可继续编辑并重新提交。
+     */
+    @PostMapping("/teacher/lab-reports/{id}/return")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> returnReport(@PathVariable Long id) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.returnReport(currentUser, id));
+    }
+
     @PostMapping("/teacher/lab-reports/{id}/grade")
     @PreAuthorize("hasRole('TEACHER')")
     /**

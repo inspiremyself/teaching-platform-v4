@@ -115,6 +115,29 @@ class LabTeacherControllerTests {
     }
 
     @Test
+    void teacherCanReturnSubmittedLabReport() throws Exception {
+        when(labService.returnReport(any(CurrentUser.class), anyLong())).thenReturn(Map.of(
+                "submissionId", 5L,
+                "status", "SAVED",
+                "labId", 1001L,
+                "studentId", 2L
+        ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/lab-reports/{id}/return", 5L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionId").value(5))
+                    .andExpect(jsonPath("$.data.status").value("SAVED"))
+                    .andExpect(jsonPath("$.data.labId").value(1001))
+                    .andExpect(jsonPath("$.data.studentId").value(2));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCanReadLabReportList() throws Exception {
         when(labService.listTeacherReports(any(CurrentUser.class), any(LabRequests.TeacherLabReportQuery.class))).thenReturn(List.of(Map.of(
                 "id", 1,

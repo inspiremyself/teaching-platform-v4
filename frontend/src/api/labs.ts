@@ -12,6 +12,7 @@ import type {
   LabReportItem,
   LabReportQuery,
   LabSubmissionOverview,
+  ReturnLabReportResult,
   StudentLabSubmissionItem,
   TeacherLabReportView,
   LabStepItem,
@@ -79,6 +80,9 @@ export const getTeacherLabItemAnswers = (labId: number | string, itemId: number 
 
 export const gradeTeacherLabReport = (reportId: number | string, data: GradeLabReportPayload) =>
   request.post<void>(`/teacher/lab-reports/${reportId}/grade`, data);
+
+export const returnTeacherLabReport = (reportId: number | string) =>
+  request.post<ReturnLabReportResult>(`/teacher/lab-reports/${reportId}/return`);
 
 export const confirmTeacherLabStepScore = (reportId: number | string, data: ConfirmLabStepScorePayload) =>
   request.post<void>(`/teacher/lab-reports/${reportId}/confirm-step-score`, data);

@@ -1831,6 +1831,223 @@ class LabServiceTests {
     }
 
     @Test
+    void returnSubmittedReportResetsStatusAndClearsScoring() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", "{\"keywords\":[{\"term\":\"架构\",\"weight\":10}],\"commentTemplate\":\"请教师确认\"}", 20);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("架构设计说明", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("待打回小结")).get("submissionId")).longValue();
+        LabSubmission beforeReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer beforeAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+
+        assertThat(beforeReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(beforeReturn.getSubmittedAt()).isNotNull();
+        assertThat(beforeAnswer.getSuggestedScore()).isNotNull();
+
+        Map<String, Object> result = labService.returnReport(teacherUser(), submissionId);
+
+        LabSubmission afterReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer afterAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+
+        assertThat(result).containsEntry("status", "SAVED")
+                .containsEntry("submissionId", submissionId)
+                .containsEntry("labId", labId)
+                .containsEntry("studentId", studentUser().id());
+        assertThat(afterReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(afterReturn.getSubmittedAt()).isNull();
+        assertThat(afterReturn.getGradedAt()).isNull();
+        assertThat(afterReturn.getTotalScore()).isEqualTo(0D);
+        assertThat(afterReturn.getSummaryText()).isEqualTo("待打回小结");
+        assertThat(afterAnswer.getAnswerText()).isEqualTo("架构设计说明");
+        assertThat(afterAnswer.getAutoScore()).isNull();
+        assertThat(afterAnswer.getSuggestedScore()).isNull();
+        assertThat(afterAnswer.getScore()).isNull();
+        assertThat(afterAnswer.getScoreSource()).isEqualTo("TEACHER");
+    }
+
+    @Test
+    void returnReportRejectsNonSubmittedStatusesAndClosedOrDraftLab() {
+        Long classId = seedClass(teacherUser().id());
+        Long publishedLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long closedLabId = seedLab(classId, ActivityStatus.CLOSED, teacherUser().id());
+        Long draftLabId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        Long stepId = seedStep(publishedLabId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), publishedLabId, stepId, new LabRequests.SaveStepAnswerRequest("saved only", null));
+        LabSubmission savedSubmission = labSubmissionRepository.findByLabIdAndStudentId(publishedLabId, studentUser().id()).orElseThrow();
+
+        assertThatThrownBy(() -> labService.returnReport(teacherUser(), savedSubmission.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("仅已提交且未批改完成的报告可打回");
+
+        Long submittedId = ((Number) labService.submitLab(studentUser(), publishedLabId, new LabRequests.SubmitLabRequest("已提交小结")).get("submissionId")).longValue();
+        LabSubmission gradedSubmission = labSubmissionRepository.findById(submittedId).orElseThrow();
+        gradedSubmission.setSubmitStatus(SubmissionStatus.GRADED);
+        labSubmissionRepository.saveAndFlush(gradedSubmission);
+
+        assertThatThrownBy(() -> labService.returnReport(teacherUser(), submittedId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("仅已提交且未批改完成的报告可打回");
+
+        Long closedStepId = seedCodeStepWithSnapshot(closedLabId, 1);
+        Long closedSubmissionId = seedSubmittedReportOnPublishedLabThenClose(closedLabId, closedStepId, "关闭实验小结");
+        assertThatThrownBy(() -> labService.returnReport(teacherUser(), closedSubmissionId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验已关闭，不能打回");
+
+        Long draftStepId = seedCodeStepWithSnapshot(draftLabId, 1);
+        Long draftSubmissionId = seedSubmittedReportOnPublishedLabThenDraft(draftLabId, draftStepId, "草稿实验小结");
+        assertThatThrownBy(() -> labService.returnReport(teacherUser(), draftSubmissionId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验未发布，不能打回");
+    }
+
+    @Test
+    void returnReportClearsPartialTeacherConfirmedScores() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long firstStepId = seedStep(labId, 1, "TEXT", "{}", "{\"keywords\":[{\"term\":\"架构\",\"weight\":10}],\"commentTemplate\":\"请教师确认\"}", 10);
+        Long secondStepId = seedStep(labId, 2, "TEXT", "{}", "{\"keywords\":[{\"term\":\"分层\",\"weight\":10}],\"commentTemplate\":\"请教师确认\"}", 10);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, firstStepId, new LabRequests.SaveStepAnswerRequest("架构分析", null));
+        labService.saveAnswer(studentUser(), labId, secondStepId, new LabRequests.SaveStepAnswerRequest("分层设计", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("部分确认小结")).get("submissionId")).longValue();
+        LabStepAnswer firstAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, firstStepId).orElseThrow();
+
+        labService.confirmStepScore(
+                teacherUser(),
+                submissionId,
+                new LabRequests.ConfirmStepScoreRequest(firstAnswer.getId(), 9D, "先确认第一题", false)
+        );
+
+        LabSubmission beforeReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer confirmedAnswer = labStepAnswerRepository.findById(firstAnswer.getId()).orElseThrow();
+
+        assertThat(beforeReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(confirmedAnswer.getScore()).isEqualTo(9D);
+        assertThat(confirmedAnswer.getTeacherComment()).isEqualTo("先确认第一题");
+
+        labService.returnReport(teacherUser(), submissionId);
+
+        LabSubmission afterReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer clearedAnswer = labStepAnswerRepository.findById(firstAnswer.getId()).orElseThrow();
+
+        assertThat(afterReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(clearedAnswer.getScore()).isNull();
+        assertThat(clearedAnswer.getTeacherComment()).isEmpty();
+        assertThat(clearedAnswer.getScoreSource()).isEqualTo("TEACHER");
+    }
+
+    @Test
+    void returnReportAllowsStudentToSaveAndResubmit() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedCodeStepWithSnapshot(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("通过 scoring engine 复用评分策略", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("初稿小结")).get("submissionId")).longValue();
+        assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+
+        labService.returnReport(teacherUser(), submissionId);
+
+        Map<String, Object> saveResult = labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest("修订后 scoring engine 复用评分策略", null)
+        );
+        Map<String, Object> submitResult = labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("修订后小结"));
+
+        LabSubmission resubmitted = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+
+        assertThat(saveResult.get("submissionStatus")).isEqualTo("SAVED");
+        assertThat(submitResult.get("status")).isEqualTo("SUBMITTED");
+        assertThat(resubmitted.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(resubmitted.getSubmittedAt()).isNotNull();
+        assertThat(resubmitted.getSummaryText()).isEqualTo("修订后小结");
+        assertThat(answer.getAnswerText()).isEqualTo("修订后 scoring engine 复用评分策略");
+    }
+
+    @Test
+    void returnReportRejectsTeacherWhoDidNotCreateLab() {
+        Long ownerTeacherId = teacherUser().id();
+        Long coTeacherId = ownerTeacherId + 101L;
+        CurrentUser coTeacher = new CurrentUser(coTeacherId, "co-teacher-return", "共班教师", UserRole.TEACHER);
+        seedStudentAccount(coTeacher);
+
+        Long classId = seedClass(ownerTeacherId);
+        jdbcTemplate.update(
+                "UPDATE class_room SET teacher_user_id = ? WHERE id = ?",
+                coTeacherId,
+                classId
+        );
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, ownerTeacherId);
+        Long stepId = seedCodeStepWithSnapshot(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("通过 scoring engine 复用评分策略", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("越权打回小结")).get("submissionId")).longValue();
+
+        assertThatThrownBy(() -> labService.returnReport(coTeacher, submissionId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限访问该实验");
+    }
+
+    @Test
+    void returnReportRejectsDuplicateReturn() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedCodeStepWithSnapshot(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("通过 scoring engine 复用评分策略", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("小结")).get("submissionId")).longValue();
+        assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+
+        labService.returnReport(teacherUser(), submissionId);
+
+        assertThatThrownBy(() -> labService.returnReport(teacherUser(), submissionId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("仅已提交且未批改完成的报告可打回");
+    }
+
+    private Long seedSubmittedReportOnPublishedLabThenClose(Long labId, Long stepId, String summaryText) {
+        labService.changeLabStatus(teacherUser(), labId, new LabRequests.ChangeLabStatusRequest("PUBLISHED"));
+        Long submissionId = seedSubmittedReport(labId, stepId, summaryText);
+        labService.changeLabStatus(teacherUser(), labId, new LabRequests.ChangeLabStatusRequest("CLOSED"));
+        return submissionId;
+    }
+
+    private Long seedSubmittedReportOnPublishedLabThenDraft(Long labId, Long stepId, String summaryText) {
+        labService.changeLabStatus(teacherUser(), labId, new LabRequests.ChangeLabStatusRequest("PUBLISHED"));
+        Long submissionId = seedSubmittedReport(labId, stepId, summaryText);
+        labService.changeLabStatus(teacherUser(), labId, new LabRequests.ChangeLabStatusRequest("DRAFT"));
+        return submissionId;
+    }
+
+    private Long seedSubmittedReport(Long labId, Long stepId, String summaryText) {
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest("通过 scoring engine 复用评分策略", null)
+        );
+        return ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest(summaryText)).get("submissionId")).longValue();
+    }
+
+    @Test
     void seededPublishedEditableFillBlankLabSupportsTeacherAndStudentFlows() {
         CurrentUser seededStudent = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
         List<Map<String, Object>> studentLabs = labService.listStudentLabs(seededStudent);

@@ -154,6 +154,16 @@
                 提交总览
               </el-button>
               <el-button plain @click="goBlankRegradeBatch(row.labId)">批量重判（填空）</el-button>
+              <el-button
+                v-if="row.submitStatus === 'SUBMITTED'"
+                type="warning"
+                plain
+                :disabled="returningId !== null"
+                :loading="returningId === row.id"
+                @click="handleReturn(row)"
+              >
+                打回
+              </el-button>
             </div>
           </article>
         </template>
@@ -166,11 +176,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { listTeacherLabReports, listTeacherLabs } from '@/api/labs';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { listTeacherLabReports, listTeacherLabs, returnTeacherLabReport } from '@/api/labs';
 import type { LabItem, LabReportItem, LabReportStatus } from '@/types/lab';
 
 const router = useRouter();
 const loading = ref(false);
+const returningId = ref<number | null>(null);
 const rows = ref<LabReportItem[]>([]);
 const teacherLabs = ref<LabItem[]>([]);
 const query = reactive({
@@ -218,6 +230,27 @@ const goDetail = (reportId: number) => {
 
 const goBatchGrade = (reportId: number) => {
   router.push(`/teacher/lab-reports/${reportId}/batch-grade`);
+};
+
+const handleReturn = async (row: LabReportItem) => {
+  if (returningId.value !== null) {
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm('打回后学生可修改作答并重新提交，是否继续？', '打回确认', { type: 'warning' });
+  } catch {
+    return;
+  }
+
+  returningId.value = row.id;
+  try {
+    await returnTeacherLabReport(row.id);
+    ElMessage.success('已打回，学生可重新编辑提交');
+    await fetchData();
+  } finally {
+    returningId.value = null;
+  }
 };
 
 const goBlankRegrade = (labId?: number) => {

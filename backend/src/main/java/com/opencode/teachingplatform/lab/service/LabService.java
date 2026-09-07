@@ -823,6 +823,53 @@ public class LabService {
         );
     }
 
+    @Transactional
+    /**
+     * 教师将单条已提交实验报告打回至可编辑草稿态。
+     *
+     * <p>保留学生作答内容，清除提交时间与自动/逐步确认的评分痕迹，使学生可再次保存并提交。</p>
+     */
+    public Map<String, Object> returnReport(CurrentUser currentUser, Long reportId) {
+        requireTeacher(currentUser);
+        LabSubmission submission = labSubmissionRepository.findById(reportId)
+                .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
+        Lab lab = ownedLab(currentUser, submission.getLabId());
+        if (lab.getStatus() == ActivityStatus.CLOSED) {
+            throw new BusinessException(40000, "实验已关闭，不能打回");
+        }
+        if (lab.getStatus() == ActivityStatus.DRAFT) {
+            throw new BusinessException(40000, "实验未发布，不能打回");
+        }
+        if (submission.getSubmitStatus() != SubmissionStatus.SUBMITTED) {
+            throw new BusinessException(40000, "仅已提交且未批改完成的报告可打回");
+        }
+
+        List<LabStepAnswer> answers = labStepAnswerRepository.findByLabSubmissionId(submission.getId());
+        for (LabStepAnswer answer : answers) {
+            answer.setAutoScore(null);
+            answer.setSuggestedScore(null);
+            answer.setScore(null);
+            answer.setScoreSource("TEACHER");
+            answer.setAutoJudgeDetail(null);
+            answer.setTeacherComment("");
+            answer.setAcceptedAutoScore(false);
+        }
+        if (!answers.isEmpty()) {
+            labStepAnswerRepository.saveAll(answers);
+        }
+
+        submission.setSubmittedAt(null);
+        submission.setTeacherComment("");
+        refreshSavedSubmissionAfterScoring(submission);
+
+        return Map.of(
+                "submissionId", submission.getId(),
+                "status", submission.getSubmitStatus().name(),
+                "labId", lab.getId(),
+                "studentId", submission.getStudentId()
+        );
+    }
+
     private void requireTeacher(CurrentUser currentUser) {
         if (currentUser.role() != UserRole.TEACHER) {
             throw new BusinessException(40300, "无教师权限");
