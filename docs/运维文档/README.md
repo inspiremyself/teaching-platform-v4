@@ -6,6 +6,7 @@
 |------|------|------|
 | [2026-09-04-路径A-Docker-Compose整站启动.md](./2026-09-04-路径A-Docker-Compose整站启动.md) | MySQL + 后端 + 前端三容器 | `scripts/path-a/` |
 | [2026-09-04-路径B-本地开发H2启动.md](./2026-09-04-路径B-本地开发H2启动.md) | 本地联调；H2 **文件库**持久化 | `scripts/path-b/`、`scripts/common/` |
+| [2026-09-07-路径B-添加教师账号.md](./2026-09-07-路径B-添加教师账号.md) | 路径 B 已启动时新增教师账号 | `scripts/common/create-teacher.sh` |
 
 ## 快速示例
 
@@ -18,6 +19,12 @@
 # 路径 B（两个终端）
 ./scripts/path-b/backend.sh
 ./scripts/path-b/frontend.sh
+
+# 路径 B：新增教师（后端须已启动）
+./scripts/common/create-teacher.sh \
+  --username teacher-260806 \
+  --password 123456 \
+  --display-name '王老师-leon'
 ```
 
 日常开发优先路径 B；验收/整站演示用路径 A。二者勿并行占用同一组端口（`8080` / `5173`）。
