@@ -1,9 +1,12 @@
 package com.opencode.teachingplatform.analysis;
 
 import com.opencode.teachingplatform.auth.entity.SysUser;
+import com.opencode.teachingplatform.auth.repository.SysUserRepository;
+import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
+import com.opencode.teachingplatform.testsupport.IntegrationTestAuthSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,12 @@ class AnalysisControllerTests {
     @Autowired
     private JwtTokenService jwtTokenService;
 
+    @Autowired
+    private SysUserRepository sysUserRepository;
+
+    @Autowired
+    private UserLoginSessionRepository userLoginSessionRepository;
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
@@ -50,7 +59,12 @@ class AnalysisControllerTests {
                 .andExpect(jsonPath("$.data.summaryCards[0].value").isNumber())
                 .andExpect(jsonPath("$.data.trend").isArray())
                 .andExpect(jsonPath("$.data.recentTasks").isArray())
-                .andExpect(jsonPath("$.data.quickLinks").isArray());
+                .andExpect(jsonPath("$.data.quickLinks").isArray())
+                .andExpect(jsonPath("$.data.summaryCards[0].value").value(9))
+                .andExpect(jsonPath("$.data.summaryCards[1].key").value("pendingGradeCount"))
+                .andExpect(jsonPath("$.data.summaryCards[1].value").value(3))
+                .andExpect(jsonPath("$.data.quickLinks[1].label").value("实验报告批改"))
+                .andExpect(jsonPath("$.data.quickLinks[1].badge").value(1));
     }
 
     @Test
@@ -84,7 +98,13 @@ class AnalysisControllerTests {
                 .andExpect(jsonPath("$.data.summaryCards").isArray())
                 .andExpect(jsonPath("$.data.upcomingTasks").isArray())
                 .andExpect(jsonPath("$.data.recentMaterials").isArray())
-                .andExpect(jsonPath("$.data.quickLinks").isArray());
+                .andExpect(jsonPath("$.data.quickLinks").isArray())
+                .andExpect(jsonPath("$.data.summaryCards[0].key").value("pendingTasks"))
+                .andExpect(jsonPath("$.data.summaryCards[0].value").value(1))
+                .andExpect(jsonPath("$.data.upcomingTasks[?(@.type=='实验')].title")
+                        .value(org.hamcrest.Matchers.hasItem("实验模块联调填空实验")))
+                .andExpect(jsonPath("$.data.quickLinks[0].label").value("我的实验"))
+                .andExpect(jsonPath("$.data.quickLinks[0].badge").value(1));
     }
 
     @Test
@@ -277,7 +297,12 @@ class AnalysisControllerTests {
     }
 
     private String bearerToken(SysUser user) {
-        return "Bearer " + jwtTokenService.issueToken(user);
+        return IntegrationTestAuthSupport.bearerToken(
+                jwtTokenService,
+                sysUserRepository,
+                userLoginSessionRepository,
+                user.getId()
+        );
     }
 
     private SysUser teacherUser(Long id, String username, String displayName) {

@@ -1,12 +1,15 @@
 package com.opencode.teachingplatform.material;
 
 import com.opencode.teachingplatform.auth.entity.SysUser;
+import com.opencode.teachingplatform.auth.repository.SysUserRepository;
+import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
 import com.opencode.teachingplatform.common.file.SeedMaterialInitializer;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
 import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import com.opencode.teachingplatform.material.repository.CourseMaterialRepository;
+import com.opencode.teachingplatform.testsupport.IntegrationTestAuthSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -59,6 +62,12 @@ class MaterialControllerTests {
 
     @Autowired
     private JwtTokenService jwtTokenService;
+
+    @Autowired
+    private SysUserRepository sysUserRepository;
+
+    @Autowired
+    private UserLoginSessionRepository userLoginSessionRepository;
 
     @Autowired
     private SeedMaterialInitializer seedMaterialInitializer;
@@ -248,7 +257,12 @@ class MaterialControllerTests {
     }
 
     private String bearerToken(SysUser user) {
-        return "Bearer " + jwtTokenService.issueToken(user);
+        return IntegrationTestAuthSupport.bearerToken(
+                jwtTokenService,
+                sysUserRepository,
+                userLoginSessionRepository,
+                user.getId()
+        );
     }
 
     private SysUser teacherUser(Long id, String username, String displayName) {

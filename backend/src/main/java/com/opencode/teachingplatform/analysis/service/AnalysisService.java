@@ -30,14 +30,15 @@ public class AnalysisService {
         Long teacherId = teacher.id();
 
         // activityCount: labs + homeworks + exams created by this teacher
-        int labCount = count("SELECT COUNT(*) FROM lab WHERE created_by = ?", teacherId);
+        int labCount = count("SELECT COUNT(*) FROM t_experiment WHERE created_by = ?", teacherId);
         int homeworkCount = count("SELECT COUNT(*) FROM homework WHERE created_by = ?", teacherId);
         int examCount = count("SELECT COUNT(*) FROM exam WHERE created_by = ?", teacherId);
         int activityCount = labCount + homeworkCount + examCount;
 
-        // pendingGradeCount: SUBMITTED lab_submissions + homework_submissions + exam_submissions for teacher's activities
+        // pendingGradeCount: SUBMITTED experiment_submissions + homework_submissions + exam_submissions for teacher's activities
         int pendingLab = count(
-                "SELECT COUNT(*) FROM lab_submission ls JOIN lab l ON ls.lab_id = l.id WHERE l.created_by = ? AND ls.submit_status = 'SUBMITTED'",
+                "SELECT COUNT(*) FROM experiment_submission es JOIN t_experiment e ON es.experiment_id = e.experiment_id " +
+                        "WHERE e.created_by = ? AND es.submit_status = 'SUBMITTED'",
                 teacherId);
         int pendingHomework = count(
                 "SELECT COUNT(*) FROM homework_submission hs JOIN homework h ON hs.homework_id = h.id WHERE h.created_by = ? AND hs.submit_status = 'SUBMITTED'",
@@ -183,13 +184,16 @@ public class AnalysisService {
                 student.id()
         );
         int totalItems = count(
-                "SELECT COUNT(*) FROM lab l JOIN class_member cm ON cm.class_id = l.class_id WHERE cm.student_user_id = ?",
+                "SELECT COUNT(*) FROM t_experiment e JOIN class_member cm ON cm.class_id = e.class_id " +
+                        "WHERE cm.student_user_id = ? AND e.status = 'PUBLISHED'",
                 student.id()
         ) + count(
-                "SELECT COUNT(*) FROM homework h JOIN class_member cm ON cm.class_id = h.class_id WHERE cm.student_user_id = ?",
+                "SELECT COUNT(*) FROM homework h JOIN class_member cm ON cm.class_id = h.class_id " +
+                        "WHERE cm.student_user_id = ? AND h.status = 'PUBLISHED'",
                 student.id()
         ) + count(
-                "SELECT COUNT(*) FROM exam e JOIN class_member cm ON cm.class_id = e.class_id WHERE cm.student_user_id = ?",
+                "SELECT COUNT(*) FROM exam ex JOIN class_member cm ON cm.class_id = ex.class_id " +
+                        "WHERE cm.student_user_id = ? AND ex.status = 'PUBLISHED'",
                 student.id()
         );
 
@@ -244,19 +248,22 @@ public class AnalysisService {
 
         int materialCount = count("SELECT COUNT(*) FROM course_material WHERE visibility = 'ALL'");
         int pendingLabCount = count(
-                "SELECT COUNT(*) FROM lab l JOIN class_member cm ON cm.class_id = l.class_id " +
-                        "LEFT JOIN lab_submission ls ON ls.lab_id = l.id AND ls.student_id = cm.student_user_id " +
-                        "WHERE cm.student_user_id = ? AND l.status = 'PUBLISHED' AND (ls.id IS NULL OR ls.submit_status <> 'SUBMITTED')",
+                "SELECT COUNT(*) FROM t_experiment e JOIN class_member cm ON cm.class_id = e.class_id " +
+                        "LEFT JOIN experiment_submission es ON es.experiment_id = e.experiment_id AND es.student_id = cm.student_user_id " +
+                        "WHERE cm.student_user_id = ? AND e.status = 'PUBLISHED' " +
+                        "AND (es.id IS NULL OR es.submit_status NOT IN ('SUBMITTED', 'GRADED'))",
                 studentId);
         int pendingHomeworkCount = count(
                 "SELECT COUNT(*) FROM homework h JOIN class_member cm ON cm.class_id = h.class_id " +
                         "LEFT JOIN homework_submission hs ON hs.homework_id = h.id AND hs.student_id = cm.student_user_id " +
-                        "WHERE cm.student_user_id = ? AND h.status = 'PUBLISHED' AND (hs.id IS NULL OR hs.submit_status <> 'SUBMITTED')",
+                        "WHERE cm.student_user_id = ? AND h.status = 'PUBLISHED' " +
+                        "AND (hs.id IS NULL OR hs.submit_status NOT IN ('SUBMITTED', 'GRADED'))",
                 studentId);
         int pendingExamCount = count(
-                "SELECT COUNT(*) FROM exam e JOIN class_member cm ON cm.class_id = e.class_id " +
-                        "LEFT JOIN exam_submission es ON es.exam_id = e.id AND es.student_id = cm.student_user_id " +
-                        "WHERE cm.student_user_id = ? AND e.status = 'PUBLISHED' AND (es.id IS NULL OR es.status NOT IN ('SUBMITTED', 'AUTO_SUBMITTED'))",
+                "SELECT COUNT(*) FROM exam ex JOIN class_member cm ON cm.class_id = ex.class_id " +
+                        "LEFT JOIN exam_submission exs ON exs.exam_id = ex.id AND exs.student_id = cm.student_user_id " +
+                        "WHERE cm.student_user_id = ? AND ex.status = 'PUBLISHED' " +
+                        "AND (exs.id IS NULL OR exs.status NOT IN ('SUBMITTED', 'AUTO_SUBMITTED', 'GRADED'))",
                 studentId);
         int pendingTaskCount = pendingLabCount + pendingHomeworkCount + pendingExamCount;
 
@@ -295,7 +302,7 @@ public class AnalysisService {
 
     private String lookupBusinessName(BusinessType type, Long businessId) {
         String sql = switch (type) {
-            case LAB -> "SELECT title FROM lab WHERE id = ?";
+            case LAB -> "SELECT experiment_name FROM t_experiment WHERE experiment_id = ?";
             case HOMEWORK -> "SELECT title FROM homework WHERE id = ?";
             case EXAM -> "SELECT title FROM exam WHERE id = ?";
         };
@@ -351,9 +358,10 @@ public class AnalysisService {
     private List<Map<String, Object>> buildTeacherRecentTasks(Long teacherId) {
         List<Map<String, Object>> tasks = new ArrayList<>();
         tasks.addAll(jdbcTemplate.query(
-                "SELECT ls.submitted_at AS event_time, l.title AS title, u.display_name AS actor " +
-                        "FROM lab_submission ls JOIN lab l ON ls.lab_id = l.id JOIN sys_user u ON u.id = ls.student_id " +
-                        "WHERE l.created_by = ? AND ls.submit_status = 'SUBMITTED'",
+                "SELECT es.submitted_at AS event_time, e.experiment_name AS title, u.display_name AS actor " +
+                        "FROM experiment_submission es JOIN t_experiment e ON es.experiment_id = e.experiment_id " +
+                        "JOIN sys_user u ON u.id = es.student_id " +
+                        "WHERE e.created_by = ? AND es.submit_status = 'SUBMITTED'",
                 (rs, rowNum) -> teacherTask("实验报告待批改", rs.getString("title"), rs.getString("actor"), rs.getObject("event_time", OffsetDateTime.class), "/teacher/lab-reports"),
                 teacherId
         ));
@@ -390,23 +398,26 @@ public class AnalysisService {
     private List<Map<String, Object>> buildStudentUpcomingTasks(Long studentId) {
         List<Map<String, Object>> tasks = new ArrayList<>();
         tasks.addAll(jdbcTemplate.query(
-                "SELECT l.title, l.end_at AS due_at FROM lab l JOIN class_member cm ON cm.class_id = l.class_id " +
-                        "LEFT JOIN lab_submission ls ON ls.lab_id = l.id AND ls.student_id = cm.student_user_id " +
-                        "WHERE cm.student_user_id = ? AND l.status = 'PUBLISHED' AND (ls.id IS NULL OR ls.submit_status <> 'SUBMITTED')",
+                "SELECT e.experiment_name AS title, e.end_at AS due_at FROM t_experiment e JOIN class_member cm ON cm.class_id = e.class_id " +
+                        "LEFT JOIN experiment_submission es ON es.experiment_id = e.experiment_id AND es.student_id = cm.student_user_id " +
+                        "WHERE cm.student_user_id = ? AND e.status = 'PUBLISHED' " +
+                        "AND (es.id IS NULL OR es.submit_status NOT IN ('SUBMITTED', 'GRADED'))",
                 (rs, rowNum) -> studentTask("实验", rs.getString("title"), rs.getObject("due_at", OffsetDateTime.class), "/student/labs"),
                 studentId
         ));
         tasks.addAll(jdbcTemplate.query(
                 "SELECT h.title, h.due_at AS due_at FROM homework h JOIN class_member cm ON cm.class_id = h.class_id " +
                         "LEFT JOIN homework_submission hs ON hs.homework_id = h.id AND hs.student_id = cm.student_user_id " +
-                        "WHERE cm.student_user_id = ? AND h.status = 'PUBLISHED' AND (hs.id IS NULL OR hs.submit_status <> 'SUBMITTED')",
+                        "WHERE cm.student_user_id = ? AND h.status = 'PUBLISHED' " +
+                        "AND (hs.id IS NULL OR hs.submit_status NOT IN ('SUBMITTED', 'GRADED'))",
                 (rs, rowNum) -> studentTask("作业", rs.getString("title"), rs.getObject("due_at", OffsetDateTime.class), "/student/homeworks"),
                 studentId
         ));
         tasks.addAll(jdbcTemplate.query(
-                "SELECT e.title, e.end_at AS due_at FROM exam e JOIN class_member cm ON cm.class_id = e.class_id " +
-                        "LEFT JOIN exam_submission es ON es.exam_id = e.id AND es.student_id = cm.student_user_id " +
-                        "WHERE cm.student_user_id = ? AND e.status = 'PUBLISHED' AND (es.id IS NULL OR es.status NOT IN ('SUBMITTED', 'AUTO_SUBMITTED'))",
+                "SELECT ex.title, ex.end_at AS due_at FROM exam ex JOIN class_member cm ON cm.class_id = ex.class_id " +
+                        "LEFT JOIN exam_submission exs ON exs.exam_id = ex.id AND exs.student_id = cm.student_user_id " +
+                        "WHERE cm.student_user_id = ? AND ex.status = 'PUBLISHED' " +
+                        "AND (exs.id IS NULL OR exs.status NOT IN ('SUBMITTED', 'AUTO_SUBMITTED', 'GRADED'))",
                 (rs, rowNum) -> studentTask("考试", rs.getString("title"), rs.getObject("due_at", OffsetDateTime.class), "/student/exams"),
                 studentId
         ));

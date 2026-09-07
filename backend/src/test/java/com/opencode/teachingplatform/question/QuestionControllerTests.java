@@ -1,11 +1,14 @@
 package com.opencode.teachingplatform.question;
 
 import com.opencode.teachingplatform.auth.entity.SysUser;
+import com.opencode.teachingplatform.auth.repository.SysUserRepository;
+import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
+import com.opencode.teachingplatform.testsupport.IntegrationTestAuthSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +42,12 @@ class QuestionControllerTests {
 
     @Autowired
     private JwtTokenService jwtTokenService;
+
+    @Autowired
+    private SysUserRepository sysUserRepository;
+
+    @Autowired
+    private UserLoginSessionRepository userLoginSessionRepository;
 
     @AfterEach
     void tearDown() {
@@ -301,7 +310,12 @@ class QuestionControllerTests {
     }
 
     private String bearerToken(SysUser user) {
-        return "Bearer " + jwtTokenService.issueToken(user);
+        return IntegrationTestAuthSupport.bearerToken(
+                jwtTokenService,
+                sysUserRepository,
+                userLoginSessionRepository,
+                user.getId()
+        );
     }
 
     private SysUser teacherUser(Long id, String username, String displayName) {
