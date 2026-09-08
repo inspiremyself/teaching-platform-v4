@@ -1293,6 +1293,77 @@ class LabServiceTests {
     }
 
     @Test
+    void submitShortAnswerLabStaysSubmittedWithSuggestedScoreOnly() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(
+                labId,
+                1,
+                "SHORT_ANSWER",
+                "{\"keywords\":[{\"term\":\"mkdir\",\"weight\":10}]}",
+                "{}",
+                10
+        );
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("使用 mkdir 创建目录", null));
+        LabStepAnswer savedAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(
+                labSubmissionRepository.findByLabIdAndStudentId(labId, studentUser().id()).orElseThrow().getId(),
+                stepId
+        ).orElseThrow();
+        assertThat(savedAnswer.getScore()).isNull();
+
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("简答命中小结"))
+                .get("submissionId")).longValue();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+        LabSubmission submission = labSubmissionRepository.findById(submissionId).orElseThrow();
+
+        assertThat(answer.getScoreSource()).isEqualTo("SUGGESTED");
+        assertThat(answer.getSuggestedScore()).isEqualTo(10D);
+        assertThat(answer.getAutoScore()).isNull();
+        assertThat(answer.getScore()).isNull();
+        assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(submission.getGradedAt()).isNull();
+        assertThat(submission.getTotalScore()).isEqualTo(0D);
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        )).isNotPresent();
+    }
+
+    @Test
+    void submitShortAnswerLabDoesNotAutoGradeWhenKeywordsMiss() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(
+                labId,
+                1,
+                "SHORT_ANSWER",
+                "{\"keywords\":[{\"term\":\"mkdir\",\"weight\":10}]}",
+                "{}",
+                10
+        );
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("仅描述文件复制操作", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("简答未命中小结"))
+                .get("submissionId")).longValue();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+        LabSubmission submission = labSubmissionRepository.findById(submissionId).orElseThrow();
+
+        assertThat(answer.getScoreSource()).isEqualTo("SUGGESTED");
+        assertThat(answer.getSuggestedScore()).isEqualTo(0D);
+        assertThat(answer.getAutoScore()).isNull();
+        assertThat(answer.getScore()).isNull();
+        assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(submission.getGradedAt()).isNull();
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        )).isNotPresent();
+    }
+
+    @Test
     void submitLabUsesQuestionSnapshotAndOverrideAnswersForFillBlankScoring() {
         Long classId = seedClass(1L);
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
@@ -1417,7 +1488,7 @@ class LabServiceTests {
         LabStepAnswer externalAnswerBefore = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(otherSubmissionId, otherLabItemId).orElseThrow();
         assertThat(targetAnswerBefore.getScore()).isEqualTo(6D);
         assertThat(otherAnswerBefore.getScore()).isEqualTo(10D);
-        assertThat(savedAnswerBefore.getScore()).isEqualTo(0D);
+        assertThat(savedAnswerBefore.getScore()).isNull();
         assertThat(externalAnswerBefore.getScore()).isEqualTo(6D);
 
         Map<String, Object> result = labService.saveBlankAcceptedAnswers(

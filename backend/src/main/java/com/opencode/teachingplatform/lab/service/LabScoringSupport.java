@@ -100,7 +100,7 @@ public class LabScoringSupport {
             case "MULTIPLE_CHOICE" -> QuestionType.MULTIPLE_CHOICE;
             case "TRUE_FALSE" -> QuestionType.TRUE_FALSE;
             case "FILL_BLANK" -> QuestionType.FILL_BLANK;
-            case "TEXT", "SUBJECTIVE", "CODE" -> QuestionType.SUBJECTIVE;
+            case "TEXT", "SUBJECTIVE", "CODE", "SHORT_ANSWER" -> QuestionType.SUBJECTIVE;
             default -> null;
         };
     }

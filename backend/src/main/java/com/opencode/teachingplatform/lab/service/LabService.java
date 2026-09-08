@@ -593,9 +593,6 @@ public class LabService {
         }
         answer.setAnswerText(answerText);
         answer.setAnswerJson(answerPayloadJson);
-        if (answer.getScore() == null) {
-            answer.setScore(0D);
-        }
         LabStepAnswer saved = labStepAnswerRepository.saveAndFlush(answer);
         // 附加保存日志，支持回溯学生在作答过程中的输入快照。
         appendAnswerSnapshot(saved);
@@ -655,9 +652,6 @@ public class LabService {
         LabAnswerImageSupport.TextAnswerPayload updatedPayload = LabAnswerImageSupport.appendImage(currentPayload, uploadedImage);
         answer.setAnswerText(answerText);
         answer.setAnswerJson(LabAnswerImageSupport.canonicalizeTextPayload(objectMapper, answerText, updatedPayload));
-        if (answer.getScore() == null) {
-            answer.setScore(0D);
-        }
         labStepAnswerRepository.save(answer);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("path", storedPath);
@@ -1286,7 +1280,7 @@ public class LabService {
         answer.setAutoJudgeDetail(result.judgeDetail());
         if (result.scoreSource() == ScoreSource.AUTO || result.scoreSource() == ScoreSource.AUTO_ACCEPTED) {
             answer.setScore(result.finalScore());
-        } else if (result.scoreSource() != ScoreSource.TEACHER) {
+        } else {
             answer.setScore(null);
         }
     }
