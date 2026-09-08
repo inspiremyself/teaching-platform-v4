@@ -18,6 +18,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -38,6 +40,91 @@ class AuthControllerTests {
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Test
+    void schoolAdminCanLoginAndReadCurrentUserWithSchoolInfo() throws Exception {
+        when(authService.login(any(com.opencode.teachingplatform.auth.dto.LoginRequest.class))).thenReturn(java.util.Map.of(
+                "token", "admin-token",
+                "user", java.util.Map.of(
+                        "id", 4,
+                        "username", "admin9001",
+                        "displayName", "演示校管",
+                        "role", "SCHOOL_ADMIN",
+                        "schoolId", 1,
+                        "schoolName", "演示学校"
+                ),
+                "permissions", java.util.List.of("CLASS_READ", "CLASS_WRITE")
+        ));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "admin9001",
+                                  "password": "123456",
+                                  "role": "SCHOOL_ADMIN"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.role").value("SCHOOL_ADMIN"))
+                .andExpect(jsonPath("$.data.user.schoolId").value(1))
+                .andExpect(jsonPath("$.data.user.schoolName").value("演示学校"));
+
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                new CurrentUser(4L, "admin9001", "演示校管", UserRole.SCHOOL_ADMIN, 1L, "admin-session"),
+                null,
+                java.util.List.of(new SimpleGrantedAuthority("ROLE_SCHOOL_ADMIN"))
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        try {
+            when(authService.getCurrentUserProfile(any())).thenReturn(java.util.Map.of(
+                    "id", 4,
+                    "username", "admin9001",
+                    "displayName", "演示校管",
+                    "role", "SCHOOL_ADMIN",
+                    "schoolId", 1,
+                    "schoolName", "演示学校",
+                    "mustChangePassword", false,
+                    "permissions", java.util.List.of("CLASS_READ", "CLASS_WRITE")
+            ));
+
+            mockMvc.perform(get("/api/v1/auth/me"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.schoolId").value(1))
+                    .andExpect(jsonPath("$.data.schoolName").value("演示学校"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherPermissionsExcludeClassWriteOnMeEndpoint() throws Exception {
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER),
+                null,
+                java.util.List.of(new SimpleGrantedAuthority("ROLE_TEACHER"))
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+        try {
+            when(authService.getCurrentUserProfile(any())).thenReturn(java.util.Map.of(
+                    "id", 1,
+                    "username", "t9001",
+                    "displayName", "演示教师",
+                    "role", "TEACHER",
+                    "mustChangePassword", false,
+                    "permissions", java.util.List.of("CLASS_READ", "MATERIAL_READ")
+            ));
+
+            mockMvc.perform(get("/api/v1/auth/me"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.permissions").isArray())
+                    .andExpect(jsonPath("$.data.permissions", not(hasItem("CLASS_WRITE"))));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
 
     @Test
     void teacherCanLoginAndReadCurrentUser() throws Exception {

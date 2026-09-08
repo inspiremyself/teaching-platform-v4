@@ -15,6 +15,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value?.role === 'STUDENT') {
       return '/student/dashboard';
     }
+    if (user.value?.role === 'SCHOOL_ADMIN') {
+      return '/admin/dashboard';
+    }
     return '/profile';
   });
 

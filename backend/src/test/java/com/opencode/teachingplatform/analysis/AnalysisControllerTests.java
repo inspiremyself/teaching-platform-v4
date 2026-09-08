@@ -63,8 +63,8 @@ class AnalysisControllerTests {
                 .andExpect(jsonPath("$.data.summaryCards[0].value").value(9))
                 .andExpect(jsonPath("$.data.summaryCards[1].key").value("pendingGradeCount"))
                 .andExpect(jsonPath("$.data.summaryCards[1].value").value(3))
-                .andExpect(jsonPath("$.data.quickLinks[1].label").value("实验报告批改"))
-                .andExpect(jsonPath("$.data.quickLinks[1].badge").value(1));
+                .andExpect(jsonPath("$.data.quickLinks[0].label").value("实验报告批改"))
+                .andExpect(jsonPath("$.data.quickLinks[0].badge").value(1));
     }
 
     @Test

@@ -8,14 +8,21 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "sys_user")
+@Table(
+        name = "sys_user",
+        uniqueConstraints = @UniqueConstraint(name = "uk_sys_user_school_username", columnNames = {"school_id", "username"})
+)
 public class SysUser extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 64)
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
+    @Column(nullable = false, length = 64)
     private String username;
 
     @Column(name = "password_hash", nullable = false)
@@ -50,6 +57,8 @@ public class SysUser extends BaseEntity {
     @Column(length = 1000)
     private String bio;
 
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public String getPasswordHash() { return passwordHash; }

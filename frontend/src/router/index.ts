@@ -9,6 +9,9 @@ const redirectToRoleHome = (role?: string) => {
   if (role === 'STUDENT') {
     return '/student/dashboard';
   }
+  if (role === 'SCHOOL_ADMIN') {
+    return '/admin/dashboard';
+  }
   return '/login';
 };
 
@@ -33,9 +36,9 @@ const router = createRouter({
       meta: { role: 'TEACHER' },
       redirect: '/teacher/dashboard',
       children: [
+        { path: 'classes', redirect: '/teacher/dashboard' },
+        { path: 'students', redirect: '/teacher/dashboard' },
         { path: 'dashboard', name: 'teacher-dashboard', component: () => import('@/views/teacher/Dashboard.vue'), meta: { title: '教师工作台' } },
-        { path: 'classes', name: 'teacher-classes', component: () => import('@/views/teacher/Classes.vue') },
-        { path: 'students', name: 'teacher-students', component: () => import('@/views/teacher/Students.vue') },
         { path: 'students/:studentId/lab-submissions', name: 'teacher-student-lab-submissions', component: () => import('@/views/teacher/StudentLabSubmissions.vue'), meta: { title: '学生实验提交' } },
         { path: 'materials', name: 'teacher-materials', component: () => import('@/views/teacher/Materials.vue') },
         { path: 'questions', name: 'teacher-questions', component: () => import('@/views/teacher/Questions.vue') },
@@ -79,6 +82,19 @@ const router = createRouter({
         { path: 'exams/:id', name: 'student-exam-detail', component: () => import('@/views/student/exams/Detail.vue') },
         { path: 'scores', component: () => import('@/views/student/Scores.vue') }
       ]
+    },
+    {
+      path: '/admin',
+      component: Layout,
+      meta: { role: 'SCHOOL_ADMIN' },
+      redirect: '/admin/dashboard',
+      children: [
+        { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue'), meta: { title: '校管总览' } },
+        { path: 'teachers', name: 'admin-teachers', component: () => import('@/views/admin/Teachers.vue'), meta: { title: '教师管理' } },
+        { path: 'classes', name: 'admin-classes', component: () => import('@/views/admin/Classes.vue'), meta: { title: '班级管理' } },
+        { path: 'students', name: 'admin-students', component: () => import('@/views/admin/Students.vue'), meta: { title: '学生管理' } },
+        { path: 'school', name: 'admin-school', component: () => import('@/views/admin/School.vue'), meta: { title: '学校信息' } },
+      ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' }
   ]

@@ -13,7 +13,7 @@
             <span class="material-symbols-outlined">filter_alt_off</span>
             重置筛选
           </button>
-          <button class="classes-console__primary-button" type="button" @click="openCreateDialog">
+          <button class="classes-console__primary-button" type="button" disabled title="组织维护已迁至校管端">
             <span class="material-symbols-outlined">add</span>
             新建班级
           </button>
@@ -105,7 +105,7 @@
                 <div class="class-row__meta">
                   <span>
                     <span class="material-symbols-outlined">badge</span>
-                    教师账号 #{{ row.teacherUserId }}
+                    {{ assignmentLabel(row) }}
                   </span>
                   <span>
                     <span class="material-symbols-outlined">group</span>
@@ -151,24 +151,9 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="190" align="right" fixed="right">
-          <template #default="{ row }">
-            <div class="class-row__actions">
-              <button class="class-row__icon-button" type="button" title="编辑班级" @click="openEditDialog(row)">
-                <span class="material-symbols-outlined">edit</span>
-              </button>
-              <button
-                class="class-row__icon-button class-row__icon-button--neutral"
-                type="button"
-                :title="row.status === 'ACTIVE' ? '归档班级' : '恢复班级'"
-                @click="toggleStatus(row)"
-              >
-                <span class="material-symbols-outlined">{{ row.status === 'ACTIVE' ? 'archive' : 'restore' }}</span>
-              </button>
-              <button class="class-row__icon-button class-row__icon-button--danger" type="button" title="删除班级" @click="remove(row.id)">
-                <span class="material-symbols-outlined">delete</span>
-              </button>
-            </div>
+        <el-table-column label="操作" width="120" align="right" fixed="right">
+          <template #default>
+            <span class="class-row__readonly-hint">只读</span>
           </template>
         </el-table-column>
 
@@ -185,8 +170,8 @@
                   : '先创建班级后，这里会展示真实班级规模、状态与维护动作。'
               }}
             </p>
-            <button class="classes-console__empty-action" type="button" @click="searchQuery || statusFilter ? resetFilters() : openCreateDialog()">
-              {{ searchQuery || statusFilter ? '重置筛选' : '立即新建班级' }}
+            <button class="classes-console__empty-action" type="button" @click="resetFilters">
+              {{ searchQuery || statusFilter ? '重置筛选' : '刷新列表' }}
             </button>
           </div>
         </template>
@@ -207,34 +192,12 @@
         </div>
       </div>
     </section>
-
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑班级' : '新建班级'" width="480px" class="classes-console__dialog">
-      <el-form label-position="top">
-        <el-form-item label="班级名称">
-          <el-input v-model="form.name" maxlength="128" placeholder="例如：软件工程 2026 级 1 班" />
-        </el-form-item>
-        <el-form-item v-if="!editingId" label="班级代码">
-          <el-input v-model="form.code" maxlength="64" placeholder="例如：SE2026-1" />
-        </el-form-item>
-        <el-form-item v-if="editingId" label="状态">
-          <el-select v-model="form.status" style="width: 100%">
-            <el-option label="启用中" value="ACTIVE" />
-            <el-option label="已归档" value="ARCHIVED" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { ElMessage, ElMessageBox } from 'element-plus';
-import { createClass, deleteClass, listClasses, updateClass } from '@/api/classes';
+import { computed, onMounted, ref, watch } from 'vue';
+import { listClasses } from '@/api/classes';
 import type { ClassStatus, TeachingClass } from '@/types/class';
 
 const PAGE_SIZE = 4;
@@ -255,20 +218,18 @@ const quickStatusOptions: Array<{ label: string; value: '' | ClassStatus }> = [
 ];
 
 const loading = ref(false);
-const submitting = ref(false);
-const dialogVisible = ref(false);
-const editingId = ref<number | null>(null);
 const rows = ref<TeachingClass[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref<ClassStatus | ''>('');
 const activeQuickStatus = ref<'' | ClassStatus>('');
 const currentPage = ref(1);
 
-const form = reactive<{ name: string; code: string; status: ClassStatus }>({
-  name: '',
-  code: '',
-  status: 'ACTIVE',
-});
+const assignmentLabel = (row: TeachingClass) => {
+  const assignment = row.myAssignment;
+  if (!assignment) return '未指派';
+  if (assignment.role === 'HEAD') return '班主任';
+  return assignment.subjectName || '学科教师';
+};
 
 const filteredRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
@@ -343,13 +304,6 @@ watch([filteredRows, totalPages], () => {
   }
 });
 
-const resetForm = () => {
-  form.name = '';
-  form.code = '';
-  form.status = 'ACTIVE';
-  editingId.value = null;
-};
-
 const resetFilters = () => {
   searchQuery.value = '';
   statusFilter.value = '';
@@ -415,68 +369,6 @@ const fetchData = async () => {
     rows.value = res.items;
   } finally {
     loading.value = false;
-  }
-};
-
-const openCreateDialog = () => {
-  resetForm();
-  dialogVisible.value = true;
-};
-
-const openEditDialog = (row: TeachingClass) => {
-  editingId.value = row.id;
-  form.name = row.name;
-  form.code = row.code;
-  form.status = row.status;
-  dialogVisible.value = true;
-};
-
-const submit = async () => {
-  if (!form.name.trim()) {
-    ElMessage.warning('请输入班级名称');
-    return;
-  }
-  if (!editingId.value && !form.code.trim()) {
-    ElMessage.warning('请输入班级代码');
-    return;
-  }
-
-  submitting.value = true;
-  try {
-    if (editingId.value) {
-      await updateClass(editingId.value, { name: form.name.trim(), status: form.status });
-      ElMessage.success('班级更新成功');
-    } else {
-      await createClass({ name: form.name.trim(), code: form.code.trim() });
-      ElMessage.success('班级创建成功');
-    }
-    dialogVisible.value = false;
-    resetForm();
-    await fetchData();
-  } finally {
-    submitting.value = false;
-  }
-};
-
-const toggleStatus = async (row: TeachingClass) => {
-  const nextStatus: ClassStatus = row.status === 'ACTIVE' ? 'ARCHIVED' : 'ACTIVE';
-  await updateClass(row.id, { name: row.name, status: nextStatus });
-  ElMessage.success('班级状态更新成功');
-  await fetchData();
-};
-
-const remove = async (id: number) => {
-  try {
-    await ElMessageBox.confirm(
-      '确认删除该班级吗？请先确保当前班级下没有仍在使用的学生关联。',
-      '删除确认',
-      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
-    );
-    await deleteClass(id);
-    ElMessage.success('班级删除成功');
-    await fetchData();
-  } catch {
-    // cancelled
   }
 };
 
@@ -1008,6 +900,12 @@ onMounted(fetchData);
 .class-row__progress-caption {
   color: #94a3b8;
   font-size: 9px;
+}
+
+.class-row__readonly-hint {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .class-row__actions {

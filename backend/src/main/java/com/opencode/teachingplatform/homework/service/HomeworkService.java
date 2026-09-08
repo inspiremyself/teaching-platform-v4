@@ -15,6 +15,7 @@ import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.clazz.entity.ClassRoom;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
+import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.PlagiarismStatus;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
@@ -58,6 +59,7 @@ public class HomeworkService {
     private final HomeworkQuestionRepository homeworkQuestionRepository;
     private final HomeworkAnswerRepository homeworkAnswerRepository;
     private final ClassRoomRepository classRoomRepository;
+    private final ClassAccessService classAccessService;
     private final ClassMemberRepository classMemberRepository;
     private final SysUserRepository sysUserRepository;
     private final PlagiarismTaskRepository plagiarismTaskRepository;
@@ -72,6 +74,7 @@ public class HomeworkService {
                            HomeworkQuestionRepository homeworkQuestionRepository,
                            HomeworkAnswerRepository homeworkAnswerRepository,
                            ClassRoomRepository classRoomRepository,
+                           ClassAccessService classAccessService,
                            ClassMemberRepository classMemberRepository,
                            SysUserRepository sysUserRepository,
                            PlagiarismTaskRepository plagiarismTaskRepository,
@@ -86,6 +89,7 @@ public class HomeworkService {
         this.homeworkQuestionRepository = homeworkQuestionRepository;
         this.homeworkAnswerRepository = homeworkAnswerRepository;
         this.classRoomRepository = classRoomRepository;
+        this.classAccessService = classAccessService;
         this.classMemberRepository = classMemberRepository;
         this.sysUserRepository = sysUserRepository;
         this.plagiarismTaskRepository = plagiarismTaskRepository;
@@ -107,11 +111,10 @@ public class HomeworkService {
     @Transactional
     public Map<String, Object> createHomework(CurrentUser currentUser, HomeworkRequests.CreateHomeworkRequest request) {
         requireTeacher(currentUser);
-        ClassRoom classRoom = classRoomRepository.findByIdAndTeacherUserId(request.classId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该班级"));
+        classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
         Homework homework = new Homework();
         homework.setCreatedBy(currentUser.id());
-        applyHomework(homework, classRoom.getId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
+        applyHomework(homework, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
 
@@ -119,9 +122,8 @@ public class HomeworkService {
     public Map<String, Object> updateHomework(CurrentUser currentUser, Long homeworkId, HomeworkRequests.UpdateHomeworkRequest request) {
         requireTeacher(currentUser);
         Homework homework = ownedHomework(currentUser, homeworkId);
-        ClassRoom classRoom = classRoomRepository.findByIdAndTeacherUserId(request.classId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该班级"));
-        applyHomework(homework, classRoom.getId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
+        classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
+        applyHomework(homework, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
 
@@ -366,8 +368,7 @@ public class HomeworkService {
     private Homework ownedHomework(CurrentUser currentUser, Long homeworkId) {
         Homework homework = homeworkRepository.findByIdAndCreatedBy(homeworkId, currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该作业"));
-        classRoomRepository.findByIdAndTeacherUserId(homework.getClassId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该班级"));
+        classAccessService.assertTeacherAssignedToClass(currentUser, homework.getClassId());
         return homework;
     }
 

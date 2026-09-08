@@ -11,8 +11,10 @@ import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
 import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
+import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.school.repository.SchoolRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,19 +38,22 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final AuditLogService auditLogService;
+    private final SchoolRepository schoolRepository;
 
     public AuthService(
             SysUserRepository sysUserRepository,
             UserLoginSessionRepository userLoginSessionRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenService jwtTokenService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            SchoolRepository schoolRepository
     ) {
         this.sysUserRepository = sysUserRepository;
         this.userLoginSessionRepository = userLoginSessionRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenService = jwtTokenService;
         this.auditLogService = auditLogService;
+        this.schoolRepository = schoolRepository;
     }
 
     @Transactional
@@ -135,10 +140,16 @@ public class AuthService {
     }
 
     private List<String> permissionsOf(SysUser user) {
-        if (user.getRole().name().equals("TEACHER")) {
-            return List.of("CLASS_READ", "CLASS_WRITE", "LAB_WRITE", "HOMEWORK_WRITE", "EXAM_WRITE", "ANALYSIS_READ");
-        }
-        return List.of("MATERIAL_READ", "LAB_READ", "HOMEWORK_READ", "EXAM_READ", "SCORE_READ");
+        return switch (user.getRole()) {
+            case SCHOOL_ADMIN -> List.of(
+                    "SCHOOL_READ", "SCHOOL_WRITE",
+                    "TEACHER_READ", "TEACHER_WRITE",
+                    "CLASS_READ", "CLASS_WRITE",
+                    "STUDENT_READ", "STUDENT_WRITE"
+            );
+            case TEACHER -> List.of("CLASS_READ", "LAB_WRITE", "HOMEWORK_WRITE", "EXAM_WRITE", "ANALYSIS_READ");
+            case STUDENT -> List.of("MATERIAL_READ", "LAB_READ", "HOMEWORK_READ", "EXAM_READ", "SCORE_READ");
+        };
     }
 
     private Map<String, Object> toUserProfile(SysUser user) {
@@ -147,6 +158,8 @@ public class AuthService {
         profile.put("username", user.getUsername());
         profile.put("displayName", user.getDisplayName());
         profile.put("role", user.getRole().name());
+        profile.put("schoolId", user.getSchoolId());
+        schoolRepository.findById(user.getSchoolId()).ifPresent(school -> profile.put("schoolName", school.getName()));
         profile.put("email", user.getEmail());
         profile.put("phone", user.getPhone());
         profile.put("officeHours", user.getOfficeHours());

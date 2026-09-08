@@ -2,7 +2,9 @@ export interface User {
   id: number;
   username: string;
   displayName: string;
-  role: 'TEACHER' | 'STUDENT';
+  role: 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN';
+  schoolId?: number;
+  schoolName?: string;
   email?: string | null;
   phone?: string | null;
   officeHours?: string | null;
@@ -14,7 +16,7 @@ export interface User {
 export interface LoginDto {
   username: string;
   password: string;
-  role: 'TEACHER' | 'STUDENT';
+  role: 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN';
   forceLogin?: boolean;
 }
 

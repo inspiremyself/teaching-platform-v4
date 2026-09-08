@@ -89,6 +89,16 @@ class AnalysisServiceTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void teacherOverviewOnlyIncludesAssignedClassesViaClassTeacherJoin() {
+        Map<String, Object> overview = analysisService.getTeacherOverview(teacher());
+        List<Map<String, Object>> sectionComparison = (List<Map<String, Object>>) overview.get("sectionComparison");
+
+        assertFalse(sectionComparison.isEmpty());
+        assertTrue(sectionComparison.stream().anyMatch(row -> "软件工程 2026-1 班".equals(row.get("className"))));
+    }
+
+    @Test
     void labBusinessNameResolvesExperimentId() {
         jdbcTemplate.update("UPDATE score_record SET business_id = 1001 WHERE id = -1");
 
@@ -129,11 +139,11 @@ class AnalysisServiceTests {
     }
 
     private static CurrentUser student() {
-        return new CurrentUser(STUDENT_ID, "20260001", "演示学生", UserRole.STUDENT, "test-session");
+        return new CurrentUser(STUDENT_ID, "20260001", "演示学生", UserRole.STUDENT, 1L, "test-session");
     }
 
     private static CurrentUser teacher() {
-        return new CurrentUser(TEACHER_ID, "t9001", "演示教师", UserRole.TEACHER, "test-session");
+        return new CurrentUser(TEACHER_ID, "t9001", "演示教师", UserRole.TEACHER, 1L, "test-session");
     }
 
     @SuppressWarnings("unchecked")

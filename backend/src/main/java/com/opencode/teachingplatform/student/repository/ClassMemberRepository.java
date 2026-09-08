@@ -12,6 +12,7 @@ public interface ClassMemberRepository extends JpaRepository<ClassMember, Long> 
     List<ClassMember> findByClassIdIn(Collection<Long> classIds);
     List<ClassMember> findByStudentUserId(Long studentUserId);
     Optional<ClassMember> findByClassIdAndStudentUserId(Long classId, Long studentUserId);
+    Optional<ClassMember> findFirstByStudentUserId(Long studentUserId);
     long countByClassId(Long classId);
     boolean existsByClassId(Long classId);
 }

@@ -1,16 +1,5 @@
 import request from '@/utils/request';
-import type { PageResult } from '@/types/common';
 import type { TeacherAnalysisOverview } from '@/types/analysis';
-
-export const getClasses = () => request.get<PageResult<any>>('/classes');
-export const createClass = (data: any) => request.post('/classes', data);
-export const updateClass = (id: string | number, data: any) => request.put(`/classes/${id}`, data);
-export const deleteClass = (id: string | number) => request.delete(`/classes/${id}`);
-
-export const getStudents = () => request.get<PageResult<any>>('/students');
-export const createStudent = (data: any) => request.post('/students', data);
-export const importStudents = (data: any) => request.post('/students/import', data);
-export const changeStudentStatus = (id: string | number, data: any) => request.post(`/students/${id}/status`, data);
 
 export const getMaterials = () => request.get<any[]>('/materials');
 export const createMaterial = (data: any) => request.post('/materials', data);

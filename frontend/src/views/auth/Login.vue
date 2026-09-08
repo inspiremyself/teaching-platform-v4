@@ -55,12 +55,14 @@
             <el-radio-group v-model="form.role" class="role-group">
               <el-radio-button value="TEACHER">教师</el-radio-button>
               <el-radio-button value="STUDENT">学生</el-radio-button>
+              <el-radio-button value="SCHOOL_ADMIN">学校管理员</el-radio-button>
             </el-radio-group>
           </el-form-item>
 
           <div class="demo-accounts">
             <button type="button" class="demo-chip" @click="fillDemo('TEACHER')">教师演示账号</button>
             <button type="button" class="demo-chip" @click="fillDemo('STUDENT')">学生演示账号</button>
+            <button type="button" class="demo-chip" @click="fillDemo('SCHOOL_ADMIN')">校管演示账号</button>
           </div>
 
           <el-form-item>
@@ -101,7 +103,7 @@ const errorMessage = ref('');
 const form = reactive({
   username: '',
   password: '',
-  role: 'TEACHER' as 'TEACHER' | 'STUDENT'
+  role: 'TEACHER' as 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN'
 });
 
 const rules = {
@@ -175,9 +177,15 @@ const showPlaceholder = (message: string) => {
   ElMessage.info(message);
 };
 
-const fillDemo = (role: 'TEACHER' | 'STUDENT') => {
+const fillDemo = (role: 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN') => {
   form.role = role;
-  form.username = role === 'TEACHER' ? 't9001' : '20260001';
+  if (role === 'TEACHER') {
+    form.username = 't9001';
+  } else if (role === 'STUDENT') {
+    form.username = '20260001';
+  } else {
+    form.username = 'admin9001';
+  }
   form.password = '123456';
 };
 

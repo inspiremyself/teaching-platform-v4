@@ -13,6 +13,7 @@ import com.opencode.teachingplatform.common.audit.AuditLogService;
 import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
+import com.opencode.teachingplatform.school.repository.SchoolRepository;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,11 +22,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -53,6 +56,9 @@ class AuthServiceTests {
 
     @Mock
     private AuditLogService auditLogService;
+
+    @Mock
+    private SchoolRepository schoolRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -146,6 +152,19 @@ class AuthServiceTests {
         assertEquals("teacher@university.edu", user.getEmail());
         assertNull(user.getPhone());
         assertEquals("周一 14:00-16:00", profile.get("officeHours"));
+    }
+
+    @Test
+    void teacherPermissionsExcludeClassWrite() {
+        SysUser user = activeTeacher();
+        when(sysUserRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> profile = authService.getCurrentUserProfile(new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER));
+
+        assertThat((List<String>) profile.get("permissions"))
+                .contains("CLASS_READ")
+                .doesNotContain("CLASS_WRITE");
     }
 
     private SysUser activeTeacher() {

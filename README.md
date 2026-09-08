@@ -77,11 +77,20 @@ cd frontend && npm install && npm run dev
 
 | 角色 | 用户名 | 密码 |
 |------|--------|------|
+| 学校管理员 | admin9001 | 123456 |
 | 教师 | t9001 | 123456 |
+| 教师 | t9002 | 123456 |
 | 学生 | 20260001 | 123456 |
 
+演示学校：`演示学校`  
 演示班级：`SE2026-1`  
-登录须选择对应身份（教师 / 学生）。
+登录须选择对应身份（学校管理员 / 教师 / 学生）。
+
+可选校管探活：
+
+```bash
+USERNAME=admin9001 ROLE=SCHOOL_ADMIN ./scripts/common/healthcheck-login.sh
+```
 
 ## 项目结构
 

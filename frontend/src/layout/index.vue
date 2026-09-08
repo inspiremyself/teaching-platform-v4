@@ -5,7 +5,7 @@
       <div class="top-navbar-left">
         <div class="brand-logo">
           <span class="material-symbols-outlined brand-icon">school</span>
-          <span class="brand-text">{{ isTeacher ? '教学工作台' : '学习工作台' }}</span>
+          <span class="brand-text">{{ brandText }}</span>
         </div>
       </div>
 
@@ -19,7 +19,7 @@
           <div class="avatar">{{ user?.displayName?.charAt(0) || '?' }}</div>
           <div class="user-profile__meta">
             <strong>{{ user?.displayName || '未登录用户' }}</strong>
-            <span>{{ isTeacher ? '教师空间' : '学生空间' }}</span>
+            <span>{{ spaceLabel }}</span>
           </div>
           <span class="material-symbols-outlined user-profile__arrow">chevron_right</span>
         </button>
@@ -32,33 +32,55 @@
     <div class="layout-body">
       <!-- SideNavBar -->
       <aside class="sidebar">
-        <div class="sidebar-org" v-if="isTeacher">
+        <div class="sidebar-org" v-if="isSchoolAdmin">
           <div class="org-icon">
             <span class="material-symbols-outlined">account_balance</span>
           </div>
           <div>
-            <div class="org-name">教学一体化平台</div>
+            <div class="org-name">{{ user?.schoolName || '学校管理' }}</div>
+            <div class="org-term">学校管理空间</div>
+          </div>
+        </div>
+
+        <div class="sidebar-org" v-else-if="isTeacher">
+          <div class="org-icon">
+            <span class="material-symbols-outlined">account_balance</span>
+          </div>
+          <div>
+            <div class="org-name">{{ user?.schoolName || '教学一体化平台' }}</div>
             <div class="org-term">当前教学周期</div>
           </div>
         </div>
         
         <div class="sidebar-org" v-else>
           <div>
-            <div class="org-name">教学一体化平台</div>
+            <div class="org-name">{{ user?.schoolName || '教学一体化平台' }}</div>
             <div class="org-term">学生学习空间</div>
           </div>
         </div>
 
-        <nav class="sidebar-nav" :aria-label="isTeacher ? '教师端主导航' : '学生端主导航'">
-          <template v-if="isTeacher">
-            <router-link to="/teacher/dashboard" class="nav-item" active-class="nav-active">
+        <nav class="sidebar-nav" :aria-label="sidebarNavLabel">
+          <template v-if="isSchoolAdmin">
+            <router-link to="/admin/dashboard" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">dashboard</span><span>总览</span>
             </router-link>
-            <router-link to="/teacher/classes" class="nav-item" active-class="nav-active">
+            <router-link to="/admin/teachers" class="nav-item" active-class="nav-active">
+              <span class="material-symbols-outlined">badge</span><span>教师管理</span>
+            </router-link>
+            <router-link to="/admin/classes" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">groups</span><span>班级管理</span>
             </router-link>
-            <router-link to="/teacher/students" class="nav-item" active-class="nav-active">
+            <router-link to="/admin/students" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">person</span><span>学生管理</span>
+            </router-link>
+            <router-link to="/admin/school" class="nav-item" active-class="nav-active">
+              <span class="material-symbols-outlined">domain</span><span>学校信息</span>
+            </router-link>
+          </template>
+
+          <template v-else-if="isTeacher">
+            <router-link to="/teacher/dashboard" class="nav-item" active-class="nav-active">
+              <span class="material-symbols-outlined">dashboard</span><span>总览</span>
             </router-link>
             <router-link to="/teacher/materials" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">folder</span><span>教学资料</span>
@@ -156,14 +178,43 @@ const router = useRouter();
 const { user } = storeToRefs(authStore);
 
 const isTeacher = computed(() => user.value?.role === 'TEACHER');
-const themeClass = computed(() => isTeacher.value ? 'theme-teacher' : 'theme-student');
+const isSchoolAdmin = computed(() => user.value?.role === 'SCHOOL_ADMIN');
+const brandText = computed(() => {
+  if (isSchoolAdmin.value) return '学校管理台';
+  if (isTeacher.value) return '教学工作台';
+  return '学习工作台';
+});
+const spaceLabel = computed(() => {
+  if (isSchoolAdmin.value) return '校管空间';
+  if (isTeacher.value) return '教师空间';
+  return '学生空间';
+});
+const sidebarNavLabel = computed(() => {
+  if (isSchoolAdmin.value) return '校管端主导航';
+  if (isTeacher.value) return '教师端主导航';
+  return '学生端主导航';
+});
+const themeClass = computed(() => {
+  if (isSchoolAdmin.value) return 'theme-admin';
+  if (isTeacher.value) return 'theme-teacher';
+  return 'theme-student';
+});
 const mobileNavItems = computed<NavItem[]>(() => {
+  if (isSchoolAdmin.value) {
+    return [
+      { to: '/admin/dashboard', label: '总览', icon: 'dashboard' },
+      { to: '/admin/teachers', label: '教师', icon: 'badge' },
+      { to: '/admin/classes', label: '班级', icon: 'groups' },
+      { to: '/admin/students', label: '学生', icon: 'person' },
+      { to: '/profile', label: '我的', icon: 'settings' },
+    ];
+  }
   if (isTeacher.value) {
     return [
       { to: '/teacher/dashboard', label: '总览', icon: 'dashboard' },
-      { to: '/teacher/classes', label: '班级', icon: 'groups' },
       { to: '/teacher/labs', label: '实验', icon: 'science' },
       { to: '/teacher/homeworks', label: '作业', icon: 'assignment' },
+      { to: '/teacher/exams', label: '考试', icon: 'quiz' },
       { to: '/profile', label: '我的', icon: 'person' },
     ];
   }
@@ -214,6 +265,11 @@ const logout = async () => {
   --primary-color: #0f766e;
   --primary-light: #f0fdfa;
   --primary-border: #0d9488;
+}
+.theme-admin {
+  --primary-color: #7c3aed;
+  --primary-light: #f5f3ff;
+  --primary-border: #8b5cf6;
 }
 .theme-student {
   --primary-color: #1d4ed8;

@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({
         ExamService.class,
         ExamScoringService.class,
+        com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         ScoringEngine.class,
         SingleChoiceScoringStrategy.class,
         MultipleChoiceScoringStrategy.class,
@@ -682,5 +683,52 @@ class ExamServiceTests {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
+    }
+
+    @Test
+    void createExamRejectsUnassignedClass() {
+        CurrentUser unassignedTeacher = new CurrentUser(999L, "t9999", "其他教师", UserRole.TEACHER);
+
+        assertThatThrownBy(() -> examService.createExam(
+                unassignedTeacher,
+                new ExamRequests.CreateExamRequest(
+                        "未授权班级考试",
+                        "应被拒绝",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        "DRAFT",
+                        null,
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0))
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40300);
+    }
+
+    @Test
+    void updateExamRejectsUnassignedClass() {
+        Long examId = createPublishedExamForStudent();
+        CurrentUser unassignedTeacher = new CurrentUser(999L, "t9999", "其他教师", UserRole.TEACHER);
+
+        assertThatThrownBy(() -> examService.updateExam(
+                unassignedTeacher,
+                examId,
+                new ExamRequests.UpdateExamRequest(
+                        "未授权更新",
+                        "应被拒绝",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        null,
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0))
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40300);
     }
 }

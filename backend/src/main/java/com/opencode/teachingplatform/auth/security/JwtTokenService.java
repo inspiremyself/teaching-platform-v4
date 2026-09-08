@@ -39,6 +39,7 @@ public class JwtTokenService {
                 .claim("uid", user.getId())
                 .claim("role", user.getRole().name())
                 .claim("displayName", user.getDisplayName())
+                .claim("schoolId", user.getSchoolId())
                 .claim("sid", sessionKey)
                 .issuedAt(Date.from(issuedAt))
                 .expiration(Date.from(expiresAt))

@@ -50,8 +50,11 @@ public class AnalysisService {
 
         // averageScore: avg score from score_record for teacher's classes
         Double avgScore = jdbcTemplate.queryForObject(
-                "SELECT AVG(sr.score) FROM score_record sr JOIN class_room cr ON sr.class_id = cr.id WHERE cr.teacher_user_id = ?",
-                Double.class, teacherId);
+                "SELECT AVG(sr.score) FROM score_record sr " +
+                        "JOIN class_room cr ON sr.class_id = cr.id " +
+                        "JOIN class_teacher ct ON ct.class_id = cr.id AND ct.teacher_user_id = ? " +
+                        "WHERE cr.school_id = ?",
+                Double.class, teacherId, teacher.schoolId());
         double averageScore = avgScore != null ? Math.round(avgScore * 10.0) / 10.0 : 0.0;
 
         // highRiskPlagiarismCount: similarity_rate > 50
@@ -82,7 +85,6 @@ public class AnalysisService {
         result.put("trend", trend);
         result.put("recentTasks", buildTeacherRecentTasks(teacherId));
         result.put("quickLinks", List.of(
-                quickLink("班级管理", "/teacher/classes", activityCount),
                 quickLink("实验报告批改", "/teacher/lab-reports", pendingLab),
                 quickLink("作业管理", "/teacher/homeworks", pendingHomework),
                 quickLink("考试结果", "/teacher/exams", pendingExam)
@@ -96,7 +98,8 @@ public class AnalysisService {
         List<Map<String, Object>> sectionComparison = jdbcTemplate.query(
                 "SELECT cr.name AS class_name, ROUND(AVG(sr.score), 1) AS avg_score, COUNT(sr.id) AS graded_count " +
                         "FROM score_record sr JOIN class_room cr ON sr.class_id = cr.id " +
-                        "WHERE cr.teacher_user_id = ? GROUP BY cr.id, cr.name ORDER BY avg_score DESC",
+                        "JOIN class_teacher ct ON ct.class_id = cr.id AND ct.teacher_user_id = ? " +
+                        "WHERE cr.school_id = ? GROUP BY cr.id, cr.name ORDER BY avg_score DESC",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("className", rs.getString("class_name"));
@@ -104,13 +107,15 @@ public class AnalysisService {
                     row.put("gradedCount", rs.getInt("graded_count"));
                     return row;
                 },
-                teacher.id()
+                teacher.id(),
+                teacher.schoolId()
         );
 
         List<Map<String, Object>> businessBreakdown = jdbcTemplate.query(
                 "SELECT business_type, ROUND(AVG(score), 1) AS avg_score, COUNT(*) AS score_count " +
                         "FROM score_record sr JOIN class_room cr ON sr.class_id = cr.id " +
-                        "WHERE cr.teacher_user_id = ? GROUP BY business_type ORDER BY business_type",
+                        "JOIN class_teacher ct ON ct.class_id = cr.id AND ct.teacher_user_id = ? " +
+                        "WHERE cr.school_id = ? GROUP BY business_type ORDER BY business_type",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<>();
                     String businessType = rs.getString("business_type");
@@ -120,7 +125,8 @@ public class AnalysisService {
                     row.put("scoreCount", rs.getInt("score_count"));
                     return row;
                 },
-                teacher.id()
+                teacher.id(),
+                teacher.schoolId()
         );
 
         List<Map<String, Object>> insights = new ArrayList<>();

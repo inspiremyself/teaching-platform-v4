@@ -32,6 +32,7 @@ import com.opencode.teachingplatform.exam.repository.ExamSubmissionRepository;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
+import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
@@ -53,6 +54,7 @@ public class ExamService {
     private final QuestionBankRepository questionBankRepository;
     private final ClassMemberRepository classMemberRepository;
     private final ClassRoomRepository classRoomRepository;
+    private final ClassAccessService classAccessService;
     private final ExamScoringService examScoringService;
     private final SysUserRepository sysUserRepository;
     private final ScoreRecordRepository scoreRecordRepository;
@@ -66,6 +68,7 @@ public class ExamService {
                        QuestionBankRepository questionBankRepository,
                        ClassMemberRepository classMemberRepository,
                        ClassRoomRepository classRoomRepository,
+                       ClassAccessService classAccessService,
                        ExamScoringService examScoringService,
                        SysUserRepository sysUserRepository,
                        ScoreRecordRepository scoreRecordRepository,
@@ -79,6 +82,7 @@ public class ExamService {
         this.questionBankRepository = questionBankRepository;
         this.classMemberRepository = classMemberRepository;
         this.classRoomRepository = classRoomRepository;
+        this.classAccessService = classAccessService;
         this.examScoringService = examScoringService;
         this.sysUserRepository = sysUserRepository;
         this.scoreRecordRepository = scoreRecordRepository;
@@ -152,6 +156,7 @@ public class ExamService {
 
     @Transactional
     public Object createExam(CurrentUser currentUser, ExamRequests.CreateExamRequest request) {
+        classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
         Exam exam = new Exam();
         exam.setTitle(request.title());
         exam.setDescription(request.description());
@@ -192,6 +197,8 @@ public class ExamService {
         if (exam.getStatus() != ActivityStatus.DRAFT) {
             throw new BusinessException(40000, "只有草稿状态的考试可以修改");
         }
+
+        classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
 
         exam.setTitle(request.title());
         exam.setDescription(request.description());

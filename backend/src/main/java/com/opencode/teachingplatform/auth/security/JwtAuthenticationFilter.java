@@ -2,10 +2,12 @@ package com.opencode.teachingplatform.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.auth.entity.UserLoginSession;
+import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.common.api.ApiResponse;
 import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.common.enums.UserStatus;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -31,15 +33,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenService jwtTokenService;
     private final UserLoginSessionRepository userLoginSessionRepository;
+    private final SysUserRepository sysUserRepository;
     private final ObjectMapper objectMapper;
 
     public JwtAuthenticationFilter(
             JwtTokenService jwtTokenService,
             UserLoginSessionRepository userLoginSessionRepository,
+            SysUserRepository sysUserRepository,
             ObjectMapper objectMapper
     ) {
         this.jwtTokenService = jwtTokenService;
         this.userLoginSessionRepository = userLoginSessionRepository;
+        this.sysUserRepository = sysUserRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -53,8 +58,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UserRole role = UserRole.valueOf(claims.get("role", String.class));
                 Long userId = ((Number) claims.get("uid")).longValue();
                 String sessionKey = claims.get("sid", String.class);
+                Object schoolIdClaim = claims.get("schoolId");
+                if (schoolIdClaim == null) {
+                    writeUnauthorized(response, 40100, "未登录或登录已过期");
+                    return;
+                }
+                Long schoolId = ((Number) schoolIdClaim).longValue();
+
                 UserLoginSession loginSession = userLoginSessionRepository.findBySessionKey(sessionKey).orElse(null);
                 if (loginSession == null || loginSession.getUser() == null || !userId.equals(loginSession.getUser().getId())) {
+                    writeUnauthorized(response, 40100, "未登录或登录已过期");
+                    return;
+                }
+
+                if (sysUserRepository.findById(userId)
+                        .map(user -> user.getStatus() != UserStatus.ACTIVE)
+                        .orElse(true)) {
                     writeUnauthorized(response, 40100, "未登录或登录已过期");
                     return;
                 }
@@ -83,6 +102,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         claims.getSubject(),
                         claims.get("displayName", String.class),
                         role,
+                        schoolId,
                         sessionKey
                 );
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(

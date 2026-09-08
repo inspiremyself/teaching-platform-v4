@@ -9,6 +9,7 @@ import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.clazz.entity.ClassRoom;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
+import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.BusinessType;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
@@ -75,6 +76,7 @@ public class LabService {
     private final LabStepAnswerLogRepository labStepAnswerLogRepository;
     private final ExperimentBlankAnswerOverrideRepository experimentBlankAnswerOverrideRepository;
     private final ClassRoomRepository classRoomRepository;
+    private final ClassAccessService classAccessService;
     private final ClassMemberRepository classMemberRepository;
     private final CourseMaterialRepository courseMaterialRepository;
     private final SysUserRepository sysUserRepository;
@@ -91,6 +93,7 @@ public class LabService {
                       LabStepAnswerLogRepository labStepAnswerLogRepository,
                       ExperimentBlankAnswerOverrideRepository experimentBlankAnswerOverrideRepository,
                       ClassRoomRepository classRoomRepository,
+                      ClassAccessService classAccessService,
                       ClassMemberRepository classMemberRepository,
                       CourseMaterialRepository courseMaterialRepository,
                       SysUserRepository sysUserRepository,
@@ -106,6 +109,7 @@ public class LabService {
         this.labStepAnswerLogRepository = labStepAnswerLogRepository;
         this.experimentBlankAnswerOverrideRepository = experimentBlankAnswerOverrideRepository;
         this.classRoomRepository = classRoomRepository;
+        this.classAccessService = classAccessService;
         this.classMemberRepository = classMemberRepository;
         this.courseMaterialRepository = courseMaterialRepository;
         this.sysUserRepository = sysUserRepository;
@@ -134,11 +138,10 @@ public class LabService {
      */
     public Map<String, Object> createLab(CurrentUser currentUser, LabRequests.CreateLabRequest request) {
         requireTeacher(currentUser);
-        ClassRoom classRoom = classRoomRepository.findByIdAndTeacherUserId(request.classId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该班级"));
+        classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
         Lab lab = new Lab();
         lab.setCreatedBy(currentUser.id());
-        applyLab(lab, classRoom.getId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
+        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
         return toTeacherLabView(labRepository.save(lab));
     }
 
@@ -146,9 +149,8 @@ public class LabService {
     public Map<String, Object> updateLab(CurrentUser currentUser, Long labId, LabRequests.UpdateLabRequest request) {
         requireTeacher(currentUser);
         Lab lab = ownedLab(currentUser, labId);
-        ClassRoom classRoom = classRoomRepository.findByIdAndTeacherUserId(request.classId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该班级"));
-        applyLab(lab, classRoom.getId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
+        classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
+        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
         return toTeacherLabView(labRepository.save(lab));
     }
 
@@ -974,13 +976,12 @@ public class LabService {
     private Lab ownedLab(CurrentUser currentUser, Long labId) {
         Lab lab = labRepository.findByIdAndCreatedBy(labId, currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
-        classRoomRepository.findByIdAndTeacherUserId(lab.getClassId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该班级"));
+        classAccessService.assertTeacherAssignedToClass(currentUser, lab.getClassId());
         return lab;
     }
 
     private void requireTeacherStudentAccess(CurrentUser currentUser, Long studentId) {
-        List<Long> teacherClassIds = classRoomRepository.findByTeacherUserId(currentUser.id()).stream()
+        List<Long> teacherClassIds = classAccessService.listAssignedClasses(currentUser).stream()
                 .map(ClassRoom::getId)
                 .toList();
         if (teacherClassIds.isEmpty()) {

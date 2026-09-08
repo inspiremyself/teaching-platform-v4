@@ -54,7 +54,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import({LabService.class, LabScoringSupport.class, LabServiceTests.TestBeans.class})
+@Import({LabService.class, LabScoringSupport.class, com.opencode.teachingplatform.clazz.service.ClassAccessService.class, LabServiceTests.TestBeans.class})
 @ActiveProfiles("test")
 class LabServiceTests {
 
@@ -214,9 +214,12 @@ class LabServiceTests {
 
         Long classId = seedClass(ownerTeacherId);
         jdbcTemplate.update(
-                "UPDATE class_room SET teacher_user_id = ? WHERE id = ?",
-                coTeacherId,
-                classId
+                """
+                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at)
+                VALUES (?, ?, 'SUBJECT', '共班学科', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                classId,
+                coTeacherId
         );
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, ownerTeacherId);
         Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
@@ -908,7 +911,7 @@ class LabServiceTests {
                 new LabRequests.UpdateLabRequest("越权更新", "desc", "content", 1, otherTeacherClassId, "DRAFT", null, null, false)
         ))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("无权限访问该班级");
+                .hasMessageContaining("无权限访问该资源");
     }
 
     @Test
@@ -2191,9 +2194,12 @@ class LabServiceTests {
 
         Long classId = seedClass(ownerTeacherId);
         jdbcTemplate.update(
-                "UPDATE class_room SET teacher_user_id = ? WHERE id = ?",
-                coTeacherId,
-                classId
+                """
+                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at)
+                VALUES (?, ?, 'SUBJECT', '共班学科', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                classId,
+                coTeacherId
         );
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, ownerTeacherId);
         Long stepId = seedCodeStepWithSnapshot(labId, 1);
@@ -2364,14 +2370,21 @@ class LabServiceTests {
         long id = Math.abs(System.nanoTime());
         jdbcTemplate.update(
                 """
-                INSERT INTO class_room (id, name, code, teacher_user_id, status, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO class_room (id, school_id, name, code, status, created_at, updated_at)
+                VALUES (?, 1, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
                 id,
                 "实验班",
                 "LAB-" + id,
-                teacherId,
                 "ACTIVE"
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at)
+                VALUES (?, ?, 'SUBJECT', '测试学科', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                id,
+                teacherId
         );
         return id;
     }
@@ -2392,9 +2405,9 @@ class LabServiceTests {
     private void seedStudentAccount(CurrentUser student) {
         jdbcTemplate.update(
                 """
-                MERGE INTO sys_user (id, username, password_hash, display_name, role, status, must_change_password, created_at, updated_at)
+                MERGE INTO sys_user (id, username, password_hash, display_name, role, status, must_change_password, school_id, created_at, updated_at)
                 KEY (id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
                 student.id(),
                 student.username(),

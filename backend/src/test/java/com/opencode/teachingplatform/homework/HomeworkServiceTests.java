@@ -46,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @Import({
         HomeworkService.class,
+        com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         LocalPlagiarismService.class,
         ScoringEngine.class,
         SingleChoiceScoringStrategy.class,
@@ -180,8 +181,12 @@ class HomeworkServiceTests {
     @Test
     void studentOnlySeesPublishedHomeworksForOwnClasses() {
         jdbcTemplate.update(
-                "INSERT INTO class_room (id, name, code, teacher_user_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
-                99L, "SE2026-2", "SE2026-2", 1L, ClassStatus.ACTIVE.name()
+                "INSERT INTO class_room (id, school_id, name, code, status, created_at, updated_at) VALUES (?, 1, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
+                99L, "SE2026-2", "SE2026-2", ClassStatus.ACTIVE.name()
+        );
+        jdbcTemplate.update(
+                "INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at) VALUES (?, 1, 'SUBJECT', '测试学科', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
+                99L
         );
 
         Homework publishedVisible = createHomework(1L, 1L, "可见作业", ActivityStatus.PUBLISHED);

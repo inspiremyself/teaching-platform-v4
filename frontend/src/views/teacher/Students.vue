@@ -314,9 +314,15 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import type { UploadFile } from 'element-plus';
 import { read, utils, writeFileXLSX } from 'xlsx';
-import { listClasses } from '@/api/classes';
-import { changeStudentStatus, createStudent, importStudents, listStudents, updateStudent } from '@/api/students';
-import type { TeachingClass } from '@/types/class';
+import {
+  changeAdminStudentStatus,
+  createAdminStudent,
+  importAdminStudents,
+  listAdminClasses,
+  listAdminStudents,
+  updateAdminStudent,
+} from '@/api/admin';
+import type { AdminClass } from '@/types/admin';
 import type { ImportStudentRow, ImportStudentsResult, Student, StudentStatus } from '@/types/student';
 
 const headerCellStyle = {
@@ -336,7 +342,7 @@ const importDialogVisible = ref(false);
 const editingId = ref<number | null>(null);
 const selectedClassId = ref<number | undefined>();
 const rows = ref<Student[]>([]);
-const classes = ref<TeachingClass[]>([]);
+const classes = ref<AdminClass[]>([]);
 const importText = ref('');
 const importResult = ref<ImportStudentsResult | null>(null);
 const selectedImportFile = ref<File | null>(null);
@@ -443,8 +449,7 @@ const getAvatarText = (displayName: string, username: string) => {
 };
 
 const fetchClasses = async () => {
-  const res = await listClasses();
-  classes.value = res.items;
+  classes.value = await listAdminClasses();
   if (!selectedClassId.value && classes.value.length === 1) {
     selectedClassId.value = classes.value[0].id;
   }
@@ -453,8 +458,7 @@ const fetchClasses = async () => {
 const fetchStudents = async () => {
   loading.value = true;
   try {
-    const res = await listStudents(selectedClassId.value);
-    rows.value = res.items;
+    rows.value = await listAdminStudents(selectedClassId.value);
   } finally {
     loading.value = false;
   }
@@ -623,10 +627,10 @@ const submit = async () => {
   submitting.value = true;
   try {
     if (editingId.value) {
-      await updateStudent(editingId.value, { displayName: form.displayName.trim(), classId: form.classId });
+      await updateAdminStudent(editingId.value, { displayName: form.displayName.trim(), classId: form.classId });
       ElMessage.success('学生更新成功');
     } else {
-      await createStudent({
+      await createAdminStudent({
         username: form.username.trim(),
         displayName: form.displayName.trim(),
         password: form.password.trim(),
@@ -644,7 +648,7 @@ const submit = async () => {
 
 const toggleStatus = async (row: Student) => {
   const nextStatus: StudentStatus = row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
-  await changeStudentStatus(row.id, nextStatus);
+  await changeAdminStudentStatus(row.id, nextStatus);
   ElMessage.success('学生状态更新成功');
   await fetchStudents();
 };
@@ -674,7 +678,7 @@ const submitImport = async () => {
 
   importing.value = true;
   try {
-    importResult.value = await importStudents({ classId: selectedClassId.value, rows: parsedRows });
+    importResult.value = await importAdminStudents({ classId: selectedClassId.value, rows: parsedRows });
     ElMessage.success('导入已完成');
     await fetchStudents();
   } finally {
