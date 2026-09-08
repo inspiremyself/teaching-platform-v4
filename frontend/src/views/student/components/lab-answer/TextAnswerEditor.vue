@@ -23,12 +23,17 @@
           :key="image.path"
           class="text-answer-editor__thumb"
         >
-          <img :src="previewUrlOf(image.path)" :alt="image.name" />
+          <img
+            :src="previewUrlOf(image.path)"
+            :alt="image.name"
+            class="text-answer-editor__thumb-image"
+            @click="handleThumbClick(image.path)"
+          />
           <button
             v-if="!disabled"
             type="button"
             class="text-answer-editor__remove"
-            @click="removeImage(index)"
+            @click.stop="removeImage(index)"
           >
             删除
           </button>
@@ -49,12 +54,21 @@
       </div>
     </div>
   </div>
+
+  <el-image-viewer
+    v-if="supportsImages && viewerVisible && viewerUrlList.length"
+    teleported
+    :url-list="viewerUrlList"
+    :initial-index="viewerInitialIndex"
+    @close="closePreview"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { uploadStudentLabAnswerImage } from '@/api/labs';
+import { useLabAnswerImageViewer } from '@/components/lab/useLabAnswerImageViewer';
 import { fetchLabAnswerImageBlobUrl, revokeLabAnswerImageBlobUrl } from '@/utils/labAnswerImage';
 import { compressLabAnswerImage, toLabAnswerImageMeta } from './compressLabAnswerImage';
 import type { LabAnswerDraft, LabAnswerImageDraftMeta } from './types';
@@ -86,12 +100,85 @@ const uploading = ref(false);
 const compressionHint = ref('');
 const localPreviewUrls = reactive<Record<string, string>>({});
 const remotePreviewUrls = reactive<Record<string, string>>({});
+let remotePreviewLoadGeneration = 0;
+const {
+  viewerVisible,
+  viewerUrlList,
+  viewerInitialIndex,
+  openPreview,
+  closePreview,
+} = useLabAnswerImageViewer();
 
 const currentText = computed(() => (props.modelValue?.kind === 'text' ? props.modelValue.text : ''));
 const currentImages = computed(() => (props.modelValue?.kind === 'text' ? props.modelValue.images : []));
 const supportsImages = computed(() => props.enableImages && props.modelValue?.kind === 'text');
+const previewUrlMap = computed(() => ({
+  ...remotePreviewUrls,
+  ...localPreviewUrls,
+}));
 
 const previewUrlOf = (path: string) => localPreviewUrls[path] || remotePreviewUrls[path] || '';
+
+const revokePreviewUrl = (url?: string) => {
+  revokeLabAnswerImageBlobUrl(url);
+};
+
+const cacheRemotePreviewUrl = (path: string, fetchedUrl: string) => {
+  if (localPreviewUrls[path] || remotePreviewUrls[path]) {
+    revokePreviewUrl(fetchedUrl);
+    return Boolean(previewUrlOf(path));
+  }
+  remotePreviewUrls[path] = fetchedUrl;
+  return true;
+};
+
+const imagePreviewScopeKey = computed(() => {
+  const stepKey = props.stepId == null ? '' : String(props.stepId);
+  const pathKey = currentImages.value.map((image) => image.path).join('\0');
+  return `${stepKey}\0${pathKey}`;
+});
+
+const ensurePreviewUrl = async (path: string, scopeAtClick: string) => {
+  if (previewUrlOf(path)) {
+    return true;
+  }
+
+  try {
+    const fetchedUrl = await fetchLabAnswerImageBlobUrl(path);
+    if (imagePreviewScopeKey.value !== scopeAtClick) {
+      revokePreviewUrl(fetchedUrl);
+      return false;
+    }
+    return cacheRemotePreviewUrl(path, fetchedUrl);
+  } catch {
+    if (imagePreviewScopeKey.value === scopeAtClick && !previewUrlOf(path)) {
+      remotePreviewUrls[path] = '';
+    }
+    return false;
+  }
+};
+
+const handleThumbClick = async (path: string) => {
+  if (!supportsImages.value) {
+    return;
+  }
+
+  const scopeAtClick = imagePreviewScopeKey.value;
+  const orderedPathsAtClick = currentImages.value.map((item) => item.path);
+  if (!(await ensurePreviewUrl(path, scopeAtClick))) {
+    return;
+  }
+  if (imagePreviewScopeKey.value !== scopeAtClick) {
+    return;
+  }
+
+  void openPreview(
+    path,
+    orderedPathsAtClick,
+    previewUrlMap,
+    () => imagePreviewScopeKey.value !== scopeAtClick,
+  );
+};
 
 const emitDraft = (text: string, images: LabAnswerImageDraftMeta[]) => {
   emit('update:modelValue', {
@@ -103,10 +190,6 @@ const emitDraft = (text: string, images: LabAnswerImageDraftMeta[]) => {
 
 const updateText = (value: string | number) => {
   emitDraft(String(value ?? ''), currentImages.value);
-};
-
-const revokePreviewUrl = (url?: string) => {
-  revokeLabAnswerImageBlobUrl(url);
 };
 
 const clearRemotePreviewUrls = () => {
@@ -125,31 +208,65 @@ const clearLocalPreviewUrls = (pathsToKeep: Set<string> = new Set()) => {
   });
 };
 
-const loadRemotePreviewUrls = async (images: LabAnswerImageDraftMeta[]) => {
-  clearRemotePreviewUrls();
+const loadRemotePreviewUrls = async (
+  images: LabAnswerImageDraftMeta[],
+  generation: number,
+) => {
+  const activePaths = new Set(images.map((image) => image.path).filter(Boolean));
+
+  for (const path of Object.keys(remotePreviewUrls)) {
+    if (!activePaths.has(path)) {
+      revokePreviewUrl(remotePreviewUrls[path]);
+      delete remotePreviewUrls[path];
+    }
+  }
+
   for (const image of images) {
-    if (!image.path || localPreviewUrls[image.path]) {
+    if (!image.path || localPreviewUrls[image.path] || remotePreviewUrls[image.path]) {
       continue;
     }
     try {
-      remotePreviewUrls[image.path] = await fetchLabAnswerImageBlobUrl(image.path);
+      const fetchedUrl = await fetchLabAnswerImageBlobUrl(image.path);
+      if (generation !== remotePreviewLoadGeneration) {
+        revokePreviewUrl(fetchedUrl);
+        return;
+      }
+      if (!cacheRemotePreviewUrl(image.path, fetchedUrl)) {
+        continue;
+      }
     } catch {
-      remotePreviewUrls[image.path] = '';
+      if (generation !== remotePreviewLoadGeneration) {
+        return;
+      }
+      if (!previewUrlOf(image.path)) {
+        remotePreviewUrls[image.path] = '';
+      }
     }
   }
 };
 
-watch(currentImages, (images) => {
-  const activePaths = new Set(images.map(image => image.path).filter(Boolean));
+watch(imagePreviewScopeKey, (_scopeKey, previousScopeKey) => {
+  if (previousScopeKey !== undefined) {
+    closePreview();
+  }
+  const activePaths = new Set(currentImages.value.map((image) => image.path).filter(Boolean));
   clearLocalPreviewUrls(activePaths);
-  void loadRemotePreviewUrls(images);
-}, { immediate: true, deep: true });
+  const generation = ++remotePreviewLoadGeneration;
+  void loadRemotePreviewUrls(currentImages.value, generation);
+}, { immediate: true });
+
+watch(supportsImages, (enabled) => {
+  if (!enabled) {
+    closePreview();
+  }
+});
 
 const openFilePicker = () => {
   fileInputRef.value?.click();
 };
 
 const removeImage = (index: number) => {
+  closePreview();
   const removed = currentImages.value[index];
   const nextImages = currentImages.value.filter((_, imageIndex) => imageIndex !== index);
   if (removed?.path) {
@@ -201,6 +318,7 @@ const handleFileChange = async (event: Event) => {
 };
 
 onBeforeUnmount(() => {
+  closePreview();
   clearLocalPreviewUrls();
   clearRemotePreviewUrls();
 });
@@ -239,13 +357,14 @@ onBeforeUnmount(() => {
   width: 112px;
 }
 
-.text-answer-editor__thumb img {
+.text-answer-editor__thumb-image {
   width: 112px;
   height: 112px;
   object-fit: cover;
   border-radius: 10px;
   border: 1px solid #e2e8f0;
   background: #fff;
+  cursor: zoom-in;
 }
 
 .text-answer-editor__remove {

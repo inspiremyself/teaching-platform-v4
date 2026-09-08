@@ -9,31 +9,40 @@
         :src="previewUrls[image.path] || ''"
         :alt="image.name"
         class="lab-answer-image-gallery__image"
-        @click="openPreview(image.path)"
+        @click="handleThumbClick(image.path)"
       />
       <figcaption class="lab-answer-image-gallery__caption">{{ image.name }}</figcaption>
     </figure>
   </div>
 
   <el-image-viewer
-    v-if="viewerVisible && viewerUrl"
-    :url-list="[viewerUrl]"
+    v-if="viewerVisible && viewerUrlList.length"
+    teleported
+    :url-list="viewerUrlList"
+    :initial-index="viewerInitialIndex"
     @close="closePreview"
   />
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, watch } from 'vue';
 import type { LabAnswerImageMeta } from '@/types/lab';
 import { fetchLabAnswerImageBlobUrl, revokeLabAnswerImageBlobUrl } from '@/utils/labAnswerImage';
+import { useLabAnswerImageViewer } from './useLabAnswerImageViewer';
 
 const props = defineProps<{
   images: LabAnswerImageMeta[];
 }>();
 
 const previewUrls = reactive<Record<string, string>>({});
-const viewerVisible = ref(false);
-const viewerUrl = ref('');
+let previewLoadGeneration = 0;
+const {
+  viewerVisible,
+  viewerUrlList,
+  viewerInitialIndex,
+  openPreview,
+  closePreview,
+} = useLabAnswerImageViewer();
 
 const revokeAll = () => {
   Object.values(previewUrls).forEach(revokeLabAnswerImageBlobUrl);
@@ -42,45 +51,96 @@ const revokeAll = () => {
   });
 };
 
-const loadPreviews = async (images: LabAnswerImageMeta[]) => {
-  revokeAll();
+const cachePreviewUrl = (path: string, fetchedUrl: string) => {
+  const existing = previewUrls[path];
+  if (existing) {
+    revokeLabAnswerImageBlobUrl(fetchedUrl);
+    return existing;
+  }
+  previewUrls[path] = fetchedUrl;
+  return fetchedUrl;
+};
+
+const imagePathKey = computed(() => props.images.map((item) => item.path).join('\0'));
+
+const handleThumbClick = async (path: string) => {
+  const pathKeyAtClick = imagePathKey.value;
+  const orderedPathsAtClick = props.images.map((item) => item.path);
+
+  if (!previewUrls[path]) {
+    let fetchedUrl = '';
+    try {
+      fetchedUrl = await fetchLabAnswerImageBlobUrl(path);
+    } catch {
+      if (imagePathKey.value === pathKeyAtClick && !previewUrls[path]) {
+        previewUrls[path] = '';
+      }
+      return;
+    }
+
+    if (imagePathKey.value !== pathKeyAtClick) {
+      revokeLabAnswerImageBlobUrl(fetchedUrl);
+      return;
+    }
+
+    cachePreviewUrl(path, fetchedUrl);
+  }
+
+  if (imagePathKey.value !== pathKeyAtClick) {
+    return;
+  }
+
+  void openPreview(
+    path,
+    orderedPathsAtClick,
+    previewUrls,
+    () => imagePathKey.value !== pathKeyAtClick,
+  );
+};
+
+const loadPreviews = async (images: LabAnswerImageMeta[], generation: number) => {
+  const activePaths = new Set(images.map((image) => image.path).filter(Boolean));
+
+  for (const path of Object.keys(previewUrls)) {
+    if (!activePaths.has(path)) {
+      revokeLabAnswerImageBlobUrl(previewUrls[path]);
+      delete previewUrls[path];
+    }
+  }
+
   for (const image of images) {
-    if (!image.path) {
+    if (!image.path || previewUrls[image.path]) {
       continue;
     }
     try {
-      previewUrls[image.path] = await fetchLabAnswerImageBlobUrl(image.path);
+      const fetchedUrl = await fetchLabAnswerImageBlobUrl(image.path);
+      if (generation !== previewLoadGeneration) {
+        revokeLabAnswerImageBlobUrl(fetchedUrl);
+        return;
+      }
+      cachePreviewUrl(image.path, fetchedUrl);
     } catch {
-      previewUrls[image.path] = '';
+      if (generation !== previewLoadGeneration) {
+        return;
+      }
+      if (!previewUrls[image.path]) {
+        previewUrls[image.path] = '';
+      }
     }
   }
 };
 
-const openPreview = (path: string) => {
-  const url = previewUrls[path];
-  if (!url) {
-    return;
+watch(imagePathKey, (_pathKey, previousPathKey) => {
+  if (previousPathKey !== undefined) {
+    closePreview();
   }
-  viewerUrl.value = url;
-  viewerVisible.value = true;
-};
-
-const closePreview = () => {
-  viewerVisible.value = false;
-  viewerUrl.value = '';
-};
-
-watch(
-  () => props.images,
-  (images) => {
-    void loadPreviews(images ?? []);
-  },
-  { immediate: true, deep: true },
-);
+  const generation = ++previewLoadGeneration;
+  void loadPreviews(props.images ?? [], generation);
+}, { immediate: true });
 
 onBeforeUnmount(() => {
-  revokeAll();
   closePreview();
+  revokeAll();
 });
 </script>
 
