@@ -1869,7 +1869,149 @@ class LabServiceTests {
     }
 
     @Test
-    void returnReportRejectsNonSubmittedStatusesAndClosedOrDraftLab() {
+    void returnGradedReportResetsStatusAndDeletesScoreRecord() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedCodeStepWithSnapshot(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("通过 scoring engine 复用评分策略", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("待终评小结")).get("submissionId")).longValue();
+        LabStepAnswer gradedAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+        assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+
+        labService.gradeReport(
+                teacherUser(),
+                submissionId,
+                new LabRequests.GradeLabReportRequest(
+                        "教师终评",
+                        List.of(new LabRequests.GradeItem(gradedAnswer.getId(), 18D, "代码题终评"))
+                )
+        );
+        assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        )).isPresent();
+
+        Map<String, Object> result = labService.returnReport(teacherUser(), submissionId);
+
+        LabSubmission afterReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer afterAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+
+        assertThat(result).containsEntry("status", "SAVED")
+                .containsEntry("submissionId", submissionId)
+                .containsEntry("labId", labId)
+                .containsEntry("studentId", studentUser().id());
+        assertThat(afterReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(afterReturn.getSubmittedAt()).isNull();
+        assertThat(afterReturn.getGradedAt()).isNull();
+        assertThat(afterReturn.getTotalScore()).isEqualTo(0D);
+        assertThat(afterReturn.getSummaryText()).isEqualTo("待终评小结");
+        assertThat(afterReturn.getTeacherComment()).isEmpty();
+        assertThat(afterAnswer.getAnswerText()).isEqualTo("通过 scoring engine 复用评分策略");
+        assertThat(afterAnswer.getScore()).isNull();
+        assertThat(afterAnswer.getAutoScore()).isNull();
+        assertThat(afterAnswer.getSuggestedScore()).isNull();
+        assertThat(afterAnswer.getScoreSource()).isEqualTo("TEACHER");
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        )).isNotPresent();
+    }
+
+    @Test
+    void returnAutoGradedZeroScoreReportCanBeReturned() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedFillBlankQuestionBankStep(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("wrong,answer", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("填空全错小结")).get("submissionId")).longValue();
+        LabSubmission beforeReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+
+        assertThat(beforeReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(beforeReturn.getTotalScore()).isEqualTo(0D);
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        )).isPresent();
+
+        labService.returnReport(teacherUser(), submissionId);
+
+        LabSubmission afterReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer afterAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+        assertThat(afterReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(afterReturn.getSubmittedAt()).isNull();
+        assertThat(afterReturn.getGradedAt()).isNull();
+        assertThat(afterReturn.getTotalScore()).isEqualTo(0D);
+        assertThat(afterReturn.getSummaryText()).isEqualTo("填空全错小结");
+        assertThat(afterReturn.getTeacherComment()).isEmpty();
+        assertThat(afterAnswer.getAnswerText()).isEqualTo("wrong,answer");
+        assertThat(afterAnswer.getScore()).isNull();
+        assertThat(afterAnswer.getAutoScore()).isNull();
+        assertThat(afterAnswer.getSuggestedScore()).isNull();
+        assertThat(afterAnswer.getScoreSource()).isEqualTo("TEACHER");
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        )).isNotPresent();
+    }
+
+    @Test
+    void returnGradedReportWithoutScoreRecordSucceeds() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedFillBlankQuestionBankStep(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("wrong,answer", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("无汇总表小结")).get("submissionId")).longValue();
+        LabSubmission gradedSubmission = labSubmissionRepository.findById(submissionId).orElseThrow();
+        gradedSubmission.setSubmitStatus(SubmissionStatus.GRADED);
+        labSubmissionRepository.saveAndFlush(gradedSubmission);
+        scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        ).ifPresent(scoreRecordRepository::delete);
+
+        Map<String, Object> result = labService.returnReport(teacherUser(), submissionId);
+
+        LabSubmission afterReturn = labSubmissionRepository.findById(submissionId).orElseThrow();
+        assertThat(result).containsEntry("status", "SAVED");
+        assertThat(afterReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(afterReturn.getSubmittedAt()).isNull();
+        assertThat(afterReturn.getGradedAt()).isNull();
+    }
+
+    @Test
+    void returnGradedReportAllowsStudentToResubmitAndRecreatesScoreRecord() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedFillBlankQuestionBankStep(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("wrong,answer", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("初稿小结")).get("submissionId")).longValue();
+        labService.returnReport(teacherUser(), submissionId);
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("spring,boot", null));
+        labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("修订小结"));
+
+        LabSubmission resubmitted = labSubmissionRepository.findById(submissionId).orElseThrow();
+        assertThat(resubmitted.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(resubmitted.getTotalScore()).isEqualTo(10D);
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+        ))
+                .isPresent()
+                .get()
+                .extracting(com.opencode.teachingplatform.analysis.entity.ScoreRecord::getScore)
+                .isEqualTo(10D);
+    }
+
+    @Test
+    void returnReportRejectsSavedStatusAndClosedOrDraftLab() {
         Long classId = seedClass(teacherUser().id());
         Long publishedLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
         Long closedLabId = seedLab(classId, ActivityStatus.CLOSED, teacherUser().id());
@@ -1883,16 +2025,7 @@ class LabServiceTests {
 
         assertThatThrownBy(() -> labService.returnReport(teacherUser(), savedSubmission.getId()))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("仅已提交且未批改完成的报告可打回");
-
-        Long submittedId = ((Number) labService.submitLab(studentUser(), publishedLabId, new LabRequests.SubmitLabRequest("已提交小结")).get("submissionId")).longValue();
-        LabSubmission gradedSubmission = labSubmissionRepository.findById(submittedId).orElseThrow();
-        gradedSubmission.setSubmitStatus(SubmissionStatus.GRADED);
-        labSubmissionRepository.saveAndFlush(gradedSubmission);
-
-        assertThatThrownBy(() -> labService.returnReport(teacherUser(), submittedId))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("仅已提交且未批改完成的报告可打回");
+                .hasMessageContaining("仅已提交或已批改的报告可打回");
 
         Long closedStepId = seedCodeStepWithSnapshot(closedLabId, 1);
         Long closedSubmissionId = seedSubmittedReportOnPublishedLabThenClose(closedLabId, closedStepId, "关闭实验小结");
@@ -2020,7 +2153,7 @@ class LabServiceTests {
 
         assertThatThrownBy(() -> labService.returnReport(teacherUser(), submissionId))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("仅已提交且未批改完成的报告可打回");
+                .hasMessageContaining("仅已提交或已批改的报告可打回");
     }
 
     private Long seedSubmittedReportOnPublishedLabThenClose(Long labId, Long stepId, String summaryText) {

@@ -155,7 +155,7 @@
               </el-button>
               <el-button plain @click="goBlankRegradeBatch(row.labId)">批量重判（填空）</el-button>
               <el-button
-                v-if="row.submitStatus === 'SUBMITTED'"
+                v-if="row.submitStatus === 'SUBMITTED' || row.submitStatus === 'GRADED'"
                 type="warning"
                 plain
                 :disabled="returningId !== null"
@@ -232,13 +232,18 @@ const goBatchGrade = (reportId: number) => {
   router.push(`/teacher/lab-reports/${reportId}/batch-grade`);
 };
 
+const returnConfirmMessage = (status?: LabReportStatus) =>
+  status === 'GRADED'
+    ? '该报告已批改，打回后成绩将清除，学生可重新编辑提交，是否继续？'
+    : '打回后学生可修改作答并重新提交，是否继续？';
+
 const handleReturn = async (row: LabReportItem) => {
   if (returningId.value !== null) {
     return;
   }
 
   try {
-    await ElMessageBox.confirm('打回后学生可修改作答并重新提交，是否继续？', '打回确认', { type: 'warning' });
+    await ElMessageBox.confirm(returnConfirmMessage(row.submitStatus), '打回确认', { type: 'warning' });
   } catch {
     return;
   }

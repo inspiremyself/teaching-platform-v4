@@ -215,7 +215,7 @@ public class LabController {
     }
 
     /**
-     * 教师将单条已提交实验报告打回，使学生可继续编辑并重新提交。
+     * 教师将单条已提交或已批改实验报告打回，使学生可继续编辑并重新提交。
      */
     @PostMapping("/teacher/lab-reports/{id}/return")
     @PreAuthorize("hasRole('TEACHER')")

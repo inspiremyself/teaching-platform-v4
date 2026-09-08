@@ -825,9 +825,10 @@ public class LabService {
 
     @Transactional
     /**
-     * 教师将单条已提交实验报告打回至可编辑草稿态。
+     * 教师将单条已提交或已批改实验报告打回至可编辑草稿态。
      *
-     * <p>保留学生作答内容，清除提交时间与自动/逐步确认的评分痕迹，使学生可再次保存并提交。</p>
+     * <p>保留学生作答内容，清除提交时间与自动/逐步确认/终评的评分痕迹，使学生可再次保存并提交。
+     * {@code GRADED} 打回时额外删除 {@code score_record}。</p>
      */
     public Map<String, Object> returnReport(CurrentUser currentUser, Long reportId) {
         requireTeacher(currentUser);
@@ -840,9 +841,11 @@ public class LabService {
         if (lab.getStatus() == ActivityStatus.DRAFT) {
             throw new BusinessException(40000, "实验未发布，不能打回");
         }
-        if (submission.getSubmitStatus() != SubmissionStatus.SUBMITTED) {
-            throw new BusinessException(40000, "仅已提交且未批改完成的报告可打回");
+        SubmissionStatus status = submission.getSubmitStatus();
+        if (status != SubmissionStatus.SUBMITTED && status != SubmissionStatus.GRADED) {
+            throw new BusinessException(40000, "仅已提交或已批改的报告可打回");
         }
+        boolean wasGraded = status == SubmissionStatus.GRADED;
 
         List<LabStepAnswer> answers = labStepAnswerRepository.findByLabSubmissionId(submission.getId());
         for (LabStepAnswer answer : answers) {
@@ -856,6 +859,13 @@ public class LabService {
         }
         if (!answers.isEmpty()) {
             labStepAnswerRepository.saveAll(answers);
+        }
+
+        if (wasGraded) {
+            scoreRecordRepository
+                    .findByBusinessTypeAndBusinessIdAndStudentId(
+                            BusinessType.LAB, lab.getId(), submission.getStudentId())
+                    .ifPresent(scoreRecordRepository::delete);
         }
 
         submission.setSubmittedAt(null);
