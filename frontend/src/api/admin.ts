@@ -2,18 +2,22 @@ import request from '@/utils/request';
 import type {
   AdminClass,
   AdminStudent,
+  AdminSubject,
   AdminTeacher,
   CreateAdminClassPayload,
   CreateStudentPayload,
+  CreateSubjectPayload,
   CreateTeacherPayload,
   ImportStudentsPayload,
   ImportStudentsResult,
   SchoolInfo,
   StudentStatus,
+  SubjectStatus,
   TeacherStatus,
   UpdateAdminClassPayload,
   UpdateSchoolPayload,
   UpdateStudentPayload,
+  UpdateSubjectPayload,
   UpdateTeacherPayload,
 } from '@/types/admin';
 
@@ -31,6 +35,18 @@ export const updateTeacher = (id: number, data: UpdateTeacherPayload) =>
 
 export const changeTeacherStatus = (id: number, status: TeacherStatus) =>
   request.post<AdminTeacher>(`/admin/teachers/${id}/status`, { status });
+
+export const listSubjects = (status?: SubjectStatus) =>
+  request.get<AdminSubject[]>('/admin/subjects', { params: status ? { status } : undefined });
+
+export const createSubject = (data: CreateSubjectPayload) =>
+  request.post<AdminSubject>('/admin/subjects', data);
+
+export const updateSubject = (id: number, data: UpdateSubjectPayload) =>
+  request.put<AdminSubject>(`/admin/subjects/${id}`, data);
+
+export const changeSubjectStatus = (id: number, status: SubjectStatus) =>
+  request.post<AdminSubject>(`/admin/subjects/${id}/status`, { status });
 
 export const listAdminClasses = (teacherUserId?: number) =>
   request.get<AdminClass[]>('/admin/classes', {

@@ -115,13 +115,22 @@
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="学科名称" min-width="160">
+            <el-table-column label="学科" min-width="200">
               <template #default="{ row }">
-                <el-input
-                  v-model="row.subjectName"
+                <el-select
+                  v-model="row.subjectId"
                   :disabled="row.role === 'HEAD'"
-                  placeholder="role=SUBJECT 时必填"
-                />
+                  placeholder="选择学科"
+                  filterable
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="subject in subjectSelectOptions"
+                    :key="subject.id"
+                    :label="`${subject.name} (${subject.code})`"
+                    :value="subject.id"
+                  />
+                </el-select>
               </template>
             </el-table-column>
             <el-table-column label="" width="60" align="center">
@@ -149,16 +158,17 @@ import {
   createAdminClass,
   deleteAdminClass,
   listAdminClasses,
+  listSubjects,
   listTeachers,
   updateAdminClass,
 } from '@/api/admin';
-import type { AdminClass, AdminTeacher, ClassTeacherInput, ClassTeacherRole } from '@/types/admin';
+import type { AdminClass, AdminSubject, AdminTeacher, ClassTeacherInput, ClassTeacherRole } from '@/types/admin';
 import type { ClassStatus } from '@/types/class';
 
 interface TeacherFormRow {
   teacherUserId: number | undefined;
   role: ClassTeacherRole;
-  subjectName: string;
+  subjectId: number | undefined;
 }
 
 const loading = ref(false);
@@ -167,6 +177,8 @@ const dialogVisible = ref(false);
 const editingId = ref<number | null>(null);
 const rows = ref<AdminClass[]>([]);
 const teachers = ref<AdminTeacher[]>([]);
+const subjects = ref<AdminSubject[]>([]);
+const subjectSelectOptions = ref<AdminSubject[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref<ClassStatus | ''>('');
 
@@ -178,6 +190,23 @@ const form = reactive({
 });
 
 const activeTeachers = computed(() => teachers.value.filter(item => item.status === 'ACTIVE'));
+const activeSubjects = computed(() => subjects.value.filter(item => item.status === 'ACTIVE'));
+
+const syncSubjectSelectOptions = (assignedTeachers: { subjectId: number | null; subjectName: string | null }[] = []) => {
+  const byId = new Map(activeSubjects.value.map(item => [item.id, item]));
+  for (const teacher of assignedTeachers) {
+    if (teacher.subjectId && !byId.has(teacher.subjectId)) {
+      byId.set(teacher.subjectId, {
+        id: teacher.subjectId,
+        name: teacher.subjectName || '已停用学科',
+        code: '—',
+        status: 'DISABLED',
+        assignmentCount: 0,
+      });
+    }
+  }
+  subjectSelectOptions.value = Array.from(byId.values());
+};
 const filteredRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
   return rows.value.filter(row => {
@@ -195,7 +224,7 @@ const totalStudents = computed(() => rows.value.reduce((sum, row) => sum + (row.
 const createEmptyTeacherRow = (): TeacherFormRow => ({
   teacherUserId: undefined,
   role: 'SUBJECT',
-  subjectName: '',
+  subjectId: undefined,
 });
 
 const resetForm = () => {
@@ -208,7 +237,7 @@ const resetForm = () => {
 
 const onRoleChange = (row: TeacherFormRow) => {
   if (row.role === 'HEAD') {
-    row.subjectName = '';
+    row.subjectId = undefined;
   }
 };
 
@@ -242,15 +271,15 @@ const toTeacherInputs = (): ClassTeacherInput[] | null => {
     }
     seen.add(row.teacherUserId);
 
-    if (row.role === 'SUBJECT' && !row.subjectName.trim()) {
-      ElMessage.warning('学科教师必须填写学科名称');
+    if (row.role === 'SUBJECT' && !row.subjectId) {
+      ElMessage.warning('学科教师必须选择学科');
       return null;
     }
 
     inputs.push({
       teacherUserId: row.teacherUserId,
       role: row.role,
-      subjectName: row.role === 'SUBJECT' ? row.subjectName.trim() : null,
+      subjectId: row.role === 'SUBJECT' ? row.subjectId : null,
     });
   }
 
@@ -265,9 +294,14 @@ const toTeacherInputs = (): ClassTeacherInput[] | null => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    const [classesRes, teachersRes] = await Promise.all([listAdminClasses(), listTeachers()]);
+    const [classesRes, teachersRes, subjectsRes] = await Promise.all([
+      listAdminClasses(),
+      listTeachers(),
+      listSubjects('ACTIVE'),
+    ]);
     rows.value = classesRes;
     teachers.value = teachersRes;
+    subjects.value = subjectsRes;
   } finally {
     loading.value = false;
   }
@@ -275,6 +309,7 @@ const fetchData = async () => {
 
 const openCreateDialog = () => {
   resetForm();
+  syncSubjectSelectOptions();
   dialogVisible.value = true;
 };
 
@@ -287,9 +322,10 @@ const openEditDialog = (row: AdminClass) => {
     ? row.teachers.map(item => ({
         teacherUserId: item.teacherUserId,
         role: item.role,
-        subjectName: item.subjectName || '',
+        subjectId: item.subjectId ?? undefined,
       }))
     : [createEmptyTeacherRow()];
+  syncSubjectSelectOptions(row.teachers);
   dialogVisible.value = true;
 };
 
@@ -336,7 +372,7 @@ const toggleStatus = async (row: AdminClass) => {
   const teachersPayload: ClassTeacherInput[] = row.teachers.map(item => ({
     teacherUserId: item.teacherUserId,
     role: item.role,
-    subjectName: item.subjectName,
+    subjectId: item.subjectId,
   }));
   await updateAdminClass(row.id, { name: row.name, status: nextStatus, teachers: teachersPayload });
   ElMessage.success('班级状态更新成功');

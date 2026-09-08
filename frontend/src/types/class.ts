@@ -2,6 +2,7 @@ export type ClassStatus = 'ACTIVE' | 'ARCHIVED';
 
 export interface ClassAssignment {
   role: 'HEAD' | 'SUBJECT';
+  subjectId: number | null;
   subjectName: string | null;
 }
 

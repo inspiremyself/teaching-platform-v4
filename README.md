@@ -84,6 +84,7 @@ cd frontend && npm install && npm run dev
 
 演示学校：`演示学校`  
 演示班级：`SE2026-1`  
+演示学科：`SE-ARCH`（软件体系结构）、`DB-PRINCIPLE`（数据库原理）  
 登录须选择对应身份（学校管理员 / 教师 / 学生）。
 
 可选校管探活：

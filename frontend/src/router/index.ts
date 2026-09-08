@@ -91,6 +91,7 @@ const router = createRouter({
       children: [
         { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue'), meta: { title: '校管总览' } },
         { path: 'teachers', name: 'admin-teachers', component: () => import('@/views/admin/Teachers.vue'), meta: { title: '教师管理' } },
+        { path: 'subjects', name: 'admin-subjects', component: () => import('@/views/admin/Subjects.vue'), meta: { title: '学科管理' } },
         { path: 'classes', name: 'admin-classes', component: () => import('@/views/admin/Classes.vue'), meta: { title: '班级管理' } },
         { path: 'students', name: 'admin-students', component: () => import('@/views/admin/Students.vue'), meta: { title: '学生管理' } },
         { path: 'school', name: 'admin-school', component: () => import('@/views/admin/School.vue'), meta: { title: '学校信息' } },

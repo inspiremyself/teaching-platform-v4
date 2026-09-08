@@ -215,11 +215,21 @@ class LabServiceTests {
         Long classId = seedClass(ownerTeacherId);
         jdbcTemplate.update(
                 """
-                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at)
-                VALUES (?, ?, 'SUBJECT', '共班学科', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO school_subject (school_id, name, code, status, created_at, updated_at)
+                SELECT 1, '共班学科', ?, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                WHERE NOT EXISTS (SELECT 1 FROM school_subject WHERE school_id = 1 AND code = ?)
+                """,
+                "CO-TEACH-" + classId,
+                "CO-TEACH-" + classId
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_id, assigned_at, created_at, updated_at)
+                VALUES (?, ?, 'SUBJECT', (SELECT id FROM school_subject WHERE school_id = 1 AND code = ?), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
                 classId,
-                coTeacherId
+                coTeacherId,
+                "CO-TEACH-" + classId
         );
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, ownerTeacherId);
         Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
@@ -2195,11 +2205,21 @@ class LabServiceTests {
         Long classId = seedClass(ownerTeacherId);
         jdbcTemplate.update(
                 """
-                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at)
-                VALUES (?, ?, 'SUBJECT', '共班学科', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO school_subject (school_id, name, code, status, created_at, updated_at)
+                SELECT 1, '共班学科', ?, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                WHERE NOT EXISTS (SELECT 1 FROM school_subject WHERE school_id = 1 AND code = ?)
+                """,
+                "CO-TEACH-" + classId,
+                "CO-TEACH-" + classId
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_id, assigned_at, created_at, updated_at)
+                VALUES (?, ?, 'SUBJECT', (SELECT id FROM school_subject WHERE school_id = 1 AND code = ?), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
                 classId,
-                coTeacherId
+                coTeacherId,
+                "CO-TEACH-" + classId
         );
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, ownerTeacherId);
         Long stepId = seedCodeStepWithSnapshot(labId, 1);
@@ -2380,8 +2400,8 @@ class LabServiceTests {
         );
         jdbcTemplate.update(
                 """
-                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at)
-                VALUES (?, ?, 'SUBJECT', '测试学科', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_id, assigned_at, created_at, updated_at)
+                VALUES (?, ?, 'SUBJECT', (SELECT id FROM school_subject WHERE school_id = 1 AND code = 'SE-ARCH'), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
                 id,
                 teacherId

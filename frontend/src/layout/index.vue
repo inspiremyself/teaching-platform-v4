@@ -67,6 +67,9 @@
             <router-link to="/admin/teachers" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">badge</span><span>教师管理</span>
             </router-link>
+            <router-link to="/admin/subjects" class="nav-item" active-class="nav-active">
+              <span class="material-symbols-outlined">menu_book</span><span>学科管理</span>
+            </router-link>
             <router-link to="/admin/classes" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">groups</span><span>班级管理</span>
             </router-link>
@@ -204,6 +207,7 @@ const mobileNavItems = computed<NavItem[]>(() => {
     return [
       { to: '/admin/dashboard', label: '总览', icon: 'dashboard' },
       { to: '/admin/teachers', label: '教师', icon: 'badge' },
+      { to: '/admin/subjects', label: '学科', icon: 'menu_book' },
       { to: '/admin/classes', label: '班级', icon: 'groups' },
       { to: '/admin/students', label: '学生', icon: 'person' },
       { to: '/profile', label: '我的', icon: 'settings' },

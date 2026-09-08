@@ -6,6 +6,8 @@ import com.opencode.teachingplatform.clazz.entity.ClassTeacher;
 import com.opencode.teachingplatform.clazz.repository.ClassTeacherRepository;
 import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.school.entity.SchoolSubject;
+import com.opencode.teachingplatform.school.repository.SchoolSubjectRepository;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,15 +22,18 @@ public class ClassService {
     private final ClassAccessService classAccessService;
     private final ClassMemberRepository classMemberRepository;
     private final ClassTeacherRepository classTeacherRepository;
+    private final SchoolSubjectRepository schoolSubjectRepository;
 
     public ClassService(
             ClassAccessService classAccessService,
             ClassMemberRepository classMemberRepository,
-            ClassTeacherRepository classTeacherRepository
+            ClassTeacherRepository classTeacherRepository,
+            SchoolSubjectRepository schoolSubjectRepository
     ) {
         this.classAccessService = classAccessService;
         this.classMemberRepository = classMemberRepository;
         this.classTeacherRepository = classTeacherRepository;
+        this.schoolSubjectRepository = schoolSubjectRepository;
     }
 
     @Transactional(readOnly = true)
@@ -56,7 +61,14 @@ public class ClassService {
     private Map<String, Object> toView(ClassRoom room, ClassTeacher assignment) {
         Map<String, Object> myAssignment = new LinkedHashMap<>();
         myAssignment.put("role", assignment.getRole().name());
-        myAssignment.put("subjectName", assignment.getSubjectName());
+        myAssignment.put("subjectId", assignment.getSubjectId());
+        String subjectName = null;
+        if (assignment.getSubjectId() != null) {
+            subjectName = schoolSubjectRepository.findById(assignment.getSubjectId())
+                    .map(SchoolSubject::getName)
+                    .orElse(null);
+        }
+        myAssignment.put("subjectName", subjectName);
 
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("id", room.getId());

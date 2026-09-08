@@ -11,6 +11,7 @@ import type {
 export type TeacherStatus = 'ACTIVE' | 'DISABLED';
 export type ClassTeacherRole = 'HEAD' | 'SUBJECT';
 export type SchoolStatus = 'ACTIVE' | 'DISABLED';
+export type SubjectStatus = 'ACTIVE' | 'DISABLED';
 
 export interface AdminTeacher {
   id: number;
@@ -18,6 +19,14 @@ export interface AdminTeacher {
   displayName: string;
   status: TeacherStatus;
   classCount: number;
+}
+
+export interface AdminSubject {
+  id: number;
+  name: string;
+  code: string;
+  status: SubjectStatus;
+  assignmentCount: number;
 }
 
 export interface CreateTeacherPayload {
@@ -30,17 +39,28 @@ export interface UpdateTeacherPayload {
   displayName: string;
 }
 
+export interface CreateSubjectPayload {
+  name: string;
+  code: string;
+}
+
+export interface UpdateSubjectPayload {
+  name: string;
+  code: string;
+}
+
 export interface ClassTeacherAssignment {
   teacherUserId: number;
   teacherName: string;
   role: ClassTeacherRole;
+  subjectId: number | null;
   subjectName: string | null;
 }
 
 export interface ClassTeacherInput {
   teacherUserId: number;
   role: ClassTeacherRole;
-  subjectName?: string | null;
+  subjectId?: number | null;
 }
 
 export interface AdminClass {

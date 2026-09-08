@@ -42,7 +42,32 @@ public final class AdminRequests {
     public record ClassTeacherItem(
             @NotNull(message = "教师不能为空") Long teacherUserId,
             @NotNull(message = "角色不能为空") ClassTeacherRole role,
-            String subjectName
+            Long subjectId
+    ) {
+    }
+
+    public record CreateSubjectRequest(
+            @NotBlank(message = "学科名称不能为空")
+            @Size(min = 1, max = 128, message = "学科名称长度必须在1到128个字符之间")
+            String name,
+            @NotBlank(message = "学科编码不能为空")
+            @Size(min = 1, max = 64, message = "学科编码长度必须在1到64个字符之间")
+            String code
+    ) {
+    }
+
+    public record UpdateSubjectRequest(
+            @NotBlank(message = "学科名称不能为空")
+            @Size(min = 1, max = 128, message = "学科名称长度必须在1到128个字符之间")
+            String name,
+            @NotBlank(message = "学科编码不能为空")
+            @Size(min = 1, max = 64, message = "学科编码长度必须在1到64个字符之间")
+            String code
+    ) {
+    }
+
+    public record ChangeSubjectStatusRequest(
+            @NotBlank(message = "状态不能为空") String status
     ) {
     }
 

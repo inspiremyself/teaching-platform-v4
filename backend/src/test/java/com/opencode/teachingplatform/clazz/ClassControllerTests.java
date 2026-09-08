@@ -48,6 +48,7 @@ class ClassControllerTests {
         UsernamePasswordAuthenticationToken authenticationToken = authenticateTeacher(1L, "t9001");
         Map<String, Object> myAssignment = new LinkedHashMap<>();
         myAssignment.put("role", "SUBJECT");
+        myAssignment.put("subjectId", 1);
         myAssignment.put("subjectName", "软件体系结构");
         when(classService.listTeacherClasses(any(CurrentUser.class))).thenReturn(new PagedResult<>(List.of(
                 Map.of(
@@ -67,6 +68,7 @@ class ClassControllerTests {
                     .andExpect(jsonPath("$.code").value(0))
                     .andExpect(jsonPath("$.data.items[0].code").value("SE2026-1"))
                     .andExpect(jsonPath("$.data.items[0].myAssignment.role").value("SUBJECT"))
+                    .andExpect(jsonPath("$.data.items[0].myAssignment.subjectId").value(1))
                     .andExpect(jsonPath("$.data.items[0].myAssignment.subjectName").value("软件体系结构"));
         } finally {
             SecurityContextHolder.clearContext();

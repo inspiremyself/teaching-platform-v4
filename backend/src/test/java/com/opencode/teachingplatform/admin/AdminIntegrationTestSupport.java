@@ -4,6 +4,8 @@ import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
 import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.school.entity.SchoolSubject;
+import com.opencode.teachingplatform.school.repository.SchoolSubjectRepository;
 import com.opencode.teachingplatform.testsupport.IntegrationTestAuthSupport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +25,9 @@ abstract class AdminIntegrationTestSupport {
     @Autowired
     protected UserLoginSessionRepository userLoginSessionRepository;
 
+    @Autowired
+    protected SchoolSubjectRepository schoolSubjectRepository;
+
     protected void clearSecurityContext() {
         SecurityContextHolder.clearContext();
     }
@@ -33,6 +38,12 @@ abstract class AdminIntegrationTestSupport {
 
     protected Long teacherId(String username) {
         return sysUserRepository.findByUsernameAndRole(username, UserRole.TEACHER).orElseThrow().getId();
+    }
+
+    protected Long subjectIdByCode(String code) {
+        return schoolSubjectRepository.findBySchoolIdAndCode(1L, code)
+                .map(SchoolSubject::getId)
+                .orElseThrow(() -> new IllegalStateException("Subject not found: " + code));
     }
 
     protected String adminBearer() {

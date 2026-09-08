@@ -185,7 +185,10 @@ class HomeworkServiceTests {
                 99L, "SE2026-2", "SE2026-2", ClassStatus.ACTIVE.name()
         );
         jdbcTemplate.update(
-                "INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_name, assigned_at, created_at, updated_at) VALUES (?, 1, 'SUBJECT', '测试学科', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
+                "INSERT INTO school_subject (school_id, name, code, status, created_at, updated_at) VALUES (1, '测试学科', 'TEST-SUBJ', 'ACTIVE', CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())"
+        );
+        jdbcTemplate.update(
+                "INSERT INTO class_teacher (class_id, teacher_user_id, role, subject_id, assigned_at, created_at, updated_at) VALUES (?, 1, 'SUBJECT', (SELECT id FROM school_subject WHERE school_id = 1 AND code = 'TEST-SUBJ'), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
                 99L
         );
 

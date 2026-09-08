@@ -23,4 +23,6 @@ public interface ClassTeacherRepository extends JpaRepository<ClassTeacher, Long
 
     @Query("SELECT DISTINCT ct.classId FROM ClassTeacher ct WHERE ct.teacherUserId = :teacherUserId")
     List<Long> findClassIdsByTeacherUserId(@Param("teacherUserId") Long teacherUserId);
+
+    long countBySubjectId(Long subjectId);
 }

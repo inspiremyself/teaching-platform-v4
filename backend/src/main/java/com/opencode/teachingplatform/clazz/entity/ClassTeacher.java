@@ -24,8 +24,8 @@ public class ClassTeacher extends BaseEntity {
     @Column(nullable = false, length = 16)
     private ClassTeacherRole role;
 
-    @Column(name = "subject_name", length = 64)
-    private String subjectName;
+    @Column(name = "subject_id")
+    private Long subjectId;
 
     @Column(name = "assigned_at", nullable = false)
     private OffsetDateTime assignedAt;
@@ -36,8 +36,8 @@ public class ClassTeacher extends BaseEntity {
     public void setTeacherUserId(Long teacherUserId) { this.teacherUserId = teacherUserId; }
     public ClassTeacherRole getRole() { return role; }
     public void setRole(ClassTeacherRole role) { this.role = role; }
-    public String getSubjectName() { return subjectName; }
-    public void setSubjectName(String subjectName) { this.subjectName = subjectName; }
+    public Long getSubjectId() { return subjectId; }
+    public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
     public OffsetDateTime getAssignedAt() { return assignedAt; }
     public void setAssignedAt(OffsetDateTime assignedAt) { this.assignedAt = assignedAt; }
 }
