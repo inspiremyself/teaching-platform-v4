@@ -267,12 +267,12 @@ const experimentTypeOptions = Object.entries(LAB_EXPERIMENT_TYPE_LABELS).map(([v
   label,
 }));
 
-const createForm = reactive<CreateLabPayload>({
+const createForm = reactive<Omit<CreateLabPayload, 'classId'> & { classId?: number }>({
   title: '',
   description: '',
   experimentContent: '',
   experimentType: 1,
-  classId: 0,
+  classId: undefined,
   status: 'DRAFT',
   materialId: null,
   summaryRequired: false,
@@ -323,7 +323,7 @@ const resetCreateForm = () => {
   createForm.description = '';
   createForm.experimentContent = '';
   createForm.experimentType = 1;
-  createForm.classId = classOptions.value[0]?.id ?? 0;
+  createForm.classId = classOptions.value[0]?.id;
   createForm.status = 'DRAFT';
   createForm.materialId = null;
   createForm.materialTitle = '';
@@ -355,7 +355,7 @@ const openEditDialog = (row: LabItem) => {
   createForm.description = row.description;
   createForm.experimentContent = row.experimentContent || '';
   createForm.experimentType = row.experimentType || 1;
-  createForm.classId = row.classId || 0;
+  createForm.classId = row.classId;
   createForm.status = row.status;
   createForm.materialId = row.materialId || null;
   createForm.materialTitle = row.materialTitle || '';
