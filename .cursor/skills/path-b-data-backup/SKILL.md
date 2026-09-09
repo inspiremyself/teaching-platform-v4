@@ -71,10 +71,20 @@ description: >-
 
 ## 硬约束
 
+- **禁止** `rm -rf data/h2/`；清库只用 `./scripts/path-b/reset-h2.sh`（内置先备份）。
+- 备份后跑 `./scripts/common/verify-path-b-backup.sh --latest` 确认 manifest 与快照统计。
 - **后端运行时禁止恢复**；备份默认也拒绝（`--force` 仅应急）。
 - 不要提交 `data/` 到 git。
-- 路径 A（Docker MySQL）不在本技能范围；见 `docs/运维文档/` 路径 A 文档。
-- 演示账号 `t9001` / `20260001` / `admin9001` 删库后 Flyway 会回来；**自定义账号不会**。
+- 跨校改 `school_id` 前须备份，并告知班级/学生不会随用户迁移。
+- 演示账号删库后 Flyway 会回来；**自定义账号/导入学生不会**。
+
+## 里程碑备份（建议）
+
+完成以下操作后立刻 `--label milestone-<简述> --with-files`：
+
+- 校管 Excel 导入一批学生
+- 脚本/校管创建真实学校与教师
+- 实验/作业联调造数后需保留
 
 ## 文档
 

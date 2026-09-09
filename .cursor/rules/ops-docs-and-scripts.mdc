@@ -11,8 +11,8 @@ alwaysApply: false
 ```text
 scripts/
   path-a/     # Docker Compose：up.sh / down.sh / logs.sh
-  path-b/     # 本地 H2：backend.sh / frontend.sh
-  common/     # 共用：healthcheck-login.sh、backup-path-b-data.sh、restore-path-b-data.sh
+  path-b/     # 本地 H2：backend.sh / frontend.sh / reset-h2.sh
+  common/     # 共用：healthcheck-login.sh、backup-path-b-data.sh、restore-path-b-data.sh、verify-path-b-backup.sh
 docs/运维文档/
   README.md                 # 索引
   YYYY-MM-DD-<主题>.md      # 创建日期作文件名前缀

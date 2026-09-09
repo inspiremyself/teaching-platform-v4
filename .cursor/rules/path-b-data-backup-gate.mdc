@@ -5,35 +5,57 @@ alwaysApply: true
 
 # 路径 B 数据备份门禁
 
-配合技能 `.cursor/skills/path-b-data-backup/SKILL.md`、脚本 `scripts/common/backup-path-b-data.sh`。
+配合技能 `.cursor/skills/path-b-data-backup/SKILL.md`、脚本 `scripts/common/backup-path-b-data.sh`。  
+**删库硬禁令**见同级规则 `path-b-no-direct-delete.mdc`（禁止 `rm data/h2/`）。
+
+## 数据分层（必记）
+
+| 层级 | 来源 | 清 `data/h2/` 后 |
+|------|------|------------------|
+| Flyway 种子 | `db/migration/V*.sql` | ✅ 自动回来（t9001、20260001、admin9001…） |
+| 本地业务数据 | 校管导入、脚本建账号、H2 Console/SQL、联调造数 | ❌ **永久丢失**（除非从 `data/backups/` 恢复） |
+| 上传文件 | `data/files/` | ❌ 不随 Flyway 恢复；需 `--with-files` 备份 |
+
+**跨校迁移用户**（改 `school_id`）不会带走班级/学生/实验——组织数据按 `school_id` 隔离。
 
 ## 触发即备份（未备份禁止继续）
-
-满足**任一**即视为破坏性操作，**须先**备份并向用户回报 `data/backups/...` 路径：
 
 | 触发 | 示例 |
 |------|------|
 | Flyway 迁移 | 新增/改 `backend/src/main/resources/db/migration/V*.sql` |
-| 清库 | 删 `data/h2/`、重置/重建路径 B 本地库 |
-| 大重构 | 方案写 schema/组织模型变更、需清 H2 验证 |
+| 清库 | **禁止** `rm -rf data/h2/`；须 `./scripts/path-b/reset-h2.sh`（内置先备份） |
+| H2 直写 | H2 Console/SQL 改 `sys_user`、建学校、批量导入 |
+| 大重构 | schema/组织模型变更、需清 H2 验证 |
+| 里程碑 | 完成校管 Excel 导入、组织搭建、重要联调数据后 → `--label milestone-xxx` |
 | 用户明示 | 「清库」「跑迁移」「重构会丢数据吗」 |
 
 ## 执行（仓库根目录）
 
-1. 端口 `${SERVER_PORT:-8080}` 有后端 → 提示停 `./scripts/path-b/backend.sh`（应急才用脚本 `--force`）。
-2. 运行：
+1. 端口 `${SERVER_PORT:-8080}` 有后端 → 清库/恢复须先停后端；备份可 `--force` 应急。
+2. 备份：
 
 ```bash
-./scripts/common/backup-path-b-data.sh --label <操作简述> [--with-files]
+./scripts/common/backup-path-b-data.sh --label <操作简述> --with-files
+./scripts/common/verify-path-b-backup.sh --latest
 ```
 
-3. 退出码 `0` 且输出含 `完成: data/backups/...` → 方可继续删库/写迁移/清 H2。
-4. **备份失败或未执行** → 禁止删 `data/h2/`、禁止帮用户清库、禁止声称迁移已完成。
+3. 清库（唯一推荐入口）：
 
-## 恢复与文档
+```bash
+./scripts/path-b/reset-h2.sh --label before-reset
+```
 
-- 丢数据：`./scripts/common/restore-path-b-data.sh --latest`（须先停后端）
-- 运维说明：`docs/运维文档/2026-09-09-路径B-数据备份与恢复.md`
+4. 退出码 `0` 且输出含 `完成: data/backups/...` → 方可继续破坏性操作。
+5. **备份失败或未执行** → 禁止删 `data/h2/`、禁止帮用户清库。
+
+## 恢复
+
+```bash
+./scripts/common/backup-path-b-data.sh --list
+./scripts/common/restore-path-b-data.sh --latest --with-files
+```
+
+运维说明：`docs/运维文档/2026-09-09-路径B-数据备份与恢复.md`
 
 ## 豁免
 

@@ -32,7 +32,7 @@ alwaysApply: true
 - 上传根：**仓库根** `data/files/`（脚本注入 `FILE_STORAGE_ROOT`）
   - `materials/` — 课程资料（既有）
   - `lab-answers/{yyyy-MM-dd}/` — 实验答题图（本期）
-- 清空本地库：停后端后删除 `data/h2/`，下次启动会重新 Flyway 灌种。**清库前须** `./scripts/common/backup-path-b-data.sh`（见 `path-b-data-backup-gate.mdc`）。
+- 清空本地库：**禁止**直接 `rm -rf data/h2/`；须 `./scripts/path-b/reset-h2.sh`（内置先备份，见 `path-b-data-backup-gate.mdc`）。
 - 单元测试仍用 `src/test/resources` 的 **mem** 库，与路径 B 文件库隔离。
 - 迁 MySQL 靠共用 `db/migration/`；不要假设可从 H2 文件一键导出到 MySQL。
 - 禁止再把路径 B 数据落到 `backend/data/`。

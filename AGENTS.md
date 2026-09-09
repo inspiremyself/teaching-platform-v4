@@ -76,6 +76,7 @@ teaching-platform/
 - 当前阶段优先级：**前端原型 / 产品交互目标 > 旧规范书细节 > 旧实现形态**。
 - 仍必须保持真实系统约束：真实前后端、真实数据库、真实权限、真实测试，不允许 mock 页面、假 API、假数据闭环。
 - 调试与 E2E 联调优先使用 **H2 文件库 + `test` profile + Flyway 种子数据**（数据目录仓库根 `data/h2/`，上传 `data/files/`，重启保留）；这套组合目前已验证能稳定支撑教师 `t9001/123456`、学生 `20260001/123456` 的真实链路测试。
+- **本地业务数据**（校管导入、脚本建账号、H2 SQL）不在 Flyway 种子内；清库即丢。破坏性操作前须 `./scripts/common/backup-path-b-data.sh`；清库须 `./scripts/path-b/reset-h2.sh`（见 `path-b-data-backup-gate.mdc`）。
 - 若需要并行跑多套前后端实例，后端优先改 `SERVER_PORT`，前端通过 `VITE_API_TARGET` 定向代理到该后端，不要硬绑定唯一的 `8080/5173` 组合。
 - 接口统一前缀仍是 `/api/v1`；统一响应仍是 `code`、`message`、`data`、`timestamp`。
 - 前端统一通过 `frontend/src/utils/request.ts` 访问后端；不要在页面里直接手写 Axios 实例。

@@ -7,7 +7,7 @@
 | [2026-09-04-路径A-Docker-Compose整站启动.md](./2026-09-04-路径A-Docker-Compose整站启动.md) | MySQL + 后端 + 前端三容器 | `scripts/path-a/` |
 | [2026-09-04-路径B-本地开发H2启动.md](./2026-09-04-路径B-本地开发H2启动.md) | 本地联调；H2 **文件库**持久化 | `scripts/path-b/`、`scripts/common/` |
 | [2026-09-07-路径B-添加教师账号.md](./2026-09-07-路径B-添加教师账号.md) | 路径 B 已启动时新增教师账号 | `scripts/common/create-teacher.sh` |
-| [2026-09-09-路径B-数据备份与恢复.md](./2026-09-09-路径B-数据备份与恢复.md) | 清库/重构前备份 H2 与上传 | `scripts/common/backup-path-b-data.sh`、`restore-path-b-data.sh` |
+| [2026-09-09-路径B-数据备份与恢复.md](./2026-09-09-路径B-数据备份与恢复.md) | 清库/重构前备份 H2 与上传 | `backup-path-b-data.sh`、`restore-path-b-data.sh`、`verify-path-b-backup.sh`、`path-b/reset-h2.sh` |
 
 ## 快速示例
 
@@ -27,9 +27,10 @@
   --password 123456 \
   --display-name '王老师-leon'
 
-# 路径 B：清库/重构前备份
+# 路径 B：清库/重构前备份与校验
 ./scripts/common/backup-path-b-data.sh --label before-refactor --with-files
-./scripts/common/backup-path-b-data.sh --list
+./scripts/common/verify-path-b-backup.sh --latest
+./scripts/path-b/reset-h2.sh --label before-reset   # 安全清库（内置备份）
 ```
 
 日常开发优先路径 B；验收/整站演示用路径 A。二者勿并行占用同一组端口（`8080` / `5173`）。

@@ -1,0 +1,39 @@
+---
+description: 禁止直接删除路径 B H2 文件库（rm data/h2）；清库只允许 reset-h2.sh；Agent 不得帮用户执行裸删库
+alwaysApply: true
+---
+
+# 禁止直接删库（路径 B）
+
+## 硬禁令
+
+**不得**执行、建议或写进文档的删库方式：
+
+```bash
+rm -rf data/h2
+rm -rf data/h2/
+rm data/h2/*
+```
+
+也**不得**用 Finder/资源管理器直接删 `data/h2/` 代替上述命令。
+
+## 唯一允许的清库入口
+
+```bash
+# 须先停 ./scripts/path-b/backend.sh
+./scripts/path-b/reset-h2.sh --with-files --label before-reset
+```
+
+该脚本会**先自动备份**到 `data/backups/`，确认后再清空 `data/h2/`。
+
+## Agent 行为
+
+| 场景 | 必须 |
+|------|------|
+| 用户/方案要求「清库」「重置 H2」「删 data/h2」 | 改用 `reset-h2.sh`，禁止裸 `rm` |
+| 迁移/重构前 | 先 `backup-path-b-data.sh`，见 `path-b-data-backup-gate.mdc` |
+| 用户坚持手动删 | 明确告知将丢失校管导入、脚本账号、实验提交；仍建议先备份 |
+
+## 原因（一句话）
+
+清 `data/h2/` 只会通过 Flyway 恢复**演示种子**；本地业务数据不在 git 里，裸删即丢。

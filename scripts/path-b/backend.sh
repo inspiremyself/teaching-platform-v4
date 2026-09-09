@@ -32,7 +32,7 @@ echo "==> 启动路径 B 后端"
 echo "    profile=${SPRING_PROFILES_ACTIVE}"
 echo "    port=${SERVER_PORT}"
 echo "    工作目录=${BACKEND_DIR}"
-echo "    H2 文件库: ${H2_FILE}.*（重启保留；清空可删 ${ROOT_DIR}/data/h2/）"
+echo "    H2 文件库: ${H2_FILE}.*（重启保留；清库请用 ../scripts/path-b/reset-h2.sh，勿直接 rm data/h2/）"
 echo "    上传根目录: ${FILE_STORAGE_ROOT}"
 
 exec ./mvnw spring-boot:run

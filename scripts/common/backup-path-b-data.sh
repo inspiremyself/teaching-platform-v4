@@ -165,5 +165,71 @@ with open(path, "w", encoding="utf-8") as f:
 PY
 
 echo "    manifest.json 已写入"
+
+capture_backup_stats() {
+  if ! lsof -nP -iTCP:"${SERVER_PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! command -v curl >/dev/null 2>&1; then
+    return 0
+  fi
+  local h2_console="${H2_CONSOLE:-http://localhost:8080/h2-console}"
+  h2_console="${h2_console%/}"
+  local backup_h2_file="${backup_dir}/h2/teaching_platform"
+  local db_url="jdbc:h2:file:${backup_h2_file};MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1;ACCESS_MODE_DATA=r"
+  local cookie jsession idx login_html out
+
+  cookie="$(mktemp -t backup-stats-cookie.XXXXXX)"
+  idx="$(curl -sS -c "$cookie" -b "$cookie" "${h2_console}/")" || { rm -f "$cookie"; return 0; }
+  jsession="$(printf '%s' "$idx" | grep -oE 'jsessionid=[a-f0-9]+' | head -1 | cut -d= -f2 || true)"
+  if [[ -z "${jsession:-}" ]]; then
+    rm -f "$cookie"
+    return 0
+  fi
+  curl -sS -c "$cookie" -b "$cookie" -o /dev/null "${h2_console}/login.jsp?jsessionid=${jsession}"
+  login_html="$(curl -sS -c "$cookie" -b "$cookie" -X POST "${h2_console}/login.do?jsessionid=${jsession}" \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data-urlencode "language=en" \
+    --data-urlencode "setting=Generic H2 (Embedded)" \
+    --data-urlencode "name=Generic H2 (Embedded)" \
+    --data-urlencode "driver=org.h2.Driver" \
+    --data-urlencode "url=${db_url}" \
+    --data-urlencode "user=sa" \
+    --data-urlencode "password=")"
+  if ! printf '%s' "$login_html" | grep -qi 'frameset\|query.jsp'; then
+    rm -f "$cookie"
+    return 0
+  fi
+  out="$(curl -sS -c "$cookie" -b "$cookie" -X POST "${h2_console}/query.do?jsessionid=${jsession}" \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    --data-urlencode "sql=SELECT (SELECT COUNT(*) FROM sys_user WHERE role='TEACHER') AS teachers, (SELECT COUNT(*) FROM sys_user WHERE role='STUDENT') AS students, (SELECT COUNT(*) FROM school) AS schools, (SELECT COUNT(*) FROM class_room) AS classes, (SELECT COUNT(*) FROM lab_submission) AS lab_submissions;")"
+  rm -f "$cookie"
+  python3 - "$backup_dir/manifest.json" "$out" <<'PY'
+import json, re, sys, html as H
+
+manifest_path, raw = sys.argv[1], sys.argv[2]
+text = H.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", re.sub(r"<script[\s\S]*?</script>", "", raw, flags=re.I))).strip())
+m = re.search(
+    r"teachers\s+students\s+schools\s+classes\s+lab_submissions\s+"
+    r"(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)",
+    text,
+    flags=re.I,
+)
+if not m:
+    raise SystemExit(0)
+keys = ["teachers", "students", "schools", "classes", "labSubmissions"]
+stats = dict(zip(keys, map(int, m.groups())))
+with open(manifest_path, encoding="utf-8") as f:
+    payload = json.load(f)
+payload["stats"] = stats
+with open(manifest_path, "w", encoding="utf-8") as f:
+    json.dump(payload, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+print("    快照统计:", ", ".join(f"{k}={v}" for k, v in stats.items()))
+PY
+}
+
+capture_backup_stats || true
+
 echo "完成: ${backup_dir}"
 echo "恢复: ./scripts/common/restore-path-b-data.sh --backup ${backup_dir}"

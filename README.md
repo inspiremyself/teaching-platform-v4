@@ -54,7 +54,10 @@
 
 ### 方式二：本地开发（路径 B，推荐日常联调）
 
-H2 **文件库**（仓库根 `data/h2/`），无需 MySQL，**重启数据保留**。清空可删该目录后重启。上传文件在 `data/files/`（答题图：`data/files/lab-answers/{yyyy-MM-dd}/`）。
+H2 **文件库**（仓库根 `data/h2/`），无需 MySQL，**重启数据保留**。  
+**清库请用** `./scripts/path-b/reset-h2.sh`（内置先备份）；**不要**直接删 `data/h2/`。  
+上传文件在 `data/files/`（答题图：`data/files/lab-answers/{yyyy-MM-dd}/`）。  
+备份与恢复见 [`docs/运维文档/2026-09-09-路径B-数据备份与恢复.md`](docs/运维文档/2026-09-09-路径B-数据备份与恢复.md)。
 
 ```bash
 # 两个终端
