@@ -71,17 +71,17 @@
 
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑学生' : '新增学生'" width="520px" destroy-on-close>
       <el-form label-position="top">
-        <el-form-item v-if="!editingId" label="账号">
-          <el-input v-model="form.username" placeholder="例如：20260011" />
+        <el-form-item v-if="!editingId" label="账号" for="admin-student-username">
+          <el-input id="admin-student-username" v-model="form.username" placeholder="例如：20260011" />
         </el-form-item>
-        <el-form-item label="学生姓名">
-          <el-input v-model="form.displayName" placeholder="请输入学生姓名" />
+        <el-form-item label="学生姓名" for="admin-student-display-name">
+          <el-input id="admin-student-display-name" v-model="form.displayName" placeholder="请输入学生姓名" />
         </el-form-item>
-        <el-form-item v-if="!editingId" label="初始密码">
-          <el-input v-model="form.password" show-password placeholder="默认可用 123456" />
+        <el-form-item v-if="!editingId" label="初始密码" for="admin-student-password">
+          <el-input id="admin-student-password" v-model="form.password" show-password placeholder="默认可用 123456" />
         </el-form-item>
-        <el-form-item label="所属班级">
-          <el-select v-model="form.classId" placeholder="请选择班级" style="width: 100%">
+        <el-form-item label="所属班级" for="admin-student-class-id">
+          <el-select id="admin-student-class-id" v-model="form.classId" placeholder="请选择班级" style="width: 100%">
             <el-option v-for="item in classes" :key="item.id" :label="`${item.name} (${item.code})`" :value="item.id" />
           </el-select>
         </el-form-item>
@@ -131,8 +131,8 @@
       </section>
 
       <el-form label-position="top" class="import-text-form">
-        <el-form-item label="文本补充导入">
-          <el-input v-model="importText" type="textarea" :rows="6" placeholder="20260011,张三,123456" />
+        <el-form-item label="文本补充导入" for="admin-student-import-text">
+          <el-input id="admin-student-import-text" v-model="importText" type="textarea" :rows="6" placeholder="20260011,张三,123456" />
         </el-form-item>
       </el-form>
 

@@ -1,0 +1,47 @@
+---
+description: 路径 B 破坏性操作前强制 DB 备份门禁（Flyway/清库/大重构）；未备份禁止删库或跑迁移
+alwaysApply: true
+---
+
+# 路径 B 数据备份门禁
+
+配合技能 `.cursor/skills/path-b-data-backup/SKILL.md`、脚本 `scripts/common/backup-path-b-data.sh`。
+
+## 触发即备份（未备份禁止继续）
+
+满足**任一**即视为破坏性操作，**须先**备份并向用户回报 `data/backups/...` 路径：
+
+| 触发 | 示例 |
+|------|------|
+| Flyway 迁移 | 新增/改 `backend/src/main/resources/db/migration/V*.sql` |
+| 清库 | 删 `data/h2/`、重置/重建路径 B 本地库 |
+| 大重构 | 方案写 schema/组织模型变更、需清 H2 验证 |
+| 用户明示 | 「清库」「跑迁移」「重构会丢数据吗」 |
+
+## 执行（仓库根目录）
+
+1. 端口 `${SERVER_PORT:-8080}` 有后端 → 提示停 `./scripts/path-b/backend.sh`（应急才用脚本 `--force`）。
+2. 运行：
+
+```bash
+./scripts/common/backup-path-b-data.sh --label <操作简述> [--with-files]
+```
+
+3. 退出码 `0` 且输出含 `完成: data/backups/...` → 方可继续删库/写迁移/清 H2。
+4. **备份失败或未执行** → 禁止删 `data/h2/`、禁止帮用户清库、禁止声称迁移已完成。
+
+## 恢复与文档
+
+- 丢数据：`./scripts/common/restore-path-b-data.sh --latest`（须先停后端）
+- 运维说明：`docs/运维文档/2026-09-09-路径B-数据备份与恢复.md`
+
+## 豁免
+
+- 仅 UT mem 库（`src/test/resources`）且本轮不清路径 B 文件库
+- 纯前端/CSS、纯文档、与 DB 无关的小改动
+- 用户明确「不要备份」→ 须告知将丢失手动账号与 Excel 导入数据，再继续
+
+## 与 feature-dev-workflow 衔接
+
+- 方案含 Flyway/清库/schema 大改 → **§2 编码前**先过本门禁
+- §3 路径 B 验收前：若本轮曾清库或跑新迁移，确认备份在破坏性操作**之前**已完成

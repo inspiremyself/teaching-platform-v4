@@ -9,6 +9,7 @@
 #   API_BASE=http://localhost:8080/api/v1
 #   H2_CONSOLE=http://localhost:8080/h2-console
 #   H2_FILE=<仓库根>/data/h2/teaching_platform   # JDBC 文件路径（无 .mv.db 后缀）
+#   SCHOOL_ID=1   # 演示学校 id（V13 后 sys_user.school_id 必填）
 # 可选参数:
 #   --force   用户名已存在时跳过插入，只做登录探活
 set -euo pipefail
@@ -18,6 +19,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 API_BASE="${API_BASE:-http://localhost:8080/api/v1}"
 H2_CONSOLE="${H2_CONSOLE:-http://localhost:8080/h2-console}"
 H2_FILE="${H2_FILE:-${ROOT_DIR}/data/h2/teaching_platform}"
+SCHOOL_ID="${SCHOOL_ID:-1}"
 
 USERNAME=""
 PASSWORD=""
@@ -36,6 +38,7 @@ usage() {
 说明:
   - 仅路径 B：后端须已用 test profile 启动，且占用 H2 文件库。
   - 密码入库为 {noop}<明文>，与种子账号一致；登录仍用明文。
+  - 默认 school_id=1（演示学校）；多校场景可设环境变量 SCHOOL_ID。
   - --force：用户名已存在则跳过 INSERT，仅探活登录。
 EOF
 }
@@ -100,6 +103,7 @@ trap cleanup EXIT
 echo "==> 路径 B 添加教师"
 echo "    username=${USERNAME}"
 echo "    displayName=${DISPLAY_NAME}"
+echo "    schoolId=${SCHOOL_ID}"
 echo "    h2Console=${H2_CONSOLE}"
 echo "    h2File=${H2_FILE}"
 
@@ -174,7 +178,7 @@ print(m.group(1) if m else "")
 
 echo "==> 检查用户名是否已存在"
 UN_ESC="${USERNAME//\'/\'\'}"
-EXIST_TEXT="$(h2_sql "SELECT id, username, role, display_name, status FROM sys_user WHERE username='${UN_ESC}';")"
+EXIST_TEXT="$(h2_sql "SELECT id, username, role, display_name, status, school_id FROM sys_user WHERE school_id=${SCHOOL_ID} AND username='${UN_ESC}' AND role='TEACHER';")"
 EXIST_ROWS="$(h2_row_count "$EXIST_TEXT")"
 if [[ -z "$EXIST_ROWS" ]]; then
   echo "错误: 无法解析查询结果行数。" >&2
@@ -194,10 +198,10 @@ else
   DN_ESC="${DISPLAY_NAME//\'/\'\'}"
   INSERT_SQL=$(cat <<EOF
 INSERT INTO sys_user (
-  username, password_hash, role, display_name, status,
+  username, password_hash, role, display_name, status, school_id,
   must_change_password, created_at, updated_at
 ) VALUES (
-  '${UN_ESC}', '{noop}${PW_ESC}', 'TEACHER', '${DN_ESC}', 'ACTIVE',
+  '${UN_ESC}', '{noop}${PW_ESC}', 'TEACHER', '${DN_ESC}', 'ACTIVE', ${SCHOOL_ID},
   FALSE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 );
 EOF
@@ -211,7 +215,7 @@ EOF
   fi
   echo "    ${INS_TEXT}"
 
-  VERIFY_TEXT="$(h2_sql "SELECT id, username, role, display_name, status FROM sys_user WHERE username='${UN_ESC}';")"
+  VERIFY_TEXT="$(h2_sql "SELECT id, username, role, display_name, status, school_id FROM sys_user WHERE school_id=${SCHOOL_ID} AND username='${UN_ESC}' AND role='TEACHER';")"
   echo "==> 插入后核对"
   echo "    ${VERIFY_TEXT}"
 fi
