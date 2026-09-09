@@ -31,7 +31,7 @@ rm data/h2/*
 | 场景 | 必须 |
 |------|------|
 | 用户/方案要求「清库」「重置 H2」「删 data/h2」 | 改用 `reset-h2.sh`，禁止裸 `rm` |
-| 迁移/重构前 | 先 `backup-path-b-data.sh`，见 `path-b-data-backup-gate.mdc` |
+| 迁移/重构前 | 先 `backup-local-data.sh`，见 `path-b-data-backup-gate.mdc` |
 | 用户坚持手动删 | 明确告知将丢失校管导入、脚本账号、实验提交；仍建议先备份 |
 
 ## 原因（一句话）

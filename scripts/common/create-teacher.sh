@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 路径 B：在已启动的后端上新增教师账号（经 H2 Console 写文件库）
+# 路径 B（H2）：在已启动的 H2 后端上新增教师账号（经 H2 Console 写文件库）
+# 须先 ./scripts/path-b/backend-h2.sh（MySQL 默认 backend.sh 无 H2 Console）
 # 用法:
 #   ./scripts/common/create-teacher.sh \
 #     --username teacher-260806 \

@@ -145,4 +145,4 @@ if [[ -f "${BACKUP}/manifest.json" ]]; then
 fi
 
 echo "完成: 已从 ${BACKUP} 恢复。"
-echo "下一步: ./scripts/path-b/backend.sh 启动后端，并用 healthcheck-login.sh 探活。"
+echo "下一步: ./scripts/path-b/backend-h2.sh 或 ./scripts/path-b/backend.sh 启动后端，并用 healthcheck-login.sh 探活。"

@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# 路径 B：本地启动后端（H2 / test profile）
+# 本地启动后端（默认 MySQL / local profile）
 # 可选环境变量:
 #   SERVER_PORT=18080
-#   SPRING_PROFILES_ACTIVE=test   # 默认 test，一般无需改
-#   FILE_STORAGE_ROOT / H2_FILE  # 默认指向仓库根 data/；一般无需改
+#   DB_HOST=127.0.0.1
+#   DB_PORT=3306
+#   DB_NAME=teaching_platform
+#   DB_USER=root
+#   DB_PASS=12345678          # 路径 A Docker MySQL 为 123456
+#   FILE_STORAGE_ROOT
+# 无 MySQL 时用 H2：./scripts/path-b/backend-h2.sh
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -20,19 +25,25 @@ if ! command -v mvn >/dev/null 2>&1; then
   exit 1
 fi
 
-export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-test}"
+export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-local}"
 export SERVER_PORT="${SERVER_PORT:-8080}"
+export DB_HOST="${DB_HOST:-127.0.0.1}"
+export DB_PORT="${DB_PORT:-3306}"
+export DB_NAME="${DB_NAME:-teaching_platform}"
+export DB_USER="${DB_USER:-root}"
+export DB_PASS="${DB_PASS:-12345678}"
 
-# 仓库根 data/（与技术方案 / 运维文档一致；勿再落到 backend/data/）
 export FILE_STORAGE_ROOT="${FILE_STORAGE_ROOT:-${ROOT_DIR}/data/files}"
-export H2_FILE="${H2_FILE:-${ROOT_DIR}/data/h2/teaching_platform}"
-mkdir -p "${ROOT_DIR}/data/h2" "${ROOT_DIR}/data/files"
+mkdir -p "${FILE_STORAGE_ROOT}"
 
-echo "==> 启动路径 B 后端"
+echo "==> 启动本地后端（MySQL）"
 echo "    profile=${SPRING_PROFILES_ACTIVE}"
 echo "    port=${SERVER_PORT}"
+echo "    jdbc=mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+echo "    user=${DB_USER}"
 echo "    工作目录=${BACKEND_DIR}"
-echo "    H2 文件库: ${H2_FILE}.*（重启保留；清库请用 ../scripts/path-b/reset-h2.sh，勿直接 rm data/h2/）"
 echo "    上传根目录: ${FILE_STORAGE_ROOT}"
+echo "    首次使用: ./scripts/common/migrate-h2-to-mysql.sh 或手动建库 teaching_platform"
+echo "    H2 联调: ./scripts/path-b/backend-h2.sh"
 
 exec ./mvnw spring-boot:run

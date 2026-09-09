@@ -10,7 +10,7 @@ spring:
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:teaching_platform}?useSSL=false&serverTimezone=UTC&characterEncoding=utf8
     username: ${DB_USER:root}
-    password: ${DB_PASS:123456}
+    password: ${DB_PASS:12345678}
   jpa:
     open-in-view: false
     hibernate:
@@ -27,5 +27,5 @@ server:
 
 app:
   jwt-secret: ${JWT_SECRET:replace-with-32-char-secret-1234}
-  # 路径 B 由 scripts/path-b/backend.sh 注入仓库根绝对路径；默认 ../data/files 相对 backend/ CWD
+  # scripts/path-b/backend.sh 注入仓库根绝对路径；默认 ../data/files 相对 backend/ CWD
   file-storage-root: ${FILE_STORAGE_ROOT:../data/files}

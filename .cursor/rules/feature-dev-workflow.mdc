@@ -77,7 +77,7 @@ alwaysApply: true
 
 **前置条件**：目标方案文首已为「已定稿」且方案自查已收敛。
 
-**路径 B 备份门禁**（`path-b-data-backup-gate.mdc`）：若方案或本轮改动涉及 `db/migration/`、清 `data/h2/`、schema/组织大重构 → **开写迁移/SQL/删库前**先执行 `./scripts/common/backup-path-b-data.sh --label <方案简称>`，向用户回报备份路径；未备份禁止继续。
+**路径 B 备份门禁**（`path-b-data-backup-gate.mdc`）：若方案或本轮改动涉及 `db/migration/`、清 `data/h2/`、schema/组织大重构 → **开写迁移/SQL/删库前**先执行 `./scripts/common/backup-local-data.sh --label <方案简称> [--with-files]`，向用户回报备份路径；未备份禁止继续。
 
 1. **范围**：只改方案列出的文件与能力；不做方案外的「顺手优化」。
 2. **真实链路**：真实前后端 + 真实 DB/Flyway；禁止 mock 页面、假 API、静态假数据闭环。
@@ -143,4 +143,4 @@ cd backend && ./mvnw test             # 后端有改动
 - ❌ 验证失败不 invoke 技能回到实现自查，直接口头说「可验收」
 - ❌ 为通过自查硬改方案口径而不改实现
 - ❌ 只读 workflow 摘要、不 Read `self-review-and-fix/SKILL.md` 就执行自查
-- ❌ 涉及 Flyway/清库却未先跑 `backup-path-b-data.sh` 就删 `data/h2/` 或写迁移
+- ❌ 涉及 Flyway/清库却未先跑 `backup-local-data.sh` 就删 `data/h2/` 或写迁移

@@ -52,29 +52,30 @@
 
 停止：`./scripts/path-a/down.sh`（加 `--volumes` 会清空 MySQL / 上传文件卷）
 
-### 方式二：本地开发（路径 B，推荐日常联调）
+### 方式二：本地开发（推荐日常联调，默认 MySQL）
 
-H2 **文件库**（仓库根 `data/h2/`），无需 MySQL，**重启数据保留**。  
-**清库请用** `./scripts/path-b/reset-h2.sh`（内置先备份）；**不要**直接删 `data/h2/`。  
-上传文件在 `data/files/`（答题图：`data/files/lab-answers/{yyyy-MM-dd}/`）。  
-备份与恢复见 [`docs/运维文档/2026-09-09-路径B-数据备份与恢复.md`](docs/运维文档/2026-09-09-路径B-数据备份与恢复.md)。
+本机 MySQL 库 `teaching_platform`（默认 `root` / `12345678`）。上传文件在 `data/files/`。  
+无 MySQL 时可用 H2：`./scripts/path-b/backend-h2.sh`（见 [路径 B H2 文档](docs/运维文档/2026-09-04-路径B-本地开发H2启动.md)）。  
+H2 数据目录备份/清库见 [本地数据备份与恢复](docs/运维文档/2026-09-09-本地数据备份与恢复.md)。
 
 ```bash
-# 两个终端
+# 两个终端（默认 MySQL）
 ./scripts/path-b/backend.sh
 ./scripts/path-b/frontend.sh
 ```
 
-等价手工命令（仍建议用脚本，脚本会注入仓库根绝对路径）：
+从 H2 迁入 MySQL（一次性）：`./scripts/common/migrate-h2-to-mysql.sh`
+
+H2 联调（可选）：
 
 ```bash
-cd backend && \
-  SPRING_PROFILES_ACTIVE=test \
-  H2_FILE="$(pwd)/../data/h2/teaching_platform" \
-  FILE_STORAGE_ROOT="$(pwd)/../data/files" \
-  ./mvnw spring-boot:run
-cd frontend && npm install && npm run dev
+./scripts/path-b/backend-h2.sh
+./scripts/path-b/frontend.sh
 ```
+
+### 方式三：本机 MySQL（路径 C，与方式二 backend 相同）
+
+`./scripts/path-c/backend.sh` 与 `./scripts/path-b/backend.sh` 等价。详见 [`docs/运维文档/2026-09-09-路径C-本地MySQL联调与H2迁移.md`](docs/运维文档/2026-09-09-路径C-本地MySQL联调与H2迁移.md)。
 
 ### 演示账号
 
@@ -95,6 +96,18 @@ cd frontend && npm install && npm run dev
 ```bash
 USERNAME=admin9001 ROLE=SCHOOL_ADMIN ./scripts/common/healthcheck-login.sh
 ```
+
+### 数据备份（MySQL 表结构 + 数据）
+
+Flyway 迁移、覆盖库或重要里程碑前：
+
+```bash
+./scripts/common/backup-local-data.sh --label milestone-xaust --with-files
+./scripts/common/verify-local-backup.sh --latest
+```
+
+恢复（须先停后端）：`./scripts/common/restore-local-data.sh --latest --with-files`  
+详见 [本地数据备份与恢复](docs/运维文档/2026-09-09-本地数据备份与恢复.md)。
 
 ## 项目结构
 

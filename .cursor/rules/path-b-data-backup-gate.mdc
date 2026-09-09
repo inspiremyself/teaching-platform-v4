@@ -1,69 +1,66 @@
 ---
-description: 路径 B 破坏性操作前强制 DB 备份门禁（Flyway/清库/大重构）；未备份禁止删库或跑迁移
+description: 本地数据破坏性操作前强制备份门禁（MySQL / H2 / Flyway / 清库）；未备份禁止删库或覆盖库
 alwaysApply: true
 ---
 
-# 路径 B 数据备份门禁
+# 本地数据备份门禁
 
-配合技能 `.cursor/skills/path-b-data-backup/SKILL.md`、脚本 `scripts/common/backup-path-b-data.sh`。  
-**删库硬禁令**见同级规则 `path-b-no-direct-delete.mdc`（禁止 `rm data/h2/`）。
+配合技能 `.cursor/skills/local-data-backup/SKILL.md`（`path-b-data-backup` 已合并）、脚本 `scripts/common/backup-local-data.sh`（**默认 MySQL**）。  
+H2 专用：`backup-path-b-data.sh` / `restore-path-b-data.sh`。MySQL 恢复：`restore-local-data.sh`。  
+**删 H2 硬禁令**见 `path-b-no-direct-delete.mdc`。
 
 ## 数据分层（必记）
 
-| 层级 | 来源 | 清 `data/h2/` 后 |
-|------|------|------------------|
-| Flyway 种子 | `db/migration/V*.sql` | ✅ 自动回来（t9001、20260001、admin9001…） |
-| 本地业务数据 | 校管导入、脚本建账号、H2 Console/SQL、联调造数 | ❌ **永久丢失**（除非从 `data/backups/` 恢复） |
-| 上传文件 | `data/files/` | ❌ 不随 Flyway 恢复；需 `--with-files` 备份 |
+| 层级 | 存储 | 清库 / DROP DATABASE 后 |
+|------|------|-------------------------|
+| Flyway 种子 | `db/migration/V*.sql` | ✅ 自动回来（t9001、20260001…） |
+| 本地业务数据 | 校管导入、脚本、联调造数 | ❌ **永久丢失**（除非从 `data/backups/` 恢复） |
+| 上传文件 | `data/files/` | ❌ 不随库恢复；备份加 `--with-files` |
 
-**跨校迁移用户**（改 `school_id`）不会带走班级/学生/实验——组织数据按 `school_id` 隔离。
+**跨校改 `school_id`** 不会带走班级/学生/实验——组织数据按 `school_id` 隔离。
 
 ## 触发即备份（未备份禁止继续）
 
 | 触发 | 示例 |
 |------|------|
 | Flyway 迁移 | 新增/改 `backend/src/main/resources/db/migration/V*.sql` |
-| 清库 | **禁止** `rm -rf data/h2/`；须 `./scripts/path-b/reset-h2.sh`（内置先备份） |
-| H2 直写 | H2 Console/SQL 改 `sys_user`、建学校、批量导入 |
-| 大重构 | schema/组织模型变更、需清 H2 验证 |
-| 里程碑 | 完成校管 Excel 导入、组织搭建、重要联调数据后 → `--label milestone-xxx` |
-| 用户明示 | 「清库」「跑迁移」「重构会丢数据吗」 |
+| MySQL 覆盖 | `migrate-h2-to-mysql.sh`、`restore-local-data.sh` 目标库已有数据 |
+| H2 清库 | **禁止** `rm -rf data/h2/`；须 `./scripts/path-b/reset-h2.sh` |
+| 大重构 | schema/组织模型变更、需清库验证 |
+| 里程碑 | 校管 Excel 导入、组织搭建后 → `--label milestone-xxx --with-files` |
+| 用户明示 | 「备份一下」「清库会丢数据吗」 |
 
 ## 执行（仓库根目录）
 
-1. 端口 `${SERVER_PORT:-8080}` 有后端 → 清库/恢复须先停后端；备份可 `--force` 应急。
-2. 备份：
+1. 恢复 / 覆盖 MySQL 前 → 停 `./scripts/path-b/backend.sh`（8080）。
+2. **默认备份（MySQL 表结构 + 数据）**：
 
 ```bash
-./scripts/common/backup-path-b-data.sh --label <操作简述> --with-files
-./scripts/common/verify-path-b-backup.sh --latest
+./scripts/common/backup-local-data.sh --label <操作简述> --with-files
+./scripts/common/verify-local-backup.sh --latest
 ```
 
-3. 清库（唯一推荐入口）：
-
-```bash
-./scripts/path-b/reset-h2.sh --label before-reset
-```
-
-4. 退出码 `0` 且输出含 `完成: data/backups/...` → 方可继续破坏性操作。
-5. **备份失败或未执行** → 禁止删 `data/h2/`、禁止帮用户清库。
+3. 仍需 H2 文件库副本时加 `--h2`（或与 `--with-files` 联用）。
+4. H2 专用（无 MySQL）：`./scripts/common/backup-path-b-data.sh ...`
+5. 退出码 `0` 且输出含 `完成: data/backups/...` → 方可继续破坏性操作。
 
 ## 恢复
 
 ```bash
-./scripts/common/backup-path-b-data.sh --list
-./scripts/common/restore-path-b-data.sh --latest --with-files
+./scripts/common/backup-local-data.sh --list
+./scripts/common/restore-local-data.sh --latest --with-files   # MySQL
+./scripts/common/restore-path-b-data.sh --latest --with-files # H2
 ```
 
-运维说明：`docs/运维文档/2026-09-09-路径B-数据备份与恢复.md`
+运维说明：`docs/运维文档/2026-09-09-本地数据备份与恢复.md`
 
 ## 豁免
 
-- 仅 UT mem 库（`src/test/resources`）且本轮不清路径 B 文件库
-- 纯前端/CSS、纯文档、与 DB 无关的小改动
-- 用户明确「不要备份」→ 须告知将丢失手动账号与 Excel 导入数据，再继续
+- 仅 UT mem 库且本轮不碰本机 MySQL/H2
+- 纯前端/CSS、纯文档
+- 用户明确「不要备份」→ 须告知将丢失业务数据再继续
 
 ## 与 feature-dev-workflow 衔接
 
 - 方案含 Flyway/清库/schema 大改 → **§2 编码前**先过本门禁
-- §3 路径 B 验收前：若本轮曾清库或跑新迁移，确认备份在破坏性操作**之前**已完成
+- §3 验收前：若本轮曾清库或跑新迁移，确认备份在破坏性操作**之前**已完成

@@ -37,9 +37,9 @@ backend/
 - 数据库结构变更一律通过 `db/migration/` 演进；`ddl-auto=validate` 说明运行时不应依赖自动建表。
 - `application.yml` 是主配置入口；profile 只做环境差异，不要把核心约束散落到多个 profile 难以追踪。
 - 路径 B（`main` 的 `test` profile）使用 H2 文件库持久化；单元测试资源保持 mem。二者有意不同，改迁移时两边都要能过。
-- **调试、联调、Playwright、演示链路优先跑 `test` profile（H2 文件库）**。当前机器上默认 `local` profile 常会因 MySQL 不可达而启动失败，继而让前端登录接口表现成 500。
-- Windows 下推荐启动方式：`cmd /c "set SPRING_PROFILES_ACTIVE=test && mvnw.cmd spring-boot:run"`。
-- 若默认端口冲突，推荐：`cmd /c "set SPRING_PROFILES_ACTIVE=test && set SERVER_PORT=18080 && mvnw.cmd spring-boot:run"`。
+- **调试、联调默认** `./scripts/path-b/backend.sh`（本机 MySQL，`local` profile）。无 MySQL 时用 `./scripts/path-b/backend-h2.sh`（H2 文件库，`test` profile）。
+- Windows MySQL：`cmd /c "set DB_PASS=12345678 && mvnw.cmd spring-boot:run"`。
+- Windows H2：`cmd /c "set SPRING_PROFILES_ACTIVE=test && mvnw.cmd spring-boot:run"`。
 - 开始前端或 Playwright 联调前，先直连探活一次 `POST /api/v1/auth/login`，确认 H2 后端真的已起来，再开始浏览器测试。
 - `src/main/java/...` 与 `src/test/java/...` 已各自有子级 AGENTS；涉及具体业务代码或测试写法时应继续向下读子规则。
 
@@ -55,19 +55,17 @@ backend/
 ## COMMANDS
 
 ```bash
-# 推荐：仓库根目录脚本（路径 B = H2 文件库）
+# 推荐：仓库根目录脚本（默认 MySQL）
 ../scripts/path-b/backend.sh
+# H2 文件库（可选）
+../scripts/path-b/backend-h2.sh
 # 或本目录：
+SPRING_PROFILES_ACTIVE=local DB_PASS=12345678 ./mvnw spring-boot:run
 SPRING_PROFILES_ACTIVE=test ./mvnw spring-boot:run
-SERVER_PORT=18080 SPRING_PROFILES_ACTIVE=test ./mvnw spring-boot:run
-
-# Windows
-cmd /c "set SPRING_PROFILES_ACTIVE=test && mvnw.cmd spring-boot:run"
-cmd /c "set SPRING_PROFILES_ACTIVE=test && set SERVER_PORT=18080 && mvnw.cmd spring-boot:run"
 
 # 测试
 ./mvnw test
 ```
 
 数据目录：仓库根 `data/h2/`（路径 B 持久化）、`data/files/`（上传）；清空 H2 后重启会重新 Flyway 灌种。  
-运维文档：`docs/运维文档/2026-09-04-路径B-本地开发H2启动.md`。
+运维文档：`docs/运维文档/2026-09-04-路径B-本地开发H2启动.md`、`docs/运维文档/2026-09-09-路径C-本地MySQL联调与H2迁移.md`。

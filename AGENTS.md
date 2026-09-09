@@ -29,7 +29,7 @@ teaching-platform/
 ├─ design-prototypes/        # 本阶段核心原型资产输入（HTML/PNG/manifest）
 ├─ docker-compose.yml        # 本地整站联调入口（路径 A）
 ├─ data/                     # 路径 B 本地持久化（gitignore）：h2/、files/
-├─ scripts/                  # 运维脚本：path-a / path-b / common
+├─ scripts/                  # 运维脚本：path-a / path-b / path-c / common
 ├─ docs/运维文档/            # 路径 A/B 启动与探活说明（日期前缀）
 └─ README.md                 # 运行方式、默认账号、环境变量
 ```
@@ -52,7 +52,7 @@ teaching-platform/
 | 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像 |
 | 原型资产清单 | `design-prototypes/manifest.csv` | 页面标题与 HTML/PNG 资产总表 |
 | 原型到实现映射 | `design/frontend-implementation-guide.md` | 页面模式、角色差异、落地优先级 |
-| 本地启动（路径 A/B） | `docs/运维文档/`、`scripts/` | Compose / H2 文件库联调、探活脚本 |
+| 本地启动（路径 A/B/C） | `docs/运维文档/`、`scripts/` | Compose / H2 文件库 / 本机 MySQL 联调、H2 迁 MySQL |
 | 路径 B H2 配置 | `backend/src/main/resources/application-test.yml` | 文件库仓库根 `data/h2/`（`H2_FILE`）；UT 仍用 test/resources mem |
 
 ## CODE MAP
@@ -75,8 +75,8 @@ teaching-platform/
 
 - 当前阶段优先级：**前端原型 / 产品交互目标 > 旧规范书细节 > 旧实现形态**。
 - 仍必须保持真实系统约束：真实前后端、真实数据库、真实权限、真实测试，不允许 mock 页面、假 API、假数据闭环。
-- 调试与 E2E 联调优先使用 **H2 文件库 + `test` profile + Flyway 种子数据**（数据目录仓库根 `data/h2/`，上传 `data/files/`，重启保留）；这套组合目前已验证能稳定支撑教师 `t9001/123456`、学生 `20260001/123456` 的真实链路测试。
-- **本地业务数据**（校管导入、脚本建账号、H2 SQL）不在 Flyway 种子内；清库即丢。破坏性操作前须 `./scripts/common/backup-path-b-data.sh`；清库须 `./scripts/path-b/reset-h2.sh`（见 `path-b-data-backup-gate.mdc`）。
+- 调试与 E2E 联调**默认** `./scripts/path-b/backend.sh`（本机 MySQL，`local` profile）。无 MySQL 时用 `./scripts/path-b/backend-h2.sh`（H2 文件库 + `test` profile）。
+- **本地业务数据**不在 Flyway 种子内；清库即丢。破坏性操作前须 `./scripts/common/backup-local-data.sh`；H2 清库须 `./scripts/path-b/reset-h2.sh`（见 `path-b-data-backup-gate.mdc`）。
 - 若需要并行跑多套前后端实例，后端优先改 `SERVER_PORT`，前端通过 `VITE_API_TARGET` 定向代理到该后端，不要硬绑定唯一的 `8080/5173` 组合。
 - 接口统一前缀仍是 `/api/v1`；统一响应仍是 `code`、`message`、`data`、`timestamp`。
 - 前端统一通过 `frontend/src/utils/request.ts` 访问后端；不要在页面里直接手写 Axios 实例。
@@ -110,19 +110,28 @@ teaching-platform/
 ./scripts/common/healthcheck-login.sh
 ./scripts/path-a/down.sh
 
-# 路径 B（本地 H2 文件库，推荐联调；两个终端）
+# 路径 B（本地 H2 文件库，两个终端）
+./scripts/path-b/backend-h2.sh
+./scripts/path-b/frontend.sh
+
+# 本地联调（默认 MySQL，两个终端）
 ./scripts/path-b/backend.sh
 ./scripts/path-b/frontend.sh
 
 # backend（仓库根目录先 cd backend；裸跑默认 local=MySQL）
 ./mvnw test
-SPRING_PROFILES_ACTIVE=test ./mvnw spring-boot:run
+./scripts/common/migrate-h2-to-mysql.sh   # H2 整库迁入 MySQL
+
+# 数据备份（MySQL 默认）
+./scripts/common/backup-local-data.sh --label milestone --with-files
+./scripts/common/verify-local-backup.sh --latest
+./scripts/common/restore-local-data.sh --latest --with-files
 
 # frontend
 cd frontend && npm install && npm run dev && npm run build
 ```
 
-运维细节：`docs/运维文档/2026-09-04-路径A-Docker-Compose整站启动.md`、`docs/运维文档/2026-09-04-路径B-本地开发H2启动.md`。
+运维细节：`docs/运维文档/2026-09-04-路径A-Docker-Compose整站启动.md`、`docs/运维文档/2026-09-09-本地数据备份与恢复.md`、`docs/运维文档/2026-09-09-路径C-本地MySQL联调与H2迁移.md`。
 
 ## NOTES
 

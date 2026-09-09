@@ -1,5 +1,5 @@
 ---
-description: 本地启动与联调约定（路径 A/B、H2、端口、探活）
+description: 本地启动与联调约定（路径 A/B/C、MySQL、H2、端口、探活）
 alwaysApply: true
 ---
 
@@ -7,9 +7,10 @@ alwaysApply: true
 
 ## 优先路径
 
-- **日常联调优先路径 B**：`SPRING_PROFILES_ACTIVE=test`（H2 **文件库**）+ 前端 Vite，无需 MySQL。
-- **整站/验收用路径 A**：`docker compose`（MySQL + 后端 + 前端）。
-- 不要默认裸跑 `./mvnw spring-boot:run`（会走 `local` 连 MySQL，本机无库时登录易 500）。
+- **日常联调默认 MySQL**：`./scripts/path-b/backend.sh`（`local` profile + 本机 `teaching_platform`）+ 前端 Vite。
+- **无 MySQL / H2 文件库**：`./scripts/path-b/backend-h2.sh`（`test` profile，数据在 `data/h2/`）。
+- **整站/验收用路径 A**：`docker compose`（MySQL + 后端 + 前端；Compose 内 `DB_PASS=123456`）。
+- 裸跑 `./mvnw spring-boot:run` 同样默认 `local` + MySQL（`application.yml` 默认 `DB_PASS=12345678`）。
 
 ## 脚本入口（仓库根目录）
 
@@ -19,34 +20,48 @@ alwaysApply: true
 ./scripts/common/healthcheck-login.sh
 ./scripts/path-a/down.sh
 
-# 路径 B（两个终端）
+# 本地联调（两个终端，默认 MySQL）
 ./scripts/path-b/backend.sh
 ./scripts/path-b/frontend.sh
+
+# H2 文件库（可选）
+./scripts/path-b/backend-h2.sh
+
+# 路径 C（等同 path-b/backend.sh，保留文档引用）
+./scripts/path-c/backend.sh
+
+# H2 → MySQL 整库迁移（须先停后端）
+./scripts/common/migrate-h2-to-mysql.sh
+
+# 数据备份 / 恢复（默认 MySQL 表结构+数据）
+./scripts/common/backup-local-data.sh --label milestone --with-files
+./scripts/common/verify-local-backup.sh --latest
+./scripts/common/restore-local-data.sh --latest --with-files   # 须先停后端
 ```
 
 运维说明见 `docs/运维文档/`（文件名带日期前缀）。
 
-## H2 事实
+## 数据目录
 
-- 路径 B（`main` 的 `test` profile）使用 **H2 文件库**，落在**仓库根** `data/h2/`（脚本注入 `H2_FILE`；yml 默认 `../data/h2/teaching_platform` 相对 `backend/`）。
-- 上传根：**仓库根** `data/files/`（脚本注入 `FILE_STORAGE_ROOT`）
-  - `materials/` — 课程资料（既有）
-  - `lab-answers/{yyyy-MM-dd}/` — 实验答题图（本期）
-- 清空本地库：**禁止**直接 `rm -rf data/h2/`；须 `./scripts/path-b/reset-h2.sh`（内置先备份，见 `path-b-data-backup-gate.mdc`）。
-- 单元测试仍用 `src/test/resources` 的 **mem** 库，与路径 B 文件库隔离。
-- 迁 MySQL 靠共用 `db/migration/`；不要假设可从 H2 文件一键导出到 MySQL。
-- 禁止再把路径 B 数据落到 `backend/data/`。
+- **MySQL（默认）**：库名 `teaching_platform`；业务数据在 MySQL 实例内。
+- **H2（可选）**：仓库根 `data/h2/`（`backend-h2.sh` 注入 `H2_FILE`）。
+- **上传根**：仓库根 `data/files/`（`FILE_STORAGE_ROOT`）
+  - `materials/` — 课程资料
+  - `lab-answers/{yyyy-MM-dd}/` — 实验答题图
+- 清空 H2：**禁止** `rm -rf data/h2/`；须 `./scripts/path-b/reset-h2.sh`（仅 H2 模式相关）。
+- H2 → MySQL：`./scripts/common/migrate-h2-to-mysql.sh`
+- 日常备份（MySQL 表结构+数据）：`./scripts/common/backup-local-data.sh`；校验 `verify-local-backup.sh`
 
 ## 端口与代理
 
-- 默认后端 `8080`、前端 `5173`；路径 A/B **不要并行占同一端口**。
+- 默认后端 `8080`、前端 `5173`；路径 A/B/C **不要并行占同一端口**。
 - 换后端端口：`SERVER_PORT=18080`；前端用 `VITE_API_TARGET=http://127.0.0.1:18080`。
-- 前端开发态走 Vite `/api` 代理；`request.ts` 用相对路径 `/api/v1`，一般不必强依赖 `.env`。
+- 前端开发态走 Vite `/api` 代理；`request.ts` 用相对路径 `/api/v1`。
 
 ## 登录探活
 
 - 登录体必须带 `role`（`TEACHER` / `STUDENT`）。
-- 探活优先 `./scripts/common/healthcheck-login.sh`（默认 `forceLogin=true`，避免 409 单点登录冲突）。
+- 探活优先 `./scripts/common/healthcheck-login.sh`（默认 `forceLogin=true`）。
 - 演示账号勿改：教师 `t9001/123456`，学生 `20260001/123456`，班级 `SE2026-1`。
 
 ## 工具链注意

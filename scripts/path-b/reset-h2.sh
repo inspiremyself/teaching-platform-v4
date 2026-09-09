@@ -21,7 +21,7 @@ usage() {
 
 说明:
   1. 检查后端已停止（占用 H2 文件锁时拒绝继续）
-  2. 自动执行 backup-path-b-data.sh
+  2. 自动执行 backup-path-b-data.sh（仅 H2；MySQL 备份请用 backup-local-data.sh）
   3. 确认后删除 data/h2/ 下文件（下次启动 Flyway 重灌演示种子）
   4. 不会删除 data/backups/
 
