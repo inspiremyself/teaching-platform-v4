@@ -7,13 +7,15 @@ import com.opencode.teachingplatform.common.enums.BusinessType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Service
 public class AnalysisService {
@@ -67,18 +69,8 @@ public class AnalysisService {
                 summaryCard("highRiskPlagiarismCount", "高风险查重", highRiskPlagiarismCount, "相似度超过 50% 的记录")
         );
 
-        // trend: last 7 days score_record grouped by date
-        List<Map<String, Object>> trend = jdbcTemplate.query(
-                "SELECT FORMATDATETIME(graded_at, 'yyyy-MM-dd') AS dt, COUNT(*) AS score_count, AVG(score) AS avg_score " +
-                        "FROM score_record WHERE graded_at >= DATEADD('DAY', -7, CURRENT_TIMESTAMP) " +
-                        "GROUP BY FORMATDATETIME(graded_at, 'yyyy-MM-dd') ORDER BY dt",
-                (rs, rowNum) -> {
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("date", rs.getString("dt"));
-                    row.put("scoreCount", rs.getInt("score_count"));
-                    row.put("avgScore", Math.round(rs.getDouble("avg_score") * 10.0) / 10.0);
-                    return row;
-                });
+        // trend: last 7 days — group in Java so H2 (UT/path-b-h2) and MySQL (path-b) both work
+        List<Map<String, Object>> trend = loadScoreTrendLast7Days();
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("summaryCards", summaryCards);
@@ -317,6 +309,35 @@ public class AnalysisService {
         } catch (Exception e) {
             return "未知";
         }
+    }
+
+    private List<Map<String, Object>> loadScoreTrendLast7Days() {
+        OffsetDateTime since = OffsetDateTime.now().minusDays(7);
+        Map<LocalDate, List<Double>> scoresByDay = new TreeMap<>();
+        jdbcTemplate.query(
+                "SELECT graded_at, score FROM score_record WHERE graded_at >= ?",
+                (rs, rowNum) -> {
+                    var timestamp = rs.getTimestamp("graded_at");
+                    if (timestamp != null) {
+                        LocalDate day = timestamp.toLocalDateTime().toLocalDate();
+                        scoresByDay.computeIfAbsent(day, ignored -> new ArrayList<>()).add(rs.getDouble("score"));
+                    }
+                    return null;
+                },
+                since
+        );
+
+        List<Map<String, Object>> trend = new ArrayList<>();
+        for (Map.Entry<LocalDate, List<Double>> entry : scoresByDay.entrySet()) {
+            List<Double> scores = entry.getValue();
+            double avg = scores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("date", entry.getKey().toString());
+            row.put("scoreCount", scores.size());
+            row.put("avgScore", Math.round(avg * 10.0) / 10.0);
+            trend.add(row);
+        }
+        return trend;
     }
 
     private int count(String sql, Object... args) {

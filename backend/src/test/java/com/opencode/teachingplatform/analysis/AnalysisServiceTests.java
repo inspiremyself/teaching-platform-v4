@@ -90,6 +90,21 @@ class AnalysisServiceTests {
 
     @Test
     @SuppressWarnings("unchecked")
+    void teacherDashboardTrendLoadsWithoutDialectSpecificSql() {
+        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
+        List<Map<String, Object>> trend = (List<Map<String, Object>>) dashboard.get("trend");
+
+        assertTrue(trend != null);
+        for (Map<String, Object> row : trend) {
+            assertTrue(row.containsKey("date"));
+            assertTrue(row.containsKey("scoreCount"));
+            assertTrue(row.containsKey("avgScore"));
+            assertTrue(((String) row.get("date")).matches("\\d{4}-\\d{2}-\\d{2}"));
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void teacherOverviewOnlyIncludesAssignedClassesViaClassTeacherJoin() {
         Map<String, Object> overview = analysisService.getTeacherOverview(teacher());
         List<Map<String, Object>> sectionComparison = (List<Map<String, Object>>) overview.get("sectionComparison");

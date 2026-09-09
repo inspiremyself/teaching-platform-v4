@@ -313,7 +313,7 @@
 
 | 字段 | 类型 | 可空 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `experiment_id` | `INT` | 否 | 自增 | 主键 |
+| `experiment_id` | `BIGINT` | 否 | 自增 | 主键（与 JPA `Lab.id` / Long 对齐；V15 自 INT 升格） |
 | `experiment_no` | `INT` | 否 |  | 实验编号 |
 | `experiment_name` | `VARCHAR(30)` | 否 |  | 实验名称 |
 | `experiment_type` | `INT` | 是 |  | 实验类型 |
