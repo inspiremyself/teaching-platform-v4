@@ -92,13 +92,50 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="importDialogVisible" title="批量导入学生" width="640px" destroy-on-close>
-      <el-alert type="info" :closable="false" show-icon title="请先选择班级后再导入；文本格式：学号,姓名,密码（每行一条）" />
-      <el-form label-position="top" style="margin-top: 16px">
-        <el-form-item label="批量录入文本">
-          <el-input v-model="importText" type="textarea" :rows="8" placeholder="20260011,张三,123456" />
+    <el-dialog v-model="importDialogVisible" title="批量导入学生" width="720px" destroy-on-close>
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        title="请先选择班级后再导入。支持 Excel（.xlsx）或文本：学号,姓名,密码（每行一条）；Excel 表头为学号/姓名/密码，密码可空（默认学号）。"
+      />
+
+      <section class="import-section">
+        <div class="import-section__title">Excel 文件导入</div>
+        <div
+          :class="['import-file-panel', { 'is-dragover': isImportDragOver }]"
+          @dragenter.prevent="handleImportDragEnter"
+          @dragover.prevent="handleImportDragOver"
+          @dragleave.prevent="handleImportDragLeave"
+          @drop.prevent="handleImportDrop"
+        >
+          <div class="import-file-panel__meta">
+            <strong>{{ importFileName || '尚未选择 Excel 文件' }}</strong>
+            <span>
+              {{ parsedImportRows.length ? `已解析 ${parsedImportRows.length} 条有效记录` : '支持 .xlsx，仅读取首个工作表' }}
+            </span>
+          </div>
+          <div class="import-file-panel__actions">
+            <el-button @click="downloadStudentImportTemplate">下载模板</el-button>
+            <el-upload accept=".xlsx" :auto-upload="false" :show-file-list="false" :on-change="handleImportFileChange">
+              <el-button type="primary" plain>选择 Excel 文件</el-button>
+            </el-upload>
+            <el-button v-if="selectedImportFile" @click="clearImportFile">清空文件</el-button>
+          </div>
+        </div>
+        <div class="import-file-panel__tips">
+          <span>可直接将 Excel 文件拖拽到上方区域</span>
+          <span>表头建议：学号、姓名、密码</span>
+          <span>密码列可空，系统会自动回退为学号</span>
+        </div>
+      </section>
+
+      <el-form label-position="top" class="import-text-form">
+        <el-form-item label="文本补充导入">
+          <el-input v-model="importText" type="textarea" :rows="6" placeholder="20260011,张三,123456" />
         </el-form-item>
       </el-form>
+
       <section v-if="importResult" class="import-result">
         <strong>成功 {{ importResult.successCount }} 条，失败 {{ importResult.failureCount }} 条</strong>
         <el-table :data="importResult.failures" size="small" empty-text="无失败记录" style="margin-top: 8px">
@@ -106,6 +143,7 @@
           <el-table-column prop="reason" label="失败原因" />
         </el-table>
       </section>
+
       <template #footer>
         <el-button @click="importDialogVisible = false">关闭</el-button>
         <el-button type="primary" :loading="importing" @click="submitImport">开始导入</el-button>
@@ -117,6 +155,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
+import type { UploadFile } from 'element-plus';
 import {
   changeAdminStudentStatus,
   createAdminStudent,
@@ -126,7 +165,12 @@ import {
   updateAdminStudent,
 } from '@/api/admin';
 import type { AdminClass, AdminStudent, ImportStudentsResult } from '@/types/admin';
-import type { StudentStatus } from '@/types/student';
+import type { ImportStudentRow, StudentStatus } from '@/types/student';
+import {
+  downloadStudentImportTemplate,
+  parseStudentExcelFile,
+  parseStudentImportText,
+} from '@/utils/studentImport';
 
 const loading = ref(false);
 const submitting = ref(false);
@@ -141,6 +185,10 @@ const searchQuery = ref('');
 const statusFilter = ref<StudentStatus | ''>('');
 const importText = ref('');
 const importResult = ref<ImportStudentsResult | null>(null);
+const selectedImportFile = ref<File | null>(null);
+const importFileName = ref('');
+const parsedImportRows = ref<ImportStudentRow[]>([]);
+const isImportDragOver = ref(false);
 
 const form = reactive({
   username: '',
@@ -190,16 +238,73 @@ const fetchStudents = async () => {
   }
 };
 
-const parseImportTextRows = () =>
-  importText.value
-    .split(/\r?\n/)
-    .map(line => line.trim())
-    .filter(Boolean)
-    .map(line => {
-      const [username = '', displayName = '', password = ''] = line.split(',').map(item => item.trim());
-      return { username, displayName, password: password || username };
-    })
-    .filter(item => item.username && item.displayName);
+const clearImportFile = () => {
+  selectedImportFile.value = null;
+  importFileName.value = '';
+  parsedImportRows.value = [];
+  isImportDragOver.value = false;
+};
+
+const applyImportFile = async (file: File) => {
+  if (!file.name.toLowerCase().endsWith('.xlsx')) {
+    ElMessage.warning('请上传 .xlsx 格式的 Excel 文件');
+    clearImportFile();
+    return;
+  }
+
+  try {
+    const parsedRows = await parseStudentExcelFile(file);
+    if (!parsedRows.length) {
+      ElMessage.warning('Excel 中没有可导入的有效学生记录');
+      clearImportFile();
+      return;
+    }
+    selectedImportFile.value = file;
+    importFileName.value = file.name;
+    parsedImportRows.value = parsedRows;
+    importResult.value = null;
+    ElMessage.success(`Excel 解析成功，共 ${parsedRows.length} 条有效记录`);
+  } catch (error) {
+    clearImportFile();
+    ElMessage.error(error instanceof Error ? error.message : 'Excel 解析失败，请检查文件内容');
+  } finally {
+    isImportDragOver.value = false;
+  }
+};
+
+const handleImportFileChange = async (uploadFile: UploadFile) => {
+  const rawFile = uploadFile.raw;
+  if (!rawFile) {
+    return;
+  }
+  await applyImportFile(rawFile);
+};
+
+const handleImportDragEnter = () => {
+  isImportDragOver.value = true;
+};
+
+const handleImportDragOver = () => {
+  isImportDragOver.value = true;
+};
+
+const handleImportDragLeave = (event: DragEvent) => {
+  const currentTarget = event.currentTarget;
+  const relatedTarget = event.relatedTarget;
+  if (currentTarget instanceof HTMLElement && relatedTarget instanceof Node && currentTarget.contains(relatedTarget)) {
+    return;
+  }
+  isImportDragOver.value = false;
+};
+
+const handleImportDrop = async (event: DragEvent) => {
+  const file = event.dataTransfer?.files?.[0];
+  if (!file) {
+    isImportDragOver.value = false;
+    return;
+  }
+  await applyImportFile(file);
+};
 
 const openCreateDialog = () => {
   resetForm();
@@ -262,6 +367,7 @@ const openImportDialog = () => {
   }
   importText.value = '';
   importResult.value = null;
+  clearImportFile();
   importDialogVisible.value = true;
 };
 
@@ -270,9 +376,12 @@ const submitImport = async () => {
     ElMessage.warning('请先选择导入班级');
     return;
   }
-  const parsedRows = parseImportTextRows();
+
+  const parsedRows =
+    parsedImportRows.value.length > 0 ? parsedImportRows.value : parseStudentImportText(importText.value);
+
   if (!parsedRows.length) {
-    ElMessage.warning('请输入至少一条有效记录');
+    ElMessage.warning('请先选择有效的 Excel 文件，或输入至少一条有效文本记录');
     return;
   }
 
@@ -342,11 +451,85 @@ onMounted(async () => {
   font-size: 11px;
 }
 
+.import-section {
+  margin-top: 16px;
+}
+
+.import-section__title {
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.import-text-form {
+  margin-top: 16px;
+}
+
+.import-file-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.import-file-panel.is-dragover {
+  border-color: var(--primary-color, #14b8a6);
+  background: rgba(20, 184, 166, 0.08);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
+.import-file-panel__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.import-file-panel__meta strong {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-all;
+}
+
+.import-file-panel__meta span,
+.import-file-panel__tips {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.import-file-panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.import-file-panel__tips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+
 .import-result {
   margin-top: 16px;
   padding: 12px;
   border-radius: 10px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .import-file-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

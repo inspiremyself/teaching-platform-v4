@@ -11,7 +11,6 @@
 | 教师工作台 | `Dashboard.vue` | KPI、提醒、入口收口 |
 | 成绩分析 | `Analysis.vue` | 指标卡、趋势图、聚合统计 |
 | 班级管理 | `Classes.vue` | 班级列表、状态、增删改 |
-| 学生管理 | `Students.vue` | 筛选、导入、状态动作 |
 | 资料管理 | `Materials.vue` | 上传、更新、删除、资源控制台 |
 | 题库管理 | `Questions.vue` | 题型/难度/编号等显性结构 |
 | 实验管理 | `Labs.vue` `labs/List.vue` | 现有页与旧平铺页并存 |
