@@ -139,6 +139,9 @@ public class LabService {
     public Map<String, Object> createLab(CurrentUser currentUser, LabRequests.CreateLabRequest request) {
         requireTeacher(currentUser);
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
+        if (parseStatus(request.status()) == ActivityStatus.PUBLISHED) {
+            throw new BusinessException(40000, LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE);
+        }
         Lab lab = new Lab();
         lab.setCreatedBy(currentUser.id());
         applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
@@ -151,6 +154,9 @@ public class LabService {
         Lab lab = ownedLab(currentUser, labId);
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
         applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
+        if (parseStatus(request.status()) == ActivityStatus.PUBLISHED) {
+            assertLabPublishable(lab);
+        }
         return toTeacherLabView(labRepository.save(lab));
     }
 
@@ -158,7 +164,11 @@ public class LabService {
     public Map<String, Object> changeLabStatus(CurrentUser currentUser, Long labId, LabRequests.ChangeLabStatusRequest request) {
         requireTeacher(currentUser);
         Lab lab = ownedLab(currentUser, labId);
-        lab.setStatus(parseStatus(request.status()));
+        ActivityStatus nextStatus = parseStatus(request.status());
+        if (nextStatus == ActivityStatus.PUBLISHED) {
+            assertLabPublishable(lab);
+        }
+        lab.setStatus(nextStatus);
         return toTeacherLabView(labRepository.save(lab));
     }
 
@@ -874,6 +884,15 @@ public class LabService {
                 "labId", lab.getId(),
                 "studentId", submission.getStudentId()
         );
+    }
+
+    private static final String LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE = "实验尚未配置题项，无法发布";
+
+    private void assertLabPublishable(Lab lab) {
+        List<LabStep> steps = labStepRepository.findByLabIdOrderByStepNoAsc(lab.getId());
+        if (steps.isEmpty()) {
+            throw new BusinessException(40000, LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE);
+        }
     }
 
     private void requireTeacher(CurrentUser currentUser) {

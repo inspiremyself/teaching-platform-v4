@@ -5,7 +5,7 @@
         <div class="labs-header__main">
           <div class="labs-header__eyebrow">教师后台 / 实验管理</div>
           <h1>实验台账</h1>
-          <p>按班级维护实验、步骤完备度与发布状态。</p>
+          <p>按班级维护实验、题项与发布状态。</p>
         </div>
         <div class="labs-header__actions">
           <el-button @click="goReports()">查看报告队列</el-button>
@@ -108,9 +108,8 @@
       <header class="labs-console__header">
         <div>
           <h2>实验台账</h2>
-           <p>核对配置完备度与发布动作。</p>
+           <p>核对题项数量与发布动作。</p>
         </div>
-        <div class="labs-console__hint">按步骤数展示完成度</div>
       </header>
 
       <div v-loading="loading" class="labs-table-shell">
@@ -138,9 +137,9 @@
             </div>
 
             <div class="lab-row__type">
-              <span class="meta-label">步骤规模</span>
-              <strong>{{ row.stepCount ?? 0 }} 步</strong>
-              <small>{{ progressLabel(row) }}</small>
+              <span class="meta-label">题项规模</span>
+              <strong>{{ row.stepCount ?? 0 }} 个题项</strong>
+              <small v-if="(row.stepCount ?? 0) === 0">请先配置题项</small>
             </div>
 
             <div class="lab-row__status">
@@ -459,6 +458,10 @@ const goBlankRegrade = (labId: number) => {
 
 const toggleStatus = async (row: LabItem) => {
   const nextStatus: LabStatus = row.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
+  if (nextStatus === 'PUBLISHED' && (row.stepCount ?? 0) === 0) {
+    ElMessage.warning('请先配置至少 1 个题项');
+    return;
+  }
   await changeTeacherLabStatus(row.id, { status: nextStatus });
   ElMessage.success(nextStatus === 'PUBLISHED' ? '实验已发布' : '实验已关闭');
   await fetchData();
@@ -489,21 +492,6 @@ const scoreVisibilityLabel = (mode?: string | null) => {
   if (mode === 'AFTER_DEADLINE') return '截止后可见';
   if (mode === 'MANUAL_RELEASE') return '教师手动发布';
   return '成绩策略未标注';
-};
-
-const progressPercent = (row: LabItem) => {
-  const total = Math.max(row.stepCount ?? 0, 0);
-  if (total <= 0) {
-    return 0;
-  }
-  return Math.min(total * 20, 100);
-};
-
-const progressLabel = (row: LabItem) => {
-  const count = row.stepCount ?? 0;
-  if (count <= 0) return '未配置步骤';
-  if (count >= 5) return `${count}/${count} 步已配置`;
-  return `${count}/5 步已配置`;
 };
 
 const updatedLabel = (row: LabItem) => {

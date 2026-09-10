@@ -849,6 +849,7 @@ class LabServiceTests {
     void teacherCanUpdateOwnedLab() {
         Long classId = seedClass(1L);
         Long labId = seedLab(classId, ActivityStatus.DRAFT, 1L);
+        seedStep(labId, 1);
 
         Map<String, Object> result = labService.updateLab(
                 teacherUser(),
@@ -881,6 +882,87 @@ class LabServiceTests {
 
         assertThat(result.get("status")).isEqualTo("CLOSED");
         assertThat(labRepository.findById(labId).orElseThrow().getStatus()).isEqualTo(ActivityStatus.CLOSED);
+    }
+
+    @Test
+    void changeLabStatusToPublishedWithoutItemsShouldFail() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, 1L);
+
+        assertThatThrownBy(() -> labService.changeLabStatus(
+                teacherUser(),
+                labId,
+                new LabRequests.ChangeLabStatusRequest("PUBLISHED")
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("尚未配置题项");
+    }
+
+    @Test
+    void changeLabStatusToPublishedWithItemsShouldSucceed() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, 1L);
+        seedStep(labId, 1);
+
+        Map<String, Object> result = labService.changeLabStatus(
+                teacherUser(),
+                labId,
+                new LabRequests.ChangeLabStatusRequest("PUBLISHED")
+        );
+
+        assertThat(result.get("status")).isEqualTo("PUBLISHED");
+        assertThat(labRepository.findById(labId).orElseThrow().getStatus()).isEqualTo(ActivityStatus.PUBLISHED);
+    }
+
+    @Test
+    void createLabAsPublishedWithoutItemsShouldFail() {
+        Long classId = seedClass(teacherUser().id());
+
+        assertThatThrownBy(() -> labService.createLab(
+                teacherUser(),
+                new LabRequests.CreateLabRequest("直接发布实验", "说明", "内容", 1, classId, "PUBLISHED", null, null, false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("尚未配置题项");
+
+        assertThat(labRepository.findAll()).noneMatch(lab -> "直接发布实验".equals(lab.getTitle()));
+    }
+
+    @Test
+    void updateLabToPublishedWithoutItemsShouldFail() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, 1L);
+
+        assertThatThrownBy(() -> labService.updateLab(
+                teacherUser(),
+                labId,
+                new LabRequests.UpdateLabRequest("更新实验", "说明", "内容", 1, classId, "PUBLISHED", null, null, false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("尚未配置题项");
+
+        assertThat(labRepository.findById(labId).orElseThrow().getStatus()).isEqualTo(ActivityStatus.DRAFT);
+    }
+
+    @Test
+    void closeOrDraftLabWithoutItemsShouldSucceed() {
+        Long classId = seedClass(1L);
+        Long draftLabId = seedLab(classId, ActivityStatus.DRAFT, 1L);
+        Long closedLabId = seedLab(classId, ActivityStatus.CLOSED, 1L);
+
+        Map<String, Object> closedResult = labService.changeLabStatus(
+                teacherUser(),
+                draftLabId,
+                new LabRequests.ChangeLabStatusRequest("CLOSED")
+        );
+        Map<String, Object> draftResult = labService.changeLabStatus(
+                teacherUser(),
+                closedLabId,
+                new LabRequests.ChangeLabStatusRequest("DRAFT")
+        );
+
+        assertThat(closedResult.get("status")).isEqualTo("CLOSED");
+        assertThat(draftResult.get("status")).isEqualTo("DRAFT");
     }
 
     @Test
