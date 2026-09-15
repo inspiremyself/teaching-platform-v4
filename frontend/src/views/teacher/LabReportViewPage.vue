@@ -44,6 +44,10 @@
           <p class="lab-report-answer">{{ step.content }}</p>
           <p>解答：</p>
           <div class="lab-report-answer lab-report-answer--box">{{ step.answerText || '' }}</div>
+          <LabAnswerImageGallery
+            v-if="step.images?.length"
+            :images="step.images"
+          />
         </article>
       </section>
 
@@ -59,6 +63,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { getTeacherLabReportView } from '@/api/labs';
+import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { TeacherLabReportView } from '@/types/lab';
 
 const route = useRoute();
@@ -94,6 +99,8 @@ onMounted(fetchDetail);
 }
 
 .lab-report-sheet {
+  max-width: 880px;
+  margin: 0 auto;
   color: #111827;
   line-height: 1.75;
   font-size: 14px;
@@ -140,7 +147,9 @@ onMounted(fetchDetail);
 }
 
 .lab-report-step {
+  padding-bottom: 18px;
   margin-bottom: 18px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .lab-report-step h3 {

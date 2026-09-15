@@ -16,6 +16,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,19 +43,26 @@ class LabReportViewControllerTests {
 
     @Test
     void teacherCanReadPureLabReportView() throws Exception {
+        Map<String, Object> step = new LinkedHashMap<>();
+        step.put("stepId", 3001);
+        step.put("stepNo", 1);
+        step.put("stepTitle", "步骤1");
+        step.put("content", "题干");
+        step.put("answerText", "最新答案");
+        step.put("images", List.of(Map.of(
+                "path", "lab-answers/2026-09-15/shot1.png",
+                "name", "shot1.png",
+                "contentType", "image/png",
+                "size", 3
+        )));
+
         when(labService.getTeacherLabReportView(any(CurrentUser.class), anyLong(), anyLong())).thenReturn(Map.of(
                 "labId", 1001,
                 "studentId", 2001,
                 "courseName", "软件设计与体系结构",
                 "reportTitle", "南昌航空大学实验报告",
                 "reportDate", "2026 年 4 月 22 日",
-                "steps", List.of(Map.of(
-                        "stepId", 3001,
-                        "stepNo", 1,
-                        "stepTitle", "步骤1",
-                        "content", "题干",
-                        "answerText", "最新答案"
-                ))
+                "steps", List.of(step)
         ));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
@@ -66,7 +74,8 @@ class LabReportViewControllerTests {
                     .andExpect(jsonPath("$.data.studentId").value(2001))
                     .andExpect(jsonPath("$.data.courseName").value("软件设计与体系结构"))
                     .andExpect(jsonPath("$.data.steps.length()").value(1))
-                    .andExpect(jsonPath("$.data.steps[0].answerText").value("最新答案"));
+                    .andExpect(jsonPath("$.data.steps[0].answerText").value("最新答案"))
+                    .andExpect(jsonPath("$.data.steps[0].images[0].path").value("lab-answers/2026-09-15/shot1.png"));
         } finally {
             SecurityContextHolder.clearContext();
         }

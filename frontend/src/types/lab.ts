@@ -205,6 +205,7 @@ export interface TeacherLabReportViewStep {
   content: string;
   questionType?: LabQuestionType;
   answerText?: string | null;
+  images?: LabAnswerImageMeta[];
 }
 
 export interface TeacherLabReportView {

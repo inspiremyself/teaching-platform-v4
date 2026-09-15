@@ -43,6 +43,7 @@ alwaysApply: true
 
 ## 数据目录
 
+- **`data/` 整树**：本地持久化，不进 git；Agent **禁止**随意删除（见 `.cursor/rules/protect-data-directory.mdc`）。
 - **MySQL（默认）**：库名 `teaching_platform`；业务数据在 MySQL 实例内。
 - **H2（可选）**：仓库根 `data/h2/`（`backend-h2.sh` 注入 `H2_FILE`）。
 - **上传根**：仓库根 `data/files/`（`FILE_STORAGE_ROOT`）

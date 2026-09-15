@@ -1,0 +1,57 @@
+---
+description: 禁止随意删除仓库根 data/ 及其全部子目录与文件；data/files 等为真实本地业务数据，不在 git 内
+alwaysApply: true
+---
+
+# 禁止随意删除 `data/` 目录树
+
+仓库根 **`data/`** 及其**任意层级**的子目录、子文件均为**本地持久化数据**（整目录在 `.gitignore` 中，**不会**随 clone/拉代码恢复）。Agent **不得**帮用户执行、建议或写进文档的「顺手清理」「腾磁盘」「删整个 data」类操作。
+
+## 硬禁令
+
+**不得**对 `data/` 做裸删除或批量清空，包括但不限于：
+
+```bash
+rm -rf data
+rm -rf data/
+rm -rf data/files
+rm -rf data/files/
+rm -rf data/backups
+rm data/files/**/*
+```
+
+也**不得**用 Finder/资源管理器直接删 `data/` 或其子目录代替上述命令；**不得**在实现任务中把「删除 `data/` 下内容」当作默认清理步骤。
+
+**H2 文件库** `data/h2/` 的额外约束与唯一清库入口见 **`path-b-no-direct-delete.mdc`**（须 `reset-h2.sh`，禁止裸 `rm data/h2`）。
+
+## 子目录含义（删即可能永久丢）
+
+| 路径 | 内容 | 删后能否靠 Flyway/重装恢复 |
+|------|------|---------------------------|
+| `data/files/` | 课程资料、实验答题图等上传文件（`FILE_STORAGE_ROOT`） | ❌ 不随库恢复；须 `--with-files` 备份 |
+| `data/backups/` | 本地 mysqldump / H2 / 文件备份包 | ❌ 丢备份即丢恢复点 |
+| `data/h2/` | 路径 B H2 文件库（可选） | ❌ 本地业务数据不在种子内；清库须脚本+备份 |
+
+MySQL 业务表在库实例内，不在 `data/` 里，但 **`data/files/` 与库记录引用路径绑定**——只清库不备份文件仍会导致「有记录无文件」。
+
+## 允许的破坏性操作（须走脚本 + 门禁）
+
+| 意图 | 唯一入口 | 前置 |
+|------|----------|------|
+| H2 清库 | `./scripts/path-b/reset-h2.sh` | 见 `path-b-no-direct-delete.mdc` |
+| 覆盖库 / 迁移 / 里程碑 | `backup-local-data.sh` / `restore-local-data.sh` 等 | 见 `path-b-data-backup-gate.mdc` |
+| 备份产生新目录 | `backup-local-data.sh --label … [--with-files]` | 只**新增** `data/backups/` 下条目，不删旧备份除非用户明确要求 |
+
+未列出的「删 `data/files` 某类文件」「清空 backups」：**须用户明确指令 + 说明不可恢复 + 建议先 `--with-files` 备份**；Agent 仍**不得**默认执行整树或整子树删除。
+
+## Agent 行为
+
+| 场景 | 必须 |
+|------|------|
+| 用户/方案写「清 data」「删上传目录」 | 澄清目标路径；`files/` / `backups/` 禁止裸 `rm`；H2 走 `reset-h2.sh` |
+| 联调、验收、重构 | 不得把删 `data/` 当作修复步骤；需要空间时只建议备份后由用户决定 |
+| 用户坚持删 `data/files` 或整棵 `data/` | 明确告知：真实用户/联调数据永久丢失；强烈建议先 `backup-local-data.sh --with-files` |
+
+## 原因（一句话）
+
+`data/` 是路径 B 的**本地数据根**；尤其 **`data/files/` 是真实用户上传与业务文件**，随意删除无法从 git 找回。

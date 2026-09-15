@@ -1375,6 +1375,7 @@ public class LabService {
         item.put("content", defaultString(step.getContent()));
         item.put("questionType", step.getQuestionType());
         item.put("answerText", resolveStudentAnswerText(answer));
+        item.put("images", answer == null ? List.of() : toAnswerImageViews(answer.getAnswerJson()));
         return item;
     }
 

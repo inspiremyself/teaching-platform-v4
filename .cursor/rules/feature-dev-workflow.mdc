@@ -144,3 +144,4 @@ cd backend && ./mvnw test             # 后端有改动
 - ❌ 为通过自查硬改方案口径而不改实现
 - ❌ 只读 workflow 摘要、不 Read `self-review-and-fix/SKILL.md` 就执行自查
 - ❌ 涉及 Flyway/清库却未先跑 `backup-local-data.sh` 就删 `data/h2/` 或写迁移
+- ❌ 裸删 `data/`、`data/files/` 或 `data/backups/`（见 `protect-data-directory.mdc`）

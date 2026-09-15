@@ -13,6 +13,10 @@ uploads/
 logs/
 *.log
 
+# python
+__pycache__/
+*.py[cod]
+
 # ide
 .idea/
 .vscode/*

@@ -1972,7 +1972,44 @@ class LabServiceTests {
         assertThat(reportView.get("totalScore")).isEqualTo(88D);
         assertThat(reportView.get("teacherComment")).isEqualTo("新评语");
         assertThat(reportView.get("summaryText")).isEqualTo("新小结");
-        assertThat(steps).singleElement().satisfies(step -> assertThat(step.get("answerText")).isEqualTo("newest answer"));
+        assertThat(steps).singleElement().satisfies(step -> {
+            assertThat(step.get("answerText")).isEqualTo("newest answer");
+            assertThat(step.get("images")).asList().isEmpty();
+        });
+    }
+
+    @Test
+    void teacherLabReportViewIncludesStepImagesWhenAnswerHasUploads() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+        labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "截图题",
+                        "{\"kind\":\"text\",\"text\":\"截图题\",\"images\":[{\"path\":\"" + path + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        );
+        labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("小结"));
+
+        Map<String, Object> reportView = labService.getTeacherLabReportView(teacherUser(), labId, studentUser().id());
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> steps = (List<Map<String, Object>>) reportView.get("steps");
+
+        assertThat(steps).hasSize(1);
+        assertThat(steps.get(0).get("answerText")).isEqualTo("截图题");
+        assertThat(steps.get(0).get("images")).asList().hasSize(1);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> image = (Map<String, Object>) ((List<?>) steps.get(0).get("images")).get(0);
+        assertThat(image.get("path")).isEqualTo(path);
     }
 
     @Test

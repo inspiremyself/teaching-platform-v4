@@ -7,7 +7,7 @@ alwaysApply: true
 
 配合技能 `.cursor/skills/local-data-backup/SKILL.md`（`path-b-data-backup` 已合并）、脚本 `scripts/common/backup-local-data.sh`（**默认 MySQL**）。  
 H2 专用：`backup-path-b-data.sh` / `restore-path-b-data.sh`。MySQL 恢复：`restore-local-data.sh`。  
-**删 H2 硬禁令**见 `path-b-no-direct-delete.mdc`。
+**删 H2 硬禁令**见 `path-b-no-direct-delete.mdc`。**禁止随意删 `data/` 树**见 `protect-data-directory.mdc`。
 
 ## 数据分层（必记）
 

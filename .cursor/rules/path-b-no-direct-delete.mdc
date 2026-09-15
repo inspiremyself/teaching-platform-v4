@@ -3,6 +3,8 @@ description: 禁止直接删除路径 B H2 文件库（rm data/h2）；清库只
 alwaysApply: true
 ---
 
+整棵 **`data/`** 目录树（含 `data/files/` 上传、`data/backups/`）的保护见 **`protect-data-directory.mdc`**。
+
 # 禁止直接删库（路径 B）
 
 ## 硬禁令
