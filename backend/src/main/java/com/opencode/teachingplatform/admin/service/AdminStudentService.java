@@ -9,7 +9,9 @@ import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.clazz.entity.ClassRoom;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
@@ -73,7 +75,7 @@ public class AdminStudentService {
         SysUser student = buildStudent(schoolId, request.username(), request.displayName(), request.password());
         SysUser saved = saveStudentOrThrow(student);
         linkStudentToClass(saved.getId(), targetClass.getId());
-        auditLogService.log(currentUser.id(), "STUDENT_CREATE", "STUDENT", saved.getId(), Map.of(
+        auditLogService.log(currentUser, AuditAction.STUDENT_CREATE, AuditResourceType.STUDENT, saved.getId(), Map.of(
                 "username", saved.getUsername(),
                 "classId", targetClass.getId()
         ));
@@ -103,7 +105,7 @@ public class AdminStudentService {
             try {
                 SysUser saved = saveStudentOrThrow(buildStudent(currentUser.schoolId(), username, row.displayName(), row.password()));
                 linkStudentToClass(saved.getId(), targetClass.getId());
-                auditLogService.log(currentUser.id(), "STUDENT_CREATE", "STUDENT", saved.getId(), Map.of(
+                auditLogService.log(currentUser, AuditAction.STUDENT_CREATE, AuditResourceType.STUDENT, saved.getId(), Map.of(
                         "username", saved.getUsername(),
                         "classId", targetClass.getId(),
                         "source", "import"
@@ -114,7 +116,7 @@ public class AdminStudentService {
             }
         }
 
-        auditLogService.log(currentUser.id(), "STUDENT_IMPORT", "CLASS", targetClass.getId(), Map.of(
+        auditLogService.log(currentUser, AuditAction.STUDENT_IMPORT, AuditResourceType.CLASS, targetClass.getId(), Map.of(
                 "classId", targetClass.getId(),
                 "successCount", successCount,
                 "failureCount", failures.size()
@@ -138,6 +140,10 @@ public class AdminStudentService {
                 .orElseThrow(() -> new BusinessException(40400, "学生不存在"));
         membership.setClassId(targetClass.getId());
         classMemberRepository.save(membership);
+        auditLogService.log(currentUser, AuditAction.STUDENT_UPDATE, AuditResourceType.STUDENT, studentId, Map.of(
+                "displayName", student.getDisplayName(),
+                "classId", targetClass.getId()
+        ));
         return toView(studentId, targetClass.getId());
     }
 
@@ -146,6 +152,9 @@ public class AdminStudentService {
         SysUser student = requireStudent(currentUser, studentId);
         student.setStatus(parseStatus(request.status()));
         sysUserRepository.save(student);
+        auditLogService.log(currentUser, AuditAction.STUDENT_STATUS, AuditResourceType.STUDENT, studentId, Map.of(
+                "status", student.getStatus().name()
+        ));
         Long classId = classMemberRepository.findFirstByStudentUserId(studentId)
                 .map(ClassMember::getClassId)
                 .orElseThrow(() -> new BusinessException(40400, "学生不存在"));

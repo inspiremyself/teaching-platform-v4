@@ -7,7 +7,9 @@ import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.clazz.repository.ClassTeacherRepository;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
@@ -61,7 +63,7 @@ public class AdminTeacherService {
         teacher.setMustChangePassword(false);
         try {
             SysUser saved = sysUserRepository.saveAndFlush(teacher);
-            auditLogService.log(currentUser.id(), "TEACHER_CREATE", "TEACHER", saved.getId(), Map.of("username", saved.getUsername()));
+            auditLogService.log(currentUser, AuditAction.TEACHER_CREATE, AuditResourceType.TEACHER, saved.getId(), Map.of("username", saved.getUsername()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
             throw new BusinessException(40900, "用户名已存在");
@@ -73,7 +75,7 @@ public class AdminTeacherService {
         SysUser teacher = requireTeacher(currentUser, id);
         teacher.setDisplayName(request.displayName().trim());
         SysUser saved = sysUserRepository.save(teacher);
-        auditLogService.log(currentUser.id(), "TEACHER_UPDATE", "TEACHER", saved.getId(), Map.of("displayName", saved.getDisplayName()));
+        auditLogService.log(currentUser, AuditAction.TEACHER_UPDATE, AuditResourceType.TEACHER, saved.getId(), Map.of("displayName", saved.getDisplayName()));
         return toView(saved);
     }
 
@@ -82,7 +84,7 @@ public class AdminTeacherService {
         SysUser teacher = requireTeacher(currentUser, id);
         teacher.setStatus(parseStatus(request.status()));
         SysUser saved = sysUserRepository.save(teacher);
-        auditLogService.log(currentUser.id(), "TEACHER_STATUS", "TEACHER", saved.getId(), Map.of("status", saved.getStatus().name()));
+        auditLogService.log(currentUser, AuditAction.TEACHER_STATUS, AuditResourceType.TEACHER, saved.getId(), Map.of("status", saved.getStatus().name()));
         return toView(saved);
     }
 

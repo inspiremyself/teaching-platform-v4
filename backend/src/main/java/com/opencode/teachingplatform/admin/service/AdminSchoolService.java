@@ -2,7 +2,9 @@ package com.opencode.teachingplatform.admin.service;
 
 import com.opencode.teachingplatform.admin.dto.AdminRequests.UpdateSchoolRequest;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.school.entity.School;
 import com.opencode.teachingplatform.school.repository.SchoolRepository;
@@ -34,7 +36,7 @@ public class AdminSchoolService {
         School school = requireSchool(currentUser.schoolId());
         school.setName(request.name().trim());
         School saved = schoolRepository.save(school);
-        auditLogService.log(currentUser.id(), "SCHOOL_UPDATE", "SCHOOL", saved.getId(), Map.of("name", saved.getName()));
+        auditLogService.log(currentUser, AuditAction.SCHOOL_UPDATE, AuditResourceType.SCHOOL, saved.getId(), Map.of("name", saved.getName()));
         return toView(saved);
     }
 

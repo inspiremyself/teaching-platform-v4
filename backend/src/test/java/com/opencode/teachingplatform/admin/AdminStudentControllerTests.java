@@ -1,5 +1,6 @@
 package com.opencode.teachingplatform.admin;
 
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,7 +66,7 @@ class AdminStudentControllerTests extends AdminIntegrationTestSupport {
     }
 
     @Test
-    void transferStudentToAnotherClass() throws Exception {
+    void updateStudent_writesAudit() throws Exception {
         Long teacher1 = teacherId("t9001");
 
         String createClassResponse = mockMvc.perform(post("/api/v1/admin/classes")
@@ -115,6 +117,13 @@ class AdminStudentControllerTests extends AdminIntegrationTestSupport {
                                 """.formatted(targetClassId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.classId").value(targetClassId));
+
+        Integer updateAuditCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_log WHERE action = ? AND resource_type = 'STUDENT'",
+                Integer.class,
+                AuditAction.STUDENT_UPDATE.name()
+        );
+        assertThat(updateAuditCount).isGreaterThanOrEqualTo(1);
     }
 
     @Test

@@ -1,7 +1,9 @@
 package com.opencode.teachingplatform.question.service;
 
 import com.opencode.teachingplatform.auth.security.CurrentUser;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.question.dto.QuestionRequests.SaveQuestionRequest;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
@@ -45,7 +47,7 @@ public class QuestionService {
         question.setCreatedBy(currentUser.id());
         try {
             QuestionBank saved = questionBankRepository.save(question);
-            auditLogService.log(currentUser.id(), "QUESTION_CREATE", "QUESTION", saved.getId(), Map.of("code", saved.getCode()));
+            auditLogService.log(currentUser, AuditAction.QUESTION_CREATE, AuditResourceType.QUESTION, saved.getId(), Map.of("code", saved.getCode()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
             throw translateIntegrityViolation(ex);
@@ -62,7 +64,7 @@ public class QuestionService {
         apply(question, request);
         try {
             QuestionBank saved = questionBankRepository.save(question);
-            auditLogService.log(currentUser.id(), "QUESTION_UPDATE", "QUESTION", saved.getId(), Map.of("code", saved.getCode()));
+            auditLogService.log(currentUser, AuditAction.QUESTION_UPDATE, AuditResourceType.QUESTION, saved.getId(), Map.of("code", saved.getCode()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
             throw translateIntegrityViolation(ex);
@@ -73,6 +75,7 @@ public class QuestionService {
     public void delete(CurrentUser currentUser, Long id) {
         QuestionBank question = questionBankRepository.findByIdAndCreatedBy(id, currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该题目"));
+        auditLogService.log(currentUser, AuditAction.QUESTION_DELETE, AuditResourceType.QUESTION, question.getId(), Map.of("code", question.getCode()));
         questionBankRepository.delete(question);
     }
 

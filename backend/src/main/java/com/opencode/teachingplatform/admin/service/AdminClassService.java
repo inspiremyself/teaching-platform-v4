@@ -10,7 +10,9 @@ import com.opencode.teachingplatform.clazz.entity.ClassRoom;
 import com.opencode.teachingplatform.clazz.entity.ClassTeacher;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.clazz.repository.ClassTeacherRepository;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.enums.ClassStatus;
 import com.opencode.teachingplatform.common.enums.ClassTeacherRole;
 import com.opencode.teachingplatform.common.enums.SubjectStatus;
@@ -92,7 +94,7 @@ public class AdminClassService {
         try {
             ClassRoom saved = classRoomRepository.saveAndFlush(room);
             replaceTeachers(saved.getId(), validatedTeachers);
-            auditLogService.log(currentUser.id(), "CLASS_CREATE", "CLASS", saved.getId(), Map.of("code", saved.getCode()));
+            auditLogService.log(currentUser, AuditAction.CLASS_CREATE, AuditResourceType.CLASS, saved.getId(), Map.of("code", saved.getCode()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
             throw new BusinessException(40900, "班级编码已存在");
@@ -107,7 +109,11 @@ public class AdminClassService {
         room.setStatus(request.status());
         ClassRoom saved = classRoomRepository.save(room);
         replaceTeachers(saved.getId(), validatedTeachers);
-        auditLogService.log(currentUser.id(), "CLASS_UPDATE", "CLASS", saved.getId(), Map.of("name", saved.getName()));
+        auditLogService.log(currentUser, AuditAction.CLASS_UPDATE, AuditResourceType.CLASS, saved.getId(), Map.of(
+                "name", saved.getName(),
+                "status", saved.getStatus().name(),
+                "teacherCount", validatedTeachers.size()
+        ));
         return toView(saved);
     }
 
@@ -119,7 +125,7 @@ public class AdminClassService {
         }
         classTeacherRepository.deleteByClassId(room.getId());
         classRoomRepository.delete(room);
-        auditLogService.log(currentUser.id(), "CLASS_DELETE", "CLASS", id, Map.of("deleted", true));
+        auditLogService.log(currentUser, AuditAction.CLASS_DELETE, AuditResourceType.CLASS, id, Map.of("deleted", true));
     }
 
     private ClassRoom requireClass(CurrentUser currentUser, Long id) {

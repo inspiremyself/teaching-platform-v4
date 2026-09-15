@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.opencode.teachingplatform.common.trace.RequestTraceContext;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -50,6 +51,7 @@ public class HttpAccessLogFilter extends OncePerRequestFilter {
 
         String traceId = UUID.randomUUID().toString();
         response.setHeader(TRACE_HEADER, traceId);
+        RequestTraceContext.set(traceId, resolveClientIp(request));
         long startedAt = System.nanoTime();
 
         try {
@@ -80,6 +82,7 @@ public class HttpAccessLogFilter extends OncePerRequestFilter {
                     truncateNullToEmpty(request.getHeader("User-Agent"), MAX_USER_AGENT_LEN)
             );
             httpAccessLogService.submit(record);
+            RequestTraceContext.clear();
         }
     }
 

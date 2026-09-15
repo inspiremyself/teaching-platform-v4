@@ -4,12 +4,14 @@ import type {
   AdminStudent,
   AdminSubject,
   AdminTeacher,
+  AuditLogListItem,
   CreateAdminClassPayload,
   CreateStudentPayload,
   CreateSubjectPayload,
   CreateTeacherPayload,
   ImportStudentsPayload,
   ImportStudentsResult,
+  ListAuditLogsParams,
   SchoolInfo,
   StudentStatus,
   SubjectStatus,
@@ -20,6 +22,7 @@ import type {
   UpdateSubjectPayload,
   UpdateTeacherPayload,
 } from '@/types/admin';
+import type { PageResult } from '@/types/common';
 
 export const getSchool = () => request.get<SchoolInfo>('/admin/school');
 
@@ -77,3 +80,6 @@ export const importAdminStudents = (data: ImportStudentsPayload) =>
 
 export const changeAdminStudentStatus = (id: number, status: StudentStatus) =>
   request.post<AdminStudent>(`/admin/students/${id}/status`, { status });
+
+export const listAuditLogs = (params: ListAuditLogsParams = {}) =>
+  request.get<PageResult<AuditLogListItem>>('/admin/audit-logs', { params });

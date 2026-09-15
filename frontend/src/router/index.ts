@@ -94,6 +94,7 @@ const router = createRouter({
         { path: 'subjects', name: 'admin-subjects', component: () => import('@/views/admin/Subjects.vue'), meta: { title: '学科管理' } },
         { path: 'classes', name: 'admin-classes', component: () => import('@/views/admin/Classes.vue'), meta: { title: '班级管理' } },
         { path: 'students', name: 'admin-students', component: () => import('@/views/admin/Students.vue'), meta: { title: '学生管理' } },
+        { path: 'audit-logs', name: 'admin-audit-logs', component: () => import('@/views/admin/AuditLogs.vue'), meta: { title: '操作日志' } },
         { path: 'school', name: 'admin-school', component: () => import('@/views/admin/School.vue'), meta: { title: '学校信息' } },
       ],
     },

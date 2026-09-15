@@ -5,7 +5,9 @@ import com.opencode.teachingplatform.admin.dto.AdminRequests.CreateSubjectReques
 import com.opencode.teachingplatform.admin.dto.AdminRequests.UpdateSubjectRequest;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.clazz.repository.ClassTeacherRepository;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.enums.SubjectStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.school.entity.SchoolSubject;
@@ -64,7 +66,7 @@ public class AdminSubjectService {
         subject.setStatus(SubjectStatus.ACTIVE);
         try {
             SchoolSubject saved = schoolSubjectRepository.saveAndFlush(subject);
-            auditLogService.log(currentUser.id(), "SUBJECT_CREATE", "SUBJECT", saved.getId(), Map.of("code", saved.getCode()));
+            auditLogService.log(currentUser, AuditAction.SUBJECT_CREATE, AuditResourceType.SUBJECT, saved.getId(), Map.of("code", saved.getCode()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
             throw new BusinessException(40901, "学科编码已存在");
@@ -85,7 +87,7 @@ public class AdminSubjectService {
         subject.setCode(code);
         try {
             SchoolSubject saved = schoolSubjectRepository.save(subject);
-            auditLogService.log(currentUser.id(), "SUBJECT_UPDATE", "SUBJECT", saved.getId(), Map.of("code", saved.getCode()));
+            auditLogService.log(currentUser, AuditAction.SUBJECT_UPDATE, AuditResourceType.SUBJECT, saved.getId(), Map.of("code", saved.getCode()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
             throw new BusinessException(40901, "学科编码已存在");
@@ -97,7 +99,7 @@ public class AdminSubjectService {
         SchoolSubject subject = requireSubject(currentUser, id);
         subject.setStatus(parseStatus(request.status()));
         SchoolSubject saved = schoolSubjectRepository.save(subject);
-        auditLogService.log(currentUser.id(), "SUBJECT_STATUS", "SUBJECT", saved.getId(), Map.of("status", saved.getStatus().name()));
+        auditLogService.log(currentUser, AuditAction.SUBJECT_STATUS, AuditResourceType.SUBJECT, saved.getId(), Map.of("status", saved.getStatus().name()));
         return toView(saved);
     }
 

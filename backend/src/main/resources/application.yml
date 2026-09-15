@@ -31,3 +31,6 @@ app:
   file-storage-root: ${FILE_STORAGE_ROOT:../data/files}
   http-access-log:
     enabled: true
+  audit-log:
+    retention-days: 180
+    retention-enabled: true

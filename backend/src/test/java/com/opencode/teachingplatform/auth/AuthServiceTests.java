@@ -9,7 +9,9 @@ import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
 import com.opencode.teachingplatform.auth.service.AuthService;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.SecurityAuditEvent;
 import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
@@ -36,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,18 +68,49 @@ class AuthServiceTests {
 
     @Test
     void disabledUserCannotLogin() {
-        SysUser user = new SysUser();
+        SysUser user = new SysUser() {
+            @Override
+            public Long getId() {
+                return 1L;
+            }
+        };
         user.setUsername("t9001");
         user.setPasswordHash("{noop}123456");
         user.setDisplayName("演示教师");
         user.setRole(UserRole.TEACHER);
         user.setStatus(UserStatus.DISABLED);
+        user.setSchoolId(1L);
         when(sysUserRepository.findByUsernameAndRole("t9001", UserRole.TEACHER)).thenReturn(Optional.of(user));
 
         BusinessException exception = assertThrows(BusinessException.class, () -> authService.login(new LoginRequest("t9001", "123456", UserRole.TEACHER)));
 
         assertEquals(40101, exception.getCode());
         assertEquals("用户名、密码或角色错误", exception.getMessage());
+        verify(auditLogService).logSecurity(argThat(event ->
+                event.action() == AuditAction.LOGIN_FAILURE && event.userId() != null));
+    }
+
+    @Test
+    void loginUnknownUser_writesFailureWithoutUserId() {
+        when(sysUserRepository.findByUsernameAndRole("nobody", UserRole.TEACHER)).thenReturn(Optional.empty());
+
+        assertThrows(BusinessException.class, () -> authService.login(new LoginRequest("nobody", "123456", UserRole.TEACHER)));
+
+        verify(auditLogService).logSecurity(argThat(event ->
+                event.action() == AuditAction.LOGIN_FAILURE && event.userId() == null));
+    }
+
+    @Test
+    void loginFailure_writesLoginFailure() {
+        SysUser user = activeTeacher();
+        user.setSchoolId(1L);
+        when(sysUserRepository.findByUsernameAndRole("t9001", UserRole.TEACHER)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "123456")).thenReturn(false);
+
+        assertThrows(BusinessException.class, () -> authService.login(new LoginRequest("t9001", "wrong", UserRole.TEACHER)));
+
+        verify(auditLogService).logSecurity(argThat(event ->
+                event.action() == AuditAction.LOGIN_FAILURE && event.userId() != null && event.userId().equals(1L)));
     }
 
     @Test

@@ -9,7 +9,10 @@ import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
+import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
+import com.opencode.teachingplatform.common.audit.SecurityAuditEvent;
 import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
@@ -20,9 +23,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -58,12 +62,18 @@ public class AuthService {
 
     @Transactional
     public Map<String, Object> login(LoginRequest request) {
-        SysUser user = sysUserRepository.findByUsernameAndRole(request.username(), request.role())
-                .orElseThrow(() -> new BusinessException(LOGIN_ERROR_CODE, LOGIN_ERROR_MESSAGE));
+        Optional<SysUser> optionalUser = sysUserRepository.findByUsernameAndRole(request.username(), request.role());
+        if (optionalUser.isEmpty()) {
+            logLoginFailure(null, null, request);
+            throw new BusinessException(LOGIN_ERROR_CODE, LOGIN_ERROR_MESSAGE);
+        }
+        SysUser user = optionalUser.get();
         if (user.getStatus() != UserStatus.ACTIVE) {
+            logLoginFailure(user.getId(), user.getSchoolId(), request);
             throw new BusinessException(LOGIN_ERROR_CODE, LOGIN_ERROR_MESSAGE);
         }
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash().replace("{noop}", ""))) {
+            logLoginFailure(user.getId(), user.getSchoolId(), request);
             throw new BusinessException(LOGIN_ERROR_CODE, LOGIN_ERROR_MESSAGE);
         }
 
@@ -75,9 +85,17 @@ public class AuthService {
         SysUser saved = sysUserRepository.save(user);
         UserLoginSession loginSession = createActiveSession(saved, now);
         String token = jwtTokenService.issueToken(saved, loginSession.getSessionKey(), now.toInstant());
-        auditLogService.log(saved.getId(), "LOGIN_SUCCESS", "USER", saved.getId(), Map.of(
-                "role", saved.getRole().name(),
-                "forceLogin", request.forceLogin()
+        auditLogService.logSecurity(new SecurityAuditEvent(
+                AuditAction.LOGIN_SUCCESS,
+                saved.getId(),
+                saved.getSchoolId(),
+                saved.getRole().name(),
+                AuditResourceType.USER,
+                saved.getId(),
+                Map.of(
+                        "role", saved.getRole().name(),
+                        "forceLogin", request.forceLogin()
+                )
         ));
         return Map.of(
                 "token", token,
@@ -103,7 +121,7 @@ public class AuthService {
                         userLoginSessionRepository.save(session);
                     });
         }
-        auditLogService.log(currentUser.id(), "LOGOUT", "USER", currentUser.id(), Map.of("loggedOut", true));
+        auditLogService.log(currentUser, AuditAction.LOGOUT, AuditResourceType.USER, currentUser.id(), Map.of("loggedOut", true));
         return Map.of("loggedOut", true);
     }
 
@@ -122,7 +140,13 @@ public class AuthService {
         user.setOfficeHours(normalizeNullable(request.officeHours()));
         user.setBio(normalizeNullable(request.bio()));
         SysUser saved = sysUserRepository.save(user);
-        auditLogService.log(currentUser.id(), "PROFILE_UPDATED", "USER", currentUser.id(), Map.of("displayName", saved.getDisplayName()));
+        auditLogService.log(
+                currentUser,
+                AuditAction.PROFILE_UPDATED,
+                AuditResourceType.USER,
+                currentUser.id(),
+                Map.of("displayName", saved.getDisplayName())
+        );
         return toUserProfile(saved);
     }
 
@@ -130,13 +154,35 @@ public class AuthService {
     public Map<String, Object> changePassword(CurrentUser currentUser, ChangePasswordRequest request) {
         SysUser user = sysUserRepository.findById(currentUser.id()).orElseThrow(() -> new BusinessException(40400, "用户不存在"));
         if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash().replace("{noop}", ""))) {
+            auditLogService.log(
+                    currentUser,
+                    AuditAction.PASSWORD_CHANGE_FAILED,
+                    AuditResourceType.USER,
+                    currentUser.id(),
+                    Map.of("failed", true)
+            );
             throw new BusinessException(40010, "旧密码错误");
         }
         user.setPasswordHash("{noop}" + request.newPassword());
         user.setMustChangePassword(false);
         sysUserRepository.save(user);
-        auditLogService.log(currentUser.id(), "PASSWORD_CHANGED", "USER", currentUser.id(), Map.of("changed", true));
+        auditLogService.log(currentUser, AuditAction.PASSWORD_CHANGED, AuditResourceType.USER, currentUser.id(), Map.of("changed", true));
         return Map.of("changed", true);
+    }
+
+    private void logLoginFailure(Long userId, Long schoolId, LoginRequest request) {
+        auditLogService.logSecurity(new SecurityAuditEvent(
+                AuditAction.LOGIN_FAILURE,
+                userId,
+                schoolId,
+                null,
+                AuditResourceType.USER,
+                userId,
+                Map.of(
+                        "username", request.username().trim(),
+                        "role", request.role().name()
+                )
+        ));
     }
 
     private List<String> permissionsOf(SysUser user) {
@@ -190,6 +236,16 @@ public class AuthService {
         existingSession.setStatus(LoginSessionStatus.KICKED);
         existingSession.setInvalidatedAt(now);
         userLoginSessionRepository.save(existingSession);
+        SysUser kickedUser = existingSession.getUser();
+        auditLogService.logSecurity(new SecurityAuditEvent(
+                AuditAction.SESSION_INVALIDATED,
+                kickedUser.getId(),
+                kickedUser.getSchoolId(),
+                kickedUser.getRole().name(),
+                AuditResourceType.USER,
+                kickedUser.getId(),
+                Map.of("reason", "forceLogin")
+        ));
     }
 
     private UserLoginSession createActiveSession(SysUser user, OffsetDateTime now) {

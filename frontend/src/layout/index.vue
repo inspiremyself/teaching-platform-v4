@@ -76,6 +76,9 @@
             <router-link to="/admin/students" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">person</span><span>学生管理</span>
             </router-link>
+            <router-link to="/admin/audit-logs" class="nav-item" active-class="nav-active">
+              <span class="material-symbols-outlined">history</span><span>操作日志</span>
+            </router-link>
             <router-link to="/admin/school" class="nav-item" active-class="nav-active">
               <span class="material-symbols-outlined">domain</span><span>学校信息</span>
             </router-link>
@@ -210,6 +213,7 @@ const mobileNavItems = computed<NavItem[]>(() => {
       { to: '/admin/subjects', label: '学科', icon: 'menu_book' },
       { to: '/admin/classes', label: '班级', icon: 'groups' },
       { to: '/admin/students', label: '学生', icon: 'person' },
+      { to: '/admin/audit-logs', label: '日志', icon: 'history' },
       { to: '/profile', label: '我的', icon: 'settings' },
     ];
   }

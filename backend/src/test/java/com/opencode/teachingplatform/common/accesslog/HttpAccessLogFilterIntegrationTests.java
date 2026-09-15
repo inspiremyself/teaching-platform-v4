@@ -5,17 +5,20 @@ import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.testsupport.IntegrationTestAuthSupport;
+import com.opencode.teachingplatform.common.audit.AuditLogRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -39,9 +42,13 @@ class HttpAccessLogFilterIntegrationTests {
     @Autowired
     private UserLoginSessionRepository userLoginSessionRepository;
 
+    @Autowired
+    private AuditLogRepository auditLogRepository;
+
     @BeforeEach
     void clearAccessLogs() {
         httpAccessLogRepository.deleteAll();
+        auditLogRepository.deleteAll();
     }
 
     private String teacherBearer() {
@@ -109,6 +116,26 @@ class HttpAccessLogFilterIntegrationTests {
                 .andExpect(status().isForbidden());
 
         assertThat(httpAccessLogRepository.count()).isZero();
+    }
+
+    @Test
+    void loginSuccess_auditTraceMatchesHeader() throws Exception {
+        String traceHeader = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"t9001","password":"123456","role":"TEACHER","forceLogin":true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(header().exists("X-Trace-Id"))
+                .andReturn()
+                .getResponse()
+                .getHeader("X-Trace-Id");
+
+        var auditRow = auditLogRepository.findAll().stream()
+                .filter(row -> "LOGIN_SUCCESS".equals(row.getAction()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(auditRow.getTraceId()).isEqualTo(traceHeader);
     }
 
 }
