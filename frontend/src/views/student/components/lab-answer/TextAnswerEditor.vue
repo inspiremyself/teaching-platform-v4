@@ -1,5 +1,5 @@
 <template>
-  <div class="text-answer-editor">
+  <div class="text-answer-editor" @paste="handlePaste">
     <el-input
       :model-value="currentText"
       type="textarea"
@@ -50,7 +50,10 @@
           @change="handleFileChange"
         />
         <el-button :loading="uploading" @click="openFilePicker">添加图片</el-button>
-        <span class="text-answer-editor__upload-tip">支持 png / jpeg / webp，单张不超过 1MB</span>
+        <p class="text-answer-editor__upload-tip">
+          支持 <strong>png / jpeg / webp</strong>，单张不超过 <strong>1MB</strong>；
+          在本页按 <kbd>Ctrl</kbd>+<kbd>V</kbd> 或 <kbd>⌘</kbd>+<kbd>V</kbd> 可<strong>粘贴截图</strong>
+        </p>
       </div>
     </div>
   </div>
@@ -261,32 +264,32 @@ watch(supportsImages, (enabled) => {
   }
 });
 
-const openFilePicker = () => {
-  fileInputRef.value?.click();
+const ALLOWED_PASTE_IMAGE_MIMES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+]);
+
+const pasteImageExtension = (mime: string) => {
+  if (mime === 'image/png') {
+    return 'png';
+  }
+  if (mime === 'image/webp') {
+    return 'webp';
+  }
+  return 'jpg';
 };
 
-const removeImage = (index: number) => {
-  closePreview();
-  const removed = currentImages.value[index];
-  const nextImages = currentImages.value.filter((_, imageIndex) => imageIndex !== index);
-  if (removed?.path) {
-    revokePreviewUrl(localPreviewUrls[removed.path]);
-    revokePreviewUrl(remotePreviewUrls[removed.path]);
-    delete localPreviewUrls[removed.path];
-    delete remotePreviewUrls[removed.path];
-  }
-  emitDraft(currentText.value, nextImages);
-  emit('images-removed');
+const normalizePastedFileName = (file: File, mime: string): File => {
+  const trimmedName = file.name.trim();
+  const name = trimmedName && trimmedName.includes('.')
+    ? trimmedName
+    : `paste-${Date.now()}.${pasteImageExtension(mime)}`;
+  return new File([file], name, { type: mime, lastModified: file.lastModified });
 };
 
-const handleFileChange = async (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = '';
-
-  if (!file) {
-    return;
-  }
+const processImageFile = async (file: File) => {
   if (!props.labId || !props.stepId) {
     ElMessage.error('缺少实验题项信息，无法上传图片');
     return;
@@ -315,6 +318,90 @@ const handleFileChange = async (event: Event) => {
   } finally {
     uploading.value = false;
   }
+};
+
+const handlePaste = async (event: ClipboardEvent) => {
+  if (!supportsImages.value || props.disabled) {
+    return;
+  }
+
+  const items = event.clipboardData?.items;
+  if (!items?.length) {
+    return;
+  }
+
+  let sawAnyImageItem = false;
+  const imageFiles: File[] = [];
+
+  for (const item of items) {
+    if (!item.type.startsWith('image/')) {
+      continue;
+    }
+    sawAnyImageItem = true;
+    const file = item.getAsFile();
+    if (!file) {
+      continue;
+    }
+    const mime = (file.type || item.type).trim().toLowerCase();
+    if (!ALLOWED_PASTE_IMAGE_MIMES.has(mime)) {
+      continue;
+    }
+    imageFiles.push(normalizePastedFileName(file, mime));
+  }
+
+  if (!sawAnyImageItem) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (imageFiles.length === 0) {
+    ElMessage.error('仅支持 png、jpeg、webp 图片');
+    return;
+  }
+
+  if (uploading.value) {
+    ElMessage.warning('正在上传图片，请稍候');
+    return;
+  }
+
+  for (const file of imageFiles) {
+    if (currentImages.value.length >= 5) {
+      ElMessage.warning('单题最多上传 5 张图片');
+      break;
+    }
+    await processImageFile(file);
+  }
+};
+
+const openFilePicker = () => {
+  fileInputRef.value?.click();
+};
+
+const removeImage = (index: number) => {
+  closePreview();
+  const removed = currentImages.value[index];
+  const nextImages = currentImages.value.filter((_, imageIndex) => imageIndex !== index);
+  if (removed?.path) {
+    revokePreviewUrl(localPreviewUrls[removed.path]);
+    revokePreviewUrl(remotePreviewUrls[removed.path]);
+    delete localPreviewUrls[removed.path];
+    delete remotePreviewUrls[removed.path];
+  }
+  emitDraft(currentText.value, nextImages);
+  emit('images-removed');
+};
+
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+
+  if (!file) {
+    return;
+  }
+
+  await processImageFile(file);
 };
 
 onBeforeUnmount(() => {
@@ -399,7 +486,34 @@ onBeforeUnmount(() => {
 }
 
 .text-answer-editor__upload-tip {
-  color: #64748b;
+  flex: 1 1 100%;
+  margin: 4px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #99f6e4;
+  background: #f0fdfa;
+  color: #115e59;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.text-answer-editor__upload-tip strong {
+  font-weight: 600;
+  color: #0f766e;
+}
+
+.text-answer-editor__upload-tip kbd {
+  display: inline-block;
+  margin: 0 1px;
+  padding: 1px 6px;
+  border: 1px solid #5eead4;
+  border-radius: 4px;
+  background: #fff;
+  color: #134e4a;
+  font-family: inherit;
   font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 1px 0 #ccfbf1;
 }
 </style>
