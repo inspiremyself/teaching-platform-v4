@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.plagiarism;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
+import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.plagiarism.controller.PlagiarismController;
 import com.opencode.teachingplatform.plagiarism.service.PlagiarismService;
@@ -42,6 +43,9 @@ class PlagiarismControllerTests {
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockBean
+    private HttpAccessLogFilter httpAccessLogFilter;
 
     @Test
     void teacherCanListPlagiarismTasks() throws Exception {

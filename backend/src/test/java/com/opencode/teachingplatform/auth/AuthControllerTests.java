@@ -5,6 +5,7 @@ import com.opencode.teachingplatform.auth.service.AuthService;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
+import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,9 @@ class AuthControllerTests {
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockBean
+    private HttpAccessLogFilter httpAccessLogFilter;
 
     @Test
     void schoolAdminCanLoginAndReadCurrentUserWithSchoolInfo() throws Exception {

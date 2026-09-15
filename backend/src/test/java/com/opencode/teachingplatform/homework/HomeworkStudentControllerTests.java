@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.homework;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
+import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.homework.controller.HomeworkController;
 import com.opencode.teachingplatform.homework.service.HomeworkService;
@@ -41,6 +42,9 @@ class HomeworkStudentControllerTests {
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockBean
+    private HttpAccessLogFilter httpAccessLogFilter;
 
     @Test
     void studentOnlySeesPublishedHomeworksForOwnClasses() throws Exception {

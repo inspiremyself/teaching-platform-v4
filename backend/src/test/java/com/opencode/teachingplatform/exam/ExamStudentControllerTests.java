@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.exam;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
+import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.exam.controller.ExamController;
@@ -46,6 +47,9 @@ class ExamStudentControllerTests {
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockBean
+    private HttpAccessLogFilter httpAccessLogFilter;
 
     @Test
     void studentOnlySeesPublishedExamsForOwnClass() throws Exception {

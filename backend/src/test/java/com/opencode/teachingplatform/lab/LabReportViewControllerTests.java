@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.lab;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
+import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.lab.controller.LabController;
 import com.opencode.teachingplatform.lab.service.LabService;
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,9 @@ class LabReportViewControllerTests {
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockBean
+    private HttpAccessLogFilter httpAccessLogFilter;
 
     @Test
     void teacherCanReadPureLabReportView() throws Exception {

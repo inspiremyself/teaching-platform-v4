@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.clazz;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
+import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.clazz.controller.ClassController;
 import com.opencode.teachingplatform.clazz.service.ClassService;
 import com.opencode.teachingplatform.common.api.PagedResult;
@@ -42,6 +43,9 @@ class ClassControllerTests {
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockBean
+    private HttpAccessLogFilter httpAccessLogFilter;
 
     @Test
     void teacherCanListAssignedClassesWithMyAssignment() throws Exception {
