@@ -11,6 +11,7 @@
 | [2026-09-09-路径B-数据备份与恢复.md](./2026-09-09-路径B-数据备份与恢复.md) | H2 专用（历史索引） | `backup-path-b-data.sh`、`restore-path-b-data.sh`、`reset-h2.sh` |
 | [2026-09-09-路径C-本地MySQL联调与H2迁移.md](./2026-09-09-路径C-本地MySQL联调与H2迁移.md) | 本机 MySQL 联调；H2 整库迁入 | `scripts/path-c/`、`migrate-h2-to-mysql.sh` |
 | [2026-09-11-nvm多项目Node版本与IDE配合.md](./2026-09-11-nvm多项目Node版本与IDE配合.md) | nvm 多版本、`.nvmrc`、Cursor/VS Code 与终端对齐 | （本机 `~/.zshrc` / 项目 `.nvmrc`） |
+| [2026-10-08-路径B-一键启动前后端dev脚本.md](./2026-10-08-路径B-一键启动前后端dev脚本.md) | **单终端一键后台启停前后端**（MySQL 或 H2） | `scripts/path-b/dev.sh` |
 
 ## 快速示例
 
@@ -23,6 +24,11 @@
 # 本地联调（两个终端，默认 MySQL）
 ./scripts/path-b/backend.sh
 ./scripts/path-b/frontend.sh
+
+# 本地联调（单终端一键后台启停，默认 MySQL；DB=h2 用 H2）
+./scripts/path-b/dev.sh up
+./scripts/path-b/dev.sh status
+./scripts/path-b/dev.sh down
 
 # H2 文件库（可选）
 ./scripts/path-b/backend-h2.sh
