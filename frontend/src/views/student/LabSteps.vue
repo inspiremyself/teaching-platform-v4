@@ -238,9 +238,6 @@
               <el-button :disabled="currentIndex === 0" @click="goPrev">上一题</el-button>
               <el-button :disabled="currentIndex === labItems.length - 1" @click="goNext">下一题</el-button>
               <el-button type="primary" :loading="saving" :disabled="readonly || !currentItem" @click="saveCurrent">保存当前题项</el-button>
-              <el-button type="success" :loading="submitting" :disabled="readonly || !labItems.length" @click="submitAll">
-                提交实验
-              </el-button>
             </div>
           </footer>
         </div>
