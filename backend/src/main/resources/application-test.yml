@@ -11,6 +11,12 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+    # 路径 B（H2 文件库）方言占位符：必须显式覆盖，否则合并到 application.yml 的 MySQL 方言值导致 V15/V16/V18 失败
+    placeholders:
+      alterModifyColumn: "ALTER COLUMN"
+      fkChecksDisable: "SET REFERENTIAL_INTEGRITY FALSE"
+      fkChecksEnable: "SET REFERENTIAL_INTEGRITY TRUE"
+      mysqlOnly: "--"
   h2:
     console:
       enabled: true

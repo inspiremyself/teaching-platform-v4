@@ -149,14 +149,157 @@ public class LabService {
     }
 
     @Transactional
+    /**
+     * 从已有实验深度拷贝创建新实验。
+     *
+     * <p>复制实验主表配置、全部题项与填空题可接受答案；学生提交、答案、成绩等运行数据不随复制迁移。
+     * 新实验拥有独立 ID 与编号（由实体 {@code @PrePersist} 自动生成，与 {@link #createLab} 同一套机制），
+     * 创建人为当前教师，成绩发布状态重置为未发布，起止时间清空待重新排期。</p>
+     *
+     * <p>关键步骤：
+     * 1) 校验源实验归属（仅 {@code created_by}，允许把不再任教的旧班实验复制到新班）；
+     * 2) 校验目标班级任教关系；
+     * 3) 发布门禁前置（源实验无题项时禁止直接复制为已发布，落库前基于源题项列表判断）；
+     * 4) 复制主表并落库；
+     * 5) 逐题项复制并记录「源题项 ID → 新题项 ID」映射；
+     * 6) 依据映射复制填空题可接受答案。</p>
+     *
+     * @param currentUser 当前登录教师
+     * @param sourceLabId 源实验 ID
+     * @param request     目标班级、新实验名称（可空，缺省为「源标题（副本）」）、发布状态（可空，缺省草稿）
+     * @return 新实验的教师视图（结构与台账行一致）
+     */
+    public Map<String, Object> copyLab(CurrentUser currentUser, Long sourceLabId,
+                                       LabRequests.CopyLabRequest request) {
+        requireTeacher(currentUser);
+
+        // 源实验只校验 ownership，不复用 ownedLab：后者还要求当前仍任教源班级，会阻断跨班复用
+        Lab source = labRepository.findByIdAndCreatedBy(sourceLabId, currentUser.id())
+                .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
+
+        classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
+
+        // 发布门禁前置：源实验无题项时不允许直接复制为已发布
+        List<LabStep> sourceSteps = labStepRepository.findByLabIdOrderByStepNoAsc(source.getId());
+        ActivityStatus targetStatus = parseStatus(request.status());
+        if (targetStatus == ActivityStatus.PUBLISHED && sourceSteps.isEmpty()) {
+            throw new BusinessException(40000, LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE);
+        }
+
+        // 复制主表：ID/编号/审计时间由实体自动生成，运行态字段（成绩发布、起止时间）不随源迁移
+        Lab copy = new Lab();
+        copy.setCreatedBy(currentUser.id());
+        copy.setClassId(request.classId());
+        copy.setTitle(resolveCopyTitle(source.getTitle(), request.title()));
+        copy.setDescription(source.getDescription());
+        copy.setExperimentType(source.getExperimentType());
+        copy.setInstructionType(source.getInstructionType());
+        copy.setExperimentContent(source.getExperimentContent());
+        copy.setMaterialId(source.getMaterialId());
+        copy.setScoreVisibilityMode(source.getScoreVisibilityMode());
+        copy.setSummaryRequired(source.isSummaryRequired());
+        copy.setScoreReleased(false);
+        copy.setStatus(targetStatus);
+        Lab saved = labRepository.save(copy);
+
+        // 复制题项，记录「源题项 ID → 新题项 ID」映射，供填空答案外键改指
+        Map<Long, Long> itemIdMapping = new LinkedHashMap<>();
+        for (LabStep sourceStep : sourceSteps) {
+            LabStep step = copyStep(sourceStep, saved.getId());
+            itemIdMapping.put(sourceStep.getId(), labStepRepository.save(step).getId());
+        }
+
+        copyBlankOverrides(source.getId(), saved.getId(), itemIdMapping, currentUser.id());
+
+        return toTeacherLabView(saved);
+    }
+
+    /**
+     * 复制单个题项到目标实验。
+     *
+     * <p>{@link LabStep} 的 setter 带派生副作用：{@code setQuestionType} 会重置
+     * experimentItemType / questionSnapshotJson / editorLanguage；{@code setAnswerConfigJson}
+     * 会把 experimentItemAnswer 覆写为答案配置。因此必须按「先 questionType，再覆盖派生字段，
+     * 最后 answerConfigJson 与 experimentItemAnswer」的顺序赋值，避免源值被默认值覆盖。</p>
+     *
+     * @param source      源题项
+     * @param targetLabId 目标实验 ID
+     * @return 待落库的新题项（ID 由实体 {@code @PrePersist} 生成）
+     */
+    private LabStep copyStep(LabStep source, Long targetLabId) {
+        LabStep step = new LabStep();
+        step.setLabId(targetLabId);
+        step.setStepNo(source.getStepNo());
+        step.setTitle(source.getTitle());
+
+        step.setQuestionType(source.getQuestionType());
+        step.setQuestionSnapshotJson(source.getQuestionSnapshotJson());
+        step.setEditorLanguage(source.getEditorLanguage());
+        step.setExperimentItemType(source.getExperimentItemType());
+
+        step.setContent(source.getContent());
+        step.setAnswerConfigJson(source.getAnswerConfigJson());
+        step.setExperimentItemAnswer(source.getExperimentItemAnswer());
+        step.setScoringConfigJson(source.getScoringConfigJson());
+
+        step.setStepScore(source.getStepScore());
+        step.setState(source.getState());
+        step.setQuestionId(source.getQuestionId());
+        step.setAllowPaste(source.isAllowPaste());
+        return step;
+    }
+
+    /**
+     * 复制源实验的全部填空题可接受答案，外键改指到新实验与新题项，创建人记为当前教师。
+     *
+     * <p>源题项已删除而答案残留的历史脏数据（映射中查不到新题项）直接跳过，不阻断复制。</p>
+     */
+    private void copyBlankOverrides(Long sourceLabId, Long targetLabId,
+                                    Map<Long, Long> itemIdMapping, Long teacherId) {
+        List<ExperimentBlankAnswerOverride> overrides =
+                experimentBlankAnswerOverrideRepository.findByExperimentIdOrderByIdAsc(sourceLabId);
+        for (ExperimentBlankAnswerOverride source : overrides) {
+            Long targetItemId = itemIdMapping.get(source.getExperimentItemId());
+            if (targetItemId == null) {
+                continue;
+            }
+            ExperimentBlankAnswerOverride copy = new ExperimentBlankAnswerOverride();
+            copy.setExperimentId(targetLabId);
+            copy.setExperimentItemId(targetItemId);
+            copy.setAcceptedAnswer(source.getAcceptedAnswer());
+            copy.setNormalizedAnswer(source.getNormalizedAnswer());
+            copy.setBlankAnswersJson(source.getBlankAnswersJson());
+            copy.setCreatedBy(teacherId);
+            experimentBlankAnswerOverrideRepository.save(copy);
+        }
+    }
+
+    /**
+     * 生成副本实验名称：优先使用请求值；缺省时为「源标题（副本）」，
+     * 超长时先截断源标题再拼后缀，保证总长不超过 30（数据库列上限）。
+     */
+    private String resolveCopyTitle(String sourceTitle, String requestedTitle) {
+        if (requestedTitle != null && !requestedTitle.isBlank()) {
+            return requestedTitle.trim();
+        }
+        String suffix = "（副本）";
+        int maxBaseLength = 30 - suffix.length();
+        String base = sourceTitle.length() > maxBaseLength
+                ? sourceTitle.substring(0, maxBaseLength)
+                : sourceTitle;
+        return base + suffix;
+    }
+
+    @Transactional
     public Map<String, Object> updateLab(CurrentUser currentUser, Long labId, LabRequests.UpdateLabRequest request) {
         requireTeacher(currentUser);
         Lab lab = ownedLab(currentUser, labId);
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
-        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
+        // 发布校验必须先于 applyLab：若先写实体再抛异常，同一持久化上下文会残留被污染的 PUBLISHED 状态
         if (parseStatus(request.status()) == ActivityStatus.PUBLISHED) {
             assertLabPublishable(lab);
         }
+        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
         return toTeacherLabView(labRepository.save(lab));
     }
 

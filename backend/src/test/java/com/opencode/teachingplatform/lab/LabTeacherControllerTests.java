@@ -413,6 +413,60 @@ class LabTeacherControllerTests {
         }
     }
 
+    @Test
+    void teacherCanCopyOwnedLab() throws Exception {
+        when(labService.copyLab(any(CurrentUser.class), anyLong(), argThat(request ->
+                request != null && request.classId() != null && request.classId().equals(1L)
+        ))).thenReturn(Map.of(
+                "id", 123456,
+                "title", "分层架构分析实验（副本）",
+                "classId", 1,
+                "status", "DRAFT",
+                "stepCount", 3
+        ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/labs/{sourceLabId}/copy", 1001L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "classId": 1,
+                                      "title": "分层架构分析实验（副本）",
+                                      "status": "DRAFT"
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.id").value(123456))
+                    .andExpect(jsonPath("$.data.title").value("分层架构分析实验（副本）"))
+                    .andExpect(jsonPath("$.data.status").value("DRAFT"))
+                    .andExpect(jsonPath("$.data.stepCount").value(3));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void copyRejectsTitleLongerThan30() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/labs/{sourceLabId}/copy", 1001L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "classId": 1,
+                                      "title": "一二三四五六七八九十一二三四五六七八九十一二三四五六七八九十一"
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("实验名称不能超过 30 个字符")));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
     private UsernamePasswordAuthenticationToken authenticateTeacher() {
         CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
         return new UsernamePasswordAuthenticationToken(

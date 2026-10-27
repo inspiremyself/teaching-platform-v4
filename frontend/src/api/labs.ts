@@ -2,6 +2,7 @@ import request from '@/utils/request';
 import type {
   ChangeLabStatusPayload,
   ConfirmLabStepScorePayload,
+  CopyLabPayload,
   CreateLabPayload,
   CreateLabStepPayload,
   GradeLabReportPayload,
@@ -33,6 +34,9 @@ import type {
 export const listTeacherLabs = () => request.get<LabItem[]>('/teacher/labs');
 
 export const createTeacherLab = (data: CreateLabPayload) => request.post<LabItem>('/teacher/labs', data);
+
+export const copyTeacherLab = (sourceLabId: number | string, data: CopyLabPayload) =>
+  request.post<LabItem>(`/teacher/labs/${sourceLabId}/copy`, data);
 
 export const updateTeacherLab = (id: number | string, data: UpdateLabPayload) => request.put<LabItem>(`/teacher/labs/${id}`, data);
 

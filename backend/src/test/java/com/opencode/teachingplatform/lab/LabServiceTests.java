@@ -2728,6 +2728,168 @@ class LabServiceTests {
         return submissionId;
     }
 
+    @Test
+    void copyLabDuplicatesConfigurationAndItems() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long sourceStepId1 = seedStep(sourceLabId, 1, "TEXT", "{}", 10);
+        Long sourceStepId2 = seedStep(sourceLabId, 2, "CODE", "{}", 20);
+
+        Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null));
+
+        Long newLabId = ((Number) view.get("id")).longValue();
+        assertThat(newLabId).isNotEqualTo(sourceLabId);
+        assertThat(view.get("title")).isEqualTo("实验-" + sourceLabId + "（副本）");
+        assertThat(view.get("status")).isEqualTo("DRAFT");
+        assertThat(view.get("stepCount")).isEqualTo(2);
+
+        List<LabStep> copiedSteps = labStepRepository.findByLabIdOrderByStepNoAsc(newLabId);
+        assertThat(copiedSteps).hasSize(2);
+        assertThat(copiedSteps.stream().map(LabStep::getId)).doesNotContain(sourceStepId1, sourceStepId2);
+
+        LabStep first = copiedSteps.get(0);
+        assertThat(first.getStepNo()).isEqualTo(1);
+        assertThat(first.getQuestionType()).isEqualTo("TEXT");
+        assertThat(first.getAnswerConfigJson()).isEqualTo("{}");
+        assertThat(first.getExperimentItemAnswer()).isEqualTo("{}");
+        assertThat(first.getStepScore()).isEqualTo(10);
+
+        LabStep second = copiedSteps.get(1);
+        assertThat(second.getStepNo()).isEqualTo(2);
+        assertThat(second.getQuestionType()).isEqualTo("CODE");
+        assertThat(second.getEditorLanguage()).isEqualTo("JAVA");
+        assertThat(second.getStepScore()).isEqualTo(20);
+    }
+
+    @Test
+    void copyLabDoesNotCopyStudentSubmissionsOrAnswers() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long sourceStepId = seedStep(sourceLabId, 1);
+        seedSubmissionAnswer(sourceLabId, sourceStepId, 20260001L, "学生答案");
+
+        Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null));
+        Long newLabId = ((Number) view.get("id")).longValue();
+
+        Integer submissionCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM experiment_submission WHERE experiment_id = ?", Integer.class, newLabId);
+        assertThat(submissionCount).isZero();
+        Integer answerCount = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*) FROM experiment_answer a
+                JOIN experiment_submission s ON a.experiment_submission_id = s.id
+                WHERE s.experiment_id = ?
+                """,
+                Integer.class, newLabId);
+        assertThat(answerCount).isZero();
+    }
+
+    @Test
+    void copyLabResetsRuntimeFields() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedStep(sourceLabId, 1);
+        jdbcTemplate.update(
+                "UPDATE t_experiment SET score_released = TRUE, start_at = CURRENT_TIMESTAMP, end_at = CURRENT_TIMESTAMP WHERE experiment_id = ?",
+                sourceLabId);
+
+        Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null));
+        Long newLabId = ((Number) view.get("id")).longValue();
+
+        Lab copied = labRepository.findById(newLabId).orElseThrow();
+        assertThat(copied.isScoreReleased()).isFalse();
+        assertThat(copied.getStartAt()).isNull();
+        assertThat(copied.getEndAt()).isNull();
+        assertThat(copied.getCreatedBy()).isEqualTo(teacherUser().id());
+    }
+
+    @Test
+    void copyLabRejectsSourceNotOwnedByTeacher() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        CurrentUser otherTeacher = new CurrentUser(99L, "t9999", "其他教师", UserRole.TEACHER);
+
+        assertThatThrownBy(() -> labService.copyLab(otherTeacher, sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限访问该实验");
+    }
+
+    @Test
+    void copyLabRejectsTargetClassNotAssigned() {
+        Long ownedClassId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(ownedClassId, ActivityStatus.DRAFT, teacherUser().id());
+        Long unassignedClassId = seedClass(99L);
+
+        assertThatThrownBy(() -> labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(unassignedClassId, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限访问该资源");
+    }
+
+    @Test
+    void copyLabMapsBlankAcceptedAnswersToNewItems() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long sourceStepId = seedStep(sourceLabId, 1, "FILL_BLANK", "{}", 10);
+        ExperimentBlankAnswerOverride override = new ExperimentBlankAnswerOverride();
+        override.setExperimentId(sourceLabId);
+        override.setExperimentItemId(sourceStepId);
+        override.setAcceptedAnswer("spring");
+        override.setNormalizedAnswer("spring");
+        override.setBlankAnswersJson("[\"spring\"]");
+        override.setCreatedBy(teacherUser().id());
+        experimentBlankAnswerOverrideRepository.saveAndFlush(override);
+
+        Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null));
+        Long newLabId = ((Number) view.get("id")).longValue();
+
+        List<ExperimentBlankAnswerOverride> copied =
+                experimentBlankAnswerOverrideRepository.findByExperimentIdOrderByIdAsc(newLabId);
+        assertThat(copied).hasSize(1);
+        ExperimentBlankAnswerOverride item = copied.get(0);
+        assertThat(item.getExperimentItemId()).isNotEqualTo(sourceStepId);
+        assertThat(item.getAcceptedAnswer()).isEqualTo("spring");
+        assertThat(item.getNormalizedAnswer()).isEqualTo("spring");
+        assertThat(item.getBlankAnswersJson()).isEqualTo("[\"spring\"]");
+        assertThat(item.getCreatedBy()).isEqualTo(teacherUser().id());
+
+        List<LabStep> newSteps = labStepRepository.findByLabIdOrderByStepNoAsc(newLabId);
+        assertThat(newSteps).hasSize(1);
+        assertThat(item.getExperimentItemId()).isEqualTo(newSteps.get(0).getId());
+    }
+
+    @Test
+    void copyLabGeneratesDefaultTitleWithin30Chars() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        String longTitle = "一二三四五六七八九十一二三四五六七八九十一二三四五六七八";
+        jdbcTemplate.update("UPDATE t_experiment SET experiment_name = ? WHERE experiment_id = ?",
+                longTitle, sourceLabId);
+
+        Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null));
+
+        String title = (String) view.get("title");
+        assertThat(title).hasSize(30);
+        assertThat(title).endsWith("（副本）");
+    }
+
+    @Test
+    void copyLabRejectsPublishedStatusWithoutItems() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+
+        assertThatThrownBy(() -> labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, "PUBLISHED")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验尚未配置题项，无法发布");
+    }
+
     private CurrentUser studentUser() {
         return new CurrentUser(200L, "student-test", "测试学生", UserRole.STUDENT);
     }

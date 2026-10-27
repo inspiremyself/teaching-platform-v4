@@ -9,6 +9,13 @@ spring:
       ddl-auto: none
   flyway:
     enabled: true
+    # V15/V16 双方言占位符：H2 不支持 MODIFY COLUMN / SET FOREIGN_KEY_CHECKS，注入 H2 方言
+    placeholders:
+      alterModifyColumn: "ALTER COLUMN"
+      fkChecksDisable: "SET REFERENTIAL_INTEGRITY FALSE"
+      fkChecksEnable: "SET REFERENTIAL_INTEGRITY TRUE"
+      # H2 侧把 V16 的 ALTER 行整行注释掉（行首 -- 前缀），避免重置自增计数器与 V13 种子冲突
+      mysqlOnly: "--"
 
 logging:
   level:

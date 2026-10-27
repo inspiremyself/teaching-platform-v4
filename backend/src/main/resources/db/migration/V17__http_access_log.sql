@@ -1,3 +1,4 @@
+-- 索引拆为独立 CREATE INDEX（标准 SQL，MySQL/H2 通吃；H2 不认 CREATE TABLE 内联 INDEX）
 CREATE TABLE http_access_log (
   id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   trace_id VARCHAR(36) NOT NULL,
@@ -12,8 +13,9 @@ CREATE TABLE http_access_log (
   client_ip VARCHAR(64) NULL,
   user_agent VARCHAR(512) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_http_access_log_created_at (created_at),
-  INDEX idx_http_access_log_user_id (user_id),
-  INDEX idx_http_access_log_trace_id (trace_id)
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_http_access_log_created_at ON http_access_log (created_at);
+CREATE INDEX idx_http_access_log_user_id ON http_access_log (user_id);
+CREATE INDEX idx_http_access_log_trace_id ON http_access_log (trace_id);

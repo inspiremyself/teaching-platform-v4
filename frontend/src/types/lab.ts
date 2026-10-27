@@ -116,6 +116,16 @@ export interface ChangeLabStatusPayload {
   status: LabStatus;
 }
 
+/**
+ * 从已有实验深度拷贝的请求体。
+ * 仅承载目标班级 / 新名称 / 发布状态；题项、填空答案、实验指导引用等由服务端从源实验复制。
+ */
+export interface CopyLabPayload {
+  classId: number;
+  title?: string;
+  status?: LabStatus;
+}
+
 export interface LabStepItem {
   id: number;
   labId: number;

@@ -1,4 +1,4 @@
-ALTER TABLE audit_log MODIFY COLUMN user_id BIGINT NULL;
+ALTER TABLE audit_log ${alterModifyColumn} user_id BIGINT NULL;
 
 ALTER TABLE audit_log ADD COLUMN school_id BIGINT NULL;
 ALTER TABLE audit_log ADD COLUMN actor_role VARCHAR(32) NULL;

@@ -21,6 +21,13 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # V15/V16 双方言占位符：本 profile（local/MySQL）注入 MySQL 方言
+    placeholders:
+      alterModifyColumn: "MODIFY COLUMN"
+      fkChecksDisable: "SET FOREIGN_KEY_CHECKS = 0"
+      fkChecksEnable: "SET FOREIGN_KEY_CHECKS = 1"
+      # V16 的 ALTER 仅 MySQL 需要（H2 建表已带 AUTO_INCREMENT，重声明会重置自增计数器）；MySQL 侧为空前缀
+      mysqlOnly: ""
 
 server:
   port: ${SERVER_PORT:8080}

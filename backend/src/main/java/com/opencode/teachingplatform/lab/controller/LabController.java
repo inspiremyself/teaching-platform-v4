@@ -48,6 +48,20 @@ public class LabController {
         return ApiResponse.ok(labService.createLab(currentUser, request));
     }
 
+    @PostMapping("/teacher/labs/{sourceLabId}/copy")
+    @PreAuthorize("hasRole('TEACHER')")
+    /**
+     * 从已有实验深度拷贝创建新实验。
+     *
+     * <p>复制主表配置、全部题项与填空题可接受答案；学生作答、成绩等运行数据不迁移。
+     * 请求体只需目标班级、可选的新名称与发布状态，其余字段由服务端从源实验复制。</p>
+     */
+    public ApiResponse<?> copyLab(@PathVariable Long sourceLabId,
+                                  @Valid @RequestBody LabRequests.CopyLabRequest request) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.copyLab(currentUser, sourceLabId, request));
+    }
+
     @PutMapping("/teacher/labs/{id}")
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> updateLab(@PathVariable Long id, @Valid @RequestBody LabRequests.UpdateLabRequest request) {

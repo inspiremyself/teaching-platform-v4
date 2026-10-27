@@ -176,6 +176,50 @@
 
     <el-dialog v-model="createDialogVisible" :title="editingId ? '编辑实验' : '新建实验'" width="600px">
       <el-form label-width="92px">
+        <el-form-item v-if="!editingId" label="创建方式">
+          <el-radio-group v-model="createMode">
+            <el-radio-button value="blank">空白创建</el-radio-button>
+            <el-radio-button value="copy" :disabled="!rows.length">从已有实验复制</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+
+        <template v-if="createMode === 'copy' && !editingId">
+          <el-form-item label="源实验" required>
+            <el-select v-model="sourceLabId" style="width: 100%" placeholder="请选择源实验" @change="handleSourceLabChange">
+              <el-option v-for="item in rows" :key="item.id" :label="sourceLabLabel(item)" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="目标班级" required>
+            <el-select v-model="createForm.classId" style="width: 100%" placeholder="请选择目标班级">
+              <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="新实验名称" required>
+            <el-input v-model="createForm.title" maxlength="30" show-word-limit />
+          </el-form-item>
+          <el-form-item label="发布状态">
+            <el-select v-model="createForm.status" style="width: 100%">
+              <el-option label="草稿" value="DRAFT" />
+              <el-option label="已发布" value="PUBLISHED" :disabled="(sourceLab?.stepCount ?? 0) === 0" />
+              <el-option label="已关闭" value="CLOSED" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="sourceLab" label="复制预览">
+            <div class="lab-copy-preview">
+              <span class="lab-meta-chip">{{ sourceLab.stepCount ?? 0 }} 个题项</span>
+              <span class="lab-meta-chip" :class="sourceLab.materialId ? 'lab-meta-chip--success' : 'lab-meta-chip--muted'">
+                {{ sourceLab.materialId ? '含实验指导' : '无实验指导' }}
+              </span>
+              <span class="lab-meta-chip" :class="sourceLab.summaryRequired ? 'lab-meta-chip--violet' : 'lab-meta-chip--muted'">
+                {{ sourceLab.summaryRequired ? '要求实验小结' : '小结非必填' }}
+              </span>
+              <span class="lab-meta-chip">{{ scoreVisibilityLabel(sourceLab.scoreVisibilityMode) }}</span>
+              <p v-if="(sourceLab.stepCount ?? 0) === 0" class="lab-copy-preview__warn">源实验没有题项，复制后需先配置题项</p>
+            </div>
+          </el-form-item>
+        </template>
+
+        <template v-else>
         <el-form-item label="实验名称" required>
           <el-input v-model="createForm.title" maxlength="100" show-word-limit />
         </el-form-item>
@@ -229,6 +273,7 @@
             inactive-text="选填"
           />
         </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="createDialogVisible = false">取消</el-button>
@@ -244,7 +289,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { listClasses } from '@/api/classes';
 import { uploadMaterial } from '@/api/materials';
-import { changeTeacherLabStatus, createTeacherLab, listTeacherLabs, updateTeacherLab } from '@/api/labs';
+import { changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab } from '@/api/labs';
 import type { TeachingClass } from '@/types/class';
 import type { UploadMaterialPayload } from '@/types/material';
 import { LAB_EXPERIMENT_TYPE_LABELS, type CreateLabPayload, type LabItem, type LabStatus } from '@/types/lab';
@@ -260,6 +305,11 @@ const searchKeyword = ref('');
 const statusFilter = ref<LabStatus | ''>('');
 const classFilter = ref('');
 const uploadingGuidance = ref(false);
+
+type CreateMode = 'blank' | 'copy';
+
+const createMode = ref<CreateMode>('blank');
+const sourceLabId = ref<number | null>(null);
 
 const experimentTypeOptions = Object.entries(LAB_EXPERIMENT_TYPE_LABELS).map(([value, label]) => ({
   value: Number(value),
@@ -283,6 +333,32 @@ const createForm = reactive<Omit<CreateLabPayload, 'classId'> & { classId?: numb
 const publishedCount = computed(() => rows.value.filter(row => row.status === 'PUBLISHED').length);
 const draftCount = computed(() => rows.value.filter(row => row.status !== 'PUBLISHED').length);
 const summaryRequiredCount = computed(() => rows.value.filter(row => row.summaryRequired).length);
+
+// 复制模式：源实验从当前台账行直接取（stepCount/materialId/summaryRequired 等预览字段均在行内），不额外请求
+const sourceLab = computed(() => rows.value.find(row => row.id === sourceLabId.value) ?? null);
+
+// 与服务端 resolveCopyTitle 同一规则：base 截到 26 字 + 「（副本）」，总长 ≤ 30
+const copyDefaultTitle = (sourceTitle: string) => {
+  const suffix = '（副本）';
+  const maxBase = 30 - suffix.length;
+  const base = sourceTitle.length > maxBase ? sourceTitle.slice(0, maxBase) : sourceTitle;
+  return base + suffix;
+};
+
+const sourceLabLabel = (row: LabItem) =>
+  `${row.title} · ${row.className || '未绑定班级'} · ${statusLabel(row.status)} · ${row.stepCount ?? 0} 个题项`;
+
+const handleSourceLabChange = (id: number) => {
+  const source = rows.value.find(row => row.id === id);
+  if (!source) {
+    return;
+  }
+  createForm.title = copyDefaultTitle(source.title);
+  // 目标班级优先沿用源班级（当前仍任教时），否则落到第一个任教班级
+  const sourceClassAvailable = classOptions.value.some(item => item.id === source.classId);
+  createForm.classId = sourceClassAvailable ? source.classId : classOptions.value[0]?.id;
+  createForm.status = 'DRAFT';
+};
 
 const filteredRows = computed(() => {
   const keyword = searchKeyword.value.trim().toLowerCase();
@@ -345,11 +421,16 @@ const fetchClasses = async () => {
 
 const openCreateDialog = () => {
   resetCreateForm();
+  createMode.value = 'blank';
+  sourceLabId.value = null;
   createDialogVisible.value = true;
 };
 
 const openEditDialog = (row: LabItem) => {
   editingId.value = row.id;
+  // 编辑态强制空白模式：不显示创建方式切换，复制语义不适用于已存在实验
+  createMode.value = 'blank';
+  sourceLabId.value = null;
   createForm.title = row.title;
   createForm.description = row.description;
   createForm.experimentContent = row.experimentContent || '';
@@ -400,6 +481,41 @@ const clearGuidance = () => {
 };
 
 const submitCreate = async () => {
+  // 复制模式：只传 目标班级/新名称/发布状态，其余字段由服务端从源实验复制
+  if (createMode.value === 'copy' && !editingId.value) {
+    if (!sourceLabId.value) {
+      ElMessage.warning('请选择源实验');
+      return;
+    }
+    if (!createForm.classId) {
+      ElMessage.warning('请选择目标班级');
+      return;
+    }
+    if (!createForm.title.trim()) {
+      ElMessage.warning('请输入新实验名称');
+      return;
+    }
+    if (createForm.status === 'PUBLISHED' && (sourceLab.value?.stepCount ?? 0) === 0) {
+      ElMessage.warning('源实验没有题项，不能直接发布');
+      return;
+    }
+
+    submitting.value = true;
+    try {
+      const copied = await copyTeacherLab(sourceLabId.value, {
+        classId: createForm.classId,
+        title: createForm.title.trim(),
+        status: createForm.status,
+      });
+      ElMessage.success(`实验复制成功，共 ${copied.stepCount ?? 0} 个题项`);
+      createDialogVisible.value = false;
+      await fetchData();
+    } finally {
+      submitting.value = false;
+    }
+    return;
+  }
+
   if (!createForm.title.trim()) {
     ElMessage.warning('请输入实验名称');
     return;
@@ -526,6 +642,25 @@ onMounted(async () => {
   border: 1px dashed var(--labs-border);
   border-radius: 12px;
   background: #f8fafc;
+}
+
+.lab-copy-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px dashed var(--labs-border);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.lab-copy-preview__warn {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  color: #d97706;
+  font-size: 12px;
 }
 
 .lab-guidance-form__meta {
