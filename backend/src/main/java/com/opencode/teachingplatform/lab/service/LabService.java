@@ -10,6 +10,7 @@ import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.clazz.entity.ClassRoom;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.clazz.service.ClassAccessService;
+import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.BusinessType;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
@@ -36,7 +37,12 @@ import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -57,6 +63,8 @@ import java.util.Map;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 /**
@@ -68,6 +76,12 @@ import java.util.Set;
  * <p>如果 controller 是“接口入口”，那么这个类就是实验模块真正的运行逻辑中心。</p>
  */
 public class LabService {
+
+    /** 教师报告队列默认每页条数。 */
+    private static final int DEFAULT_REPORT_PAGE_SIZE = 10;
+
+    /** 教师报告队列单页上限，与审计日志分页口径保持一致。 */
+    private static final int MAX_REPORT_PAGE_SIZE = 100;
 
     private final LabRepository labRepository;
     private final LabStepRepository labStepRepository;
@@ -502,17 +516,161 @@ public class LabService {
         return Map.of("deleted", true, "id", stepId);
     }
 
+    /**
+     * 教师端实验报告队列（分页 + 筛选）。
+     *
+     * <p>与改造前的区别：以前是把教师名下全部提交拉进内存再做 keyword/status 过滤，
+     * 现在把过滤与分页都下沉到数据库，只把当前页的提交加载进内存。</p>
+     *
+     * <p>维度解析采用混合策略：教师所属实验、关键词命中的实验 / 班级 / 学生都在内存里解析
+     * （基数小），提交表上只保留 {@code lab_id IN} + {@code student_id IN} + {@code submit_status =} 这类
+     * 可走索引的谓词，避免跨表子查询在 MySQL / H2 双方言下出现差异。</p>
+     */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> listTeacherReports(CurrentUser currentUser, LabRequests.TeacherLabReportQuery query) {
+    public PagedResult<Map<String, Object>> listTeacherReports(CurrentUser currentUser,
+                                                               LabRequests.TeacherLabReportQuery query) {
         requireTeacher(currentUser);
-        List<Long> ownedLabIds = labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream().map(Lab::getId).toList();
+
+        // 1. 归一化并校验分页参数：空值取默认值，越界按统一错误码拒绝
+        int page = query == null || query.page() == null ? 1 : query.page();
+        int pageSize = query == null || query.pageSize() == null ? DEFAULT_REPORT_PAGE_SIZE : query.pageSize();
+        if (page < 1 || pageSize < 1 || pageSize > MAX_REPORT_PAGE_SIZE) {
+            throw new BusinessException(40000, "参数不合法");
+        }
+
+        // 2. 教师数据域：只允许查询自己创建的实验下的提交
+        List<Lab> ownedLabs = labRepository.findByCreatedByOrderByIdDesc(currentUser.id());
+        if (ownedLabs.isEmpty()) {
+            return new PagedResult<>(List.of(), page, pageSize, 0);
+        }
+
+        // 3. 单实验筛选：与教师数据域取交集，越权或不存在时直接返回空页
+        List<Long> scopeLabIds = ownedLabs.stream().map(Lab::getId).toList();
+        if (query != null && query.labId() != null) {
+            if (!scopeLabIds.contains(query.labId())) {
+                return new PagedResult<>(List.of(), page, pageSize, 0);
+            }
+            scopeLabIds = List.of(query.labId());
+        }
+
+        // 4. 状态筛选：非法状态按"等值匹配不到"处理，即空结果而不是报错（与改造前一致）
+        SubmissionStatus statusFilter = null;
+        String rawStatus = query == null ? null : query.status();
+        if (!isBlank(rawStatus)) {
+            try {
+                statusFilter = SubmissionStatus.valueOf(rawStatus.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                return new PagedResult<>(List.of(), page, pageSize, 0);
+            }
+        }
+
+        // 5. 关键词：实验名 / 班级名在内存解析，姓名 / 学号 / 用户名走一条用户库查询
+        String keyword = query == null ? "" : normalize(query.keyword());
+        boolean keywordActive = !keyword.isBlank();
+        List<Long> labKeywordHitIds = List.of();
+        List<Long> studentKeywordHitIds = List.of();
+        if (keywordActive) {
+            Map<Long, String> classNameById = loadClassNames(ownedLabs);
+            Set<Long> scopeLabIdSet = new LinkedHashSet<>(scopeLabIds);
+            labKeywordHitIds = ownedLabs.stream()
+                    .filter(lab -> scopeLabIdSet.contains(lab.getId()))
+                    .filter(lab -> normalize(lab.getTitle()).contains(keyword)
+                            || normalize(classNameById.getOrDefault(lab.getClassId(), "")).contains(keyword))
+                    .map(Lab::getId)
+                    .toList();
+            studentKeywordHitIds = sysUserRepository.findIdsByKeyword("%" + keyword + "%");
+        }
+
+        // 6. 拼装提交表谓词：关键词维度之间必须是 OR，不能折叠进 labId 的 AND
+        List<Long> specLabIds = scopeLabIds;
+        SubmissionStatus specStatus = statusFilter;
+        List<Long> specLabHitIds = labKeywordHitIds;
+        List<Long> specStudentHitIds = studentKeywordHitIds;
+        Specification<LabSubmission> specification = (root, criteriaQuery, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(root.get("labId").in(specLabIds));
+            if (specStatus != null) {
+                predicates.add(criteriaBuilder.equal(root.get("submitStatus"), specStatus));
+            }
+            if (keywordActive) {
+                Predicate keywordPredicate;
+                if (!specLabHitIds.isEmpty() && !specStudentHitIds.isEmpty()) {
+                    keywordPredicate = criteriaBuilder.or(
+                            root.get("labId").in(specLabHitIds),
+                            root.get("studentId").in(specStudentHitIds));
+                } else if (!specLabHitIds.isEmpty()) {
+                    keywordPredicate = root.get("labId").in(specLabHitIds);
+                } else if (!specStudentHitIds.isEmpty()) {
+                    keywordPredicate = root.get("studentId").in(specStudentHitIds);
+                } else {
+                    keywordPredicate = criteriaBuilder.disjunction();
+                }
+                predicates.add(keywordPredicate);
+            }
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        // 7. 真分页查询 + 当前页批量映射（避免逐行查实验 / 学生 / 班级）
+        Page<LabSubmission> pageResult = labSubmissionRepository.findAll(
+                specification,
+                PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "id")));
+        return new PagedResult<>(toReportListViews(pageResult.getContent()), page, pageSize, pageResult.getTotalElements());
+    }
+
+    /**
+     * 教师端实验报告导航队列（全量、轻量）。
+     *
+     * <p>报告详情页与批量批改页需要基于全部报告做"上一份 / 下一份"跳转，
+     * 分页接口会截断队列，因此单独提供无分页的全量列表，行结构与分页接口完全一致。</p>
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listTeacherReportQueue(CurrentUser currentUser) {
+        requireTeacher(currentUser);
+        List<Long> ownedLabIds = labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+                .map(Lab::getId)
+                .toList();
         if (ownedLabIds.isEmpty()) {
             return List.of();
         }
-        return labSubmissionRepository.findByLabIdIn(ownedLabIds).stream()
-                .map(this::toReportListView)
-                .filter(item -> matchesTeacherReportQuery(item, query))
+        List<LabSubmission> submissions = labSubmissionRepository.findByLabIdIn(ownedLabIds).stream()
+                .sorted(Comparator.comparing(LabSubmission::getId).reversed())
                 .toList();
+        return toReportListViews(submissions);
+    }
+
+    /**
+     * 教师端实验报告全局统计（不受列表筛选影响）。
+     *
+     * <p>队列页头部的"报告总量 / 待批改 / 已批改"三张卡需要全量口径，
+     * 分页结果只能看到当前页，因此单独用一条分组计数查询提供。</p>
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTeacherReportStats(CurrentUser currentUser) {
+        requireTeacher(currentUser);
+        List<Long> ownedLabIds = labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+                .map(Lab::getId)
+                .toList();
+        Map<String, Object> stats = new LinkedHashMap<>();
+        long total = 0L;
+        long submitted = 0L;
+        long graded = 0L;
+        if (!ownedLabIds.isEmpty()) {
+            for (Object[] row : labSubmissionRepository.countGroupByStatus(ownedLabIds)) {
+                SubmissionStatus status = (SubmissionStatus) row[0];
+                long count = ((Number) row[1]).longValue();
+                // total 汇总全部状态（含 SAVED），与改造前 rows.length 的口径保持一致
+                total += count;
+                if (status == SubmissionStatus.SUBMITTED) {
+                    submitted += count;
+                } else if (status == SubmissionStatus.GRADED) {
+                    graded += count;
+                }
+            }
+        }
+        stats.put("total", total);
+        stats.put("submitted", submitted);
+        stats.put("graded", graded);
+        return stats;
     }
 
     @Transactional(readOnly = true)
@@ -1461,25 +1619,67 @@ public class LabService {
         scoreRecordRepository.save(scoreRecord);
     }
 
-    private Map<String, Object> toReportListView(LabSubmission submission) {
-        Lab lab = labRepository.findById(submission.getLabId()).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
-        SysUser student = sysUserRepository.findById(submission.getStudentId()).orElseThrow(() -> new BusinessException(40400, "学生不存在"));
-        Map<String, Object> item = new LinkedHashMap<>();
-        item.put("id", submission.getId());
-        item.put("labId", lab.getId());
-        item.put("labTitle", lab.getTitle());
-        item.put("classId", lab.getClassId());
-        item.put("className", resolveClassName(lab.getClassId()));
-        item.put("studentId", student.getId());
-        item.put("studentName", student.getDisplayName());
-        item.put("studentUsername", student.getUsername());
-        item.put("studentNo", student.getUsername());
-        item.put("submitStatus", submission.getSubmitStatus().name());
-        item.put("totalScore", submission.getTotalScore());
-        item.put("summaryRequired", lab.isSummaryRequired());
-        item.put("submittedAt", submission.getSubmittedAt());
-        item.put("gradedAt", submission.getGradedAt());
-        return item;
+    /**
+     * 批量把提交行映射为教师报告列表视图。
+     *
+     * <p>分页接口与导航队列共用这一份实现，保证两条链路的行字段口径不会漂移；
+     * 同时把"逐行查实验 / 学生 / 班级"收敛成每类对象各一次 {@code findAllById}，消除 N+1。</p>
+     */
+    private List<Map<String, Object>> toReportListViews(List<LabSubmission> submissions) {
+        if (submissions.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> labIds = submissions.stream()
+                .map(LabSubmission::getLabId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<Long> studentIds = submissions.stream()
+                .map(LabSubmission::getStudentId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Map<Long, Lab> labById = labRepository.findAllById(labIds).stream()
+                .collect(Collectors.toMap(Lab::getId, Function.identity()));
+        Map<Long, SysUser> studentById = sysUserRepository.findAllById(studentIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, Function.identity()));
+        Map<Long, String> classNameById = loadClassNames(labById.values().stream().toList());
+
+        List<Map<String, Object>> items = new ArrayList<>(submissions.size());
+        for (LabSubmission submission : submissions) {
+            Lab lab = labById.get(submission.getLabId());
+            SysUser student = studentById.get(submission.getStudentId());
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", submission.getId());
+            item.put("labId", submission.getLabId());
+            item.put("labTitle", lab == null ? "" : lab.getTitle());
+            item.put("classId", lab == null ? null : lab.getClassId());
+            item.put("className", lab == null ? "" : classNameById.getOrDefault(lab.getClassId(), ""));
+            item.put("studentId", submission.getStudentId());
+            item.put("studentName", student == null ? "" : student.getDisplayName());
+            item.put("studentUsername", student == null ? "" : student.getUsername());
+            item.put("studentNo", student == null ? "" : student.getUsername());
+            item.put("submitStatus", submission.getSubmitStatus().name());
+            item.put("totalScore", submission.getTotalScore());
+            item.put("summaryRequired", lab != null && lab.isSummaryRequired());
+            item.put("submittedAt", submission.getSubmittedAt());
+            item.put("gradedAt", submission.getGradedAt());
+            items.add(item);
+        }
+        return items;
+    }
+
+    /**
+     * 一次性加载一批实验所属班级的名称，避免逐行 {@code findById}。
+     *
+     * @return 班级 id → 班级名称（原文，关键词匹配时调用方自行归一化）
+     */
+    private Map<Long, String> loadClassNames(List<Lab> labs) {
+        Set<Long> classIds = labs.stream()
+                .map(Lab::getClassId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (classIds.isEmpty()) {
+            return Map.of();
+        }
+        return classRoomRepository.findAllById(classIds).stream()
+                .collect(Collectors.toMap(ClassRoom::getId, ClassRoom::getName));
     }
 
     private Map<String, Object> toTeacherReportItem(LabStep step, List<LabStepAnswer> answers) {
@@ -1522,33 +1722,10 @@ public class LabService {
         return item;
     }
 
-    private boolean matchesTeacherReportQuery(Map<String, Object> item, LabRequests.TeacherLabReportQuery query) {
-        if (query == null) {
-            return true;
-        }
-        String normalizedStatus = normalize(query.status());
-        if (!isBlank(normalizedStatus) && !normalizedStatus.equals(normalize(item.get("submitStatus")))) {
-            return false;
-        }
-        String keyword = normalize(query.keyword());
-        if (isBlank(keyword)) {
-            return true;
-        }
-        return containsNormalized(item.get("labTitle"), keyword)
-                || containsNormalized(item.get("studentName"), keyword)
-                || containsNormalized(item.get("studentNo"), keyword)
-                || containsNormalized(item.get("studentUsername"), keyword)
-                || containsNormalized(item.get("className"), keyword);
-    }
-
     private String resolveClassName(Long classId) {
         return classRoomRepository.findById(classId)
                 .map(ClassRoom::getName)
                 .orElse("");
-    }
-
-    private boolean containsNormalized(Object value, String keyword) {
-        return normalize(value).contains(keyword);
     }
 
     private String normalize(Object value) {

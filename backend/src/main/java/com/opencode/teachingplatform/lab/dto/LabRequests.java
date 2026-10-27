@@ -61,9 +61,18 @@ public final class LabRequests {
     ) {
     }
 
+    /**
+     * 教师端实验报告队列的查询条件。
+     *
+     * <p>除筛选条件外还承载分页参数：{@code page} 为空时按 1 处理，{@code pageSize} 为空时按 10 处理，
+     * {@code pageSize} 上限 100。{@code labId} 用于把原先前端内存里的单实验筛选下沉到数据库。</p>
+     */
     public record TeacherLabReportQuery(
             String keyword,
-            String status
+            String status,
+            Long labId,
+            Integer page,
+            Integer pageSize
     ) {
     }
 

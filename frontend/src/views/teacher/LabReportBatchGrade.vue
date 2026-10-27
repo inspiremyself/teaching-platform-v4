@@ -101,7 +101,7 @@
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReports } from '@/api/labs';
+import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
@@ -190,7 +190,7 @@ const fetchData = async () => {
   try {
     const [data, reportRows] = await Promise.all([
       getTeacherLabReportDetail(reportId.value),
-      listTeacherLabReports(),
+      listTeacherLabReportQueue(),
     ]);
     detail.value = data;
     reports.value = reportRows;

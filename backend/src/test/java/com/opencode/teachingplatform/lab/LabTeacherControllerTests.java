@@ -4,6 +4,7 @@ import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
 import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
+import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.lab.controller.LabController;
@@ -143,7 +144,7 @@ class LabTeacherControllerTests {
 
     @Test
     void teacherCanReadLabReportList() throws Exception {
-        when(labService.listTeacherReports(any(CurrentUser.class), any(LabRequests.TeacherLabReportQuery.class))).thenReturn(List.of(Map.of(
+        when(labService.listTeacherReports(any(CurrentUser.class), any(LabRequests.TeacherLabReportQuery.class))).thenReturn(new PagedResult<>(List.of(Map.of(
                 "id", 1,
                 "labId", 1,
                 "labTitle", "分层架构分析实验",
@@ -151,18 +152,21 @@ class LabTeacherControllerTests {
                 "studentName", "演示学生",
                 "studentNo", "20260001",
                 "submitStatus", "SUBMITTED"
-        )));
+        )), 1, 10, 1));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {
             mockMvc.perform(get("/api/v1/teacher/lab-reports"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(0))
-                    .andExpect(jsonPath("$.data.length()").value(1))
-                    .andExpect(jsonPath("$.data[0].labTitle").value("分层架构分析实验"))
-                    .andExpect(jsonPath("$.data[0].className").value("SE2026-1"))
-                    .andExpect(jsonPath("$.data[0].studentNo").value("20260001"))
-                    .andExpect(jsonPath("$.data[0].submitStatus").value("SUBMITTED"));
+                    .andExpect(jsonPath("$.data.items.length()").value(1))
+                    .andExpect(jsonPath("$.data.page").value(1))
+                    .andExpect(jsonPath("$.data.pageSize").value(10))
+                    .andExpect(jsonPath("$.data.total").value(1))
+                    .andExpect(jsonPath("$.data.items[0].labTitle").value("分层架构分析实验"))
+                    .andExpect(jsonPath("$.data.items[0].className").value("SE2026-1"))
+                    .andExpect(jsonPath("$.data.items[0].studentNo").value("20260001"))
+                    .andExpect(jsonPath("$.data.items[0].submitStatus").value("SUBMITTED"));
         } finally {
             SecurityContextHolder.clearContext();
         }
@@ -172,16 +176,63 @@ class LabTeacherControllerTests {
     void teacherLabReportListForwardsQueryFilters() throws Exception {
         when(labService.listTeacherReports(any(CurrentUser.class), argThat(query ->
                 query != null && "架构".equals(query.keyword()) && "SUBMITTED".equals(query.status())
-        ))).thenReturn(List.of());
+                        && Long.valueOf(1L).equals(query.labId())
+                        && Integer.valueOf(2).equals(query.page())
+                        && Integer.valueOf(5).equals(query.pageSize())
+        ))).thenReturn(new PagedResult<>(List.of(), 2, 5, 0));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {
             mockMvc.perform(get("/api/v1/teacher/lab-reports")
                             .param("keyword", "架构")
-                            .param("status", "SUBMITTED"))
+                            .param("status", "SUBMITTED")
+                            .param("labId", "1")
+                            .param("page", "2")
+                            .param("pageSize", "5"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(0))
-                    .andExpect(jsonPath("$.data.length()").value(0));
+                    .andExpect(jsonPath("$.data.items.length()").value(0))
+                    .andExpect(jsonPath("$.data.page").value(2))
+                    .andExpect(jsonPath("$.data.pageSize").value(5))
+                    .andExpect(jsonPath("$.data.total").value(0));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCanReadFullReportQueueForNavigation() throws Exception {
+        when(labService.listTeacherReportQueue(any(CurrentUser.class))).thenReturn(List.of(Map.of(
+                "id", 2,
+                "labTitle", "分层架构分析实验",
+                "studentNo", "20260001"
+        )));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/teacher/lab-reports/queue"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.length()").value(1))
+                    .andExpect(jsonPath("$.data[0].studentNo").value("20260001"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCanReadReportStats() throws Exception {
+        when(labService.getTeacherReportStats(any(CurrentUser.class)))
+                .thenReturn(Map.of("total", 57L, "submitted", 12L, "graded", 30L));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/teacher/lab-reports/stats"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.total").value(57))
+                    .andExpect(jsonPath("$.data.submitted").value(12))
+                    .andExpect(jsonPath("$.data.graded").value(30));
         } finally {
             SecurityContextHolder.clearContext();
         }

@@ -16,7 +16,6 @@ export const createLab = (data: any) => request.post('/labs', data);
 export const updateLab = (id: string | number, data: any) => request.put(`/labs/${id}`, data);
 export const getLabSteps = (id: string | number) => request.get<any[]>(`/labs/${id}/steps`);
 export const createLabStep = (id: string | number, data: any) => request.post(`/labs/${id}/steps`, data);
-export const getLabReports = () => request.get<any[]>('/teacher/lab-reports');
 export const gradeLabReport = (id: string | number, data: any) => request.post(`/teacher/lab-reports/${id}/grade`, data);
 
 export const getHomeworks = () => request.get<any[]>('/homeworks');

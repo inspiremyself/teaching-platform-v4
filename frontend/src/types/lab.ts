@@ -394,6 +394,16 @@ export interface ConfirmLabStepScorePayload {
 export interface LabReportQuery {
   keyword?: string;
   status?: string;
+  labId?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+/** 教师端实验报告全局统计（全量口径，不受列表筛选影响） */
+export interface TeacherLabReportStats {
+  total: number;
+  submitted: number;
+  graded: number;
 }
 
 export interface LabSubmissionOverviewItem {

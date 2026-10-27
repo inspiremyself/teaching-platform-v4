@@ -27,9 +27,11 @@ import type {
   SubmitLabResult,
   TeacherLabBlankAnswerDistribution,
   TeacherLabBlankItem,
+  TeacherLabReportStats,
   UpdateLabPayload,
   UpdateLabStepPayload,
 } from '@/types/lab';
+import type { PageResult } from '@/types/common';
 
 export const listTeacherLabs = () => request.get<LabItem[]>('/teacher/labs');
 
@@ -64,8 +66,15 @@ export const updateTeacherLabStep = (stepId: number | string, data: UpdateLabSte
 export const deleteTeacherLabStep = (stepId: number | string) =>
   request.delete<void>(`/teacher/lab-steps/${stepId}`);
 
+/** 教师端实验报告队列（分页 + 筛选），供队列页使用 */
 export const listTeacherLabReports = (params?: LabReportQuery) =>
-  request.get<LabReportItem[]>('/teacher/lab-reports', { params });
+  request.get<PageResult<LabReportItem>>('/teacher/lab-reports', { params });
+
+/** 教师端实验报告导航队列（全量、无分页），供详情页 / 批量批改页构建上一份下一份队列 */
+export const listTeacherLabReportQueue = () => request.get<LabReportItem[]>('/teacher/lab-reports/queue');
+
+/** 教师端实验报告全局统计（全量口径，不受筛选影响） */
+export const getTeacherLabReportStats = () => request.get<TeacherLabReportStats>('/teacher/lab-reports/stats');
 
 export const getTeacherLabReportDetail = (reportId: number | string) =>
   request.get<LabReportDetail>(`/teacher/lab-reports/${reportId}`);

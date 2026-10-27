@@ -126,11 +126,43 @@ public class LabController {
         return ApiResponse.ok(labService.deleteStep(currentUser, stepId));
     }
 
+    /**
+     * 教师端实验报告队列（分页 + 筛选）。
+     *
+     * <p>返回 {@code PagedResult}（items / page / pageSize / total），
+     * 由前端队列页渲染分页表格使用。</p>
+     */
     @GetMapping("/teacher/lab-reports")
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> listTeacherReports(@ModelAttribute LabRequests.TeacherLabReportQuery query) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(labService.listTeacherReports(currentUser, query));
+    }
+
+    /**
+     * 教师端实验报告导航队列（全量、无分页）。
+     *
+     * <p>供报告详情页 / 批量批改页构建"上一份 / 下一份"跳转队列，
+     * 语义上必须看到全部报告，因此不能复用分页接口。</p>
+     */
+    @GetMapping("/teacher/lab-reports/queue")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> listTeacherReportQueue() {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.listTeacherReportQueue(currentUser));
+    }
+
+    /**
+     * 教师端实验报告全局统计。
+     *
+     * <p>返回 {@code {total, submitted, graded}}，是教师维度的全量口径，
+     * 不受队列页任何筛选条件影响，用于头部汇总卡。</p>
+     */
+    @GetMapping("/teacher/lab-reports/stats")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> getTeacherReportStats() {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.getTeacherReportStats(currentUser));
     }
 
     @GetMapping("/teacher/lab-reports/{id}")

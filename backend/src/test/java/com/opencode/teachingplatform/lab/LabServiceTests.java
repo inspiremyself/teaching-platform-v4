@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.lab;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
+import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
@@ -65,6 +66,8 @@ class LabServiceTests {
     private static final long SEEDED_PLAYWRIGHT_LAB_ID = 1003L;
     private static final long SEEDED_PLAYWRIGHT_FILL_BLANK_STEP_ID = 2005L;
     private static int generatedExperimentId = 6000;
+    private static int generatedReportStudentId = 80000;
+    private static int generatedReportSubmissionId = 90000;
 
     @Autowired
     private LabService labService;
@@ -1008,9 +1011,14 @@ class LabServiceTests {
 
     @Test
     void teacherCanReadSeededLabReports() {
-        List<Map<String, Object>> reports = labService.listTeacherReports(teacherUser(), new LabRequests.TeacherLabReportQuery(null, null));
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, null)
+        );
+        List<Map<String, Object>> reports = page.items();
 
         assertThat(reports).isNotEmpty();
+        assertThat(page.total()).isGreaterThanOrEqualTo(reports.size());
         assertThat(reports).anySatisfy(report -> {
             if ("分层架构分析实验".equals(report.get("labTitle"))) {
                 assertThat(report.get("className")).isNotNull().asString().isNotBlank();
@@ -1022,15 +1030,229 @@ class LabServiceTests {
 
     @Test
     void teacherCanFilterLabReportsByKeywordAndStatus() {
-        List<Map<String, Object>> reports = labService.listTeacherReports(
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery("20260001", "GRADED")
+                new LabRequests.TeacherLabReportQuery("20260001", "GRADED", null, null, null)
         );
+        List<Map<String, Object>> reports = page.items();
 
         assertThat(reports).hasSize(1);
+        assertThat(page.total()).isEqualTo(1);
         assertThat(reports.getFirst().get("labTitle")).isEqualTo("分层架构分析实验");
         assertThat(reports.getFirst().get("studentNo")).isEqualTo("20260001");
         assertThat(reports.getFirst().get("submitStatus")).isEqualTo("GRADED");
+    }
+
+    @Test
+    void teacherReportListAppliesDefaultPagination() {
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, null)
+        );
+
+        assertThat(page.page()).isEqualTo(1);
+        assertThat(page.pageSize()).isEqualTo(10);
+        assertThat(page.items()).hasSizeLessThanOrEqualTo(10);
+        assertThat(page.total()).isGreaterThanOrEqualTo(page.items().size());
+    }
+
+    @Test
+    void teacherReportListSlicesPagesWithoutOverlap() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long firstSubmissionId = seedReportSubmission(labId, seedReportStudent("paging-a"), SubmissionStatus.SAVED);
+        Long secondSubmissionId = seedReportSubmission(labId, seedReportStudent("paging-b"), SubmissionStatus.SUBMITTED);
+
+        PagedResult<Map<String, Object>> firstPage = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, labId, 1, 1)
+        );
+        PagedResult<Map<String, Object>> secondPage = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, labId, 2, 1)
+        );
+
+        assertThat(firstPage.total()).isEqualTo(2);
+        assertThat(secondPage.total()).isEqualTo(2);
+        assertThat(firstPage.items()).hasSize(1);
+        assertThat(secondPage.items()).hasSize(1);
+        assertThat(firstPage.items().getFirst().get("id")).isNotEqualTo(secondPage.items().getFirst().get("id"));
+        // 排序按 id DESC：后插入的报告排在第一页
+        assertThat(firstPage.items().getFirst().get("id")).isEqualTo(secondSubmissionId);
+        assertThat(secondPage.items().getFirst().get("id")).isEqualTo(firstSubmissionId);
+    }
+
+    @Test
+    void teacherReportKeywordMatchesLabTitleOrStudentName() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        seedReportSubmission(labId, seedReportStudent("or-match"), SubmissionStatus.SUBMITTED);
+        String labTitle = labRepository.findById(labId).orElseThrow().getTitle();
+
+        // 仅实验名命中（学生姓名不含该关键词）也必须返回，验证五字段是 OR 而不是 AND
+        PagedResult<Map<String, Object>> byLabTitle = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(labTitle, null, labId, null, null)
+        );
+        // 仅学生姓名命中（实验名不含该关键词）同样必须返回
+        PagedResult<Map<String, Object>> byStudentName = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery("关键词学生", null, labId, null, null)
+        );
+
+        assertThat(byLabTitle.items()).hasSize(1);
+        assertThat(byStudentName.items()).hasSize(1);
+    }
+
+    @Test
+    void teacherReportKeywordMatchesClassName() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        seedReportSubmission(labId, seedReportStudent("class-match"), SubmissionStatus.SAVED);
+
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery("实验班", null, labId, null, null)
+        );
+
+        assertThat(page.items()).hasSize(1);
+        assertThat(page.items().getFirst().get("className")).isEqualTo("实验班");
+    }
+
+    @Test
+    void teacherReportKeywordWithoutHitReturnsEmptyPage() {
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery("绝对不存在的关键词-zzz", null, null, null, null)
+        );
+
+        assertThat(page.items()).isEmpty();
+        assertThat(page.total()).isZero();
+    }
+
+    @Test
+    void teacherReportStatusFilterIgnoresCase() {
+        PagedResult<Map<String, Object>> upperCase = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, "GRADED", null, null, null)
+        );
+        PagedResult<Map<String, Object>> lowerCase = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, "graded", null, null, null)
+        );
+
+        assertThat(upperCase.total()).isPositive();
+        assertThat(lowerCase.total()).isEqualTo(upperCase.total());
+        assertThat(lowerCase.items()).extracting(item -> item.get("submitStatus")).containsOnly("GRADED");
+    }
+
+    @Test
+    void teacherReportInvalidStatusReturnsEmptyPage() {
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, "GRADEDX", null, null, null)
+        );
+
+        assertThat(page.items()).isEmpty();
+        assertThat(page.total()).isZero();
+    }
+
+    @Test
+    void teacherReportRejectsIllegalPagination() {
+        assertThatThrownBy(() -> labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, null, 0, 10)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("参数不合法");
+        assertThatThrownBy(() -> labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, null, 1, 0)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("参数不合法");
+        assertThatThrownBy(() -> labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, null, 1, 101)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("参数不合法");
+    }
+
+    @Test
+    void teacherReportListFiltersByLabId() {
+        Long classId = seedClass(1L);
+        Long firstLabId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long secondLabId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        seedReportSubmission(firstLabId, seedReportStudent("lab-a"), SubmissionStatus.SAVED);
+        seedReportSubmission(secondLabId, seedReportStudent("lab-b"), SubmissionStatus.SAVED);
+
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
+                teacherUser(),
+                new LabRequests.TeacherLabReportQuery(null, null, firstLabId, null, null)
+        );
+
+        assertThat(page.total()).isEqualTo(1);
+        assertThat(page.items().getFirst().get("labId")).isEqualTo(firstLabId);
+    }
+
+    @Test
+    void teacherWithoutLabsGetsEmptyReportStructures() {
+        CurrentUser otherTeacher = new CurrentUser(987654L, "t-nolab", "无实验教师", UserRole.TEACHER);
+
+        PagedResult<Map<String, Object>> page = labService.listTeacherReports(
+                otherTeacher,
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, null)
+        );
+
+        assertThat(page.items()).isEmpty();
+        assertThat(page.total()).isZero();
+        assertThat(page.page()).isEqualTo(1);
+        assertThat(page.pageSize()).isEqualTo(10);
+        assertThat(labService.listTeacherReportQueue(otherTeacher)).isEmpty();
+        assertThat(labService.getTeacherReportStats(otherTeacher))
+                .containsEntry("total", 0L)
+                .containsEntry("submitted", 0L)
+                .containsEntry("graded", 0L);
+    }
+
+    @Test
+    void teacherReportQueueReturnsAllReportsOrderByIdDesc() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long firstSubmissionId = seedReportSubmission(labId, seedReportStudent("queue-a"), SubmissionStatus.SAVED);
+        Long secondSubmissionId = seedReportSubmission(labId, seedReportStudent("queue-b"), SubmissionStatus.SUBMITTED);
+
+        List<Map<String, Object>> queue = labService.listTeacherReportQueue(teacherUser());
+
+        assertThat(queue).isNotEmpty();
+        List<Object> submissionIds = queue.stream().map(row -> row.get("id")).toList();
+        assertThat(submissionIds).contains(firstSubmissionId, secondSubmissionId);
+        assertThat(submissionIds.indexOf(secondSubmissionId)).isLessThan(submissionIds.indexOf(firstSubmissionId));
+
+        Map<String, Object> row = queue.stream()
+                .filter(item -> secondSubmissionId.equals(item.get("id")))
+                .findFirst()
+                .orElseThrow();
+        assertThat(row).containsKeys(
+                "id", "labId", "labTitle", "classId", "className", "studentId", "studentName",
+                "studentUsername", "studentNo", "submitStatus", "totalScore", "summaryRequired",
+                "submittedAt", "gradedAt");
+        assertThat(row.get("studentNo")).asString().startsWith("kw-queue-b-");
+    }
+
+    @Test
+    void teacherReportStatsAggregateAllStatuses() {
+        Map<String, Object> before = labService.getTeacherReportStats(teacherUser());
+
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        seedReportSubmission(labId, seedReportStudent("stats-saved"), SubmissionStatus.SAVED);
+        seedReportSubmission(labId, seedReportStudent("stats-submitted"), SubmissionStatus.SUBMITTED);
+        seedReportSubmission(labId, seedReportStudent("stats-graded"), SubmissionStatus.GRADED);
+
+        Map<String, Object> after = labService.getTeacherReportStats(teacherUser());
+
+        assertThat(longValue(after, "total") - longValue(before, "total")).isEqualTo(3L);
+        assertThat(longValue(after, "submitted") - longValue(before, "submitted")).isEqualTo(1L);
+        assertThat(longValue(after, "graded") - longValue(before, "graded")).isEqualTo(1L);
     }
 
     @Test
@@ -2896,5 +3118,42 @@ class LabServiceTests {
 
     private CurrentUser teacherUser() {
         return new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+    }
+
+    /**
+     * 为一个报告用例临时建一个学生账号，返回学生 id。
+     *
+     * <p>用户名带 {@code tag} 便于在断言中识别，显示名统一以「关键词学生」开头，
+     * 供 keyword 走学生姓名命中分支的用例使用。</p>
+     */
+    private Long seedReportStudent(String tag) {
+        long id = generatedReportStudentId++;
+        seedStudentAccount(new CurrentUser(id, "kw-" + tag + "-" + id, "关键词学生-" + tag, UserRole.STUDENT));
+        return id;
+    }
+
+    /**
+     * 直接插入一条实验提交，返回提交 id。
+     *
+     * <p>只建提交行即可覆盖报告队列 / 统计的查询链路，不需要构造题项与答案。</p>
+     */
+    private Long seedReportSubmission(Long labId, Long studentId, SubmissionStatus status) {
+        long id = generatedReportSubmissionId++;
+        jdbcTemplate.update(
+                """
+                INSERT INTO experiment_submission (id, experiment_id, student_id, submit_status, total_score, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                id,
+                labId,
+                studentId,
+                status.name(),
+                status == SubmissionStatus.GRADED ? 90D : 0D
+        );
+        return id;
+    }
+
+    private long longValue(Map<String, Object> source, String key) {
+        return ((Number) source.get(key)).longValue();
     }
 }

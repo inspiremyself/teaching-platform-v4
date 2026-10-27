@@ -9,15 +9,15 @@
         </div>
         <div class="reports-header__actions">
           <el-button plain @click="resetFilters">重置筛选</el-button>
-          <el-button type="primary" @click="fetchData">刷新队列</el-button>
+          <el-button type="primary" @click="refreshQueue">刷新队列</el-button>
         </div>
       </div>
 
       <div class="reports-header__meta">
-        <span class="reports-header__meta-item"><strong>{{ rows.length }}</strong> 报告总量</span>
-        <span class="reports-header__meta-item"><strong>{{ submittedCount }}</strong> 待批改</span>
-        <span class="reports-header__meta-item"><strong>{{ gradedCount }}</strong> 已批改</span>
-        <span class="reports-header__meta-item reports-header__meta-item--accent">{{ filteredRows.length }} 条 · {{ activeStatusLabel }} · {{ priorityDescription }}</span>
+        <span class="reports-header__meta-item"><strong>{{ stats.total }}</strong> 报告总量</span>
+        <span class="reports-header__meta-item"><strong>{{ stats.submitted }}</strong> 待批改</span>
+        <span class="reports-header__meta-item"><strong>{{ stats.graded }}</strong> 已批改</span>
+        <span class="reports-header__meta-item reports-header__meta-item--accent">{{ total }} 条 · {{ activeStatusLabel }} · {{ priorityDescription }}</span>
       </div>
     </section>
 
@@ -28,7 +28,7 @@
         </div>
         <div>
           <div class="summary-card__label">报告总量</div>
-          <div class="summary-card__value">{{ rows.length }}</div>
+          <div class="summary-card__value">{{ stats.total }}</div>
            <div class="summary-card__desc">当前报告队列全部记录。</div>
         </div>
       </article>
@@ -38,7 +38,7 @@
         </div>
         <div>
           <div class="summary-card__label">待批改</div>
-          <div class="summary-card__value">{{ submittedCount }}</div>
+          <div class="summary-card__value">{{ stats.submitted }}</div>
            <div class="summary-card__desc">已提交且尚未完成评分。</div>
         </div>
       </article>
@@ -48,7 +48,7 @@
         </div>
         <div>
           <div class="summary-card__label">已批改</div>
-          <div class="summary-card__value">{{ gradedCount }}</div>
+          <div class="summary-card__value">{{ stats.graded }}</div>
            <div class="summary-card__desc">已完成总评和给分。</div>
         </div>
       </article>
@@ -56,7 +56,7 @@
          <div class="summary-card__header-line">
            <div>
              <div class="summary-card__label">当前筛选</div>
-             <div class="summary-card__value summary-card__value--small">{{ filteredRows.length }} 条</div>
+             <div class="summary-card__value summary-card__value--small">{{ total }} 条</div>
           </div>
           <span class="summary-chip">{{ activeStatusLabel }}</span>
         </div>
@@ -88,13 +88,13 @@
              <el-option label="已提交" value="SUBMITTED" />
             <el-option label="已批改" value="GRADED" />
           </el-select>
-          <el-button type="primary" @click="fetchData">刷新队列</el-button>
+          <el-button type="primary" @click="refreshQueue">刷新队列</el-button>
         </div>
       </div>
       <div class="toolbar-card__meta">
-        <span>共 {{ rows.length }} 条报告</span>
+        <span>共 {{ stats.total }} 条报告</span>
         <span class="toolbar-divider"></span>
-        <span>当前显示 {{ filteredRows.length }} 条</span>
+        <span>当前筛选 {{ total }} 条</span>
         <el-button link type="primary" @click="resetFilters">清空筛选</el-button>
       </div>
     </section>
@@ -108,8 +108,8 @@
       </header>
 
       <div v-loading="loading" class="reports-list-shell">
-        <template v-if="filteredRows.length">
-          <article v-for="row in filteredRows" :key="row.id" class="report-row">
+        <template v-if="rows.length">
+          <article v-for="row in rows" :key="row.id" class="report-row">
             <div class="report-row__identity">
               <div class="report-avatar">{{ studentInitial(row) }}</div>
               <div>
@@ -169,6 +169,19 @@
         </template>
         <el-empty v-else description="暂无匹配实验报告" />
       </div>
+
+      <div v-if="total > 0" class="reports-pagination">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="total"
+          layout="total, sizes, prev, pager, next"
+          background
+          @current-change="handlePageChange"
+          @size-change="handlePageSizeChange"
+        />
+      </div>
     </section>
   </div>
 </template>
@@ -177,13 +190,30 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { listTeacherLabReports, listTeacherLabs, returnTeacherLabReport } from '@/api/labs';
-import type { LabItem, LabReportItem, LabReportStatus } from '@/types/lab';
+import {
+  getTeacherLabReportStats,
+  listTeacherLabReports,
+  listTeacherLabs,
+  returnTeacherLabReport,
+} from '@/api/labs';
+import type { LabItem, LabReportItem, LabReportQuery, LabReportStatus, TeacherLabReportStats } from '@/types/lab';
+
+const DEFAULT_PAGE_SIZE = 10;
+
+/** 请求序号：翻页连点时丢弃过期响应，避免旧页数据覆盖新页 */
+let fetchSequence = 0;
 
 const router = useRouter();
 const loading = ref(false);
 const returningId = ref<number | null>(null);
+/** 当前页的报告行；分页后不再持有全量数据 */
 const rows = ref<LabReportItem[]>([]);
+/** 当前筛选条件下的报告总数（跨全部页），由分页响应的 total 提供 */
+const total = ref(0);
+const page = ref(1);
+const pageSize = ref(DEFAULT_PAGE_SIZE);
+/** 教师维度全量统计，不受筛选影响，用于头部三张汇总卡 */
+const stats = ref<TeacherLabReportStats>({ total: 0, submitted: 0, graded: 0 });
 const teacherLabs = ref<LabItem[]>([]);
 const query = reactive({
   keyword: '',
@@ -191,9 +221,6 @@ const query = reactive({
   labId: '',
 });
 
-const filteredRows = computed(() => rows.value.filter((row) => !query.labId || String(row.labId) === query.labId));
-const submittedCount = computed(() => rows.value.filter(row => row.submitStatus === 'SUBMITTED').length);
-const gradedCount = computed(() => rows.value.filter(row => row.submitStatus === 'GRADED').length);
 const activeStatusLabel = computed(() => statusLabel(query.status || undefined));
 const keywordLabel = computed(() => query.keyword.trim() ? `关键词“${query.keyword.trim()}”` : '未使用关键词');
 const priorityDescription = computed(() => query.status === 'SUBMITTED' ? '待批改报告' : query.labId ? '单实验报告队列' : '实验报告全队列');
@@ -205,27 +232,74 @@ const fetchTeacherLabs = async () => {
   teacherLabs.value = await listTeacherLabs();
 };
 
-const fetchData = async () => {
+/** 组装后端查询参数：labId 由下拉框的字符串转成数字后随筛选一起下沉到后端 */
+const buildQuery = (): LabReportQuery => ({
+  keyword: query.keyword.trim() || undefined,
+  status: query.status || undefined,
+  labId: query.labId ? Number(query.labId) : undefined,
+  page: page.value,
+  pageSize: pageSize.value,
+});
+
+/**
+ * 拉取当前页报告。
+ *
+ * @param options.resetPage 是否重置到第 1 页；首屏、筛选、刷新、打回后为 true，翻页与改每页条数时为 false
+ */
+const fetchData = async (options: { resetPage?: boolean } = {}) => {
+  if (options.resetPage !== false) {
+    page.value = 1;
+  }
+  const sequence = ++fetchSequence;
   loading.value = true;
   try {
-    rows.value = await listTeacherLabReports({
-      keyword: query.keyword.trim() || undefined,
-      status: query.status || undefined,
-    });
+    const result = await listTeacherLabReports(buildQuery());
+    // 只接受最后一次请求的结果
+    if (sequence !== fetchSequence) {
+      return;
+    }
+    rows.value = result.items;
+    total.value = result.total;
+    // 越界回退：末页记录被筛选或打回挤掉时，回退到最后一个有效页再取一次
+    if (!result.items.length && page.value > 1 && result.total > 0) {
+      page.value = Math.max(1, Math.ceil(result.total / pageSize.value));
+      const fallback = await listTeacherLabReports(buildQuery());
+      if (sequence !== fetchSequence) {
+        return;
+      }
+      rows.value = fallback.items;
+      total.value = fallback.total;
+    }
   } finally {
-    loading.value = false;
+    if (sequence === fetchSequence) {
+      loading.value = false;
+    }
   }
+};
+
+const fetchStats = async () => {
+  stats.value = await getTeacherLabReportStats();
+};
+
+/** 刷新队列：列表与全局统计同时刷新 */
+const refreshQueue = async () => {
+  await Promise.all([fetchData(), fetchStats()]);
+};
+
+const handlePageChange = async () => {
+  await fetchData({ resetPage: false });
+};
+
+const handlePageSizeChange = async () => {
+  page.value = 1;
+  await fetchData({ resetPage: false });
 };
 
 const resetFilters = async () => {
   query.keyword = '';
   query.status = '';
   query.labId = '';
-  await fetchData();
-};
-
-const goDetail = (reportId: number) => {
-  router.push(`/teacher/lab-reports/${reportId}`);
+  await refreshQueue();
 };
 
 const goBatchGrade = (reportId: number) => {
@@ -252,17 +326,11 @@ const handleReturn = async (row: LabReportItem) => {
   try {
     await returnTeacherLabReport(row.id);
     ElMessage.success('已打回，学生可重新编辑提交');
-    await fetchData();
+    // 打回会改变提交状态，列表与全局统计都要刷新
+    await Promise.all([fetchData(), fetchStats()]);
   } finally {
     returningId.value = null;
   }
-};
-
-const goBlankRegrade = (labId?: number) => {
-  if (!labId) {
-    return;
-  }
-  router.push(`/teacher/labs/${labId}/blank-regrade`);
 };
 
 const goBlankRegradeBatch = (labId?: number) => {
@@ -291,12 +359,6 @@ const openReportView = (row: LabReportItem) => {
     },
   }).href;
   window.open(href, '_blank', 'noopener,noreferrer');
-};
-
-const goReportsByLab = async (row: LabReportItem) => {
-  query.labId = row.labId ? String(row.labId) : '';
-  query.keyword = row.labTitle || '';
-  await fetchData();
 };
 
 const statusLabel = (status?: LabReportStatus) => {
@@ -342,6 +404,7 @@ onMounted(() => {
   query.keyword = typeof initialKeyword === 'string' ? initialKeyword : '';
   void fetchTeacherLabs();
   void fetchData();
+  void fetchStats();
 });
 </script>
 
@@ -602,6 +665,14 @@ onMounted(() => {
 .reports-console__header h2 {
   font-size: 16px;
   color: var(--reports-text);
+}
+
+.reports-pagination {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--reports-border);
 }
 
 .reports-list-shell {
