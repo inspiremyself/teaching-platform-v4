@@ -12,6 +12,7 @@ import type {
   ImportStudentsPayload,
   ImportStudentsResult,
   ListAuditLogsParams,
+  ResetStudentPasswordPayload,
   SchoolInfo,
   StudentStatus,
   SubjectStatus,
@@ -80,6 +81,9 @@ export const importAdminStudents = (data: ImportStudentsPayload) =>
 
 export const changeAdminStudentStatus = (id: number, status: StudentStatus) =>
   request.post<AdminStudent>(`/admin/students/${id}/status`, { status });
+
+export const resetAdminStudentPassword = (id: number, data: ResetStudentPasswordPayload) =>
+  request.post<{ reset: boolean }>(`/admin/students/${id}/password`, data);
 
 export const listAuditLogs = (params: ListAuditLogsParams = {}) =>
   request.get<PageResult<AuditLogListItem>>('/admin/audit-logs', { params });

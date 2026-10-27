@@ -2,6 +2,7 @@ package com.opencode.teachingplatform.admin.controller;
 
 import com.opencode.teachingplatform.admin.dto.AdminRequests.ChangeStudentStatusRequest;
 import com.opencode.teachingplatform.admin.dto.AdminRequests.CreateStudentRequest;
+import com.opencode.teachingplatform.admin.dto.AdminRequests.ResetStudentPasswordRequest;
 import com.opencode.teachingplatform.admin.dto.AdminRequests.UpdateStudentRequest;
 import com.opencode.teachingplatform.student.dto.StudentRequests.ImportStudentsRequest;
 import com.opencode.teachingplatform.admin.service.AdminStudentService;
@@ -53,5 +54,11 @@ public class AdminStudentController {
     public ApiResponse<?> changeStatus(@PathVariable Long id, @Valid @RequestBody ChangeStudentStatusRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(adminStudentService.changeStatus(currentUser, id, request));
+    }
+
+    @PostMapping("/{id}/password")
+    public ApiResponse<?> resetPassword(@PathVariable Long id, @Valid @RequestBody ResetStudentPasswordRequest request) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(adminStudentService.resetPassword(currentUser, id, request));
     }
 }

@@ -125,6 +125,10 @@ export interface UpdateSchoolPayload {
   name: string;
 }
 
+export interface ResetStudentPasswordPayload {
+  password: string;
+}
+
 export type {
   CreateStudentPayload,
   ImportStudentsPayload,

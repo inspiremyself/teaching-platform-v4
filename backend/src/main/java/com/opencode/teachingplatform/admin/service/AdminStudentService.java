@@ -2,16 +2,19 @@ package com.opencode.teachingplatform.admin.service;
 
 import com.opencode.teachingplatform.admin.dto.AdminRequests.ChangeStudentStatusRequest;
 import com.opencode.teachingplatform.admin.dto.AdminRequests.CreateStudentRequest;
+import com.opencode.teachingplatform.admin.dto.AdminRequests.ResetStudentPasswordRequest;
 import com.opencode.teachingplatform.admin.dto.AdminRequests.UpdateStudentRequest;
 import com.opencode.teachingplatform.student.dto.StudentRequests.ImportStudentsRequest;
 import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
+import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.clazz.entity.ClassRoom;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
 import com.opencode.teachingplatform.common.audit.AuditResourceType;
+import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
@@ -37,17 +40,20 @@ public class AdminStudentService {
     private final ClassRoomRepository classRoomRepository;
     private final ClassMemberRepository classMemberRepository;
     private final AuditLogService auditLogService;
+    private final UserLoginSessionRepository userLoginSessionRepository;
 
     public AdminStudentService(
             SysUserRepository sysUserRepository,
             ClassRoomRepository classRoomRepository,
             ClassMemberRepository classMemberRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            UserLoginSessionRepository userLoginSessionRepository
     ) {
         this.sysUserRepository = sysUserRepository;
         this.classRoomRepository = classRoomRepository;
         this.classMemberRepository = classMemberRepository;
         this.auditLogService = auditLogService;
+        this.userLoginSessionRepository = userLoginSessionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -159,6 +165,41 @@ public class AdminStudentService {
                 .map(ClassMember::getClassId)
                 .orElseThrow(() -> new BusinessException(40400, "学生不存在"));
         return toView(studentId, classId);
+    }
+
+    /**
+     * 校管重置学生密码。
+     *
+     * <p>语义：直接覆盖 password_hash，即刻生效；不启用强制首登改密；
+     * 同时将该学生当前 ACTIVE 登录会话置为 KICKED，使旧登录态失效。
+     * 安全约束：新密码任何分支均不写入审计、日志与响应体。</p>
+     */
+    @Transactional
+    public Map<String, Object> resetPassword(CurrentUser currentUser, Long studentId,
+                                             ResetStudentPasswordRequest request) {
+        SysUser student = requireStudent(currentUser, studentId);
+        String newPassword = request.password().trim();
+        if (newPassword.length() < 6 || newPassword.length() > 32) {
+            throw new BusinessException(40000, "密码长度必须在6到32个字符之间");
+        }
+        student.setPasswordHash("{noop}" + newPassword);
+        student.setMustChangePassword(false);
+        sysUserRepository.save(student);
+
+        OffsetDateTime now = OffsetDateTime.now();
+        userLoginSessionRepository
+                .findFirstByUser_IdAndStatusOrderByCreatedAtDesc(studentId, LoginSessionStatus.ACTIVE)
+                .ifPresent(session -> {
+                    session.setStatus(LoginSessionStatus.KICKED);
+                    session.setInvalidatedAt(now);
+                    userLoginSessionRepository.save(session);
+                });
+
+        auditLogService.log(currentUser, AuditAction.STUDENT_PASSWORD_RESET, AuditResourceType.STUDENT, studentId, Map.of(
+                "username", student.getUsername(),
+                "displayName", student.getDisplayName()
+        ));
+        return Map.of("reset", true);
     }
 
     private ClassRoom requireClass(CurrentUser currentUser, Long classId) {

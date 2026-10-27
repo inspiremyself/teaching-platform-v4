@@ -58,9 +58,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" align="right" fixed="right">
+        <el-table-column label="操作" width="220" align="right" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openEditDialog(row)">编辑</el-button>
+            <el-button link type="primary" @click="openResetDialog(row)">重置密码</el-button>
             <el-button link :type="row.status === 'ACTIVE' ? 'warning' : 'success'" @click="toggleStatus(row)">
               {{ row.status === 'ACTIVE' ? '停用' : '启用' }}
             </el-button>
@@ -89,6 +90,40 @@
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="resetDialogVisible" title="重置密码" width="420px" destroy-on-close>
+      <el-alert
+        v-if="resetTarget"
+        type="info"
+        :closable="false"
+        show-icon
+        :title="`学生「${resetTarget.displayName}（${resetTarget.username}）」`"
+      />
+      <el-form label-position="top" style="margin-top: 12px">
+        <el-form-item label="新密码" for="admin-student-reset-password" required>
+          <el-input
+            id="admin-student-reset-password"
+            v-model="resetPasswordForm.password"
+            show-password
+            maxlength="32"
+            placeholder="6~32 位字符"
+          />
+        </el-form-item>
+        <el-form-item label="确认新密码" for="admin-student-reset-password-confirm" required>
+          <el-input
+            id="admin-student-reset-password-confirm"
+            v-model="resetPasswordForm.confirmPassword"
+            show-password
+            maxlength="32"
+            placeholder="再次输入新密码"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="resetDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="resetSubmitting" @click="submitReset">确定</el-button>
       </template>
     </el-dialog>
 
@@ -154,7 +189,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import type { UploadFile } from 'element-plus';
 import {
   changeAdminStudentStatus,
@@ -162,6 +197,7 @@ import {
   importAdminStudents,
   listAdminClasses,
   listAdminStudents,
+  resetAdminStudentPassword,
   updateAdminStudent,
 } from '@/api/admin';
 import type { AdminClass, AdminStudent, ImportStudentsResult } from '@/types/admin';
@@ -195,6 +231,14 @@ const form = reactive({
   displayName: '',
   password: '123456',
   classId: undefined as number | undefined,
+});
+
+const resetDialogVisible = ref(false);
+const resetSubmitting = ref(false);
+const resetTarget = ref<AdminStudent | null>(null);
+const resetPasswordForm = reactive({
+  password: '',
+  confirmPassword: '',
 });
 
 const filteredRows = computed(() => {
@@ -358,6 +402,42 @@ const toggleStatus = async (row: AdminStudent) => {
   await changeAdminStudentStatus(row.id, nextStatus);
   ElMessage.success('学生状态更新成功');
   await fetchStudents();
+};
+
+const openResetDialog = (row: AdminStudent) => {
+  resetTarget.value = row;
+  resetPasswordForm.password = '';
+  resetPasswordForm.confirmPassword = '';
+  resetDialogVisible.value = true;
+};
+
+const submitReset = async () => {
+  if (!resetTarget.value) {
+    return;
+  }
+  const password = resetPasswordForm.password.trim();
+  if (password.length < 6 || password.length > 32) {
+    ElMessage.warning('密码长度必须在6到32个字符之间');
+    return;
+  }
+  if (password !== resetPasswordForm.confirmPassword.trim()) {
+    ElMessage.warning('两次输入的密码不一致');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm('确认将该学生的密码重置为新密码？', '重置密码', { type: 'warning' });
+  } catch {
+    return;
+  }
+
+  resetSubmitting.value = true;
+  try {
+    await resetAdminStudentPassword(resetTarget.value.id, { password });
+    ElMessage.success('密码已重置');
+    resetDialogVisible.value = false;
+  } finally {
+    resetSubmitting.value = false;
+  }
 };
 
 const openImportDialog = () => {
