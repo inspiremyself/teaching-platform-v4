@@ -36,7 +36,9 @@ usage() {
 }
 
 port_pid() { # 输出监听端口的进程 pid（可能为空）
-  lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' | sed 's/ $//'
+  # 端口空闲时 lsof 返回非零；在 set -euo pipefail 下必须用 || true 兜底，
+  # 否则调用处赋值（pids="$(port_pid ...)") 会直接终结脚本。
+  lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | tr '\n' ' ' | sed 's/ $//' || true
 }
 
 is_up() { [[ -n "$(port_pid "$1")" ]]; }
