@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface ExperimentBlankAnswerOverrideRepository extends JpaRepository<ExperimentBlankAnswerOverride, Long> {
     List<ExperimentBlankAnswerOverride> findByExperimentIdAndExperimentItemIdOrderByIdAsc(Long experimentId, Long experimentItemId);
+    List<ExperimentBlankAnswerOverride> findByExperimentIdOrderByIdAsc(Long experimentId);
     void deleteByExperimentIdAndExperimentItemId(Long experimentId, Long experimentItemId);
 }

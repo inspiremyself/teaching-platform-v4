@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -25,6 +27,19 @@ public final class LabRequests {
             Long materialId,
             ScoreVisibilityMode scoreVisibilityMode,
             Boolean summaryRequired
+    ) {
+    }
+
+    /**
+     * 从已有实验深度拷贝的请求体。
+     *
+     * <p>只承载「目标班级 / 新实验名称 / 发布状态」三个可选项，
+     * 其余字段（实验要求、内容、类型、题项、填空答案等）由服务端从源实验复制，前端不传入。</p>
+     */
+    public record CopyLabRequest(
+            @NotNull(message = "请选择目标班级") Long classId,
+            @Size(max = 30, message = "实验名称不能超过 30 个字符") String title,
+            @Pattern(regexp = "DRAFT|PUBLISHED|CLOSED", message = "实验状态非法") String status
     ) {
     }
 
