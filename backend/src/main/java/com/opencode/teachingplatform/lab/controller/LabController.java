@@ -3,6 +3,8 @@ package com.opencode.teachingplatform.lab.controller;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.SecurityUtils;
 import com.opencode.teachingplatform.common.api.ApiResponse;
+import com.opencode.teachingplatform.lab.behavior.dto.BehaviorRequests;
+import com.opencode.teachingplatform.lab.behavior.service.BehaviorIngestService;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.service.LabService;
 import jakarta.validation.Valid;
@@ -29,9 +31,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class LabController {
 
     private final LabService labService;
+    private final BehaviorIngestService behaviorIngestService;
 
-    public LabController(LabService labService) {
+    public LabController(LabService labService, BehaviorIngestService behaviorIngestService) {
         this.labService = labService;
+        this.behaviorIngestService = behaviorIngestService;
     }
 
     @GetMapping("/teacher/labs")
@@ -172,6 +176,18 @@ public class LabController {
         return ApiResponse.ok(labService.getTeacherReportDetail(currentUser, id));
     }
 
+    /**
+     * 教师查看单份报告的行为详情（metrics 全量 + 行为时间线）。
+     *
+     * <p>独立于报告详情接口：时间线按需加载，避免膨胀报告详情契约（方案 D11）。</p>
+     */
+    @GetMapping("/teacher/lab-reports/{id}/behavior")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> getTeacherReportBehavior(@PathVariable Long id) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(labService.getTeacherReportBehavior(currentUser, id));
+    }
+
     @GetMapping("/teacher/labs/{labId}/report-view/{studentId}")
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> getTeacherLabReportView(@PathVariable Long labId, @PathVariable Long studentId) {
@@ -248,6 +264,20 @@ public class LabController {
                                             @RequestPart("file") MultipartFile file) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(labService.uploadAnswerImage(currentUser, id, stepId, file));
+    }
+
+    /**
+     * 学生批量上报作答行为事件（行为采集链唯一入口，方案 §5.1）。
+     *
+     * <p>逐条容错：非法条目计入 dropped 而不整批失败；实验已关闭时返回
+     * {@code closed:true} 让前端停采；event_uuid 幂等，重试不产生重复行。</p>
+     */
+    @PostMapping("/student/labs/{id}/behavior-events")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ApiResponse<?> reportBehaviorEvents(@PathVariable Long id,
+                                               @RequestBody BehaviorRequests.IngestBatch batch) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(behaviorIngestService.ingest(currentUser, id, batch));
     }
 
     @GetMapping("/labs/answer-images")

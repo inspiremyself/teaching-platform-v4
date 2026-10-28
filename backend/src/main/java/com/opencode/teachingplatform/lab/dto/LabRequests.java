@@ -71,6 +71,8 @@ public final class LabRequests {
             String keyword,
             String status,
             Long labId,
+            // 行为风险等级筛选：LOW/MEDIUM/HIGH/NONE（空=不过滤；非法值按空结果处理，D10）
+            String riskLevel,
             Integer page,
             Integer pageSize
     ) {

@@ -49,6 +49,8 @@
         </article>
       </section>
 
+      <BehaviorSummaryCard :submission-id="reportId" />
+
       <section class="detail-layout">
         <aside class="detail-sidebar">
           <article class="sidebar-card">
@@ -196,6 +198,7 @@ import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabR
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
+import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 
 const route = useRoute();
 const router = useRouter();

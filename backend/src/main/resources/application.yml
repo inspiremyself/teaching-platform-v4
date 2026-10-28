@@ -41,3 +41,17 @@ app:
   audit-log:
     retention-days: 180
     retention-enabled: true
+
+# 实验作答行为采集与风险标记（技术方案 §4.4；本地 profile 不覆盖，全走默认值）
+lab:
+  behavior:
+    ingest:
+      max-batch-size: 100
+      max-payload-bytes: 4096
+      clock-skew-tolerance-ms: 600000
+    risk:
+      per-step-min-ms: 45000
+      paste-chars-threshold: 500
+      paste-ratio-threshold: 0.3
+      hidden-count-threshold: 5
+      hidden-ratio-threshold: 0.5

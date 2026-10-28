@@ -9,6 +9,7 @@ import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.common.file.LocalFileStorageService;
+import com.opencode.teachingplatform.lab.behavior.service.LabBehaviorMetricsService;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.entity.Lab;
 import com.opencode.teachingplatform.lab.entity.LabStep;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -53,6 +55,9 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @DataJpaTest
 @Import({LabService.class, LabScoringSupport.class, com.opencode.teachingplatform.clazz.service.ClassAccessService.class, LabServiceTests.TestBeans.class})
@@ -71,6 +76,22 @@ class LabServiceTests {
 
     @Autowired
     private LabService labService;
+
+    /**
+     * 行为指标服务在本类中走 mock（方案用例 20）：
+     * 懒算 refreshStaleMetrics 是 REQUIRES_NEW 写库，@DataJpaTest 事务内种子对独立连接不可见，
+     * 真实执行会触发 metrics 表 FK 违反；真实聚合与懒算由 LabBehaviorMetricsServiceTests 覆盖。
+     */
+    @MockBean
+    private LabBehaviorMetricsService labBehaviorMetricsService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void stubBehaviorMetricsService() {
+        // 懒算默认返回空集（全部行视为无 metrics → behavior 为 null，不影响既有断言）；verify 场景单独覆盖
+        org.mockito.Mockito.lenient()
+                .when(labBehaviorMetricsService.refreshStaleMetrics(org.mockito.ArgumentMatchers.anyList()))
+                .thenReturn(Map.of());
+    }
 
     @Autowired
     private LabRepository labRepository;
@@ -831,6 +852,8 @@ class LabServiceTests {
         LabSubmission submission = labSubmissionRepository.findById(submissionId).orElseThrow();
 
         assertThat(submission.getSummaryText()).isEqualTo("本次实验总结");
+        // 用例 21：提交成功后同步触发一次行为指标全量计算（D8 时机①），不断言指标数值
+        verify(labBehaviorMetricsService, times(1)).computeForSubmission(any(LabSubmission.class));
     }
 
     @Test
@@ -1013,7 +1036,7 @@ class LabServiceTests {
     void teacherCanReadSeededLabReports() {
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, null, null, null)
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, null, null)
         );
         List<Map<String, Object>> reports = page.items();
 
@@ -1032,7 +1055,7 @@ class LabServiceTests {
     void teacherCanFilterLabReportsByKeywordAndStatus() {
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery("20260001", "GRADED", null, null, null)
+                new LabRequests.TeacherLabReportQuery("20260001", "GRADED", null, null, null, null)
         );
         List<Map<String, Object>> reports = page.items();
 
@@ -1047,7 +1070,7 @@ class LabServiceTests {
     void teacherReportListAppliesDefaultPagination() {
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, null, null, null)
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, null, null)
         );
 
         assertThat(page.page()).isEqualTo(1);
@@ -1065,11 +1088,11 @@ class LabServiceTests {
 
         PagedResult<Map<String, Object>> firstPage = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, labId, 1, 1)
+                new LabRequests.TeacherLabReportQuery(null, null, labId, null, 1, 1)
         );
         PagedResult<Map<String, Object>> secondPage = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, labId, 2, 1)
+                new LabRequests.TeacherLabReportQuery(null, null, labId, null, 2, 1)
         );
 
         assertThat(firstPage.total()).isEqualTo(2);
@@ -1092,12 +1115,12 @@ class LabServiceTests {
         // 仅实验名命中（学生姓名不含该关键词）也必须返回，验证五字段是 OR 而不是 AND
         PagedResult<Map<String, Object>> byLabTitle = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(labTitle, null, labId, null, null)
+                new LabRequests.TeacherLabReportQuery(labTitle, null, labId, null, null, null)
         );
         // 仅学生姓名命中（实验名不含该关键词）同样必须返回
         PagedResult<Map<String, Object>> byStudentName = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery("关键词学生", null, labId, null, null)
+                new LabRequests.TeacherLabReportQuery("关键词学生", null, labId, null, null, null)
         );
 
         assertThat(byLabTitle.items()).hasSize(1);
@@ -1112,7 +1135,7 @@ class LabServiceTests {
 
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery("实验班", null, labId, null, null)
+                new LabRequests.TeacherLabReportQuery("实验班", null, labId, null, null, null)
         );
 
         assertThat(page.items()).hasSize(1);
@@ -1123,7 +1146,7 @@ class LabServiceTests {
     void teacherReportKeywordWithoutHitReturnsEmptyPage() {
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery("绝对不存在的关键词-zzz", null, null, null, null)
+                new LabRequests.TeacherLabReportQuery("绝对不存在的关键词-zzz", null, null, null, null, null)
         );
 
         assertThat(page.items()).isEmpty();
@@ -1134,11 +1157,11 @@ class LabServiceTests {
     void teacherReportStatusFilterIgnoresCase() {
         PagedResult<Map<String, Object>> upperCase = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, "GRADED", null, null, null)
+                new LabRequests.TeacherLabReportQuery(null, "GRADED", null, null, null, null)
         );
         PagedResult<Map<String, Object>> lowerCase = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, "graded", null, null, null)
+                new LabRequests.TeacherLabReportQuery(null, "graded", null, null, null, null)
         );
 
         assertThat(upperCase.total()).isPositive();
@@ -1150,7 +1173,7 @@ class LabServiceTests {
     void teacherReportInvalidStatusReturnsEmptyPage() {
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, "GRADEDX", null, null, null)
+                new LabRequests.TeacherLabReportQuery(null, "GRADEDX", null, null, null, null)
         );
 
         assertThat(page.items()).isEmpty();
@@ -1161,17 +1184,17 @@ class LabServiceTests {
     void teacherReportRejectsIllegalPagination() {
         assertThatThrownBy(() -> labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, null, 0, 10)))
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, 0, 10)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("参数不合法");
         assertThatThrownBy(() -> labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, null, 1, 0)))
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, 1, 0)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("参数不合法");
         assertThatThrownBy(() -> labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, null, 1, 101)))
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, 1, 101)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("参数不合法");
     }
@@ -1186,7 +1209,7 @@ class LabServiceTests {
 
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 teacherUser(),
-                new LabRequests.TeacherLabReportQuery(null, null, firstLabId, null, null)
+                new LabRequests.TeacherLabReportQuery(null, null, firstLabId, null, null, null)
         );
 
         assertThat(page.total()).isEqualTo(1);
@@ -1199,7 +1222,7 @@ class LabServiceTests {
 
         PagedResult<Map<String, Object>> page = labService.listTeacherReports(
                 otherTeacher,
-                new LabRequests.TeacherLabReportQuery(null, null, null, null, null)
+                new LabRequests.TeacherLabReportQuery(null, null, null, null, null, null)
         );
 
         assertThat(page.items()).isEmpty();

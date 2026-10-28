@@ -18,6 +18,11 @@ import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.common.file.LocalFileStorageService;
+import com.opencode.teachingplatform.lab.behavior.entity.BehaviorEvent;
+import com.opencode.teachingplatform.lab.behavior.entity.LabSubmissionMetrics;
+import com.opencode.teachingplatform.lab.behavior.repository.BehaviorEventRepository;
+import com.opencode.teachingplatform.lab.behavior.repository.LabSubmissionMetricsRepository;
+import com.opencode.teachingplatform.lab.behavior.service.LabBehaviorMetricsService;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.entity.ExperimentBlankAnswerOverride;
 import com.opencode.teachingplatform.lab.entity.Lab;
@@ -55,6 +60,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -98,6 +104,9 @@ public class LabService {
     private final ScoreRecordRepository scoreRecordRepository;
     private final ObjectMapper objectMapper;
     private final LocalFileStorageService localFileStorageService;
+    private final LabBehaviorMetricsService labBehaviorMetricsService;
+    private final LabSubmissionMetricsRepository labSubmissionMetricsRepository;
+    private final BehaviorEventRepository behaviorEventRepository;
     private final Path storageRoot;
 
     public LabService(LabRepository labRepository,
@@ -115,6 +124,9 @@ public class LabService {
                       ScoreRecordRepository scoreRecordRepository,
                       ObjectMapper objectMapper,
                       LocalFileStorageService localFileStorageService,
+                      LabBehaviorMetricsService labBehaviorMetricsService,
+                      LabSubmissionMetricsRepository labSubmissionMetricsRepository,
+                      BehaviorEventRepository behaviorEventRepository,
                       @Value("${app.file-storage-root}") String storageRoot) {
         this.labRepository = labRepository;
         this.labStepRepository = labStepRepository;
@@ -131,6 +143,9 @@ public class LabService {
         this.scoreRecordRepository = scoreRecordRepository;
         this.objectMapper = objectMapper;
         this.localFileStorageService = localFileStorageService;
+        this.labBehaviorMetricsService = labBehaviorMetricsService;
+        this.labSubmissionMetricsRepository = labSubmissionMetricsRepository;
+        this.behaviorEventRepository = behaviorEventRepository;
         this.storageRoot = Path.of(storageRoot).toAbsolutePath().normalize();
     }
 
@@ -564,7 +579,41 @@ public class LabService {
             }
         }
 
-        // 5. 关键词：实验名 / 班级名在内存解析，姓名 / 学号 / 用户名走一条用户库查询
+        // 5. 行为风险等级筛选：内存命中集模式（D10）。命中集基于已落库 metrics，
+        //    当前页行的懒算在装配阶段触发（toReportListViews），筛选不等待懒算
+        String rawRiskLevel = query == null ? null : query.riskLevel();
+        List<Long> riskHitSubmissionIds = null;
+        if (!isBlank(rawRiskLevel)) {
+            String normalizedRiskLevel = rawRiskLevel.trim().toUpperCase(Locale.ROOT);
+            switch (normalizedRiskLevel) {
+                case LabSubmissionMetrics.RISK_LOW, LabSubmissionMetrics.RISK_MEDIUM, LabSubmissionMetrics.RISK_HIGH ->
+                        riskHitSubmissionIds = labSubmissionMetricsRepository
+                                .findByLabIdInAndRiskLevel(scopeLabIds, normalizedRiskLevel).stream()
+                                .map(LabSubmissionMetrics::getSubmissionId)
+                                .toList();
+                case "NONE" -> {
+                    // NONE = metrics 缺失 或 risk_flags 含 NO_BEHAVIOR_DATA（懒算会为无事件行建 metrics，D10）
+                    Set<Long> withBehaviorMetrics = labSubmissionMetricsRepository.findByLabIdIn(scopeLabIds).stream()
+                            .filter(metrics -> !parseStringList(metrics.getRiskFlagsJson())
+                                    .contains(LabSubmissionMetrics.FLAG_NO_BEHAVIOR_DATA))
+                            .map(LabSubmissionMetrics::getSubmissionId)
+                            .collect(Collectors.toSet());
+                    riskHitSubmissionIds = labSubmissionRepository.findByLabIdIn(scopeLabIds).stream()
+                            .map(LabSubmission::getId)
+                            .filter(id -> !withBehaviorMetrics.contains(id))
+                            .toList();
+                }
+                // 非法值与 status 语义对齐：按"匹配不到"处理，空结果而不是报错
+                default -> {
+                    return new PagedResult<>(List.of(), page, pageSize, 0);
+                }
+            }
+            if (riskHitSubmissionIds.isEmpty()) {
+                return new PagedResult<>(List.of(), page, pageSize, 0);
+            }
+        }
+
+        // 6. 关键词：实验名 / 班级名在内存解析，姓名 / 学号 / 用户名走一条用户库查询
         String keyword = query == null ? "" : normalize(query.keyword());
         boolean keywordActive = !keyword.isBlank();
         List<Long> labKeywordHitIds = List.of();
@@ -581,16 +630,20 @@ public class LabService {
             studentKeywordHitIds = sysUserRepository.findIdsByKeyword("%" + keyword + "%");
         }
 
-        // 6. 拼装提交表谓词：关键词维度之间必须是 OR，不能折叠进 labId 的 AND
+        // 7. 拼装提交表谓词：关键词维度之间必须是 OR，不能折叠进 labId 的 AND
         List<Long> specLabIds = scopeLabIds;
         SubmissionStatus specStatus = statusFilter;
         List<Long> specLabHitIds = labKeywordHitIds;
         List<Long> specStudentHitIds = studentKeywordHitIds;
+        List<Long> specRiskHitIds = riskHitSubmissionIds;
         Specification<LabSubmission> specification = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(root.get("labId").in(specLabIds));
             if (specStatus != null) {
                 predicates.add(criteriaBuilder.equal(root.get("submitStatus"), specStatus));
+            }
+            if (specRiskHitIds != null) {
+                predicates.add(root.get("id").in(specRiskHitIds));
             }
             if (keywordActive) {
                 Predicate keywordPredicate;
@@ -610,7 +663,7 @@ public class LabService {
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
-        // 7. 真分页查询 + 当前页批量映射（避免逐行查实验 / 学生 / 班级）
+        // 8. 真分页查询 + 当前页批量映射（避免逐行查实验 / 学生 / 班级）
         Page<LabSubmission> pageResult = labSubmissionRepository.findAll(
                 specification,
                 PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "id")));
@@ -702,6 +755,92 @@ public class LabService {
         return detail;
     }
 
+    /**
+     * 教师查看单份报告的行为详情（方案 §5.3 / D11）。
+     *
+     * <p>返回 metrics 全量（摘要字段 + stepDwellMs / firstStartedAt / lastEventAt / computedAt）
+     * 与按 {@code (occurred_at, id)} 升序的行为时间线；时间线上限 500 条，
+     * {@code timelineTotal} 返回真实总数供前端提示截断。</p>
+     *
+     * <p>读取前对该行触发一次懒算：提交后迟到的尾部事件（LAB_LEAVE、末段心跳）在此刻补齐，
+     * 保证详情页看到的是最新口径。</p>
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTeacherReportBehavior(CurrentUser currentUser, Long reportId) {
+        requireTeacher(currentUser);
+        LabSubmission submission = labSubmissionRepository.findById(reportId)
+                .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
+        ownedLab(currentUser, submission.getLabId());
+
+        LabSubmissionMetrics metrics = ensureMetricsFresh(List.of(submission)).get(submission.getId());
+        Page<BehaviorEvent> timelinePage = behaviorEventRepository.findByBizTypeAndLabIdAndStudentId(
+                BehaviorEvent.BIZ_TYPE_LAB,
+                submission.getLabId(),
+                submission.getStudentId(),
+                PageRequest.of(0, 500, Sort.by(Sort.Direction.ASC, "occurredAt", "id")));
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        if (metrics == null) {
+            // 防御性兜底：metrics 写入失败时时间线仍返回（§5.3）
+            result.put("metrics", null);
+        } else {
+            Map<String, Object> metricsView = new LinkedHashMap<>(toBehaviorView(metrics, submission));
+            metricsView.put("stepDwellMs", parseStepDwell(metrics.getStepDwellJson()));
+            metricsView.put("firstStartedAt", metrics.getFirstStartedAt());
+            metricsView.put("lastEventAt", metrics.getLastEventAt());
+            metricsView.put("computedAt", metrics.getComputedAt());
+            result.put("metrics", metricsView);
+        }
+        result.put("timeline", timelinePage.getContent().stream()
+                .map(this::toBehaviorTimelineItem)
+                .toList());
+        result.put("timelineTotal", timelinePage.getTotalElements());
+        return result;
+    }
+
+    /** 时间线单条视图：eventType / occurredAt / stepId / payload（JSON 还原为对象）。 */
+    private Map<String, Object> toBehaviorTimelineItem(BehaviorEvent event) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("eventType", event.getEventType());
+        item.put("occurredAt", event.getOccurredAt());
+        item.put("stepId", event.getStepId());
+        item.put("payload", parsePayloadMap(event.getPayloadJson()));
+        return item;
+    }
+
+    /** payload_json → Map；空或解析失败按空 Map 处理（防御）。 */
+    private Map<String, Object> parsePayloadMap(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(json,
+                    objectMapper.getTypeFactory().constructMapType(LinkedHashMap.class, String.class, Object.class));
+        } catch (Exception ex) {
+            return Map.of();
+        }
+    }
+
+    /** step_dwell_json → Map<String, Long>（key 为 stepId 字符串，契约 {"123": 45000}）。 */
+    private Map<String, Long> parseStepDwell(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            Map<String, Object> raw = objectMapper.readValue(json,
+                    objectMapper.getTypeFactory().constructMapType(LinkedHashMap.class, String.class, Object.class));
+            Map<String, Long> dwell = new LinkedHashMap<>();
+            raw.forEach((stepId, value) -> {
+                if (value instanceof Number number) {
+                    dwell.put(stepId, number.longValue());
+                }
+            });
+            return dwell;
+        } catch (Exception ex) {
+            return Map.of();
+        }
+    }
+
     @Transactional(readOnly = true)
     public Map<String, Object> getTeacherLabReportView(CurrentUser currentUser, Long labId, Long studentId) {
         requireTeacher(currentUser);
@@ -738,6 +877,9 @@ public class LabService {
         List<LabStep> steps = labStepRepository.findByLabIdOrderByStepNoAsc(labId);
         List<ClassMember> members = classMemberRepository.findByClassId(lab.getClassId());
         Map<Long, LabSubmission> submissionByStudentId = indexSubmissionsByStudentId(labSubmissionRepository.findByLabId(labId));
+        // D15：提交总览与批改队列共用同一懒算 + 装配方法，数值口径防漂移
+        Map<Long, LabSubmissionMetrics> behaviorBySubmissionId = ensureMetricsFresh(
+                List.copyOf(submissionByStudentId.values()));
 
         List<Map<String, Object>> items = steps.stream().map(step -> {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -770,6 +912,10 @@ public class LabService {
             studentRow.put("submissionId", submission == null ? null : submission.getId());
             studentRow.put("submitStatus", submission == null ? null : submission.getSubmitStatus().name());
             studentRow.put("submittedAt", submission == null ? null : submission.getSubmittedAt());
+            // 无提交的学生无行为数据，behavior 为 null（前端按 "-" 展示，区别于防御性兜底）
+            studentRow.put("behavior", submission == null
+                    ? null
+                    : toBehaviorView(behaviorBySubmissionId.get(submission.getId()), submission));
             studentRow.put("cells", cells);
             students.add(studentRow);
         }
@@ -965,7 +1111,10 @@ public class LabService {
         LabAnswerImageSupport.TextAnswerPayload updatedPayload = LabAnswerImageSupport.appendImage(currentPayload, uploadedImage);
         answer.setAnswerText(answerText);
         answer.setAnswerJson(LabAnswerImageSupport.canonicalizeTextPayload(objectMapper, answerText, updatedPayload));
-        labStepAnswerRepository.save(answer);
+        LabStepAnswer savedAnswer = labStepAnswerRepository.save(answer);
+        // D17③：图片上传同样追加快照，与 saveAnswer 保持"每次服务端确认的答案变更"同一口径，
+        // 覆盖"先答文字、最后统一传图"的真实场景，保存次数不再失真
+        appendAnswerSnapshot(savedAnswer);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("path", storedPath);
         result.put("name", displayName);
@@ -1037,6 +1186,10 @@ public class LabService {
             labStepAnswerRepository.save(answer);
         }
         refreshSubmissionAfterScoring(lab, submission);
+        // 行为指标联动（D8 时机①）：提交成功事务内全量算一次。
+        // 提交瞬间前端缓冲中的尾部事件（LAB_LEAVE、末段心跳）可能尚未到达，
+        // 本次以已到事件为准，迟到事件由教师首读的懒算兜底重算（时机②）
+        labBehaviorMetricsService.computeForSubmission(submission);
         return Map.of(
                 "submissionId", submission.getId(),
                 "status", submission.getSubmitStatus().name()
@@ -1640,6 +1793,9 @@ public class LabService {
         Map<Long, SysUser> studentById = sysUserRepository.findAllById(studentIds).stream()
                 .collect(Collectors.toMap(SysUser::getId, Function.identity()));
         Map<Long, String> classNameById = loadClassNames(labById.values().stream().toList());
+        // 行为指标懒算（D8 时机②）：当前页缺失或 watermark 落后的行批量重算，
+        // 结果以内存对象直接装配（REQUIRES_NEW 内层已落库，外层 readOnly 事务不重查）
+        Map<Long, LabSubmissionMetrics> behaviorBySubmissionId = ensureMetricsFresh(submissions);
 
         List<Map<String, Object>> items = new ArrayList<>(submissions.size());
         for (LabSubmission submission : submissions) {
@@ -1660,9 +1816,99 @@ public class LabService {
             item.put("summaryRequired", lab != null && lab.isSummaryRequired());
             item.put("submittedAt", submission.getSubmittedAt());
             item.put("gradedAt", submission.getGradedAt());
+            // D15：列表 / queue / overview / 详情共用同一装配方法，防止口径漂移
+            item.put("behavior", toBehaviorView(behaviorBySubmissionId.get(submission.getId()), submission));
             items.add(item);
         }
         return items;
+    }
+
+    /**
+     * 行为指标懒算入口（D8 时机②）。
+     *
+     * <p>判定陈旧的两类行：metrics 缺失，或 {@code event_watermark} 落后于该归属键的最新事件 id。
+     * 陈旧行经 {@code refreshStaleMetrics}（REQUIRES_NEW）重算落库——本方法的调用方均为
+     * {@code @Transactional(readOnly = true)}，直接写库会静默失败，且重算结果以内存对象
+     * 返回装配（MySQL RR 快照下外层事务重查读不到内层新提交）。</p>
+     *
+     * @return submissionId → metrics（含新算与既有的合并视图）
+     */
+    private Map<Long, LabSubmissionMetrics> ensureMetricsFresh(List<LabSubmission> rows) {
+        if (rows.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = rows.stream().map(LabSubmission::getId).toList();
+        Map<Long, LabSubmissionMetrics> result = new HashMap<>();
+        labSubmissionMetricsRepository.findAllById(ids)
+                .forEach(metrics -> result.put(metrics.getSubmissionId(), metrics));
+
+        // 各归属键 (labId, studentId) 的最新事件 id：按 labIds 粗筛后内存对拍当前页行
+        Set<Long> labIds = rows.stream()
+                .map(LabSubmission::getLabId)
+                .collect(Collectors.toSet());
+        Map<String, Long> maxEventIdByPair = new HashMap<>();
+        if (!labIds.isEmpty()) {
+            for (Object[] row : behaviorEventRepository
+                    .findMaxIdByBizTypeAndLabIdInGroupByStudent(BehaviorEvent.BIZ_TYPE_LAB, labIds)) {
+                Long labId = ((Number) row[0]).longValue();
+                Long studentId = ((Number) row[1]).longValue();
+                Long maxEventId = ((Number) row[2]).longValue();
+                maxEventIdByPair.put(labId + ":" + studentId, maxEventId);
+            }
+        }
+
+        List<LabSubmission> stale = rows.stream()
+                .filter(submission -> {
+                    LabSubmissionMetrics metrics = result.get(submission.getId());
+                    if (metrics == null) {
+                        return true;
+                    }
+                    Long maxEventId = maxEventIdByPair.get(submission.getLabId() + ":" + submission.getStudentId());
+                    return maxEventId != null && maxEventId > metrics.getEventWatermark();
+                })
+                .toList();
+        if (!stale.isEmpty()) {
+            result.putAll(labBehaviorMetricsService.refreshStaleMetrics(stale));
+        }
+        return result;
+    }
+
+    /**
+     * 行为摘要视图的唯一装配方法（D15 防漂移）：批改队列 / 导航队列 / 提交总览共用。
+     *
+     * @param metrics 懒算后的指标行；为 null 仅作防御性兜底（正常路径懒算后恒有值）
+     * @param submission 提交行，用于推导 durationOpen（SAVED 行"截至最近事件"口径）
+     */
+    private Map<String, Object> toBehaviorView(LabSubmissionMetrics metrics, LabSubmission submission) {
+        if (metrics == null) {
+            return null;
+        }
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("totalDurationMs", metrics.getTotalDurationMs());
+        view.put("activeDurationMs", metrics.getActiveDurationMs());
+        view.put("durationOpen", submission.getSubmittedAt() == null);
+        view.put("saveCount", metrics.getSaveCount());
+        view.put("pasteCount", metrics.getPasteCount());
+        view.put("pastedChars", metrics.getPastedChars());
+        view.put("hiddenCount", metrics.getVisibilityHiddenCount());
+        view.put("hiddenMs", metrics.getHiddenMs());
+        view.put("sessionCount", metrics.getSessionCount());
+        view.put("riskLevel", metrics.getRiskLevel());
+        view.put("riskFlags", parseStringList(metrics.getRiskFlagsJson()));
+        return view;
+    }
+
+    /** risk_flags_json → List<String>；空或解析失败按空列表处理（防御）。 */
+    private List<String> parseStringList(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+        } catch (Exception ex) {
+            return List.of();
+        }
     }
 
     /**

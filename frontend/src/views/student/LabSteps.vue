@@ -100,7 +100,7 @@
                 <div class="question-card__score">{{ currentItem.stepScore }} 分</div>
               </header>
 
-              <div class="question-card__body">
+              <div class="question-card__body" @paste="onAnswerPaste">
                 <section class="question-card__prompt" :class="{ 'question-card__prompt--embedded': currentQuestionType === 'FILL_BLANK' }">
                   <div class="pane-title">题目</div>
                   <FillBlankInlineEditor
@@ -264,6 +264,7 @@ import {
 } from './components/lab-answer/answerPayload';
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from './components/lab-answer/types';
 import { useLabAnswerDrafts } from './components/lab-answer/useLabAnswerDrafts';
+import { behaviorCollector } from '@/utils/behaviorCollector';
 
 const route = useRoute();
 const router = useRouter();
@@ -369,6 +370,22 @@ const updateCurrentDraft = (value: LabAnswerDraft) => {
   patchDraft(currentItem.value.id, value);
 };
 
+// 行为采集：作答区外层容器捕获粘贴（D13，不改编辑器内部）；blocked 由服务端按步骤配置回填
+const onAnswerPaste = (event: ClipboardEvent) => {
+  const stepId = currentItem.value?.id;
+  if (stepId == null) {
+    return;
+  }
+  const pastedLength = event.clipboardData?.getData('text').length ?? 0;
+  if (pastedLength <= 0) {
+    return;
+  }
+  behaviorCollector.track('PASTE', {
+    fieldKind: currentQuestionType.value === 'CODE' ? 'CODE' : 'TEXT',
+    pastedLength,
+  }, stepId);
+};
+
 const syncImagesAfterRemove = () => {
   void persistCurrentItem({ silent: true });
 };
@@ -454,8 +471,13 @@ const selectItem = async (index: number) => {
   if (!target) {
     return;
   }
+  const previousStepId = currentItem.value?.id ?? null;
   currentIndex.value = index;
   await updateItemQuery(target.id);
+  // 行为采集：题项切换成功后上报 STEP_VIEW（dwellMs 由采集器归属上一题）
+  if (target.id !== previousStepId) {
+    behaviorCollector.setStep(target.id);
+  }
 };
 
 const draftAnswerOf = (item: StudentLabStepItem) => buildCompatibilityAnswerText(ensureDraft(item));
@@ -511,6 +533,8 @@ const persistItem = (item: StudentLabStepItem, options: { silent?: boolean } = {
     return true;
   } catch {
     itemAutosaveStates[item.id] = 'error';
+    // 行为采集：保存失败（自动/手动均采集，silent 区分来源）
+    behaviorCollector.track('SAVE_FAILED', { stepId: item.id, silent: !!options.silent }, item.id);
     if (!options.silent) {
       ElMessage.error('保存失败，请稍后重试');
     }
@@ -578,18 +602,23 @@ const submitAll = async () => {
   if (!detail.value) {
     return;
   }
+  // 行为采集：提交点击（无论后续是否被拦截）
+  behaviorCollector.track('SUBMIT_CLICK', {});
   if (!labItems.value.some((item) => hasSavedAnswer(item))) {
+    behaviorCollector.track('SUBMIT_BLOCKED', { reason: 'no-saved-answer' });
     ElMessage.warning('请至少先保存一道题目后再提交');
     return;
   }
   if (dirtyItemCount.value > 0) {
     const saved = await persistCurrentItem({ silent: true });
     if (!saved) {
+      behaviorCollector.track('SUBMIT_BLOCKED', { reason: 'autosave-failed' });
       ElMessage.error('当前题项自动保存失败，请稍后重试');
       return;
     }
   }
   if (detail.value.summaryRequired && !summaryDraft.value.trim()) {
+    behaviorCollector.track('SUBMIT_BLOCKED', { reason: 'summary-required' });
     ElMessage.warning('当前实验要求填写实验小结后再提交');
     return;
   }
@@ -602,6 +631,9 @@ const submitAll = async () => {
       summaryText: summaryDraft.value.trim(),
     });
     ElMessage.success('实验提交成功');
+    // 行为采集：提交成功收尾（leave 内已触发 flush），随后停采
+    behaviorCollector.leave('submitted');
+    behaviorCollector.stop();
     await fetchData();
   } finally {
     submitting.value = false;
@@ -681,10 +713,26 @@ watch(() => (currentItem.value ? buildAnswerPayloadJson(ensureDraft(currentItem.
   scheduleAutosave();
 });
 
-onMounted(fetchData);
+onMounted(() => {
+  void fetchData().then(() => {
+    // 行为采集：仅在可编辑作答会话内激活；已提交/已批改的只读查看不采集
+    if (readonly.value) {
+      return;
+    }
+    behaviorCollector.start({ labId: labId.value });
+    behaviorCollector.track('LAB_ENTER', {});
+    // 首题（含深链 query 指定的题项）产生首条 STEP_VIEW，无 fromStepId
+    if (currentItem.value) {
+      behaviorCollector.setStep(currentItem.value.id);
+    }
+  });
+});
 
 onBeforeUnmount(() => {
   clearAutosaveTimer();
+  // 行为采集：路由离开收尾并停采；直接关浏览器由采集器 beforeunload 钩子兜底（D17②）
+  behaviorCollector.leave('route');
+  behaviorCollector.stop();
 });
 </script>
 

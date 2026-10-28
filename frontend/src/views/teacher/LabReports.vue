@@ -88,6 +88,13 @@
              <el-option label="已提交" value="SUBMITTED" />
             <el-option label="已批改" value="GRADED" />
           </el-select>
+          <el-select v-model="query.riskLevel" placeholder="全部风险等级" clearable>
+            <el-option label="全部风险等级" value="" />
+            <el-option label="高风险" value="HIGH" />
+            <el-option label="中风险" value="MEDIUM" />
+            <el-option label="低风险" value="LOW" />
+            <el-option label="无行为数据" value="NONE" />
+          </el-select>
           <el-button type="primary" @click="refreshQueue">刷新队列</el-button>
         </div>
       </div>
@@ -140,6 +147,40 @@
               <span :class="['priority-pill', `priority-pill--${priorityTone(row)}`]">{{ priorityLabel(row) }}</span>
             </div>
 
+            <div class="report-row__behavior">
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">作答时长</span>
+                <el-tooltip v-if="row.behavior?.durationOpen" content="进行中，截至最近事件" placement="top">
+                  <strong>{{ formatTotalDuration(row.behavior) }}</strong>
+                </el-tooltip>
+                <strong v-else>{{ row.behavior ? formatTotalDuration(row.behavior) : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">活跃时长</span>
+                <strong>{{ row.behavior ? formatActiveDuration(row.behavior) : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">保存次数</span>
+                <strong>{{ row.behavior ? row.behavior.saveCount : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">粘贴</span>
+                <strong>{{ row.behavior ? `${row.behavior.pasteCount}次 · ${row.behavior.pastedChars}字符` : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">切屏</span>
+                <strong>{{ row.behavior ? `${row.behavior.hiddenCount}次 · ${formatBehaviorDuration(row.behavior.hiddenMs)}` : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">风险</span>
+                <el-tooltip :content="riskTagTooltip(row.behavior)" placement="top">
+                  <el-tag :type="riskTagType(row.behavior)" size="small" effect="light" :class="{ 'risk-tag--muted': hasNoBehaviorData(row.behavior) }">
+                    {{ riskTagLabel(row.behavior) }}
+                  </el-tag>
+                </el-tooltip>
+              </div>
+            </div>
+
             <div class="report-row__actions">
               <el-button plain @click="openReportView(row)">实验报告</el-button>
               <el-button type="primary" plain @click="goBatchGrade(row.id)">
@@ -153,17 +194,25 @@
               >
                 提交总览
               </el-button>
-              <el-button plain @click="goBlankRegradeBatch(row.labId)">批量重判（填空）</el-button>
-              <el-button
-                v-if="row.submitStatus === 'SUBMITTED' || row.submitStatus === 'GRADED'"
-                type="warning"
-                plain
-                :disabled="returningId !== null"
-                :loading="returningId === row.id"
-                @click="handleReturn(row)"
-              >
-                打回
-              </el-button>
+              <el-dropdown trigger="click" @command="(cmd: string) => handleRowCommand(cmd, row)">
+                <el-button plain>
+                  更多操作
+                  <span class="material-symbols-outlined" style="font-size: 14px">expand_more</span>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="regrade" :disabled="!row.labId">批量重判（填空）</el-dropdown-item>
+                    <el-dropdown-item
+                      v-if="row.submitStatus === 'SUBMITTED' || row.submitStatus === 'GRADED'"
+                      command="return"
+                      :disabled="returningId !== null"
+                      :loading="returningId === row.id"
+                    >
+                      打回
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
           </article>
         </template>
@@ -197,6 +246,15 @@ import {
   returnTeacherLabReport,
 } from '@/api/labs';
 import type { LabItem, LabReportItem, LabReportQuery, LabReportStatus, TeacherLabReportStats } from '@/types/lab';
+import {
+  formatActiveDuration,
+  formatBehaviorDuration,
+  formatTotalDuration,
+  hasNoBehaviorData,
+  riskTagLabel,
+  riskTagTooltip,
+  riskTagType,
+} from './components/behaviorDisplay';
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -219,6 +277,7 @@ const query = reactive({
   keyword: '',
   status: '',
   labId: '',
+  riskLevel: '',
 });
 
 const activeStatusLabel = computed(() => statusLabel(query.status || undefined));
@@ -237,6 +296,7 @@ const buildQuery = (): LabReportQuery => ({
   keyword: query.keyword.trim() || undefined,
   status: query.status || undefined,
   labId: query.labId ? Number(query.labId) : undefined,
+  riskLevel: (query.riskLevel || undefined) as LabReportQuery['riskLevel'],
   page: page.value,
   pageSize: pageSize.value,
 });
@@ -299,6 +359,7 @@ const resetFilters = async () => {
   query.keyword = '';
   query.status = '';
   query.labId = '';
+  query.riskLevel = '';
   await refreshQueue();
 };
 
@@ -338,6 +399,15 @@ const goBlankRegradeBatch = (labId?: number) => {
     return;
   }
   router.push(`/teacher/labs/${labId}/blank-regrade/batch`);
+};
+
+/** "更多操作" 下拉菜单统一入口：按 command 分发到对应动作 */
+const handleRowCommand = async (command: string, row: LabReportItem) => {
+  if (command === 'regrade') {
+    goBlankRegradeBatch(row.labId);
+  } else if (command === 'return') {
+    await handleReturn(row);
+  }
 };
 
 const goSubmissionOverview = (labId?: number) => {
@@ -683,10 +753,15 @@ onMounted(() => {
 
 .report-row {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) 0.85fr 0.85fr 0.75fr minmax(280px, auto);
-  gap: 10px;
+  grid-template-columns:
+    minmax(0, 360px)        /* identity: 头像 + 实验标题 + chip + 学生信息 */
+    minmax(120px, 0.85fr)   /* status: 提交状态 tag */
+    minmax(100px, 0.7fr)    /* score: 当前总分 */
+    minmax(80px, 0.6fr)     /* priority: 优先级 pill */
+    auto;                   /* actions: 3主按钮 + 更多下拉，吃剩余空间 */
+  gap: 10px 12px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--reports-border);
   border-radius: 12px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
@@ -694,9 +769,11 @@ onMounted(() => {
 
 .report-row__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .report-row__identity {
@@ -788,6 +865,36 @@ onMounted(() => {
   color: #475569;
 }
 
+.report-row__behavior {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.behavior-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.behavior-cell__label {
+  font-size: 10px;
+  color: var(--reports-muted);
+  letter-spacing: 0.04em;
+}
+
+.behavior-cell strong {
+  font-size: 12px;
+  color: var(--reports-text);
+  white-space: nowrap;
+}
+
+.risk-tag--muted {
+  opacity: 0.65;
+}
+
 @media (max-width: 1180px) {
   .reports-summary-grid,
   .report-row {
@@ -815,8 +922,14 @@ onMounted(() => {
     width: 100%;
   }
 
+  .report-row__behavior {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .report-row__actions {
+    grid-column: 1 / -1;
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 </style>

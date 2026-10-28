@@ -7,8 +7,11 @@ import type {
   CreateLabStepPayload,
   GradeLabReportPayload,
   LabAnswerImageMeta,
+  LabBehaviorEventItem,
+  LabBehaviorIngestResult,
   LabItem,
   LabItemAnswerWall,
+  LabReportBehaviorDetail,
   LabReportDetail,
   LabReportItem,
   LabReportQuery,
@@ -79,6 +82,10 @@ export const getTeacherLabReportStats = () => request.get<TeacherLabReportStats>
 export const getTeacherLabReportDetail = (reportId: number | string) =>
   request.get<LabReportDetail>(`/teacher/lab-reports/${reportId}`);
 
+/** 教师查看单份报告的行为详情（metrics 全量 + 时间线，按需加载） */
+export const getTeacherLabReportBehavior = (reportId: number | string) =>
+  request.get<LabReportBehaviorDetail>(`/teacher/lab-reports/${reportId}/behavior`);
+
 export const getTeacherLabReportView = (labId: number | string, studentId: number | string) =>
   request.get<TeacherLabReportView>(`/teacher/labs/${labId}/report-view/${studentId}`);
 
@@ -120,3 +127,7 @@ export const uploadStudentLabAnswerImage = (labId: number | string, stepId: numb
 
 export const submitStudentLab = (labId: number | string, data: SubmitLabPayload) =>
   request.post<SubmitLabResult>(`/student/labs/${labId}/submit`, data);
+
+/** 学生批量上报作答行为事件（behaviorCollector 唯一出口；eventUuid 幂等，重试复用） */
+export const reportLabBehaviorEvents = (labId: number | string, events: LabBehaviorEventItem[]) =>
+  request.post<LabBehaviorIngestResult>(`/student/labs/${labId}/behavior-events`, { events });

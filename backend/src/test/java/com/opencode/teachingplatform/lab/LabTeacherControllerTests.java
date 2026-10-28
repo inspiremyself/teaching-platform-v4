@@ -7,6 +7,7 @@ import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.lab.behavior.service.BehaviorIngestService;
 import com.opencode.teachingplatform.lab.controller.LabController;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.service.LabService;
@@ -46,6 +47,9 @@ class LabTeacherControllerTests {
 
     @MockBean
     private LabService labService;
+
+    @MockBean
+    private BehaviorIngestService behaviorIngestService;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -518,12 +522,68 @@ class LabTeacherControllerTests {
         }
     }
 
+    @Test
+    void teacherCanReadReportBehavior() throws Exception {
+        when(labService.getTeacherReportBehavior(any(CurrentUser.class), anyLong())).thenReturn(Map.of(
+                "metrics", Map.of("riskLevel", "LOW", "saveCount", 3),
+                "timeline", List.of(Map.of("eventType", "LAB_ENTER", "occurredAt", "2026-10-28T10:00:00+08:00")),
+                "timelineTotal", 1
+        ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/teacher/lab-reports/{id}/behavior", 123L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.metrics.riskLevel").value("LOW"))
+                    .andExpect(jsonPath("$.data.timelineTotal").value(1));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherReportBehaviorRejectsNonOwnedLab() throws Exception {
+        when(labService.getTeacherReportBehavior(any(CurrentUser.class), anyLong()))
+                .thenThrow(new BusinessException(40300, "无权访问该实验的报告"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/teacher/lab-reports/{id}/behavior", 123L))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value(40300));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void studentCannotReadReportBehavior() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(get("/api/v1/teacher/lab-reports/{id}/behavior", 123L))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value(40300));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
     private UsernamePasswordAuthenticationToken authenticateTeacher() {
         CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
         return new UsernamePasswordAuthenticationToken(
                 currentUser,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_TEACHER"))
+        );
+    }
+
+    private UsernamePasswordAuthenticationToken authenticateStudent() {
+        CurrentUser currentUser = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        return new UsernamePasswordAuthenticationToken(
+                currentUser,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_STUDENT"))
         );
     }
 }

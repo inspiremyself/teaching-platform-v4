@@ -168,6 +168,77 @@ export interface LabReportItem {
   summaryRequired?: boolean;
   submittedAt?: string;
   gradedAt?: string;
+  /** 行为指标摘要（懒算后恒有值；null 仅防御性兜底，无数据判定以 riskFlags 含 NO_BEHAVIOR_DATA 为准） */
+  behavior?: LabReportBehavior | null;
+}
+
+/** 行为指标摘要（技术方案 §5.2；列表 / 导航队列 / 提交总览共用同一结构） */
+export interface LabReportBehavior {
+  /** 总作答时长（毫秒）；SAVED 行为"截至最近事件"口径且 durationOpen=true；无数据源为 null */
+  totalDurationMs: number | null;
+  /** 活跃时长（毫秒），心跳求和；无心跳为 null，前端显示 `-` */
+  activeDurationMs: number | null;
+  /** true = SAVED 行，时长截至最近事件（队列页加 `*` 后缀） */
+  durationOpen: boolean;
+  saveCount: number;
+  pasteCount: number;
+  pastedChars: number;
+  hiddenCount: number;
+  hiddenMs: number;
+  /** 作答会话数（LAB_ENTER 计数，D17①），活跃时长列展示 `{active} · {n}次` */
+  sessionCount: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  riskFlags: string[];
+}
+
+/** 行为详情时间线条目（§5.3） */
+export interface LabBehaviorTimelineItem {
+  eventType: string;
+  occurredAt: string;
+  stepId?: number | null;
+  payload?: Record<string, unknown>;
+}
+
+/** 行为详情：metrics 在 §5.2 摘要基础上扩展逐题停留与计算时间 */
+export interface LabReportBehaviorDetail {
+  metrics: (LabReportBehavior & {
+    stepDwellMs: Record<string, number>;
+    firstStartedAt?: string | null;
+    lastEventAt?: string | null;
+    computedAt?: string | null;
+  }) | null;
+  timeline: LabBehaviorTimelineItem[];
+  timelineTotal: number;
+}
+
+/** 行为事件类型枚举（与后端 BehaviorEventType 对齐，恰好 11 值，D3） */
+export type LabBehaviorEventType =
+  | 'LAB_ENTER'
+  | 'LAB_LEAVE'
+  | 'STEP_VIEW'
+  | 'PASTE'
+  | 'VISIBILITY'
+  | 'WINDOW_BLUR'
+  | 'WINDOW_FOCUS'
+  | 'HEARTBEAT'
+  | 'SUBMIT_CLICK'
+  | 'SUBMIT_BLOCKED'
+  | 'SAVE_FAILED';
+
+/** 单条行为事件（§5.1；occurredAt 为 ISO 字符串，payload 不上报 blocked——服务端回填） */
+export interface LabBehaviorEventItem {
+  eventUuid: string;
+  eventType: LabBehaviorEventType;
+  occurredAt: string;
+  stepId?: number | null;
+  payload?: Record<string, unknown>;
+}
+
+/** 批量上报响应；closed=true 表示实验已关闭、采集器应立即停采（D16 配对行为） */
+export interface LabBehaviorIngestResult {
+  accepted: number;
+  dropped: number;
+  closed?: boolean;
 }
 
 export interface LabReportAnswerItem {
@@ -395,6 +466,8 @@ export interface LabReportQuery {
   keyword?: string;
   status?: string;
   labId?: number;
+  /** 行为风险等级筛选（D10）：NONE = metrics 缺失或含 NO_BEHAVIOR_DATA */
+  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'NONE';
   page?: number;
   pageSize?: number;
 }
@@ -426,6 +499,8 @@ export interface LabSubmissionOverviewStudent {
   submissionId?: number | null;
   submitStatus?: LabReportStatus | null;
   submittedAt?: string | null;
+  /** 行为摘要（§5.4）；无提交的学生为 null */
+  behavior?: LabReportBehavior | null;
   cells: LabSubmissionOverviewCell[];
 }
 

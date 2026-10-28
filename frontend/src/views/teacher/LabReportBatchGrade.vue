@@ -29,7 +29,10 @@
 
     <el-empty v-if="!loading && !detail" description="未获取到报告详情" />
 
-    <section v-else class="batch-grade-panel">
+    <template v-else>
+      <BehaviorSummaryCard v-if="detail" :submission-id="reportId" />
+
+      <section class="batch-grade-panel">
       <div class="batch-grade-panel__header">
         <div>
           <h2>{{ detail?.labTitle || '实验报告' }}</h2>
@@ -94,6 +97,7 @@
         </el-table-column>
       </el-table>
     </section>
+    </template>
   </div>
 </template>
 
@@ -103,6 +107,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
+import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
 

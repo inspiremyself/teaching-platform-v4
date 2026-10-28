@@ -6,6 +6,8 @@ import com.opencode.teachingplatform.auth.security.SecurityConfig;
 import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.lab.behavior.dto.BehaviorRequests;
+import com.opencode.teachingplatform.lab.behavior.service.BehaviorIngestService;
 import com.opencode.teachingplatform.lab.controller.LabController;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.service.LabService;
@@ -44,6 +46,9 @@ class LabStudentControllerTests {
 
     @MockBean
     private LabService labService;
+
+    @MockBean
+    private BehaviorIngestService behaviorIngestService;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -234,12 +239,78 @@ class LabStudentControllerTests {
         }
     }
 
+    @Test
+    void studentCanPostBehaviorEvents() throws Exception {
+        when(behaviorIngestService.ingest(any(CurrentUser.class), anyLong(), any(BehaviorRequests.IngestBatch.class)))
+                .thenReturn(Map.of("accepted", 2, "dropped", 0));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/student/labs/{id}/behavior-events", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "events": [
+                                        {"eventUuid": "uuid-1", "eventType": "LAB_ENTER", "occurredAt": "2026-10-28T10:00:00+08:00"},
+                                        {"eventUuid": "uuid-2", "eventType": "HEARTBEAT", "occurredAt": "2026-10-28T10:01:00+08:00", "payload": {"activeMs": 60000}}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.accepted").value(2))
+                    .andExpect(jsonPath("$.data.dropped").value(0));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void behaviorEventsRejectsEmptyBatch() throws Exception {
+        when(behaviorIngestService.ingest(any(CurrentUser.class), anyLong(), any(BehaviorRequests.IngestBatch.class)))
+                .thenThrow(new BusinessException(40000, "events 不能为空"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/student/labs/{id}/behavior-events", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"events\": []}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCannotPostBehaviorEvents() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/student/labs/{id}/behavior-events", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"events\": []}"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value(40300));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
     private UsernamePasswordAuthenticationToken authenticateStudent() {
         CurrentUser currentUser = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
         return new UsernamePasswordAuthenticationToken(
                 currentUser,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_STUDENT"))
+        );
+    }
+
+    private UsernamePasswordAuthenticationToken authenticateTeacher() {
+        CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        return new UsernamePasswordAuthenticationToken(
+                currentUser,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_TEACHER"))
         );
     }
 }

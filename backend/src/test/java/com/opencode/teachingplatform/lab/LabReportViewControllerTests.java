@@ -4,6 +4,7 @@ import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
 import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
+import com.opencode.teachingplatform.lab.behavior.service.BehaviorIngestService;
 import com.opencode.teachingplatform.lab.controller.LabController;
 import com.opencode.teachingplatform.lab.service.LabService;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,9 @@ class LabReportViewControllerTests {
 
     @MockBean
     private LabService labService;
+
+    @MockBean
+    private BehaviorIngestService behaviorIngestService;
 
     @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;

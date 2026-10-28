@@ -33,6 +33,9 @@
                   </button>
                 </th>
                 <th class="overview-matrix__status-head">提交状态</th>
+                <th class="overview-matrix__behavior-head">时长</th>
+                <th class="overview-matrix__behavior-head">粘贴</th>
+                <th class="overview-matrix__behavior-head">风险</th>
               </tr>
             </thead>
             <tbody>
@@ -65,6 +68,27 @@
                   </el-tag>
                   <span v-else class="overview-matrix__muted">未提交</span>
                 </td>
+                <td class="overview-matrix__behavior">
+                  <template v-if="student.behavior">
+                    <el-tooltip v-if="student.behavior.durationOpen" content="进行中，截至最近事件" placement="top">
+                      <strong>{{ formatTotalDuration(student.behavior) }}</strong>
+                    </el-tooltip>
+                    <strong v-else>{{ formatTotalDuration(student.behavior) }}</strong>
+                    <span class="overview-matrix__muted">活跃 {{ formatActiveDuration(student.behavior) }}</span>
+                  </template>
+                  <span v-else class="overview-matrix__muted">-</span>
+                </td>
+                <td class="overview-matrix__behavior">
+                  <strong v-if="student.behavior">{{ student.behavior.pasteCount }}次 · {{ student.behavior.pastedChars }}字符</strong>
+                  <span v-else class="overview-matrix__muted">-</span>
+                </td>
+                <td class="overview-matrix__behavior">
+                  <el-tooltip :content="riskTagTooltip(student.behavior)" placement="top">
+                    <el-tag :type="riskTagType(student.behavior)" size="small" effect="light" :class="{ 'risk-tag--muted': hasNoBehaviorData(student.behavior) }">
+                      {{ riskTagLabel(student.behavior) }}
+                    </el-tag>
+                  </el-tooltip>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -80,6 +104,14 @@ import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getTeacherLabSubmissionOverview } from '@/api/labs';
 import type { LabReportStatus, LabSubmissionOverview } from '@/types/lab';
+import {
+  formatActiveDuration,
+  formatTotalDuration,
+  hasNoBehaviorData,
+  riskTagLabel,
+  riskTagTooltip,
+  riskTagType,
+} from './components/behaviorDisplay';
 
 const route = useRoute();
 const router = useRouter();
@@ -263,6 +295,30 @@ onMounted(() => {
 
 .overview-matrix__status {
   min-width: 110px;
+}
+
+.overview-matrix__behavior-head,
+.overview-matrix__behavior {
+  min-width: 130px;
+  background: #fdfefe;
+}
+
+.overview-matrix__behavior-head {
+  background: #f8fafc;
+}
+
+.overview-matrix__behavior strong {
+  font-size: 12px;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.overview-matrix__behavior {
+  font-size: 12px;
+}
+
+.risk-tag--muted {
+  opacity: 0.65;
 }
 
 .overview-matrix__muted {
