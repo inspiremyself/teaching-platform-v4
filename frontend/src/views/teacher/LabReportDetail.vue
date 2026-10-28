@@ -49,7 +49,7 @@
         </article>
       </section>
 
-      <BehaviorSummaryCard :submission-id="reportId" />
+      <BehaviorSummaryCard :submission-id="reportId" :step-list="stepList" />
 
       <section class="detail-layout">
         <aside class="detail-sidebar">
@@ -199,6 +199,7 @@ import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
+import type { StepBrief } from './components/BehaviorSummaryCard.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -213,6 +214,17 @@ const pendingScrollContext = ref<{ anchorId: string | null; offset: number; scro
 const reportId = computed(() => Number(route.params.id));
 
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
+
+/** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
+const stepList = computed<StepBrief[]>(() =>
+  answerItems.value
+    .filter((i) => i.stepId != null && i.stepNo != null)
+    .map((i) => ({
+      stepId: i.stepId!,
+      stepNo: i.stepNo!,
+      title: i.stepTitle || i.title || '',
+    })),
+);
 
 const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
 

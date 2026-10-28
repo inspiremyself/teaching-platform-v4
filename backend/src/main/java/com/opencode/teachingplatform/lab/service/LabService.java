@@ -1892,6 +1892,8 @@ public class LabService {
         view.put("pastedChars", metrics.getPastedChars());
         view.put("hiddenCount", metrics.getVisibilityHiddenCount());
         view.put("hiddenMs", metrics.getHiddenMs());
+        view.put("pasteBlockedCount", metrics.getPasteBlockedCount());
+        view.put("blurCount", metrics.getBlurCount());
         view.put("sessionCount", metrics.getSessionCount());
         view.put("riskLevel", metrics.getRiskLevel());
         view.put("riskFlags", parseStringList(metrics.getRiskFlagsJson()));

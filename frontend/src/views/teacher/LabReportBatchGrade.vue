@@ -30,7 +30,7 @@
     <el-empty v-if="!loading && !detail" description="未获取到报告详情" />
 
     <template v-else>
-      <BehaviorSummaryCard v-if="detail" :submission-id="reportId" />
+      <BehaviorSummaryCard v-if="detail" :submission-id="reportId" :step-list="stepList" />
 
       <section class="batch-grade-panel">
       <div class="batch-grade-panel__header">
@@ -108,6 +108,7 @@ import { ElMessage } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
+import type { StepBrief } from './components/BehaviorSummaryCard.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
 
@@ -123,6 +124,17 @@ const gradeFormMap = reactive<Record<string, { answerId: number; score: number; 
 
 const reportId = computed(() => Number(route.params.id));
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
+
+/** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
+const stepList = computed<StepBrief[]>(() =>
+  answerItems.value
+    .filter((i) => i.stepId != null && i.stepNo != null)
+    .map((i) => ({
+      stepId: i.stepId!,
+      stepNo: i.stepNo!,
+      title: i.stepTitle || i.title || '',
+    })),
+);
 const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
 const computedTotalScore = computed(() => answerItems.value.reduce((sum, item) => sum + (gradeFormMap[gradeKey(item)]?.score ?? 0), 0));
 const reportQueue = computed(() => sortReports(reports.value));

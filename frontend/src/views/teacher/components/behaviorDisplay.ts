@@ -197,3 +197,23 @@ export const behaviorEventPayloadSummary = (item: LabBehaviorTimelineItem): stri
 /** 时间线时间格式化（复用队列页口径：yyyy-MM-dd hh:mm） */
 export const formatBehaviorTime = (value?: string | null): string =>
   value ? value.replace('T', ' ').slice(0, 19) : '-';
+
+/**
+ * 逐题停留紧凑格式："5min 30s" / "45s"；null 或 0 返回 null（表示无有效停留，
+ * 由调用方决定是否显示 "—" 或跳过标记）。
+ *
+ * 与 formatBehaviorDuration（"h:mm:ss" 摘要口径）并存：前者适合
+ * 逐题对比面板，后者适合行列摘要。
+ */
+export const formatStepDwell = (ms: number | null | undefined): string | null => {
+  if (ms == null || ms <= 0) {
+    return null;
+  }
+  const totalSeconds = Math.floor(ms / 1000);
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds === 0 ? `${minutes}min` : `${minutes}min ${seconds}s`;
+};

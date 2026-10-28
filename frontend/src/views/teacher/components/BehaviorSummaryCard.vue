@@ -26,7 +26,12 @@
         <article class="behavior-metric">
           <span class="behavior-metric__label">活跃时长</span>
           <strong>{{ formatActiveDuration(metrics) }}</strong>
-          <small>心跳累计 · 会话数 {{ metrics.sessionCount }}</small>
+          <small>心跳累计</small>
+        </article>
+        <article class="behavior-metric">
+          <span class="behavior-metric__label">会话数</span>
+          <strong>{{ metrics.sessionCount }}</strong>
+          <small>断续作答次数（LAB_ENTER 计数）</small>
         </article>
         <article class="behavior-metric">
           <span class="behavior-metric__label">保存次数</span>
@@ -36,12 +41,23 @@
         <article class="behavior-metric">
           <span class="behavior-metric__label">粘贴</span>
           <strong>{{ metrics.pasteCount }} 次 · {{ metrics.pastedChars }} 字符</strong>
-          <small>含被禁止题目的粘贴尝试</small>
+          <small
+            v-if="metrics.pasteBlockedCount > 0"
+            class="behavior-metric__subtext--warn"
+          >
+            含 {{ metrics.pasteBlockedCount }} 次禁止粘贴题的尝试
+          </small>
+          <small v-else>含被禁止题目的粘贴尝试</small>
         </article>
         <article class="behavior-metric">
           <span class="behavior-metric__label">切屏</span>
           <strong>{{ metrics.hiddenCount }} 次 · {{ formatBehaviorDuration(metrics.hiddenMs) }}</strong>
           <small>页面切到后台的次数与时长</small>
+        </article>
+        <article class="behavior-metric">
+          <span class="behavior-metric__label">失焦</span>
+          <strong>{{ metrics.blurCount }} 次</strong>
+          <small>浏览器内切换到其他标签页</small>
         </article>
         <article class="behavior-metric">
           <span class="behavior-metric__label">计算时间</span>
@@ -56,6 +72,8 @@
       v-model="drawerVisible"
       :timeline="detail?.timeline ?? []"
       :total="detail?.timelineTotal ?? 0"
+      :step-dwell-ms="detail?.metrics?.stepDwellMs ?? {}"
+      :step-list="stepList"
     />
   </section>
 </template>
@@ -76,9 +94,22 @@ import {
 } from './behaviorDisplay';
 import BehaviorTimelineDrawer from './BehaviorTimelineDrawer.vue';
 
+/**
+ * 题项简要结构（stepId → stepNo/title 映射用，D2）。
+ * 两个使用点（LabReportDetail / LabReportBatchGrade）都已有完整 step 列表，
+ * 按需通过 step-list prop 传入；不传时 Drawer 的 Step Dwell 面板按 stepId 兜底展示。
+ */
+export interface StepBrief {
+  stepId: number;
+  stepNo: number;
+  title: string;
+}
+
 const props = defineProps<{
   /** 报告（提交）ID，即 behavior 详情接口路径参数 */
   submissionId: number;
+  /** 可选：题项列表，用于 Step Dwell 面板 stepId → stepNo/title 映射 */
+  stepList?: StepBrief[];
 }>();
 
 const loading = ref(false);
@@ -155,9 +186,10 @@ onMounted(() => {
   opacity: 0.65;
 }
 
+/* 8 指标卡 4×2 网格（D1-D8 对齐） */
 .behavior-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -189,6 +221,11 @@ onMounted(() => {
   font-size: 11px;
   color: #94a3b8;
   line-height: 1.4;
+}
+
+.behavior-metric__subtext--warn {
+  color: #b45309;
+  font-weight: 600;
 }
 
 @media (max-width: 1180px) {

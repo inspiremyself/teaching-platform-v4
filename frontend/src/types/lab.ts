@@ -183,9 +183,13 @@ export interface LabReportBehavior {
   saveCount: number;
   pasteCount: number;
   pastedChars: number;
+  /** 粘贴被禁题上的粘贴尝试次数（metrics.paste_blocked_count 增量暴露，D3） */
+  pasteBlockedCount: number;
   hiddenCount: number;
   hiddenMs: number;
-  /** 作答会话数（LAB_ENTER 计数，D17①），活跃时长列展示 `{active} · {n}次` */
+  /** 窗口失焦次数（metrics.blur_count 增量暴露，D3） */
+  blurCount: number;
+  /** 作答会话数（LAB_ENTER 计数，D17①） */
   sessionCount: number;
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
   riskFlags: string[];
