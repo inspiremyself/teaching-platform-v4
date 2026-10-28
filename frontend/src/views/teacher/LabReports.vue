@@ -147,40 +147,6 @@
               <span :class="['priority-pill', `priority-pill--${priorityTone(row)}`]">{{ priorityLabel(row) }}</span>
             </div>
 
-            <div class="report-row__behavior">
-              <div class="behavior-cell">
-                <span class="behavior-cell__label">作答时长</span>
-                <el-tooltip v-if="row.behavior?.durationOpen" content="进行中，截至最近事件" placement="top">
-                  <strong>{{ formatTotalDuration(row.behavior) }}</strong>
-                </el-tooltip>
-                <strong v-else>{{ row.behavior ? formatTotalDuration(row.behavior) : '-' }}</strong>
-              </div>
-              <div class="behavior-cell">
-                <span class="behavior-cell__label">活跃时长</span>
-                <strong>{{ row.behavior ? formatActiveDuration(row.behavior) : '-' }}</strong>
-              </div>
-              <div class="behavior-cell">
-                <span class="behavior-cell__label">保存次数</span>
-                <strong>{{ row.behavior ? row.behavior.saveCount : '-' }}</strong>
-              </div>
-              <div class="behavior-cell">
-                <span class="behavior-cell__label">粘贴</span>
-                <strong>{{ row.behavior ? `${row.behavior.pasteCount}次 · ${row.behavior.pastedChars}字符` : '-' }}</strong>
-              </div>
-              <div class="behavior-cell">
-                <span class="behavior-cell__label">切屏</span>
-                <strong>{{ row.behavior ? `${row.behavior.hiddenCount}次 · ${formatBehaviorDuration(row.behavior.hiddenMs)}` : '-' }}</strong>
-              </div>
-              <div class="behavior-cell">
-                <span class="behavior-cell__label">风险</span>
-                <el-tooltip :content="riskTagTooltip(row.behavior)" placement="top">
-                  <el-tag :type="riskTagType(row.behavior)" size="small" effect="light" :class="{ 'risk-tag--muted': hasNoBehaviorData(row.behavior) }">
-                    {{ riskTagLabel(row.behavior) }}
-                  </el-tag>
-                </el-tooltip>
-              </div>
-            </div>
-
             <div class="report-row__actions">
               <el-button plain @click="openReportView(row)">实验报告</el-button>
               <el-button type="primary" plain @click="goBatchGrade(row.id)">
@@ -213,6 +179,40 @@
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
+            </div>
+
+            <div class="report-row__behavior">
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">作答时长</span>
+                <el-tooltip v-if="row.behavior?.durationOpen" content="进行中，截至最近事件" placement="top">
+                  <strong>{{ formatTotalDuration(row.behavior) }}</strong>
+                </el-tooltip>
+                <strong v-else>{{ row.behavior ? formatTotalDuration(row.behavior) : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">活跃时长</span>
+                <strong>{{ row.behavior ? formatActiveDuration(row.behavior) : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">保存次数</span>
+                <strong>{{ row.behavior ? row.behavior.saveCount : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">粘贴</span>
+                <strong>{{ row.behavior ? `${row.behavior.pasteCount}次 · ${row.behavior.pastedChars}字符` : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">切屏</span>
+                <strong>{{ row.behavior ? `${row.behavior.hiddenCount}次 · ${formatBehaviorDuration(row.behavior.hiddenMs)}` : '-' }}</strong>
+              </div>
+              <div class="behavior-cell">
+                <span class="behavior-cell__label">风险</span>
+                <el-tooltip :content="riskTagTooltip(row.behavior)" placement="top">
+                  <el-tag :type="riskTagType(row.behavior)" size="small" effect="light" :class="{ 'risk-tag--muted': hasNoBehaviorData(row.behavior) }">
+                    {{ riskTagLabel(row.behavior) }}
+                  </el-tag>
+                </el-tooltip>
+              </div>
             </div>
           </article>
         </template>
