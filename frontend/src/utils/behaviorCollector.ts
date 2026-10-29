@@ -5,7 +5,8 @@
  * - 队列缓冲，5s 定时或满 20 条批量发送；正常发送走 request.ts（统一鉴权/拦截/解包）；
  * - 卸载/切后台兜底用 fetch keepalive 带完整 Authorization 头——不使用 sendBeacon
  *   （sendBeacon 无法带自定义头，会造出无鉴权写入通道，D12）；
- * - eventUuid 用 crypto.randomUUID()，失败重试 ≤3 次复用原 uuid，服务端按 uuid 幂等；
+ * - eventUuid 用 newEventUuid() 生成（crypto.randomUUID 仅在安全上下文可用，
+ *   非 secure context 降级到 getRandomValues / Math.random），服务端按 uuid 幂等；
  * - 浏览器直接关闭时组件 onBeforeUnmount 不执行：LAB_LEAVE{reason:"unload"} 与
  *   末段不满 60s 的尾部心跳由 beforeunload 钩子内部补发（D17②）；
  * - 收到 closed:true（作答中途实验被关闭）立即停采并丢弃后续事件（D16 配对行为）。
@@ -45,12 +46,38 @@ const state = {
   hiddenAt: null as number | null,
 };
 
+/**
+ * 生成事件幂等 UUID（RFC 4122 v4）。
+ * crypto.randomUUID 只在安全上下文（https / localhost）提供，通过内网 IP、隧道或旧内核
+ * 访问时为 undefined；此时降级到 crypto.getRandomValues，再兜底 Math.random，
+ * 保证埋点永远不会中断提交等主流程。
+ */
+const newEventUuid = (): string => {
+  const webCrypto = typeof crypto !== 'undefined' ? crypto : undefined;
+  if (webCrypto && typeof webCrypto.randomUUID === 'function') {
+    return webCrypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  if (webCrypto && typeof webCrypto.getRandomValues === 'function') {
+    webCrypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  // 版本位固定为 4，变体位固定为 10xx
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16)}`;
+};
+
 const enqueue = (eventType: LabBehaviorEventType, payload?: Record<string, unknown>, stepId?: number | null) => {
   if (!state.started || state.closed) {
     return;
   }
   const item: LabBehaviorEventItem = {
-    eventUuid: crypto.randomUUID(),
+    eventUuid: newEventUuid(),
     eventType,
     occurredAt: new Date().toISOString(),
     stepId: stepId ?? null,
