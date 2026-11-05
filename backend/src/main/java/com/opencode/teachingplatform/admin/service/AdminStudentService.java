@@ -68,6 +68,7 @@ public class AdminStudentService {
         }
         return classMemberRepository.findByClassIdIn(classIds).stream()
                 .map(member -> toView(member.getStudentUserId(), member.getClassId()))
+                .sorted(java.util.Comparator.comparing(m -> (String) m.get("username")))
                 .toList();
     }
 

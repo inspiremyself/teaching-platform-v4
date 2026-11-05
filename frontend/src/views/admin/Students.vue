@@ -96,11 +96,16 @@
     <el-dialog v-model="resetDialogVisible" title="重置密码" width="420px" destroy-on-close>
       <el-alert
         v-if="resetTarget"
-        type="info"
+        type="error"
         :closable="false"
         show-icon
-        :title="`学生「${resetTarget.displayName}（${resetTarget.username}）」`"
-      />
+        title="即将修改以下学生的密码，请再次确认"
+      >
+        <div class="reset-confirm-name">
+          <strong>{{ resetTarget.displayName }}</strong>
+          <span class="reset-confirm-username">账号 {{ resetTarget.username }}</span>
+        </div>
+      </el-alert>
       <el-form label-position="top" style="margin-top: 12px">
         <el-form-item label="新密码" for="admin-student-reset-password" required>
           <el-input
@@ -243,16 +248,18 @@ const resetPasswordForm = reactive({
 
 const filteredRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
-  return rows.value.filter(row => {
-    const matchesKeyword =
-      !keyword ||
-      row.username.toLowerCase().includes(keyword) ||
-      row.displayName.toLowerCase().includes(keyword) ||
-      (row.className?.toLowerCase().includes(keyword) ?? false) ||
-      (row.classCode?.toLowerCase().includes(keyword) ?? false);
-    const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
-    return matchesKeyword && matchesStatus;
-  });
+  return rows.value
+    .filter(row => {
+      const matchesKeyword =
+        !keyword ||
+        row.username.toLowerCase().includes(keyword) ||
+        row.displayName.toLowerCase().includes(keyword) ||
+        (row.className?.toLowerCase().includes(keyword) ?? false) ||
+        (row.classCode?.toLowerCase().includes(keyword) ?? false);
+      const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
+      return matchesKeyword && matchesStatus;
+    })
+    .sort((a, b) => a.username.localeCompare(b.username));
 });
 
 const activeCount = computed(() => filteredRows.value.filter(item => item.status === 'ACTIVE').length);
@@ -425,7 +432,11 @@ const submitReset = async () => {
     return;
   }
   try {
-    await ElMessageBox.confirm('确认将该学生的密码重置为新密码？', '重置密码', { type: 'warning' });
+    await ElMessageBox.confirm(
+      `确认将学生「${resetTarget.value.username} ${resetTarget.value.displayName}」的密码重置为新密码？`,
+      '重置密码',
+      { type: 'warning' }
+    );
   } catch {
     return;
   }
@@ -433,7 +444,7 @@ const submitReset = async () => {
   resetSubmitting.value = true;
   try {
     await resetAdminStudentPassword(resetTarget.value.id, { password });
-    ElMessage.success('密码已重置');
+    ElMessage.success(`已把 ${resetTarget.value.username} ${resetTarget.value.displayName} 的密码重置`);
     resetDialogVisible.value = false;
   } finally {
     resetSubmitting.value = false;
@@ -483,6 +494,23 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.reset-confirm-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.reset-confirm-name strong {
+  font-size: 16px;
+  color: var(--el-text-color-primary);
+}
+
+.reset-confirm-username {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
 .admin-eyebrow {
   margin-bottom: 2px;
   color: var(--primary-color);
