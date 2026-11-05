@@ -35,13 +35,13 @@ instance.interceptors.response.use(
   response => {
     const res = response.data;
     if (res.code !== 0) {
-      if (res.code !== 40901) {
+      if (res.code !== 40901 && res.code !== 40101 && res.code !== 40103) {
         ElMessage.error(res.message || '请求失败');
       }
       if (res.code === 40102) {
         sessionStorage.setItem(KICKED_OUT_NOTICE_KEY, res.message || '账号已在其他设备登录，请重新登录');
       }
-      if (res.code === 401 || res.code === 40100 || res.code === 40101) {
+      if (res.code === 401 || res.code === 40100) {
         const authStore = useAuthStore();
         authStore.logout();
         window.location.href = '/login';
@@ -53,13 +53,13 @@ instance.interceptors.response.use(
   error => {
     const responseData = error.response?.data;
     if (responseData && typeof responseData.code === 'number') {
-      if (responseData.code !== 40901) {
+      if (responseData.code !== 40901 && responseData.code !== 40101 && responseData.code !== 40103) {
         ElMessage.error(responseData.message || '请求失败');
       }
       if (responseData.code === 40102) {
         sessionStorage.setItem(KICKED_OUT_NOTICE_KEY, responseData.message || '账号已在其他设备登录，请重新登录');
       }
-      if ([401, 40100, 40101, 40102].includes(responseData.code)) {
+      if ([401, 40100, 40102].includes(responseData.code)) {
         const authStore = useAuthStore();
         authStore.logout();
         window.location.href = '/login';

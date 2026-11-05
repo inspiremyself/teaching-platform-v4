@@ -94,6 +94,12 @@ import { ApiError } from '@/utils/request';
 
 const KICKED_OUT_NOTICE_KEY = 'kicked_out_notice';
 
+const LOGIN_ERROR_MAP: Record<number, string> = {
+  40101: '用户名、密码或角色错误',
+  40103: '账号已停用，如有疑问请联系学校管理员',
+  40901: '该账号已在其他设备登录，继续登录将使旧设备下线'
+};
+
 const authStore = useAuthStore();
 const router = useRouter();
 const formRef = ref<FormInstance>();
@@ -125,7 +131,7 @@ const isMessageBoxCancel = (value: unknown) => value === 'cancel' || value === '
 
 const resolveLoginError = (error: unknown) => {
   if (error instanceof ApiError) {
-    return error.message || '登录失败，请检查账号、密码和当前身份是否正确';
+    return LOGIN_ERROR_MAP[error.code] || error.message || '登录失败，请检查账号、密码和当前身份是否正确';
   }
   const message = error instanceof Error ? error.message : '';
   return /status code 400/i.test(message)

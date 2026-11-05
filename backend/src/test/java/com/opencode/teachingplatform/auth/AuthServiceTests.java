@@ -84,8 +84,8 @@ class AuthServiceTests {
 
         BusinessException exception = assertThrows(BusinessException.class, () -> authService.login(new LoginRequest("t9001", "123456", UserRole.TEACHER)));
 
-        assertEquals(40101, exception.getCode());
-        assertEquals("用户名、密码或角色错误", exception.getMessage());
+        assertEquals(40103, exception.getCode());
+        assertEquals("该账号已被停用，请联系管理员", exception.getMessage());
         verify(auditLogService).logSecurity(argThat(event ->
                 event.action() == AuditAction.LOGIN_FAILURE && event.userId() != null));
     }

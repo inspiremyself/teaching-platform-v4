@@ -36,6 +36,8 @@ public class AuthService {
     private static final String LOGIN_ERROR_MESSAGE = "用户名、密码或角色错误";
     private static final int LOGIN_CONFLICT_CODE = 40901;
     private static final String LOGIN_CONFLICT_MESSAGE = "该账号已在其他设备登录，继续登录将使旧设备下线";
+    private static final int LOGIN_DISABLED_CODE = 40103;
+    private static final String LOGIN_DISABLED_MESSAGE = "该账号已被停用，请联系管理员";
 
     private final SysUserRepository sysUserRepository;
     private final UserLoginSessionRepository userLoginSessionRepository;
@@ -70,7 +72,7 @@ public class AuthService {
         SysUser user = optionalUser.get();
         if (user.getStatus() != UserStatus.ACTIVE) {
             logLoginFailure(user.getId(), user.getSchoolId(), request);
-            throw new BusinessException(LOGIN_ERROR_CODE, LOGIN_ERROR_MESSAGE);
+            throw new BusinessException(LOGIN_DISABLED_CODE, LOGIN_DISABLED_MESSAGE);
         }
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash().replace("{noop}", ""))) {
             logLoginFailure(user.getId(), user.getSchoolId(), request);

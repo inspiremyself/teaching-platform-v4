@@ -240,7 +240,7 @@ class AuthControllerTests {
     @Test
     void disabledUserCannotLogin() throws Exception {
         when(authService.login(any(com.opencode.teachingplatform.auth.dto.LoginRequest.class)))
-                .thenThrow(new com.opencode.teachingplatform.common.exception.BusinessException(40101, "用户名、密码或角色错误"));
+                .thenThrow(new com.opencode.teachingplatform.common.exception.BusinessException(40103, "该账号已被停用，请联系管理员"));
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -252,8 +252,8 @@ class AuthControllerTests {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(40101))
-                .andExpect(jsonPath("$.message").value("用户名、密码或角色错误"));
+                .andExpect(jsonPath("$.code").value(40103))
+                .andExpect(jsonPath("$.message").value("该账号已被停用，请联系管理员"));
     }
 
     @Test
