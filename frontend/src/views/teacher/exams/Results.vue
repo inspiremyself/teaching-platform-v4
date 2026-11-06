@@ -45,9 +45,9 @@
         <div class="queue-filter-row">
           <el-select v-model="statusFilter" clearable placeholder="全部状态">
             <el-option label="进行中" value="IN_PROGRESS" />
-            <el-option label="已提交" value="SUBMITTED" />
+            <el-option label="待评分" value="SUBMITTED" />
             <el-option label="已评分" value="GRADED" />
-            <el-option label="超时" value="TIMEOUT" />
+            <el-option label="超时提交" value="AUTO_SUBMITTED" />
           </el-select>
         </div>
 
@@ -162,10 +162,10 @@
                   <span>建议分 {{ formatScore(answer.suggestedScore) }}，当前 {{ formatScore(answer.score) }}</span>
                   <span>{{ answer.judgeDetail || '当前无自动判题说明。' }}</span>
                   <div class="manual-grade-box__row">
-                    <button class="action-panel__secondary" type="button" :disabled="detail?.status === 'GRADED'" @click="confirmAnswer(answer.questionId, true)">
+                    <button class="action-panel__secondary" type="button" :disabled="!detail" @click="confirmAnswer(answer.questionId, true)">
                       采纳推荐分
                     </button>
-                    <button class="action-panel__secondary" type="button" :disabled="detail?.status === 'GRADED'" @click="confirmAnswer(answer.questionId, false)">
+                    <button class="action-panel__secondary" type="button" :disabled="!detail" @click="confirmAnswer(answer.questionId, false)">
                       按当前分确认
                     </button>
                   </div>
@@ -214,7 +214,7 @@
             title="当前答卷已评分完成，如需验证保存链路请切换到待评分答卷。"
             class="grading-readonly-alert"
           />
-          <button class="action-panel__primary" type="button" :disabled="!detail || detail.status === 'GRADED'" :loading="false" @click="submitGrade">
+          <button class="action-panel__primary" type="button" :disabled="!detail || detail.status === 'GRADED' || submitting" @click="submitGrade">
             <span class="material-symbols-outlined">save</span>
             保存评分
           </button>
@@ -268,7 +268,7 @@ const filteredRows = computed(() => {
   })
 })
 
-const pendingCount = computed(() => rows.value.filter(row => row.status === 'SUBMITTED' || row.status === 'TIMEOUT').length)
+const pendingCount = computed(() => rows.value.filter(row => row.status === 'SUBMITTED' || row.status === 'AUTO_SUBMITTED').length)
 const gradedCount = computed(() => rows.value.filter(row => row.status === 'GRADED').length)
 const activeRow = computed(() => rows.value.find(row => row.submissionId === activeSubmissionId.value) ?? null)
 const activeStudentLabel = computed(() => activeRow.value?.studentName ?? '尚未选择')
@@ -348,7 +348,7 @@ const selectSubmission = async (row: ExamSubmissionListItem) => {
 }
 
 const submitGrade = async () => {
-  if (!detail.value) {
+  if (!detail.value || submitting.value) {
     return
   }
   submitting.value = true
@@ -395,14 +395,14 @@ const submissionStatusLabel = (status: string) => {
   if (status === 'IN_PROGRESS') return '进行中'
   if (status === 'SUBMITTED') return '待评分'
   if (status === 'GRADED') return '已评分'
-  if (status === 'TIMEOUT') return '超时提交'
+  if (status === 'AUTO_SUBMITTED') return '超时提交'
   return status || '未知'
 }
 
 const submissionStatusTone = (status: string) => {
   if (status === 'GRADED') return 'success'
   if (status === 'SUBMITTED') return 'warning'
-  if (status === 'TIMEOUT') return 'danger'
+  if (status === 'AUTO_SUBMITTED') return 'danger'
   return 'info'
 }
 
@@ -429,16 +429,77 @@ const questionStatusLabel = (answer: ExamAnswerDetail) => {
 
 const formatScore = (score: number | null | undefined) => (typeof score === 'number' ? String(score) : '-')
 
-const formatDisplayAnswer = (value: string | null) => {
-  if (!value) {
-    return '未作答'
+/** 判断题真值集合，与 PRD FR-3 约定保持一致（大小写经 toUpperCase 归一） */
+const JUDGE_TRUE_VALUES = new Set(['TRUE'])
+const JUDGE_FALSE_VALUES = new Set(['FALSE'])
+
+/** 判断是否为普通对象（排除数组与 null） */
+const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/**
+ * 将任意答案节点压平成可读文本。
+ * 数组按“，”连接；对象优先取 answer/text/value/answerText/selectedKey/code。
+ */
+const toScalarText = (value: unknown): string => {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'string') return value.trim()
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) {
+    return value.map(toScalarText).filter(Boolean).join('，')
   }
-  try {
-    const parsed = JSON.parse(value)
-    if (Array.isArray(parsed)) {
-      return parsed.join('，')
+  if (isPlainRecord(value)) {
+    for (const key of ['answer', 'text', 'value', 'answerText', 'selectedKey', 'code']) {
+      const text = toScalarText(value[key])
+      if (text) return text
     }
-    return String(parsed)
+  }
+  return ''
+}
+
+/**
+ * 按 kind 解析学生答案；无 kind 时按标准答案字段兜底。
+ * 返回空字符串表示无可读内容，由调用方统一转“未作答”。
+ */
+const formatAnswerNode = (node: unknown): string => {
+  if (node === null || node === undefined) return ''
+  if (!isPlainRecord(node)) return toScalarText(node)
+
+  const kind = typeof node.kind === 'string' ? node.kind : ''
+  if (kind === 'single') return toScalarText(node.selectedKey)
+  if (kind === 'multiple') return toScalarText(node.selectedKeys)
+  if (kind === 'judge') {
+    const raw = String(node.value ?? '').trim().toUpperCase()
+    if (JUDGE_TRUE_VALUES.has(raw)) return '正确'
+    if (JUDGE_FALSE_VALUES.has(raw)) return '错误'
+    return toScalarText(node.value)
+  }
+  if (kind === 'fill') return toScalarText(node.blanks)
+  if (kind === 'code') return toScalarText(node.code)
+  if (kind === 'text') return toScalarText(node.text ?? node.answer ?? node.answerText)
+
+  // 标准答案形态（PRD FR-3 规则 5）：按顺序取第一个非空字段；
+  // 该字段无法压平为标量时，原样输出该字段的 JSON 字符串，继续向后兜底
+  for (const key of ['correctAnswer', 'correct', 'answer', 'answers', 'blanks', 'selectedKey', 'selectedKeys']) {
+    const field = node[key]
+    if (field === undefined || field === null) continue
+    if (Array.isArray(field) && field.length === 0) continue
+    if (typeof field === 'string' && !field.trim()) continue
+    const text = toScalarText(field)
+    if (text) return text
+    const rawField = JSON.stringify(field)
+    if (rawField && rawField !== '{}') return rawField
+  }
+  // 无任何可读字段时原样输出对象 JSON，禁止 [object Object]
+  const rawNode = JSON.stringify(node)
+  return rawNode && rawNode !== '{}' ? rawNode : ''
+}
+
+/** 批改页答案展示：空值与不可读内容统一显示“未作答” */
+const formatDisplayAnswer = (value: string | null): string => {
+  if (!value || !value.trim()) return '未作答'
+  try {
+    return formatAnswerNode(JSON.parse(value)) || '未作答'
   } catch {
     return value
   }

@@ -462,6 +462,10 @@ public class ExamService {
             throw new BusinessException(40000, "考试已提交，不能重复提交");
         }
 
+        // 2.1 Load exam once for status override and score visibility checks
+        Exam exam = examRepository.findById(examId)
+                .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
+
         // 3. Determine status based on deadline
         OffsetDateTime now = OffsetDateTime.now();
         if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt())) {
@@ -532,15 +536,17 @@ public class ExamService {
             examAnswerRepository.save(answer);
         }
 
-        // 7-9. Set scores and timestamps
+        // 7-9. Set scores and timestamps; objective-only submissions are finalized on submit
         submission.setAutoScore(autoScore);
         submission.setManualScore(0.0);
         submission.setTotalScore(autoScore);
         submission.setSubmittedAt(now);
+        if (!hasManualGrading) {
+            submission.setStatus(ExamSubmissionStatus.GRADED);
+        }
         examSubmissionRepository.save(submission);
 
-        if (!hasManualGrading && canStudentSeeScore(examRepository.findById(examId)
-                .orElseThrow(() -> new BusinessException(40400, "考试不存在")), submission)) {
+        if (!hasManualGrading && canStudentSeeScore(exam, submission)) {
             upsertScoreRecord(examId, submission, autoScore);
         }
 
@@ -713,6 +719,11 @@ public class ExamService {
                 aMap.put("studentAnswer", ea.getAnswerJson());
                 aMap.put("isCorrect", ea.getIsCorrect());
                 aMap.put("score", ea.getScore());
+                aMap.put("autoScore", ea.getAutoScore());
+                aMap.put("suggestedScore", ea.getSuggestedScore());
+                aMap.put("scoreSource", ea.getScoreSource());
+                aMap.put("judgeDetail", ea.getJudgeDetail());
+                aMap.put("acceptedAutoScore", ea.isAcceptedAutoScore());
                 aMap.put("teacherComment", ea.getTeacherComment());
             }
 
@@ -755,8 +766,11 @@ public class ExamService {
             throw new BusinessException(40000, "当前状态不允许批改");
         }
 
-        // Update subjective question scores
-        for (ExamRequests.GradeExamAnswerItem item : request.answers()) {
+        // Update subjective question scores; empty/null answers only trigger a recompute below
+        List<ExamRequests.GradeExamAnswerItem> items = request.answers() == null
+                ? List.of()
+                : request.answers();
+        for (ExamRequests.GradeExamAnswerItem item : items) {
             ExamAnswer answer = examAnswerRepository.findByExamSubmissionIdAndQuestionId(submissionId, item.questionId())
                     .orElseThrow(() -> new BusinessException(40400, "答题记录不存在: questionId=" + item.questionId()));
 

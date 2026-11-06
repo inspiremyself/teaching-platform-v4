@@ -292,6 +292,72 @@ class ExamTeacherControllerTests {
         }
     }
 
+    @Test
+    void teacherCanGradeSubmissionWithEmptyAnswers() throws Exception {
+        Map<String, Object> gradeResult = new LinkedHashMap<>();
+        gradeResult.put("submissionId", 100);
+        gradeResult.put("status", "GRADED");
+        gradeResult.put("autoScore", 5.0);
+        gradeResult.put("manualScore", 0.0);
+        gradeResult.put("totalScore", 5.0);
+
+        when(examService.gradeSubmission(any(CurrentUser.class), eq(100L), any(ExamRequests.GradeExamSubmissionRequest.class)))
+                .thenReturn(gradeResult);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/exam-submissions/{id}/grade", 100L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "answers": []
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.status").value("GRADED"))
+                    .andExpect(jsonPath("$.data.totalScore").value(5.0));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherSubmissionDetailExposesScoringMetadata() throws Exception {
+        Map<String, Object> answer = new LinkedHashMap<>();
+        answer.put("questionId", 1);
+        answer.put("studentAnswer", "{\"kind\":\"single\",\"selectedKey\":\"A\"}");
+        answer.put("isCorrect", true);
+        answer.put("score", 5.0);
+        answer.put("autoScore", 5.0);
+        answer.put("suggestedScore", 5.0);
+        answer.put("scoreSource", "AUTO");
+        answer.put("judgeDetail", "matched");
+        answer.put("acceptedAutoScore", true);
+        answer.put("teacherComment", null);
+
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("submissionId", 100);
+        detail.put("status", "GRADED");
+        detail.put("answers", List.of(answer));
+
+        when(examService.getSubmissionDetail(any(CurrentUser.class), eq(100L))).thenReturn(detail);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/teacher/exam-submissions/{id}", 100L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.answers[0].autoScore").value(5.0))
+                    .andExpect(jsonPath("$.data.answers[0].suggestedScore").value(5.0))
+                    .andExpect(jsonPath("$.data.answers[0].scoreSource").value("AUTO"))
+                    .andExpect(jsonPath("$.data.answers[0].judgeDetail").value("matched"))
+                    .andExpect(jsonPath("$.data.answers[0].acceptedAutoScore").value(true));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
     private UsernamePasswordAuthenticationToken authenticateTeacher() {
         CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
         return new UsernamePasswordAuthenticationToken(

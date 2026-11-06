@@ -4,7 +4,6 @@ import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.OffsetDateTime;
@@ -85,8 +84,13 @@ public final class ExamRequests {
             String teacherComment
     ) {}
 
+    /**
+     * 批量人工评分入参。
+     * answers 允许为空数组或缺省：纯客观题答卷由交卷链路自动结案，
+     * 历史卡单可由教师触发一次空列表“保存评分”以重新计算并结案。
+     */
     public record GradeExamSubmissionRequest(
-            @NotEmpty List<GradeExamAnswerItem> answers
+            List<GradeExamAnswerItem> answers
     ) {}
 
     public record ConfirmExamAnswerRequest(

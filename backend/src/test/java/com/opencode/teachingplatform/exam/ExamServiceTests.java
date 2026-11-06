@@ -231,6 +231,16 @@ class ExamServiceTests {
                 .containsEntry("ACCEPTED_AUTO_SCORE", false);
         assertThat(((Number) rows.get(2).get("SUGGESTED_SCORE")).doubleValue()).isGreaterThanOrEqualTo(0.0);
         assertThat(rows.get(2).get("JUDGE_DETAIL")).asString().contains("matched");
+
+        // 含主观题的答卷不自动结案，也不写入共享成绩记录
+        entityManager.flush();
+        Integer scoreRecordCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM score_record WHERE business_type = 'EXAM' AND business_id = ? AND student_id = ?",
+                Integer.class,
+                examId,
+                student.id()
+        );
+        assertThat(scoreRecordCount).isZero();
     }
 
     @Test
@@ -805,6 +815,229 @@ class ExamServiceTests {
                 examId
         );
         assertThat(autoScore).isEqualTo(8.0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitObjectiveOnlyExamMarksGradedAndWritesScoreRecord() {
+        Long examId = createObjectiveOnlyExam(null);
+        startExamAndGetSubmissionId(examId);
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(student, examId,
+                submitObjectiveAnswers());
+        entityManager.flush();
+
+        assertThat(submitResult.get("status")).isEqualTo("GRADED");
+        assertThat(submitResult.get("hasManualGrading")).isEqualTo(false);
+        assertThat(((Number) submitResult.get("autoScore")).doubleValue()).isEqualTo(5.0);
+        assertThat(((Number) submitResult.get("totalScore")).doubleValue()).isEqualTo(5.0);
+        assertThat(countScoreRecords(examId)).isEqualTo(1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitObjectiveOnlyExamAfterDeadlineMarksGraded() {
+        Long examId = createObjectiveOnlyExam(null);
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        expireSubmissionDeadline(submissionId);
+
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(student, examId,
+                submitObjectiveAnswers());
+
+        assertThat(submitResult.get("status")).isEqualTo("GRADED");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitObjectiveOnlyExamUnderManualReleaseWritesNoScoreRecord() {
+        Long examId = createObjectiveOnlyExam(
+                com.opencode.teachingplatform.common.enums.ScoreVisibilityMode.MANUAL_RELEASE);
+        startExamAndGetSubmissionId(examId);
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(student, examId,
+                submitObjectiveAnswers());
+        entityManager.flush();
+
+        assertThat(submitResult.get("status")).isEqualTo("GRADED");
+        assertThat(countScoreRecords(examId)).isZero();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitObjectiveOnlyExamUnderImmediateVisibilityWritesScoreRecord() {
+        Long examId = createObjectiveOnlyExam(
+                com.opencode.teachingplatform.common.enums.ScoreVisibilityMode.IMMEDIATE);
+        startExamAndGetSubmissionId(examId);
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(student, examId,
+                submitObjectiveAnswers());
+        entityManager.flush();
+
+        assertThat(submitResult.get("status")).isEqualTo("GRADED");
+        Double recordScore = jdbcTemplate.queryForObject(
+                "SELECT score FROM score_record WHERE business_type = 'EXAM' AND business_id = ? AND student_id = ?",
+                Double.class,
+                examId,
+                student.id()
+        );
+        assertThat(recordScore).isEqualTo(((Number) submitResult.get("autoScore")).doubleValue());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void gradeSubmissionAcceptsEmptyAnswersForObjectiveOnlySubmission() {
+        Long examId = createObjectiveOnlyExam(null);
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, submitObjectiveAnswers());
+        resetSubmissionStatus(submissionId, "SUBMITTED");
+
+        Map<String, Object> gradeResult = (Map<String, Object>) examService.gradeSubmission(
+                teacher,
+                submissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of())
+        );
+
+        assertThat(gradeResult.get("status")).isEqualTo("GRADED");
+        assertThat(((Number) gradeResult.get("totalScore")).doubleValue()).isEqualTo(5.0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void gradeSubmissionEmptyAnswersKeepsSubmittedWhenSubjectiveUnscored() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, submitFullAnswers());
+
+        Map<String, Object> gradeResult = (Map<String, Object>) examService.gradeSubmission(
+                teacher,
+                submissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of())
+        );
+        entityManager.flush();
+
+        assertThat(gradeResult.get("status")).isEqualTo("SUBMITTED");
+        assertThat(countScoreRecords(examId)).isZero();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void gradeSubmissionEmptyAnswersDowngradesAutoSubmittedToSubmitted() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        expireSubmissionDeadline(submissionId);
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(student, examId, submitFullAnswers());
+        assertThat(submitResult.get("status")).isEqualTo("AUTO_SUBMITTED");
+
+        Map<String, Object> gradeResult = (Map<String, Object>) examService.gradeSubmission(
+                teacher,
+                submissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of())
+        );
+
+        assertThat(gradeResult.get("status")).isEqualTo("SUBMITTED");
+    }
+
+    @Test
+    void gradeSubmissionRejectsAlreadyGradedSubmission() {
+        Long examId = createObjectiveOnlyExam(null);
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, submitObjectiveAnswers());
+
+        assertThatThrownBy(() -> examService.gradeSubmission(
+                teacher,
+                submissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of())
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("当前状态不允许批改")
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40000);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void getSubmissionDetailIncludesScoringMetadata() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, submitFullAnswers());
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getSubmissionDetail(teacher, submissionId);
+        List<Map<String, Object>> answers = (List<Map<String, Object>>) detail.get("answers");
+        Map<String, Object> firstAnswer = null;
+        for (Map<String, Object> answer : answers) {
+            if (Long.valueOf(1L).equals(answer.get("questionId"))) {
+                firstAnswer = answer;
+                break;
+            }
+        }
+
+        assertThat(firstAnswer).isNotNull();
+        assertThat(firstAnswer).containsKeys("autoScore", "suggestedScore", "scoreSource", "judgeDetail", "acceptedAutoScore");
+        assertThat(((Number) firstAnswer.get("autoScore")).doubleValue()).isEqualTo(5.0);
+        assertThat(firstAnswer.get("scoreSource")).isEqualTo("AUTO");
+        assertThat(firstAnswer.get("acceptedAutoScore")).isEqualTo(true);
+        assertThat(firstAnswer.get("judgeDetail")).asString().contains("matched");
+    }
+
+    private ExamRequests.SubmitExamRequest submitObjectiveAnswers() {
+        return new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null)
+        ));
+    }
+
+    private ExamRequests.SubmitExamRequest submitFullAnswers() {
+        return new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(2L, List.of("true"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(3L, null, "统一错误处理与前端解析", null, null)
+        ));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Long startExamAndGetSubmissionId(Long examId) {
+        Map<String, Object> startResult = (Map<String, Object>) examService.startExam(student, examId);
+        return ((Number) startResult.get("submissionId")).longValue();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Long createObjectiveOnlyExam(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode mode) {
+        Map<String, Object> created = (Map<String, Object>) examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(
+                        "客观题考试-" + System.nanoTime(),
+                        "仅含单选题，用于自动结案测试",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(2),
+                        30,
+                        "PUBLISHED",
+                        mode,
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        null
+                )
+        );
+        return ((Number) created.get("id")).longValue();
+    }
+
+    /** 通过 JDBC 直改截止时间，模拟交卷时已超时；clear 后 service 重新加载实体 */
+    private void expireSubmissionDeadline(Long submissionId) {
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE exam_submission SET deadline_at = ? WHERE id = ?",
+                OffsetDateTime.now().minusMinutes(1), submissionId);
+        entityManager.clear();
+    }
+
+    /** 回写历史状态，模拟 TD1 上线前遗留的待评分卡单 */
+    private void resetSubmissionStatus(Long submissionId, String status) {
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE exam_submission SET status = ? WHERE id = ?", status, submissionId);
+        entityManager.clear();
+    }
+
+    private Integer countScoreRecords(Long examId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM score_record WHERE business_type = 'EXAM' AND business_id = ? AND student_id = ?",
+                Integer.class,
+                examId,
+                student.id()
+        );
     }
 
     private Long createDraftExam(boolean shuffleQuestions) {
