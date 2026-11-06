@@ -117,6 +117,7 @@ public class ExamService {
             // Student: show published exams, and also retain exams that already have a submission/result
             List<ClassMember> memberships = classMemberRepository.findByStudentUserId(currentUser.id());
             List<Map<String, Object>> result = new ArrayList<>();
+            OffsetDateTime now = OffsetDateTime.now();
             for (ClassMember membership : memberships) {
                 List<Exam> exams = examRepository.findByClassId(membership.getClassId());
                 for (Exam exam : exams) {
@@ -128,8 +129,13 @@ public class ExamService {
                         continue;
                     }
                     var classRoom = classRoomRepository.findById(exam.getClassId()).orElse(null);
-                    boolean canStart = submissionOpt.isEmpty();
-                    boolean canResume = submissionOpt.isPresent() && submissionOpt.get().getStatus() == ExamSubmissionStatus.IN_PROGRESS;
+                    boolean canStart = submissionOpt.isEmpty()
+                            && (exam.getStartAt() == null || !now.isBefore(exam.getStartAt()))
+                            && (exam.getEndAt() == null || now.isBefore(exam.getEndAt()));
+                    boolean canResume = submissionOpt.isPresent()
+                            && submissionOpt.get().getStatus() == ExamSubmissionStatus.IN_PROGRESS
+                            && (submissionOpt.get().getDeadlineAt() == null
+                                || !now.isAfter(submissionOpt.get().getDeadlineAt().plusSeconds(120)));
                     boolean canViewResult = submissionOpt.isPresent() && canStudentSeeScore(exam, submissionOpt.get());
 
                     Map<String, Object> map = new LinkedHashMap<>();
@@ -173,11 +179,12 @@ public class ExamService {
         exam.setShuffleQuestions(Boolean.TRUE.equals(request.shuffleQuestions()));
         exam.setCreatedBy(currentUser.id());
         assertBankQuestions(request.questions());
+        Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id());
         examRepository.save(exam);
 
         if (request.questions() != null) {
             for (ExamRequests.ExamQuestionItem item : request.questions()) {
-                examQuestionRepository.save(buildExamQuestion(exam.getId(), item));
+                examQuestionRepository.save(buildExamQuestion(exam.getId(), item, bankQuestions.get(item.questionId())));
             }
         }
 
@@ -202,6 +209,10 @@ public class ExamService {
 
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
 
+        // Validate question-bank ownership before any mutation so a 404 leaves the exam untouched.
+        assertBankQuestions(request.questions());
+        Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id());
+
         exam.setTitle(request.title());
         exam.setDescription(request.description());
         exam.setClassId(request.classId());
@@ -212,13 +223,12 @@ public class ExamService {
         if (request.shuffleQuestions() != null) {
             exam.setShuffleQuestions(request.shuffleQuestions());
         }
-        assertBankQuestions(request.questions());
         examRepository.save(exam);
 
         if (request.questions() != null) {
             examQuestionRepository.deleteByExamId(id);
             for (ExamRequests.ExamQuestionItem item : request.questions()) {
-                examQuestionRepository.save(buildExamQuestion(exam.getId(), item));
+                examQuestionRepository.save(buildExamQuestion(exam.getId(), item, bankQuestions.get(item.questionId())));
             }
         }
 
@@ -233,6 +243,10 @@ public class ExamService {
     public Object getExamDetail(CurrentUser currentUser, Long id) {
         Exam exam = examRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
+
+        if (currentUser.role() == UserRole.TEACHER && !exam.getCreatedBy().equals(currentUser.id())) {
+            throw new BusinessException(40300, "无权限查看该考试");
+        }
 
         if (currentUser.role() == UserRole.STUDENT) {
             if (exam.getStatus() != ActivityStatus.PUBLISHED && exam.getStatus() != ActivityStatus.CLOSED) {
@@ -415,25 +429,29 @@ public class ExamService {
         if (existingOpt.isPresent()) {
             ExamSubmission existing = existingOpt.get();
             if (existing.getStatus() == ExamSubmissionStatus.IN_PROGRESS) {
-                // Return existing in-progress submission
-                long remainingSeconds = 0;
-                if (existing.getDeadlineAt() != null) {
-                    remainingSeconds = Math.max(0, Duration.between(OffsetDateTime.now(), existing.getDeadlineAt()).getSeconds());
-                }
-                Map<String, Object> result = new LinkedHashMap<>();
-                result.put("submissionId", existing.getId());
-                result.put("deadlineAt", existing.getDeadlineAt());
-                result.put("remainingSeconds", remainingSeconds);
-                return result;
+                // Return existing in-progress submission without time-window check,
+                // so refreshing at the deadline can still trigger auto submission.
+                return buildStartResult(existing, OffsetDateTime.now());
             } else {
                 // SUBMITTED, AUTO_SUBMITTED, GRADED
                 throw new BusinessException(40000, "考试已提交，不能重新开始");
             }
         }
 
-        // Create new submission
+        // Validate time window only for a brand-new submission
         OffsetDateTime now = OffsetDateTime.now();
+        if (exam.getStartAt() != null && now.isBefore(exam.getStartAt())) {
+            throw new BusinessException(40000, "考试尚未开始");
+        }
+        if (exam.getEndAt() != null && !now.isBefore(exam.getEndAt())) {
+            throw new BusinessException(40000, "考试已结束");
+        }
+
+        // Create new submission, deadline capped by exam end time
         OffsetDateTime deadlineAt = now.plusMinutes(exam.getDurationMinutes());
+        if (exam.getEndAt() != null && deadlineAt.isAfter(exam.getEndAt())) {
+            deadlineAt = exam.getEndAt();
+        }
 
         ExamSubmission submission = new ExamSubmission();
         submission.setExamId(examId);
@@ -443,10 +461,20 @@ public class ExamService {
         submission.setStatus(ExamSubmissionStatus.IN_PROGRESS);
         examSubmissionRepository.save(submission);
 
-        long remainingSeconds = Duration.between(now, deadlineAt).getSeconds();
+        return buildStartResult(submission, now);
+    }
+
+    /**
+     * 构造开始考试响应体：统一计算剩余秒数，剩余时间不允许为负。
+     */
+    private Map<String, Object> buildStartResult(ExamSubmission submission, OffsetDateTime now) {
+        long remainingSeconds = 0;
+        if (submission.getDeadlineAt() != null) {
+            remainingSeconds = Math.max(0, Duration.between(now, submission.getDeadlineAt()).getSeconds());
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("submissionId", submission.getId());
-        result.put("deadlineAt", deadlineAt);
+        result.put("deadlineAt", submission.getDeadlineAt());
         result.put("remainingSeconds", remainingSeconds);
         return result;
     }
@@ -466,8 +494,14 @@ public class ExamService {
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
 
-        // 3. Determine status based on deadline
+        // 2.2 Reject submissions beyond the grace period before any write happens.
+        // Exam status is intentionally not checked: CLOSED must not override the deadline rule.
         OffsetDateTime now = OffsetDateTime.now();
+        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt().plusSeconds(120))) {
+            throw new BusinessException(40000, "考试已结束，无法提交");
+        }
+
+        // 3. Determine status based on deadline
         if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt())) {
             submission.setStatus(ExamSubmissionStatus.AUTO_SUBMITTED);
         } else {
@@ -929,9 +963,7 @@ public class ExamService {
         );
     }
 
-    private ExamQuestion buildExamQuestion(Long examId, ExamRequests.ExamQuestionItem item) {
-        QuestionBank questionBank = questionBankRepository.findById(item.questionId())
-                .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
+    private ExamQuestion buildExamQuestion(Long examId, ExamRequests.ExamQuestionItem item, QuestionBank questionBank) {
         ExamQuestion examQuestion = new ExamQuestion();
         examQuestion.setExamId(examId);
         examQuestion.setQuestionId(item.questionId());
@@ -939,6 +971,23 @@ public class ExamService {
         examQuestion.setQuestionScore(item.questionScore());
         examQuestion.setQuestionSnapshotJson(writeJson(toSnapshot(questionBank, item.sortOrder(), item.questionScore())));
         return examQuestion;
+    }
+
+    /**
+     * 逐项加载当前教师拥有的题库题目；缺失或非本人统一返回 404。
+     * 必须在写主表 / 批量删除题目之前调用，保证失败路径不产生任何写操作。
+     */
+    private Map<Long, QuestionBank> loadOwnedBankQuestions(List<ExamRequests.ExamQuestionItem> items, Long teacherId) {
+        Map<Long, QuestionBank> result = new LinkedHashMap<>();
+        if (items == null) {
+            return result;
+        }
+        for (ExamRequests.ExamQuestionItem item : items) {
+            QuestionBank bank = questionBankRepository.findByIdAndCreatedBy(item.questionId(), teacherId)
+                    .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
+            result.put(item.questionId(), bank);
+        }
+        return result;
     }
 
     /**

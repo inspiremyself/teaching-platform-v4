@@ -5,6 +5,7 @@ import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
 import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.homework.controller.HomeworkController;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
 import com.opencode.teachingplatform.homework.service.HomeworkService;
@@ -189,6 +190,30 @@ class HomeworkTeacherControllerTests {
                     .andExpect(jsonPath("$.data.id").value(11))
                     .andExpect(jsonPath("$.data.questionId").value(9))
                     .andExpect(jsonPath("$.data.sortOrder").value(1));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void addQuestionFromBankReturns404ForForeignQuestion() throws Exception {
+        when(homeworkService.addQuestionFromBank(any(CurrentUser.class), anyLong(), any(HomeworkRequests.AddHomeworkQuestionFromBankRequest.class)))
+                .thenThrow(new BusinessException(40400, "题库题目不存在"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homeworks/{id}/questions/bank", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "questionId": 9001,
+                                      "sortOrder": 1,
+                                      "questionScore": 10
+                                    }
+                                    """))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value(40400))
+                    .andExpect(jsonPath("$.message").value("题库题目不存在"));
         } finally {
             SecurityContextHolder.clearContext();
         }

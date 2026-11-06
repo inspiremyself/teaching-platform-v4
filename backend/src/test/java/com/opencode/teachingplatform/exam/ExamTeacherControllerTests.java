@@ -141,6 +141,70 @@ class ExamTeacherControllerTests {
     }
 
     @Test
+    void teacherCanReadOwnExamDetail() throws Exception {
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("id", -1);
+        detail.put("title", "体系结构阶段测验");
+        detail.put("className", "SE2026-1");
+        detail.put("questions", List.of(Map.of(
+                "questionId", 1,
+                "sortOrder", 1,
+                "questionScore", 5.0,
+                "type", "SINGLE",
+                "stem", "ApiResponse 的 code 字段含义？",
+                "answerJson", "[\"A\"]",
+                "analysisText", "code 为 0 表示成功"
+        )));
+
+        when(examService.getExamDetail(any(CurrentUser.class), eq(-1L))).thenReturn(detail);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/exams/{id}", -1L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.title").value("体系结构阶段测验"))
+                    .andExpect(jsonPath("$.data.questions.length()").value(1))
+                    .andExpect(jsonPath("$.data.questions[0].answerJson").value("[\"A\"]"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCannotReadAnotherTeachersExamDetail() throws Exception {
+        when(examService.getExamDetail(any(CurrentUser.class), eq(-2L)))
+                .thenThrow(new BusinessException(40300, "无权限查看该考试"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/exams/{id}", -2L))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value(40300))
+                    .andExpect(jsonPath("$.message").value("无权限查看该考试"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void schoolAdminCannotReadExamDetail() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        new CurrentUser(9L, "admin9001", "校管", UserRole.SCHOOL_ADMIN),
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_SCHOOL_ADMIN"))
+                )
+        );
+        try {
+            mockMvc.perform(get("/api/v1/exams/{id}", -1L))
+                    .andExpect(status().isForbidden());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCanListExamResults() throws Exception {
         List<Map<String, Object>> results = new ArrayList<>();
         Map<String, Object> item = new LinkedHashMap<>();

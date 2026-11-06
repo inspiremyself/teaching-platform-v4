@@ -946,6 +946,47 @@ class HomeworkServiceTests {
         assertThat(questionBankRepository.findById(bankQuestion.getId()).orElseThrow().getStem()).isEqualTo(originalStem);
     }
 
+    @Test
+    void addQuestionFromBankRejectsForeignQuestion() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "他人题库作业", ActivityStatus.DRAFT);
+
+        String foreignCode = "FOREIGN-Q-" + System.nanoTime();
+        // 显式指定主键，避免 H2 identity 与种子数据显式 ID 冲突
+        jdbcTemplate.update(
+                """
+                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, answer_json, created_by, created_at, updated_at)
+                VALUES (9002, ?, 'SINGLE', ?, 'MEDIUM', 5, '["A"]', 3, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
+                """,
+                foreignCode, "他人创建的题库题目"
+        );
+        Long foreignQuestionId = jdbcTemplate.queryForObject(
+                "SELECT id FROM question_bank WHERE code = ?", Long.class, foreignCode);
+        long before = homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(homework.getId()).size();
+
+        assertThatThrownBy(() -> homeworkService.addQuestionFromBank(teacher, homework.getId(),
+                new HomeworkRequests.AddHomeworkQuestionFromBankRequest(foreignQuestionId, 1, 5D)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("题库题目不存在");
+
+        assertThat(homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(homework.getId())).hasSize((int) before);
+    }
+
+    @Test
+    void addQuestionFromBankAcceptsOwnQuestion() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "本人题库作业", ActivityStatus.DRAFT);
+        QuestionBank ownQuestion = questionBankRepository.findById(1L).orElseThrow();
+
+        Map<String, Object> created = homeworkService.addQuestionFromBank(teacher, homework.getId(),
+                new HomeworkRequests.AddHomeworkQuestionFromBankRequest(ownQuestion.getId(), 1, 5D));
+
+        assertThat(created.get("id")).isNotNull();
+        List<HomeworkQuestion> questions = homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(homework.getId());
+        assertThat(questions).hasSize(1);
+        assertThat(questions.get(0).getQuestionId()).isEqualTo(ownQuestion.getId());
+    }
+
     private Homework createHomework(Long teacherId, Long classId, String title, ActivityStatus status) {
         Homework homework = new Homework();
         homework.setTitle(title);

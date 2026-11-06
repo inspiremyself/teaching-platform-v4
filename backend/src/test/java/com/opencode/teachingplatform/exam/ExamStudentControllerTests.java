@@ -132,6 +132,42 @@ class ExamStudentControllerTests {
     }
 
     @Test
+    void startExamBeforeStartReturns400() throws Exception {
+        when(examService.startExam(any(CurrentUser.class), eq(-1L)))
+                .thenThrow(new BusinessException(40000, "考试尚未开始"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/exams/{id}/start", -1L))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("考试尚未开始"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void submitExamAfterGraceReturns400() throws Exception {
+        when(examService.submitExam(any(CurrentUser.class), eq(-1L), any(ExamRequests.SubmitExamRequest.class)))
+                .thenThrow(new BusinessException(40000, "考试已结束，无法提交"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/exams/{id}/submit", -1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"answers": [{"questionId": 1, "answerJson": "[\\"A\\"]"}]}
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("考试已结束，无法提交"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void submitExamAutoGradesSingleMultipleAndTrueFalseQuestions() throws Exception {
         // Mock submitExam to return auto-graded result
         Map<String, Object> submitResult = new LinkedHashMap<>();

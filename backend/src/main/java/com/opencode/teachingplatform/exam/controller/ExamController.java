@@ -40,6 +40,7 @@ public class ExamController {
     }
 
     @GetMapping("/exams/{id}")
+    @PreAuthorize("hasAnyRole('TEACHER','STUDENT')")
     public ApiResponse<?> detail(@PathVariable Long id) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(examService.getExamDetail(currentUser, id));

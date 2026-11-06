@@ -59,6 +59,7 @@ class ExamServiceTests {
 
     private final CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
     private final CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+    private final CurrentUser anotherTeacher = new CurrentUser(3L, "t9003", "其他教师", UserRole.TEACHER);
 
     @SuppressWarnings("unchecked")
     private Long createPublishedExamForStudent() {
@@ -469,8 +470,8 @@ class ExamServiceTests {
                         "期末考试",
                         "覆盖第 1-6 章",
                         1L,
-                        OffsetDateTime.parse("2026-04-20T09:00:00+08:00"),
-                        OffsetDateTime.parse("2026-04-20T10:30:00+08:00"),
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(2),
                         90,
                         "PUBLISHED",
                         null,
@@ -560,7 +561,7 @@ class ExamServiceTests {
                         "发布后才可见",
                         1L,
                         OffsetDateTime.now().minusHours(2),
-                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
                         60,
                         "PUBLISHED",
                         com.opencode.teachingplatform.common.enums.ScoreVisibilityMode.MANUAL_RELEASE,
@@ -1082,6 +1083,259 @@ class ExamServiceTests {
 
     private Long createExamWithVisibility(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode mode) {
         return createExamWithVisibility(mode, false);
+    }
+
+    // ------------------------------------------------------------------
+    // P0 回归：考试详情归属、时间窗、交卷宽限期、列表可操作标记、组卷归属
+    // ------------------------------------------------------------------
+
+    @Test
+    void teacherDetailRejectsNonOwner() {
+        Long examId = createPublishedExamForStudent();
+
+        assertThatThrownBy(() -> examService.getExamDetail(anotherTeacher, examId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40300)
+                .hasMessage("无权限查看该考试");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void teacherDetailIncludesAnswerJsonForOwner() {
+        Long examId = createPublishedExamForStudent();
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+        List<Map<String, Object>> questions = (List<Map<String, Object>>) detail.get("questions");
+
+        assertThat(questions).isNotEmpty();
+        assertThat(questions.get(0).get("answerJson")).isNotNull();
+        assertThat(questions.get(0).get("analysisText")).isNotNull();
+    }
+
+    @Test
+    void startExamRejectsBeforeStartAt() {
+        Long examId = createExamWithWindow("未开始考试-" + System.nanoTime(),
+                OffsetDateTime.now().plusHours(1), OffsetDateTime.now().plusHours(2), 30, "PUBLISHED");
+
+        assertThatThrownBy(() -> examService.startExam(student, examId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("考试尚未开始");
+        assertThat(countSubmissions(examId)).isZero();
+    }
+
+    @Test
+    void startExamRejectsAfterEndAt() {
+        Long examId = createExamWithWindow("已结束考试-" + System.nanoTime(),
+                OffsetDateTime.now().minusHours(2), OffsetDateTime.now().minusHours(1), 30, "PUBLISHED");
+
+        assertThatThrownBy(() -> examService.startExam(student, examId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("考试已结束");
+        assertThat(countSubmissions(examId)).isZero();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void startExamCapsDeadlineAtToEndAt() {
+        OffsetDateTime endAt = OffsetDateTime.now().plusMinutes(10);
+        Long examId = createExamWithWindow("即将结束考试-" + System.nanoTime(),
+                OffsetDateTime.now().minusMinutes(10), endAt, 30, "PUBLISHED");
+
+        Map<String, Object> result = (Map<String, Object>) examService.startExam(student, examId);
+        OffsetDateTime deadlineAt = (OffsetDateTime) result.get("deadlineAt");
+
+        assertThat(deadlineAt).isAfter(endAt.minusSeconds(1));
+        assertThat(deadlineAt).isBefore(endAt.plusSeconds(1));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void startExamReturnsExistingSubmissionAfterEndAt() {
+        Long examId = createExamWithWindow("结束但有进行中-" + System.nanoTime(),
+                OffsetDateTime.now().minusHours(2), OffsetDateTime.now().minusHours(1), 30, "PUBLISHED");
+        Long submissionId = 910001L;
+        jdbcTemplate.update("""
+                INSERT INTO exam_submission (id, exam_id, student_id, started_at, deadline_at, status, created_at, updated_at)
+                VALUES (?, ?, 2, ?, ?, 'IN_PROGRESS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, submissionId, examId, OffsetDateTime.now().minusMinutes(40), OffsetDateTime.now().minusMinutes(1));
+
+        Map<String, Object> result = (Map<String, Object>) examService.startExam(student, examId);
+
+        assertThat(((Number) result.get("submissionId")).longValue()).isEqualTo(submissionId);
+        assertThat(((Number) result.get("remainingSeconds")).longValue()).isZero();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void startExamDoesNotExtendDeadlineOnReentry() {
+        Long examId = createPublishedExamForStudent();
+
+        Map<String, Object> first = (Map<String, Object>) examService.startExam(student, examId);
+        Map<String, Object> second = (Map<String, Object>) examService.startExam(student, examId);
+
+        assertThat(((OffsetDateTime) second.get("deadlineAt")).toInstant().getEpochSecond())
+                .isEqualTo(((OffsetDateTime) first.get("deadlineAt")).toInstant().getEpochSecond());
+        assertThat(countSubmissions(examId)).isEqualTo(1);
+    }
+
+    @Test
+    void submitExamRejectsAfterGracePeriod() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE exam_submission SET deadline_at = ? WHERE id = ?",
+                OffsetDateTime.now().minusSeconds(121), submissionId);
+        entityManager.clear();
+
+        assertThatThrownBy(() -> examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null)
+        ))))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("考试已结束，无法提交");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM exam_submission WHERE id = ?", String.class, submissionId))
+                .isEqualTo("IN_PROGRESS");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM exam_answer WHERE exam_submission_id = ?", Integer.class, submissionId)).isZero();
+    }
+
+    @Test
+    void submitExamAutoSubmitsWithinGracePeriod() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE exam_submission SET deadline_at = ? WHERE id = ?",
+                OffsetDateTime.now().minusSeconds(60), submissionId);
+        entityManager.clear();
+
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null)
+        )));
+        entityManager.flush();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM exam_submission WHERE id = ?", String.class, submissionId))
+                .isEqualTo("AUTO_SUBMITTED");
+        // 交卷会为试卷中每道题落一条答案记录（本夹具为 3 题）
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM exam_answer WHERE exam_submission_id = ?", Integer.class, submissionId))
+                .isEqualTo(3);
+    }
+
+    @Test
+    void submitExamMarksSubmittedBeforeDeadline() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null)
+        )));
+        entityManager.flush();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM exam_submission WHERE id = ?", String.class, submissionId))
+                .isEqualTo("SUBMITTED");
+    }
+
+    @Test
+    void createExamRejectsForeignQuestionBankItem() {
+        insertForeignQuestionBankItem();
+        String title = "越权组卷考试-" + System.nanoTime();
+
+        assertThatThrownBy(() -> examService.createExam(teacher, new ExamRequests.CreateExamRequest(
+                title, "", 1L, OffsetDateTime.now().minusHours(1), OffsetDateTime.now().plusHours(1), 30,
+                "DRAFT", null, List.of(new ExamRequests.ExamQuestionItem(9001L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40400)
+                .hasMessage("题库题目不存在");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM exam WHERE title = ?", Integer.class, title)).isZero();
+    }
+
+    @Test
+    void updateExamRejectsForeignQuestionAndKeepsOriginals() {
+        String title = "待更新考试-" + System.nanoTime();
+        Long examId = createExamWithWindow(title, OffsetDateTime.now().minusHours(1),
+                OffsetDateTime.now().plusHours(1), 30, "DRAFT");
+        insertForeignQuestionBankItem();
+
+        assertThatThrownBy(() -> examService.updateExam(teacher, examId, new ExamRequests.UpdateExamRequest(
+                "改名后考试", "", 1L, OffsetDateTime.now().minusHours(1), OffsetDateTime.now().plusHours(1), 30,
+                null, List.of(new ExamRequests.ExamQuestionItem(9001L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40400)
+                .hasMessage("题库题目不存在");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT title FROM exam WHERE id = ?", String.class, examId))
+                .isEqualTo(title);
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT question_id FROM exam_question WHERE exam_id = ?", Long.class, examId))
+                .containsExactly(1L);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void studentListFlagsReflectTimeWindow() {
+        OffsetDateTime now = OffsetDateTime.now();
+        Long futureExamId = createExamWithWindow("未来考试-" + System.nanoTime(),
+                now.plusHours(1), now.plusHours(2), 30, "PUBLISHED");
+        Long expiredExamId = createExamWithWindow("过期考试-" + System.nanoTime(),
+                now.minusHours(2), now.minusHours(1), 30, "PUBLISHED");
+        Long openExamId = createExamWithWindow("进行中考试-" + System.nanoTime(),
+                now.minusMinutes(10), now.plusHours(1), 30, "PUBLISHED");
+        Long resumableExamId = createExamWithWindow("宽限期内考试-" + System.nanoTime(),
+                now.minusMinutes(10), now.plusHours(1), 30, "PUBLISHED");
+        Long resumableSubmissionId = startExamAndGetSubmissionId(resumableExamId);
+        Long expiredSubmissionExamId = createExamWithWindow("超宽限期考试-" + System.nanoTime(),
+                now.minusMinutes(10), now.plusHours(1), 30, "PUBLISHED");
+        Long expiredSubmissionId = startExamAndGetSubmissionId(expiredSubmissionExamId);
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE exam_submission SET deadline_at = ? WHERE id = ?",
+                now.minusSeconds(60), resumableSubmissionId);
+        jdbcTemplate.update("UPDATE exam_submission SET deadline_at = ? WHERE id = ?",
+                now.minusSeconds(121), expiredSubmissionId);
+        entityManager.clear();
+
+        List<Map<String, Object>> exams = (List<Map<String, Object>>) examService.listExams(student);
+        Map<Long, Map<String, Object>> byId = new LinkedHashMap<>();
+        for (Map<String, Object> exam : exams) {
+            byId.put(((Number) exam.get("id")).longValue(), exam);
+        }
+
+        assertThat(byId.get(futureExamId).get("canStart")).isEqualTo(false);
+        assertThat(byId.get(expiredExamId).get("canStart")).isEqualTo(false);
+        assertThat(byId.get(openExamId).get("canStart")).isEqualTo(true);
+        assertThat(byId.get(resumableExamId).get("canResume")).isEqualTo(true);
+        assertThat(byId.get(expiredSubmissionExamId).get("canResume")).isEqualTo(false);
+    }
+
+    private Long createExamWithWindow(String title, OffsetDateTime startAt, OffsetDateTime endAt,
+                                      int durationMinutes, String status) {
+        Map<String, Object> created = (Map<String, Object>) examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(title, "", 1L, startAt, endAt, durationMinutes, status, null,
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)
+        );
+        return ((Number) created.get("id")).longValue();
+    }
+
+    private void insertForeignQuestionBankItem() {
+        jdbcTemplate.update("""
+                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score,
+                                           options_json, answer_json, analysis_text, created_by, created_at, updated_at)
+                VALUES (9001, 'Q-FOREIGN-9001', 'SINGLE', '他人题目', 'EASY', 5,
+                        '["A","B"]', '["A"]', '解析', 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """);
+    }
+
+    private int countSubmissions(Long examId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM exam_submission WHERE exam_id = ?", Integer.class, examId);
     }
 
     private Long createExamWithVisibility(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode mode,

@@ -246,7 +246,7 @@ public class HomeworkService {
         requireTeacher(currentUser);
         Homework homework = ownedHomework(currentUser, homeworkId);
         assertDraftOnly(homework, "新增题目");
-        QuestionBank questionBank = questionBankRepository.findById(request.getQuestionId())
+        QuestionBank questionBank = questionBankRepository.findByIdAndCreatedBy(request.getQuestionId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
         HomeworkQuestion question = new HomeworkQuestion();
         question.setHomeworkId(homework.getId());
