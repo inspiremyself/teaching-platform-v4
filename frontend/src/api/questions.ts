@@ -1,9 +1,11 @@
 import request from '@/utils/request';
+import type { AxiosRequestConfig } from 'axios';
 import type { QuestionItem, SaveQuestionPayload } from '@/types/question';
 
 export const listQuestions = () => request.get<QuestionItem[]>('/questions');
 
-export const createQuestion = (data: SaveQuestionPayload) => request.post<QuestionItem>('/questions', data);
+export const createQuestion = (data: SaveQuestionPayload, config?: AxiosRequestConfig) =>
+  request.post<QuestionItem>('/questions', data, config);
 
 export const updateQuestion = (id: number, data: SaveQuestionPayload) => request.put<QuestionItem>(`/questions/${id}`, data);
 

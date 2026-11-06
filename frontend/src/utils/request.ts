@@ -3,6 +3,13 @@ import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import type { AxiosRequestConfig } from 'axios';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** 为 true 时抑制全局错误提示，由调用方自行呈现错误 */
+    silent?: boolean;
+  }
+}
+
 const KICKED_OUT_NOTICE_KEY = 'kicked_out_notice';
 
 export class ApiError extends Error {
@@ -34,8 +41,9 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
   response => {
     const res = response.data;
+    const silent = response.config.silent === true;
     if (res.code !== 0) {
-      if (res.code !== 40901 && res.code !== 40101 && res.code !== 40103) {
+      if (!silent && res.code !== 40901 && res.code !== 40101 && res.code !== 40103) {
         ElMessage.error(res.message || '请求失败');
       }
       if (res.code === 40102) {
@@ -52,8 +60,9 @@ instance.interceptors.response.use(
   },
   error => {
     const responseData = error.response?.data;
+    const silent = error.config?.silent === true;
     if (responseData && typeof responseData.code === 'number') {
-      if (responseData.code !== 40901 && responseData.code !== 40101 && responseData.code !== 40103) {
+      if (!silent && responseData.code !== 40901 && responseData.code !== 40101 && responseData.code !== 40103) {
         ElMessage.error(responseData.message || '请求失败');
       }
       if (responseData.code === 40102) {
@@ -66,7 +75,9 @@ instance.interceptors.response.use(
       }
       return Promise.reject(new ApiError(responseData.code, responseData.message || '请求失败'));
     }
-    ElMessage.error(error.message || '请求失败，请稍后重试');
+    if (!silent) {
+      ElMessage.error(error.message || '请求失败，请稍后重试');
+    }
     return Promise.reject(error);
   }
 );

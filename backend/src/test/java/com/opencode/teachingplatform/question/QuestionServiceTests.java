@@ -5,6 +5,7 @@ import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.question.dto.QuestionRequests.SaveQuestionRequest;
@@ -16,6 +17,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -33,6 +37,8 @@ class QuestionServiceTests {
     private AuditLogService auditLogService;
 
     private QuestionService questionService;
+
+    private final CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
@@ -57,6 +63,63 @@ class QuestionServiceTests {
                         "解析"
                 )
         ));
+    }
+
+    @Test
+    void createNormalizesCodeToUpperCase() {
+        when(questionBankRepository.existsByCode("LINUX-001")).thenReturn(false);
+        when(questionBankRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        questionService.create(teacher, buildRequest(" linux-001 "));
+
+        verify(questionBankRepository).save(argThat(question -> "LINUX-001".equals(question.getCode())));
+    }
+
+    @Test
+    void createRejectsCaseInsensitiveDuplicate() {
+        when(questionBankRepository.existsByCode("LINUX-001")).thenReturn(true);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> questionService.create(teacher, buildRequest("linux-001")));
+        assertEquals(40900, ex.getCode());
+    }
+
+    @Test
+    void updateNormalizesCodeBeforeDuplicateCheck() {
+        QuestionBank question = new QuestionBank();
+        question.setCode("OLD-001");
+        when(questionBankRepository.findByIdAndCreatedBy(10L, 1L)).thenReturn(Optional.of(question));
+        when(questionBankRepository.existsByCodeAndIdNot("LINUX-001", 10L)).thenReturn(false);
+        when(questionBankRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        questionService.update(teacher, 10L, buildRequest(" linux-001 "));
+
+        verify(questionBankRepository).save(argThat(saved -> "LINUX-001".equals(saved.getCode())));
+    }
+
+    @Test
+    void updateRejectsCodeExistsGlobally() {
+        QuestionBank question = new QuestionBank();
+        question.setCode("OLD-001");
+        when(questionBankRepository.findByIdAndCreatedBy(10L, 1L)).thenReturn(Optional.of(question));
+        when(questionBankRepository.existsByCodeAndIdNot("OTHER-001", 10L)).thenReturn(true);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> questionService.update(teacher, 10L, buildRequest("other-001")));
+        assertEquals(40900, ex.getCode());
+    }
+
+    private SaveQuestionRequest buildRequest(String code) {
+        return new SaveQuestionRequest(
+                code,
+                "SINGLE",
+                "测试题干",
+                "MEDIUM",
+                5,
+                "[\"A\",\"B\"]",
+                "[\"A\"]",
+                "解析"
+        );
     }
 
     @Test

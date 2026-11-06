@@ -170,7 +170,9 @@ public class ExamService {
             throw new BusinessException(40000, "无效的考试状态: " + request.status());
         }
         exam.setScoreVisibilityMode(request.scoreVisibilityMode() == null ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM : request.scoreVisibilityMode());
+        exam.setShuffleQuestions(Boolean.TRUE.equals(request.shuffleQuestions()));
         exam.setCreatedBy(currentUser.id());
+        assertBankQuestions(request.questions());
         examRepository.save(exam);
 
         if (request.questions() != null) {
@@ -207,6 +209,10 @@ public class ExamService {
         exam.setEndAt(request.endAt());
         exam.setDurationMinutes(request.durationMinutes());
         exam.setScoreVisibilityMode(request.scoreVisibilityMode() == null ? exam.getScoreVisibilityMode() : request.scoreVisibilityMode());
+        if (request.shuffleQuestions() != null) {
+            exam.setShuffleQuestions(request.shuffleQuestions());
+        }
+        assertBankQuestions(request.questions());
         examRepository.save(exam);
 
         if (request.questions() != null) {
@@ -272,6 +278,7 @@ public class ExamService {
         result.put("durationMinutes", exam.getDurationMinutes());
         result.put("status", exam.getStatus().name());
         result.put("scoreVisibilityMode", exam.getScoreVisibilityMode().name());
+        result.put("shuffleQuestions", exam.isShuffleQuestions());
         result.put("questions", questionList);
 
         // For students: enrich with submission state so frontend can restore progress/result
@@ -323,7 +330,13 @@ public class ExamService {
                             examQuestions.stream()
                                     .filter(item -> Objects.equals(item.getQuestionId(), questionId))
                                     .findFirst()
-                                    .ifPresent(item -> qMap.put("answerJson", resolveQuestionSnapshot(item).answerJson()));
+                                    .ifPresent(item -> {
+                                        qMap.put("answerJson", resolveQuestionSnapshot(item).answerJson());
+                                        if (item.getQuestionId() != null) {
+                                            questionBankRepository.findById(item.getQuestionId())
+                                                    .ifPresent(qb -> qMap.put("analysisText", qb.getAnalysisText()));
+                                        }
+                                    });
                         }
                     }
                 }
@@ -343,6 +356,12 @@ public class ExamService {
 
         ActivityStatus newStatus = ActivityStatus.valueOf(request.status());
         if (exam.getStatus() == ActivityStatus.DRAFT && newStatus == ActivityStatus.PUBLISHED) {
+            boolean hasLegacyInlineQuestion = examQuestionRepository
+                    .findByExamIdOrderBySortOrder(id).stream()
+                    .anyMatch(item -> item.getQuestionId() == null);
+            if (hasLegacyInlineQuestion) {
+                throw new BusinessException(40000, "请先将题目保存到题库后再组卷");
+            }
             exam.setStatus(ActivityStatus.PUBLISHED);
         } else if (exam.getStatus() == ActivityStatus.PUBLISHED && newStatus == ActivityStatus.CLOSED) {
             exam.setStatus(ActivityStatus.CLOSED);
@@ -376,6 +395,20 @@ public class ExamService {
 
         if (exam.getStatus() != ActivityStatus.PUBLISHED) {
             throw new BusinessException(40000, "考试未发布，不能开始");
+        }
+
+        boolean isMember = classMemberRepository
+                .findByClassIdAndStudentUserId(exam.getClassId(), currentUser.id())
+                .isPresent();
+        if (!isMember) {
+            throw new BusinessException(40300, "无权限参加该考试");
+        }
+
+        boolean hasLegacyInlineQuestion = examQuestionRepository
+                .findByExamIdOrderBySortOrder(examId).stream()
+                .anyMatch(item -> item.getQuestionId() == null);
+        if (hasLegacyInlineQuestion) {
+            throw new BusinessException(40000, "试卷包含不支持的题目，请联系教师");
         }
 
         Optional<ExamSubmission> existingOpt = examSubmissionRepository.findByExamIdAndStudentId(examId, currentUser.id());
@@ -882,35 +915,30 @@ public class ExamService {
         );
     }
 
-    private QuestionSnapshot toInlineSnapshot(ExamRequests.ExamQuestionItem item) {
-        return QuestionSnapshotFactory.fromInlineQuestion(
-                item.questionType(),
-                item.stem(),
-                item.optionsJson(),
-                item.answerJson(),
-                item.scoringConfigJson(),
-                item.sortOrder(),
-                item.questionScore()
-        );
-    }
-
     private ExamQuestion buildExamQuestion(Long examId, ExamRequests.ExamQuestionItem item) {
+        QuestionBank questionBank = questionBankRepository.findById(item.questionId())
+                .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
         ExamQuestion examQuestion = new ExamQuestion();
         examQuestion.setExamId(examId);
         examQuestion.setQuestionId(item.questionId());
         examQuestion.setSortOrder(item.sortOrder());
         examQuestion.setQuestionScore(item.questionScore());
-
-        QuestionSnapshot snapshot;
-        if ("INLINE".equalsIgnoreCase(item.resolvedSourceType())) {
-            snapshot = toInlineSnapshot(item);
-        } else {
-            QuestionBank questionBank = questionBankRepository.findById(item.questionId())
-                    .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
-            snapshot = toSnapshot(questionBank, item.sortOrder(), item.questionScore());
-        }
-        examQuestion.setQuestionSnapshotJson(writeJson(snapshot));
+        examQuestion.setQuestionSnapshotJson(writeJson(toSnapshot(questionBank, item.sortOrder(), item.questionScore())));
         return examQuestion;
+    }
+
+    /**
+     * 组卷题目必须全部来自题库；内联题已下线，历史数据仅允许读取。
+     */
+    private void assertBankQuestions(List<ExamRequests.ExamQuestionItem> items) {
+        if (items == null) {
+            return;
+        }
+        for (ExamRequests.ExamQuestionItem item : items) {
+            if (item == null || item.questionId() == null || !"BANK".equalsIgnoreCase(item.resolvedSourceType())) {
+                throw new BusinessException(40000, "考试题目必须来自题库");
+            }
+        }
     }
 
     private String writeJson(Object value) {

@@ -10,6 +10,7 @@
         <div class="workbench-header__actions question-console__hero-actions">
           <el-button class="question-console__ghost-button" @click="openPickerDialog">挑选题目配置</el-button>
           <el-button class="question-console__ghost-button" @click="resetFilters">重置筛选</el-button>
+          <el-button class="question-console__ghost-button" @click="importVisible = true">批量导入</el-button>
           <el-button type="primary" class="question-console__primary-button" @click="openCreateDialog">
             新增题目
           </el-button>
@@ -212,6 +213,8 @@
     />
 
     <QuestionPickerDialog v-model:visible="pickerVisible" @confirm="applyPickedQuestions" />
+
+    <QuestionImportDialog v-model:visible="importVisible" @imported="fetchData" />
   </div>
 </template>
 
@@ -231,6 +234,7 @@ import QuestionEditorDialog, {
   type QuestionEditorDialogValue,
 } from '@/components/question-config/QuestionEditorDialog.vue';
 import QuestionPickerDialog from '@/components/question-config/QuestionPickerDialog.vue';
+import QuestionImportDialog from '@/components/question-config/QuestionImportDialog.vue';
 
 type QuickViewKey = 'ALL' | 'INCOMPLETE' | 'HARD' | 'OBJECTIVE';
 
@@ -265,6 +269,7 @@ const loading = ref(false);
 const submitting = ref(false);
 const dialogVisible = ref(false);
 const pickerVisible = ref(false);
+const importVisible = ref(false);
 const editingId = ref<number | null>(null);
 const rows = ref<QuestionItem[]>([]);
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([]);

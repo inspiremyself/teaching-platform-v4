@@ -93,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { listQuestions } from '@/api/questions'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
@@ -102,7 +102,9 @@ import { TYPED_EDITOR_LABELS } from '@/views/teacher/components/typed-editor/con
 import { parseQuestionAnswerArray } from '@/views/teacher/components/typed-editor/hydrators/fromQuestion'
 import QuestionConfigList from './QuestionConfigList.vue'
 
-const props = defineProps<{ visible: boolean }>()
+const props = withDefaults(defineProps<{ visible: boolean; validateJudgeFormat?: boolean }>(), {
+  validateJudgeFormat: false,
+})
 
 const emit = defineEmits<{
   'update:visible': [boolean]
@@ -206,9 +208,49 @@ const fetchData = async () => {
   }
 }
 
+/**
+ * 判断题格式兼容性：选项 key 必须恰为 T/F，答案必须为非空的 T/F 列表。
+ * 仅当调用方开启 validateJudgeFormat 时生效（考试组卷场景）。
+ */
+const isJudgeFormatCompatible = (row: QuestionItem): boolean => {
+  if (row.type !== 'JUDGE') return true
+  try {
+    const options = JSON.parse(row.optionsJson || '[]')
+    if (!Array.isArray(options)) return false
+    const keys = options
+      .filter((item: unknown) => item !== null && typeof item === 'object')
+      .map((item: any) => String(item.key ?? '').trim().toUpperCase())
+    if (keys.length !== 2 || !keys.includes('T') || !keys.includes('F')) return false
+    const answer = JSON.parse(row.answerJson || '[]')
+    if (!Array.isArray(answer) || answer.length === 0) return false
+    return answer.every((item: unknown) => {
+      const value = String(item ?? '').trim().toUpperCase()
+      return value === 'T' || value === 'F'
+    })
+  } catch {
+    return false
+  }
+}
+
 const handleSelectionChange = (selection: QuestionItem[]) => {
-  selectedRows.value = selection
-  syncSelectedConfigs(selection)
+  if (!props.validateJudgeFormat) {
+    selectedRows.value = selection
+    syncSelectedConfigs(selection)
+    return
+  }
+
+  const validRows = selection.filter(row => isJudgeFormatCompatible(row))
+  const invalidRows = selection.filter(row => !isJudgeFormatCompatible(row))
+  selectedRows.value = validRows
+  syncSelectedConfigs(validRows)
+
+  if (invalidRows.length) {
+    ElMessage.warning('该判断题格式不兼容，请重新导入该题')
+    // 在事件回调内同步取消勾选会触发重入，放到下一帧统一对齐视觉状态
+    nextTick(() => {
+      invalidRows.forEach(row => tableRef.value?.toggleRowSelection?.(row, false))
+    })
+  }
 }
 
 const updateSelectedScore = ({ localId, score }: { localId: string; score: number }) => {

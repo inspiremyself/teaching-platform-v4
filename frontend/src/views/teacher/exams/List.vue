@@ -227,12 +227,27 @@
               <el-form-item label="时长(分钟)">
                 <el-input-number v-model="form.durationMinutes" :min="1" :max="600" />
               </el-form-item>
+              <el-form-item label="题目乱序">
+                <el-switch v-model="form.shuffleQuestions" />
+                <p class="exam-dialog__hint">开启后，题目顺序按学生生成；同一学生刷新后顺序保持不变。</p>
+              </el-form-item>
               <el-form-item label="成绩可见性">
                 <el-select v-model="form.scoreVisibilityMode" style="width: 100%">
+                  <el-option label="交卷后立即可见" value="IMMEDIATE" />
                   <el-option label="教师确认后可见" value="AFTER_TEACHER_CONFIRM" />
-                  <el-option label="提交后可见" value="AFTER_SUBMIT" />
-                  <el-option label="立即可见" value="IMMEDIATE" />
+                  <el-option
+                    v-if="isLegacyScoreMode"
+                    :label="legacyScoreModeLabel"
+                    :value="form.scoreVisibilityMode"
+                    disabled
+                  />
                 </el-select>
+                <p v-if="form.scoreVisibilityMode === 'AFTER_TEACHER_CONFIRM'" class="exam-dialog__hint">
+                  学生交卷后不会立即看到成绩。
+                </p>
+                <p v-if="isLegacyScoreMode" class="exam-dialog__hint exam-dialog__hint--danger">
+                  当前为历史配置「{{ legacyScoreModeLabel }}」，必须改选「交卷后立即可见」或「教师确认后可见」后才能保存。
+                </p>
               </el-form-item>
             </el-form>
           </div>
@@ -241,12 +256,24 @@
             <div class="dialog-block__header">
               <div>
                 <div class="dialog-block__title">题目配置</div>
-                <p class="dialog-block__desc">通过共享选题弹窗带入题库题，或直接新增内联题，再在当前考试壳中调整顺序、分值与题目资产内容。</p>
+                <p class="dialog-block__desc">通过共享选题弹窗从题库带入题目，再在当前考试壳中调整顺序与分值。</p>
               </div>
               <div class="dialog-block__actions">
                 <el-button plain @click="openQuestionPicker">从题库挑题</el-button>
-                <el-button type="primary" plain @click="openInlineQuestionEditor">新增内联题</el-button>
               </div>
+            </div>
+
+            <div v-if="legacyInlineQuestions.length" class="legacy-inline-block">
+              <el-alert
+                v-for="item in legacyInlineQuestions"
+                :key="item.localId"
+                type="warning"
+                :closable="false"
+                show-icon
+                :title="`该题不支持，请删除后从题库重新选择：${item.stem}`"
+              >
+                <el-button link type="danger" @click="removeLegacyInlineQuestion(item.localId)">删除该题</el-button>
+              </el-alert>
             </div>
 
             <QuestionConfigList
@@ -264,7 +291,7 @@
             <div class="selection-panel__header">
               <div>
                 <div class="selection-panel__title">已选题目</div>
-                <p>考试现已支持题库题与内联题混合配置；这里复用共享题目配置清单管理真实组卷顺序与分值。</p>
+                <p>考试题目全部来自题库；这里复用共享题目配置清单管理真实组卷顺序与分值。</p>
               </div>
               <span class="selection-panel__badge">{{ configuredQuestions.length }} 题</span>
             </div>
@@ -291,7 +318,12 @@
           <div class="exam-dialog__footer-note">保留创建 / 编辑考试、题目选择、排序与分值保存逻辑，仅强化教师台工作面板样式与信息层级。</div>
           <div class="exam-dialog__footer-actions">
             <el-button @click="dialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="submitting" @click="submitForm">保存考试</el-button>
+            <el-button
+              type="primary"
+              :loading="submitting"
+              :disabled="legacyInlineQuestions.length > 0 || isLegacyScoreMode"
+              @click="submitForm"
+            >保存考试</el-button>
           </div>
         </footer>
       </div>
@@ -301,22 +333,26 @@
       v-model:visible="questionDialogVisible"
       :initial-question="currentEditorQuestion"
       :loading="questionSubmitting"
-      :title="questionDialogTitle"
-      :description="questionDialogDescription"
-      :submit-text="questionDialogSubmitText"
-      :show-asset-fields="questionEditorMode === 'BANK'"
-      :show-config-fields="questionEditorMode !== 'BANK'"
+      title="编辑题库题目"
+      description="在考试壳中直接复用共享题目编辑器维护题库题资产；保存后会同步到当前考试配置清单。"
+      submit-text="保存题库题"
+      :show-asset-fields="true"
+      :show-config-fields="false"
       @saved="submitConfiguredQuestion"
     />
 
-    <QuestionPickerDialog v-model:visible="pickerVisible" @confirm="applyPickedQuestions" />
+    <QuestionPickerDialog
+      v-model:visible="pickerVisible"
+      validate-judge-format
+      @confirm="applyPickedQuestions"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { listClasses } from '@/api/classes'
 import { listQuestions, updateQuestion } from '@/api/questions'
 import { changeExamStatus, createExam, getExamDetail, listExams, updateExam } from '@/api/exams'
@@ -328,10 +364,13 @@ import QuestionEditorDialog, {
 import QuestionPickerDialog from '@/components/question-config/QuestionPickerDialog.vue'
 import type { TeachingClass } from '@/types/class'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
-import type { CreateExamPayload, ExamListItem, UpdateExamPayload } from '@/types/exam'
-import type { QuestionItem, QuestionType } from '@/types/question'
+import type { CreateExamPayload, ExamListItem, ExamQuestionView, ScoreVisibilityMode, UpdateExamPayload } from '@/types/exam'
+import type { QuestionItem } from '@/types/question'
 import { buildQuestionPayloadFromDraft } from '../components/typed-editor/adapters/questionAdapter'
 import { parseQuestionAnswerArray } from '../components/typed-editor/hydrators/fromQuestion'
+
+/** 编辑态下允许历史内联题（questionId 为 null）进入只读分流 */
+type EditableExamQuestion = ExamQuestionView & { questionId: number | null }
 
 interface ExamFormState {
   title: string
@@ -340,7 +379,14 @@ interface ExamFormState {
   startAt: string | null
   endAt: string | null
   durationMinutes: number
-  scoreVisibilityMode: string
+  scoreVisibilityMode: ScoreVisibilityMode
+  shuffleQuestions: boolean
+}
+
+/** 历史成绩可见性值到展示文案的映射 */
+const LEGACY_SCORE_MODE_LABELS: Record<string, string> = {
+  AFTER_DEADLINE: '考试截止后可见',
+  MANUAL_RELEASE: '手动发布成绩',
 }
 
 const router = useRouter()
@@ -350,12 +396,13 @@ const questionSubmitting = ref(false)
 const dialogVisible = ref(false)
 const pickerVisible = ref(false)
 const questionDialogVisible = ref(false)
-const questionEditorMode = ref<'BANK' | 'INLINE'>('BANK')
 const editingId = ref<number | null>(null)
 const rows = ref<ExamListItem[]>([])
 const classOptions = ref<TeachingClass[]>([])
 const questionPool = ref<QuestionItem[]>([])
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([])
+/** 历史内联题：不进入组卷提交，必须先删除并从题库重新选择 */
+const legacyInlineQuestions = ref<Array<{ localId: string; stem: string }>>([])
 const searchQuery = ref('')
 const statusFilter = ref<ExamListItem['status'] | ''>('')
 const classFilter = ref<number | null>(null)
@@ -368,7 +415,8 @@ const form = ref<ExamFormState>({
   startAt: null as string | null,
   endAt: null as string | null,
   durationMinutes: 60,
-  scoreVisibilityMode: 'AFTER_TEACHER_CONFIRM',
+  scoreVisibilityMode: 'IMMEDIATE',
+  shuffleQuestions: false,
 })
 
 const filteredRows = computed(() => {
@@ -409,15 +457,7 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
   }
 
   const current = currentConfiguredQuestion.value
-  if (!current) {
-    return null
-  }
-
-  if (questionEditorMode.value === 'INLINE') {
-    return current
-  }
-
-  if (!current.questionBankId) {
+  if (!current?.questionBankId) {
     return null
   }
 
@@ -450,20 +490,21 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
   }
 })
 
-const questionDialogTitle = computed(() => {
-  if (questionEditorMode.value === 'BANK') {
-    return '编辑题库题目'
-  }
-  return currentConfiguredQuestion.value ? '编辑内联题' : '新增内联题'
-})
-
-const questionDialogDescription = computed(() =>
-  questionEditorMode.value === 'BANK'
-    ? '在考试壳中直接复用共享题目编辑器维护题库题资产；保存后会同步到当前考试配置清单。'
-    : '使用共享题目编辑器直接新增或编辑考试内联题，保存后由考试接口统一落库为题目快照。',
+/** 是否停留在旧版成绩可见性值上，需强制改选后才能保存 */
+const isLegacyScoreMode = computed(
+  () =>
+    form.value.scoreVisibilityMode === 'AFTER_DEADLINE' ||
+    form.value.scoreVisibilityMode === 'MANUAL_RELEASE',
 )
 
-const questionDialogSubmitText = computed(() => (questionEditorMode.value === 'BANK' ? '保存题库题' : '保存内联题'))
+const legacyScoreModeLabel = computed(
+  () => LEGACY_SCORE_MODE_LABELS[form.value.scoreVisibilityMode] ?? String(form.value.scoreVisibilityMode),
+)
+
+/** 组卷中是否包含主观题，用于「立即可见」保存前提示 */
+const hasSubjectiveQuestion = computed(() =>
+  configuredQuestions.value.some(item => !['SINGLE', 'MULTI', 'JUDGE'].includes(item.questionType)),
+)
 
 const fetchExams = async () => {
   loading.value = true
@@ -489,97 +530,13 @@ const resequenceConfiguredQuestions = (items: ConfiguredQuestionItem[]) =>
     sortOrder: index + 1,
   }))
 
-const buildConfiguredInlineQuestion = (
-  editorPayload: QuestionEditorDialogSubmitPayload,
-  current?: ConfiguredQuestionItem | null,
-): ConfiguredQuestionItem => {
-  const questionPayload = buildQuestionPayloadFromDraft(editorPayload.draft, {
-    code: editorPayload.code,
-    difficulty: editorPayload.difficulty,
-    defaultScore: editorPayload.defaultScore,
-    analysisText: editorPayload.analysisText,
-  })
-
-  return {
-    localId: current?.localId ?? `inline-${Date.now()}`,
-    questionBankId: null,
-    sourceType: 'INLINE',
-    questionType: questionPayload.type,
-    stem: questionPayload.stem,
-    sortOrder: current?.sortOrder ?? configuredQuestions.value.length + 1,
-    score: current?.score ?? editorPayload.defaultScore,
-    options: parseQuestionAnswerArray(questionPayload.optionsJson).map((option, index) => {
-      if (option && typeof option === 'object') {
-        const record = option as Record<string, unknown>
-        return {
-          key: String(record.key ?? String.fromCharCode(65 + index)),
-          label: String(record.content ?? record.label ?? record.text ?? ''),
-        }
-      }
-
-      return {
-        key: String.fromCharCode(65 + index),
-        label: String(option ?? ''),
-      }
-    }),
-    answerJson: questionPayload.answerJson,
-    scoringConfigJson: JSON.stringify({
-      type: questionPayload.type,
-      optionsJson: questionPayload.optionsJson,
-      answerJson: questionPayload.answerJson,
-      analysisText: questionPayload.analysisText,
-    }),
-  }
-}
-
-const normalizeInlineQuestionType = (type: string): string => {
-  if (type === 'SINGLE_CHOICE') return 'SINGLE'
-  if (type === 'MULTIPLE_CHOICE') return 'MULTI'
-  if (type === 'TRUE_FALSE') return 'JUDGE'
-  if (type === 'FILL_BLANK') return 'FILL'
-  if (type === 'TEXT') return 'SHORT'
-  return type
-}
-
-const buildInlineScoringConfigJson = (item: ConfiguredQuestionItem) => {
-  const normalizedType = normalizeInlineQuestionType(item.questionType)
-
-  if (item.scoringConfigJson?.trim()) {
-    try {
-      const parsed = JSON.parse(item.scoringConfigJson)
-      return JSON.stringify(parsed)
-    } catch {
-      // fall through to rebuild from configured item
-    }
-  }
-
-  return JSON.stringify({
-    type: normalizedType,
-    optionsJson: item.options?.length
-      ? JSON.stringify(
-          item.options.map(option => ({
-            key: option.key,
-            content: option.label,
-          })),
-        )
-      : null,
-    answerJson: item.answerJson?.trim() || '[]',
-    analysisText: '',
-  })
-}
-
 const mergeConfiguredQuestions = (items: ConfiguredQuestionItem[]) => {
-  const existingByBankId = new Map(configuredQuestions.value.filter(item => item.questionBankId).map(item => [item.questionBankId, item]))
-  const inlineItems = configuredQuestions.value.filter(item => item.sourceType === 'INLINE')
-  const merged = [...inlineItems]
-
-  for (const item of items) {
-    if (item.questionBankId) {
-      merged.push(existingByBankId.get(item.questionBankId) ?? item)
-      continue
-    }
-    merged.push(item)
-  }
+  const existingByBankId = new Map(
+    configuredQuestions.value.filter(item => item.questionBankId).map(item => [item.questionBankId, item]),
+  )
+  const merged = items
+    .filter(item => item.questionBankId)
+    .map(item => existingByBankId.get(item.questionBankId) ?? item)
 
   configuredQuestions.value = resequenceConfiguredQuestions(merged)
 }
@@ -592,9 +549,11 @@ const resetForm = () => {
     startAt: null,
     endAt: null,
     durationMinutes: 60,
-    scoreVisibilityMode: 'AFTER_TEACHER_CONFIRM',
+    scoreVisibilityMode: 'IMMEDIATE',
+    shuffleQuestions: false,
   }
   configuredQuestions.value = []
+  legacyInlineQuestions.value = []
   editingId.value = null
 }
 
@@ -613,10 +572,25 @@ const openEditDialog = async (row: ExamListItem) => {
     startAt: detail.startAt,
     endAt: detail.endAt,
     durationMinutes: detail.durationMinutes,
-    scoreVisibilityMode: detail.scoreVisibilityMode || 'AFTER_TEACHER_CONFIRM',
+    scoreVisibilityMode: detail.scoreVisibilityMode ?? 'IMMEDIATE',
+    shuffleQuestions: detail.shuffleQuestions === true,
   }
+
+  // 历史内联题（questionId 为 null）不能进入组卷提交，只做只读分流提示
+  const rawQuestions = (detail.questions || []) as EditableExamQuestion[]
+  const normalQuestions: EditableExamQuestion[] = []
+  legacyInlineQuestions.value = []
+  for (const [index, item] of rawQuestions.entries()) {
+    if (item.questionId == null) {
+      // 用数组下标而非 sortOrder 生成 localId：历史数据允许 sortOrder 重复，下标天然唯一
+      legacyInlineQuestions.value.push({ localId: `legacy-${index}`, stem: item.stem })
+    } else {
+      normalQuestions.push(item)
+    }
+  }
+
   configuredQuestions.value = resequenceConfiguredQuestions(
-    (detail.questions || []).map((q, index) => ({
+    normalQuestions.map((q, index) => ({
       localId: `bank-${q.questionId}`,
       questionBankId: q.questionId,
       sourceType: 'BANK',
@@ -649,12 +623,6 @@ const openQuestionPicker = () => {
   pickerVisible.value = true
 }
 
-const openInlineQuestionEditor = () => {
-  questionEditorMode.value = 'INLINE'
-  activeConfiguredQuestionLocalId.value = null
-  questionDialogVisible.value = true
-}
-
 const applyPickedQuestions = (items: ConfiguredQuestionItem[]) => {
   mergeConfiguredQuestions(items)
   ElMessage.success(`已带入 ${items.length} 道题目配置`)
@@ -674,14 +642,15 @@ const removeConfiguredQuestion = (localId: string) => {
   )
 }
 
-const editConfiguredQuestion = async (item: ConfiguredQuestionItem) => {
-  questionEditorMode.value = item.sourceType
-  activeConfiguredQuestionLocalId.value = item.localId
+const removeLegacyInlineQuestion = (localId: string) => {
+  legacyInlineQuestions.value = legacyInlineQuestions.value.filter(item => item.localId !== localId)
+}
 
-  if (item.sourceType !== 'BANK') {
-    questionDialogVisible.value = true
+const editConfiguredQuestion = async (item: ConfiguredQuestionItem) => {
+  if (!item.questionBankId) {
     return
   }
+  activeConfiguredQuestionLocalId.value = item.localId
 
   if (!questionPool.value.length) {
     await fetchQuestions()
@@ -725,38 +694,26 @@ const syncConfiguredBankQuestion = (question: QuestionItem) => {
 
 const submitConfiguredQuestion = async (editorPayload: QuestionEditorDialogSubmitPayload) => {
   const current = currentConfiguredQuestion.value
+  if (!current?.questionBankId) {
+    ElMessage.warning('当前题目未绑定题库题。')
+    return
+  }
+
   questionSubmitting.value = true
   try {
-    if (questionEditorMode.value === 'BANK') {
-      if (!current?.questionBankId) {
-        ElMessage.warning('当前题目未绑定题库题。')
-        return
-      }
-
-      const payload = buildQuestionPayloadFromDraft(editorPayload.draft, {
-        code: editorPayload.code,
-        difficulty: editorPayload.difficulty,
-        defaultScore: editorPayload.defaultScore,
-        analysisText: editorPayload.analysisText,
-      })
-      await updateQuestion(current.questionBankId, payload)
-      await fetchQuestions()
-      const refreshed = questionPool.value.find(row => row.id === current.questionBankId)
-      if (refreshed) {
-        syncConfiguredBankQuestion(refreshed)
-      }
-      ElMessage.success('题库题更新成功')
-    } else {
-      const nextItem = buildConfiguredInlineQuestion(editorPayload, current)
-      if (current) {
-        configuredQuestions.value = resequenceConfiguredQuestions(
-          configuredQuestions.value.map(item => (item.localId === current.localId ? nextItem : item)),
-        )
-      } else {
-        configuredQuestions.value = resequenceConfiguredQuestions([...configuredQuestions.value, nextItem])
-      }
-      ElMessage.success(current ? '内联题已更新' : '内联题已加入当前考试配置')
+    const payload = buildQuestionPayloadFromDraft(editorPayload.draft, {
+      code: editorPayload.code,
+      difficulty: editorPayload.difficulty,
+      defaultScore: editorPayload.defaultScore,
+      analysisText: editorPayload.analysisText,
+    })
+    await updateQuestion(current.questionBankId, payload)
+    await fetchQuestions()
+    const refreshed = questionPool.value.find(row => row.id === current.questionBankId)
+    if (refreshed) {
+      syncConfiguredBankQuestion(refreshed)
     }
+    ElMessage.success('题库题更新成功')
 
     questionDialogVisible.value = false
     activeConfiguredQuestionLocalId.value = null
@@ -774,68 +731,67 @@ const submitForm = async () => {
     ElMessage.warning('请选择班级')
     return
   }
+  if (legacyInlineQuestions.value.length) {
+    ElMessage.error('请先将题目保存到题库后再组卷')
+    return
+  }
+  if (!configuredQuestions.value.length) {
+    ElMessage.warning('请至少选择一道题目')
+    return
+  }
+  if (isLegacyScoreMode.value) {
+    ElMessage.error('请先将成绩可见性改为「交卷后立即可见」或「教师确认后可见」')
+    return
+  }
+  if (form.value.scoreVisibilityMode === 'IMMEDIATE' && hasSubjectiveQuestion.value) {
+    await ElMessageBox.alert('主观题需人工批改，交卷后不会立即出成绩', '提示', {
+      confirmButtonText: '继续保存',
+      type: 'warning',
+    })
+  }
+
   submitting.value = true
   try {
-    const questions = configuredQuestions.value.map(question => {
-      if (question.sourceType === 'BANK' && question.questionBankId) {
-        return {
-          questionId: question.questionBankId,
-          sourceType: 'BANK' as const,
-          sortOrder: question.sortOrder,
-          questionScore: question.score,
-        }
-      }
+    const questions = configuredQuestions.value
+      .filter(item => item.sourceType === 'BANK' && item.questionBankId)
+      .map(item => ({
+        questionId: item.questionBankId as number,
+        sourceType: 'BANK' as const,
+        sortOrder: item.sortOrder,
+        questionScore: item.score,
+      }))
 
-      return {
-        questionId: null,
-        sourceType: 'INLINE' as const,
-        questionType: normalizeInlineQuestionType(question.questionType) as QuestionType,
-        stem: question.stem.trim(),
-        sortOrder: question.sortOrder,
-        questionScore: question.score,
-        optionsJson: question.options?.length
-          ? JSON.stringify(
-              question.options.map(option => ({
-                key: option.key,
-                content: option.label,
-              })),
-            )
-          : null,
-        answerJson: question.answerJson?.trim() || '[]',
-        scoringConfigJson: buildInlineScoringConfigJson(question),
-      }
-    })
+    const basePayload = {
+      title: form.value.title.trim(),
+      description: form.value.description.trim(),
+      classId: form.value.classId,
+      durationMinutes: form.value.durationMinutes,
+      scoreVisibilityMode: form.value.scoreVisibilityMode,
+      shuffleQuestions: form.value.shuffleQuestions,
+      questions,
+    }
 
     if (editingId.value) {
       const payload: UpdateExamPayload = {
-        title: form.value.title.trim(),
-        description: form.value.description.trim(),
-        classId: form.value.classId,
+        ...basePayload,
         startAt: form.value.startAt || '',
         endAt: form.value.endAt || '',
-        durationMinutes: form.value.durationMinutes,
-        scoreVisibilityMode: form.value.scoreVisibilityMode,
-        questions,
       }
       await updateExam(editingId.value, payload)
-      ElMessage.success(configuredQuestions.value.length ? `考试更新成功，当前共保存 ${configuredQuestions.value.length} 道题目` : '考试更新成功')
+      ElMessage.success(`考试更新成功，当前共保存 ${questions.length} 道题目`)
     } else {
       const payload: CreateExamPayload = {
-        title: form.value.title.trim(),
-        description: form.value.description.trim(),
-        classId: form.value.classId,
+        ...basePayload,
         startAt: form.value.startAt || undefined,
         endAt: form.value.endAt || undefined,
-        durationMinutes: form.value.durationMinutes,
         status: 'DRAFT',
-        scoreVisibilityMode: form.value.scoreVisibilityMode,
-        questions,
       }
       await createExam(payload)
-      ElMessage.success(configuredQuestions.value.length ? `考试创建成功，并写入了 ${configuredQuestions.value.length} 道题目` : '考试创建成功')
+      ElMessage.success(`考试创建成功，并写入了 ${questions.length} 道题目`)
     }
     dialogVisible.value = false
     configuredQuestions.value = []
+    legacyInlineQuestions.value = []
     await fetchExams()
   } finally {
     submitting.value = false
@@ -843,6 +799,11 @@ const submitForm = async () => {
 }
 
 const publishExam = async (row: ExamListItem) => {
+  const detail = await getExamDetail(row.id)
+  if ((detail.questions || []).some(q => q.questionId == null)) {
+    ElMessage.error('请先将题目保存到题库后再组卷')
+    return
+  }
   await changeExamStatus(row.id, 'PUBLISHED')
   ElMessage.success('考试已发布')
   await fetchExams()
@@ -1583,6 +1544,25 @@ onMounted(async () => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.exam-dialog__hint {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.exam-dialog__hint--danger {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.legacy-inline-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .dialog-grid {

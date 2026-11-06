@@ -1,6 +1,6 @@
 import type { UnifiedQuestionAnswerPayload } from './question-answer'
 
-export type ScoreVisibilityMode = 'IMMEDIATE' | 'AFTER_SUBMIT' | 'AFTER_TEACHER_CONFIRM' | 'HIDDEN' | string
+export type ScoreVisibilityMode = 'IMMEDIATE' | 'AFTER_TEACHER_CONFIRM' | 'AFTER_DEADLINE' | 'MANUAL_RELEASE'
 
 export interface ExamListItem {
   id: number
@@ -43,6 +43,8 @@ export interface ExamQuestionView {
   judgeDetail?: string | null
   acceptedAutoScore?: boolean | null
   teacherComment?: string | null
+  sortOrder?: number
+  analysisText?: string | null
 }
 
 export interface ExamDetail {
@@ -56,6 +58,7 @@ export interface ExamDetail {
   endAt: string | null
   durationMinutes: number
   scoreVisibilityMode?: ScoreVisibilityMode | null
+  shuffleQuestions?: boolean
   questions: ExamQuestionView[]
   // Student-specific fields
   submissionId?: number
@@ -78,16 +81,12 @@ export interface CreateExamPayload {
   durationMinutes?: number
   status?: string
   scoreVisibilityMode?: ScoreVisibilityMode
+  shuffleQuestions?: boolean
   questions?: Array<{
-    questionId?: number | null
-    sourceType?: 'BANK' | 'INLINE'
-    questionType?: string
-    stem?: string
+    questionId: number
+    sourceType?: 'BANK'
     sortOrder: number
     questionScore: number
-    optionsJson?: string | null
-    answerJson?: string | null
-    scoringConfigJson?: string | null
   }>
 }
 
@@ -99,16 +98,12 @@ export interface UpdateExamPayload {
   endAt: string
   durationMinutes: number
   scoreVisibilityMode?: ScoreVisibilityMode
+  shuffleQuestions?: boolean
   questions: Array<{
-    questionId?: number | null
-    sourceType?: 'BANK' | 'INLINE'
-    questionType?: string
-    stem?: string
+    questionId: number
+    sourceType?: 'BANK'
     sortOrder: number
     questionScore: number
-    optionsJson?: string | null
-    answerJson?: string | null
-    scoringConfigJson?: string | null
   }>
 }
 
@@ -150,6 +145,7 @@ export interface ExamAnswerDetail {
   acceptedAutoScore?: boolean | null
   teacherComment: string | null
   questionScore: number
+  analysisText?: string | null
 }
 
 export interface ExamSubmissionDetail {

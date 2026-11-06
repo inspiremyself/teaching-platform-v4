@@ -36,6 +36,8 @@ public class Exam extends BaseEntity {
     private ScoreVisibilityMode scoreVisibilityMode = ScoreVisibilityMode.AFTER_TEACHER_CONFIRM;
     @Column(name = "score_released", nullable = false)
     private boolean scoreReleased;
+    @Column(name = "shuffle_questions", nullable = false)
+    private boolean shuffleQuestions;
 
     public Long getClassId() { return classId; }
     public void setClassId(Long classId) { this.classId = classId; }
@@ -57,4 +59,6 @@ public class Exam extends BaseEntity {
     public void setScoreVisibilityMode(ScoreVisibilityMode scoreVisibilityMode) { this.scoreVisibilityMode = scoreVisibilityMode; }
     public boolean isScoreReleased() { return scoreReleased; }
     public void setScoreReleased(boolean scoreReleased) { this.scoreReleased = scoreReleased; }
+    public boolean isShuffleQuestions() { return shuffleQuestions; }
+    public void setShuffleQuestions(boolean shuffleQuestions) { this.shuffleQuestions = shuffleQuestions; }
 }

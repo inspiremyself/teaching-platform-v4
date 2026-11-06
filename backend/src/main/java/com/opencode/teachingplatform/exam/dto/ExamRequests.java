@@ -1,6 +1,7 @@
 package com.opencode.teachingplatform.exam.dto;
 
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -13,37 +14,27 @@ public final class ExamRequests {
 
     private ExamRequests() {}
 
+    /**
+     * 组卷题目入参：考试仅接受题库题目，内联题已下线。
+     * sourceType 为兼容旧客户端保留，缺省仍解析为 BANK。
+     */
     public record ExamQuestionItem(
             Long questionId,
             String sourceType,
-            String questionType,
-            String stem,
             @NotNull Integer sortOrder,
-            @NotNull Double questionScore,
-            String optionsJson,
-            String answerJson,
-            String scoringConfigJson
+            @NotNull Double questionScore
     ) {
-        public ExamQuestionItem(@NotNull Long questionId,
-                                @NotNull Integer sortOrder,
-                                @NotNull Double questionScore) {
-            this(questionId, "BANK", null, null, sortOrder, questionScore, null, null, null);
+        public ExamQuestionItem(Long questionId, Integer sortOrder, Double questionScore) {
+            this(questionId, "BANK", sortOrder, questionScore);
         }
 
         public String resolvedSourceType() {
-            return sourceType == null || sourceType.isBlank()
-                    ? (questionId != null ? "BANK" : "INLINE")
-                    : sourceType;
+            return sourceType == null || sourceType.isBlank() ? "BANK" : sourceType;
         }
 
-        @AssertTrue(message = "BANK 题目必须提供 questionId，INLINE 题目必须提供 questionType 和 stem")
+        @AssertTrue(message = "考试题目必须来自题库")
         public boolean isValidConfig() {
-            String resolved = resolvedSourceType();
-            if ("INLINE".equalsIgnoreCase(resolved)) {
-                return questionType != null && !questionType.isBlank()
-                        && stem != null && !stem.isBlank();
-            }
-            return questionId != null;
+            return questionId != null && "BANK".equalsIgnoreCase(resolvedSourceType());
         }
     }
 
@@ -56,7 +47,8 @@ public final class ExamRequests {
             @NotNull Integer durationMinutes,
             @NotBlank String status,
             ScoreVisibilityMode scoreVisibilityMode,
-            List<ExamQuestionItem> questions
+            @Valid List<ExamQuestionItem> questions,
+            Boolean shuffleQuestions
     ) {}
 
     public record UpdateExamRequest(
@@ -67,7 +59,8 @@ public final class ExamRequests {
             OffsetDateTime endAt,
             @NotNull Integer durationMinutes,
             ScoreVisibilityMode scoreVisibilityMode,
-            List<ExamQuestionItem> questions
+            @Valid List<ExamQuestionItem> questions,
+            Boolean shuffleQuestions
     ) {}
 
     public record ChangeExamStatusRequest(

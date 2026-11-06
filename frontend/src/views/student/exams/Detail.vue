@@ -278,6 +278,12 @@
                 <div class="result-answer-block__label">评分信息</div>
                 <div class="result-answer-block__value">{{ canShowResult ? resultMetaText(question.questionId) : '成绩暂未开放' }}</div>
               </div>
+              <div class="result-answer-block result-answer-block--light result-answer-block--full">
+                <div class="result-answer-block__label">题目解析</div>
+                <div class="result-answer-block__value">
+                  {{ canShowResult ? analysisTextOf(question.questionId, question) : '成绩暂未开放' }}
+                </div>
+              </div>
             </div>
 
             <div v-if="canShowResult && resultAnswerMap[question.questionId]?.teacherComment" class="teacher-comment-box">
@@ -314,11 +320,14 @@ import CodeLabAnswerEditor from '../components/lab-answer/CodeLabAnswerEditor.vu
 import { buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText } from '../components/lab-answer/answerPayload'
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from '../components/lab-answer/types'
 import { getExamDetail, startExam, submitExam } from '@/api/exams'
+import { useAuthStore } from '@/stores/auth'
+import { shuffleExamQuestions } from '@/utils/examShuffle'
 import type { ExamAnswerDetail, ExamDetail, ExamQuestionView } from '@/types/exam'
 import type { StudentChoiceOption, StudentLabStepItem } from '@/types/lab'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const examId = route.params.id as string
 
 const state = ref<'A' | 'B' | 'C'>('A')
@@ -360,6 +369,16 @@ const resultStatusDescription = computed(() => {
 
 function qType(question: ExamQuestionView): string {
   return question.questionType ?? question.type ?? 'TEXT'
+}
+
+/**
+ * 返回学生侧题目顺序：开启乱序时按「学生 + 考试」稳定洗牌，刷新后顺序不变。
+ */
+function orderedQuestions(data: ExamDetail): ExamQuestionView[] {
+  const raw = data.questions ?? []
+  if (data.shuffleQuestions !== true) return raw
+  const studentId = authStore.user?.id ?? 0
+  return shuffleExamQuestions(raw, `${studentId}:${data.id}`)
 }
 
 function normalizeType(type: string): string {
@@ -636,13 +655,19 @@ function resultMetaText(questionId: number) {
   return '教师人工评分中'
 }
 
+/** 题目解析：优先取结果明细，回退到题目快照，缺省展示占位文案 */
+function analysisTextOf(questionId: number, question: ExamQuestionView): string {
+  const text = resultAnswerMap.value[questionId]?.analysisText ?? question.analysisText ?? ''
+  return text.trim() ? text : '暂无解析'
+}
+
 async function doStart() {
   starting.value = true
   try {
     const response = await startExam(examId) as { deadlineAt?: string }
     if (response?.deadlineAt) {
       detail.value = await getExamDetail(examId)
-      questions.value = detail.value?.questions ?? []
+      questions.value = detail.value ? orderedQuestions(detail.value) : []
       loadSavedAnswers()
       startTimer(response.deadlineAt)
       state.value = 'B'
@@ -703,7 +728,7 @@ function autoSubmit() {
 async function loadExam() {
   const data = await getExamDetail(examId)
   detail.value = data
-  questions.value = data.questions ?? []
+  questions.value = orderedQuestions(data)
 
   const map: Record<number, ExamAnswerDetail> = {}
   const answerDetails = (data as ExamDetail & { answerDetails?: ExamAnswerDetail[] }).answerDetails
@@ -726,6 +751,7 @@ async function loadExam() {
           score: earnedScore,
           teacherComment: question.teacherComment ?? null,
           questionScore: question.questionScore ?? question.score ?? 0,
+          analysisText: question.analysisText ?? null,
         }
       }
     })
@@ -1281,6 +1307,10 @@ onUnmounted(() => {
 .result-answer-block--light {
   background: #fff;
   border: 1px solid #e2e8f0;
+}
+
+.result-answer-block--full {
+  grid-column: 1 / -1;
 }
 
 .result-answer-grid {

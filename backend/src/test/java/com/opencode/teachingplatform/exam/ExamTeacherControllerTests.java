@@ -107,15 +107,7 @@ class ExamTeacherControllerTests {
     }
 
     @Test
-    void teacherCanCreateExamWithInlineQuestion() throws Exception {
-        when(examService.createExam(any(CurrentUser.class), any(ExamRequests.CreateExamRequest.class)))
-                .thenReturn(Map.of(
-                        "id", 11,
-                        "title", "含内联题考试",
-                        "classId", 1,
-                        "status", "DRAFT"
-                ));
-
+    void teacherCreateExamWithInlineQuestionReturns400() throws Exception {
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {
             mockMvc.perform(post("/api/v1/exams")
@@ -123,7 +115,7 @@ class ExamTeacherControllerTests {
                             .content("""
                                     {
                                       "title": "含内联题考试",
-                                      "description": "允许教师直接新增题目",
+                                      "description": "内联题已下线",
                                       "classId": 1,
                                       "durationMinutes": 60,
                                       "status": "DRAFT",
@@ -140,10 +132,9 @@ class ExamTeacherControllerTests {
                                       ]
                                     }
                                     """))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(0))
-                    .andExpect(jsonPath("$.data.id").value(11))
-                    .andExpect(jsonPath("$.data.status").value("DRAFT"));
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("考试题目必须来自题库"));
         } finally {
             SecurityContextHolder.clearContext();
         }

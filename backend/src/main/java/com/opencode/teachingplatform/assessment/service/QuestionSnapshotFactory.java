@@ -28,25 +28,4 @@ public final class QuestionSnapshotFactory {
                 true
         );
     }
-
-    public static QuestionSnapshot fromInlineQuestion(String questionType,
-                                                      String stem,
-                                                      String optionsJson,
-                                                      String answerJson,
-                                                      String scoringConfigJson,
-                                                      Integer sortOrder,
-                                                      Double score) {
-        return new QuestionSnapshot(
-                null,
-                "INLINE",
-                questionType,
-                stem,
-                sortOrder,
-                score,
-                optionsJson,
-                answerJson,
-                scoringConfigJson,
-                false
-        );
-    }
 }

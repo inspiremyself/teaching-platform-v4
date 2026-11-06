@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -76,60 +77,18 @@ class ExamServiceTests {
                                 new ExamRequests.ExamQuestionItem(1L, 1, 5.0),
                                 new ExamRequests.ExamQuestionItem(2L, 2, 3.0),
                                 new ExamRequests.ExamQuestionItem(3L, 3, 10.0)
-                        )
+                        ),
+                        null
                 )
         );
         return ((Number) created.get("id")).longValue();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void createExamShouldPersistInlineQuestionSnapshotAndExposeItInDetail() {
-        Map<String, Object> created = (Map<String, Object>) examService.createExam(
-                teacher,
-                new ExamRequests.CreateExamRequest(
-                        "内联题考试",
-                        "允许直接新增题目",
-                        1L,
-                        OffsetDateTime.now().minusHours(1),
-                        OffsetDateTime.now().plusHours(1),
-                        45,
-                        "DRAFT",
-                        null,
-                        List.of(
-                                new ExamRequests.ExamQuestionItem(null, "INLINE", "SHORT", "请概述共享题目能力设计", 1, 12.0, null, "[\"围绕快照、答案 payload 与评分适配展开\"]", "{\"type\":\"SHORT\",\"answerJson\":\"[\\\"围绕快照、答案 payload 与评分适配展开\\\"]\"}")
-                        )
-                )
-        );
-
-        Long examId = ((Number) created.get("id")).longValue();
-        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
-        List<Map<String, Object>> questions = (List<Map<String, Object>>) detail.get("questions");
-
-        assertThat(questions).singleElement().satisfies(question -> {
-            assertThat(question.get("questionId")).isNull();
-            assertThat(question.get("type")).isEqualTo("SHORT");
-            assertThat(question.get("stem")).isEqualTo("请概述共享题目能力设计");
-            assertThat(question.get("questionScore")).isEqualTo(12.0);
-            assertThat(question.get("answerJson")).isEqualTo("[\"围绕快照、答案 payload 与评分适配展开\"]");
-        });
-
-        Map<String, Object> persisted = jdbcTemplate.queryForMap(
-                "SELECT question_id, question_snapshot_json FROM exam_question WHERE exam_id = ?",
-                examId
-        );
-        assertThat(persisted.get("QUESTION_ID")).isNull();
-        assertThat(String.valueOf(persisted.get("QUESTION_SNAPSHOT_JSON")))
-                .contains("\"sourceType\":\"INLINE\"")
-                .contains("\"questionType\":\"SHORT\"")
-                .contains("\"stem\":\"请概述共享题目能力设计\"");
-    }
-
-    @Test
     void examSchemaSupportsSingleAttemptWorkflow() throws Exception {
         // Verify EXAM table has CLASS_ID column
         Set<String> examColumns = getColumnNames("EXAM");
-        assertThat(examColumns).contains("CLASS_ID");
+        assertThat(examColumns).contains("CLASS_ID", "SHUFFLE_QUESTIONS");
 
         // Verify EXAM_SUBMISSION table has required columns
         Set<String> submissionColumns = getColumnNames("EXAM_SUBMISSION");
@@ -505,7 +464,8 @@ class ExamServiceTests {
                         90,
                         "PUBLISHED",
                         null,
-                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0))
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        null
                 )
         );
 
@@ -594,7 +554,8 @@ class ExamServiceTests {
                         60,
                         "PUBLISHED",
                         com.opencode.teachingplatform.common.enums.ScoreVisibilityMode.MANUAL_RELEASE,
-                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0))
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        null
                 )
         );
         Long examId = ((Number) created.get("id")).longValue();
@@ -635,6 +596,296 @@ class ExamServiceTests {
 
         assertThat(questions).isNotEmpty();
         assertThat(findQuestion(questions, 1L).get("stem")).isEqualTo("Original snapshot stem");
+    }
+
+    @Test
+    void createExamRejectsInlineQuestion() {
+        assertThatThrownBy(() -> examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(
+                        "内联题考试",
+                        "内联题已下线",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        45,
+                        "DRAFT",
+                        null,
+                        List.of(new ExamRequests.ExamQuestionItem(null, "INLINE", 1, 12.0)),
+                        null
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("考试题目必须来自题库")
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40000);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void createExamDefaultsShuffleQuestionsToFalse() {
+        Map<String, Object> created = (Map<String, Object>) examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(
+                        "默认顺序考试",
+                        "",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        "DRAFT",
+                        null,
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        null
+                )
+        );
+        Long examId = ((Number) created.get("id")).longValue();
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+        assertThat(detail.get("shuffleQuestions")).isEqualTo(false);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT shuffle_questions FROM exam WHERE id = ?", Boolean.class, examId))
+                .isEqualTo(Boolean.FALSE);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void createExamPersistsShuffleQuestionsWhenTrue() {
+        Map<String, Object> created = (Map<String, Object>) examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(
+                        "乱序考试",
+                        "",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        "DRAFT",
+                        null,
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        true
+                )
+        );
+        Long examId = ((Number) created.get("id")).longValue();
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+        assertThat(detail.get("shuffleQuestions")).isEqualTo(true);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT shuffle_questions FROM exam WHERE id = ?", Boolean.class, examId))
+                .isEqualTo(Boolean.TRUE);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void updateExamKeepsShuffleQuestionsWhenOmitted() {
+        Long examId = createDraftExam(true);
+
+        examService.updateExam(teacher, examId, buildUpdateRequest("保留乱序", null, List.of(1L)));
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+        assertThat(detail.get("shuffleQuestions")).isEqualTo(true);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void updateExamUpdatesShuffleQuestionsWhenProvided() {
+        Long examId = createDraftExam(false);
+
+        examService.updateExam(teacher, examId, buildUpdateRequest("改为乱序", true, List.of(1L)));
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+        assertThat(detail.get("shuffleQuestions")).isEqualTo(true);
+    }
+
+    @Test
+    void updateExamRejectsInlineQuestion() {
+        Long examId = createDraftExam(false);
+
+        assertThatThrownBy(() -> examService.updateExam(
+                teacher,
+                examId,
+                new ExamRequests.UpdateExamRequest(
+                        "更新为内联题",
+                        "",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        null,
+                        List.of(new ExamRequests.ExamQuestionItem(null, "INLINE", 1, 5.0)),
+                        null
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("考试题目必须来自题库")
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40000);
+    }
+
+    @Test
+    void publishExamRejectsLegacyInlineQuestion() {
+        insertLegacyInlineExam(901L, "DRAFT");
+
+        assertThatThrownBy(() -> examService.changeStatus(
+                teacher, 901L, new ExamRequests.ChangeExamStatusRequest("PUBLISHED")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("请先将题目保存到题库后再组卷")
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40000);
+    }
+
+    @Test
+    void startExamRejectsLegacyInlineQuestion() {
+        insertLegacyInlineExam(902L, "PUBLISHED");
+
+        assertThatThrownBy(() -> examService.startExam(student, 902L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("试卷包含不支持的题目，请联系教师")
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40000);
+    }
+
+    @Test
+    void startExamRejectsStudentOutsideClass() {
+        insertLegacyInlineExam(903L, "PUBLISHED");
+        CurrentUser outsider = new CurrentUser(999L, "20269999", "非本班学生", UserRole.STUDENT);
+
+        assertThatThrownBy(() -> examService.startExam(outsider, 903L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限参加该考试")
+                .extracting(ex -> ((BusinessException) ex).getCode())
+                .isEqualTo(40300);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void studentDetailIncludesAnalysisTextWhenScoreVisible() {
+        Long examId = createExamWithVisibility(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode.IMMEDIATE);
+        examService.startExam(student, examId);
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null)
+        )));
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(student, examId);
+        List<Map<String, Object>> questions = (List<Map<String, Object>>) detail.get("questions");
+        assertThat(detail.get("resultAvailable")).isEqualTo(true);
+        assertThat(findQuestion(questions, 1L).get("analysisText")).isEqualTo("强调控制复杂度");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void studentDetailOmitsAnalysisTextWhenScoreHidden() {
+        Long examId = createExamWithVisibility(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        examService.startExam(student, examId);
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null)
+        )));
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(student, examId);
+        List<Map<String, Object>> questions = (List<Map<String, Object>>) detail.get("questions");
+        assertThat(detail.get("resultAvailable")).isEqualTo(false);
+        assertThat(findQuestion(questions, 1L)).doesNotContainKey("analysisText");
+    }
+
+    @Test
+    void shuffleFlagDoesNotAffectScoring() {
+        Long examId = createExamWithVisibility(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode.AFTER_TEACHER_CONFIRM, true);
+        examService.startExam(student, examId);
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(2L, List.of("true"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(3L, null, "统一错误处理与前端解析", null, null)
+        )));
+        // 提交后分数仅写入持久化上下文，JdbcTemplate 直连查询前需显式刷库
+        entityManager.flush();
+
+        Double autoScore = jdbcTemplate.queryForObject(
+                "SELECT auto_score FROM exam_submission WHERE exam_id = ? AND student_id = 2",
+                Double.class,
+                examId
+        );
+        assertThat(autoScore).isEqualTo(8.0);
+    }
+
+    private Long createDraftExam(boolean shuffleQuestions) {
+        Map<String, Object> created = (Map<String, Object>) examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(
+                        "草稿考试-" + System.nanoTime(),
+                        "",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        "DRAFT",
+                        null,
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        shuffleQuestions
+                )
+        );
+        return ((Number) created.get("id")).longValue();
+    }
+
+    private ExamRequests.UpdateExamRequest buildUpdateRequest(String title,
+                                                              Boolean shuffleQuestions,
+                                                              List<Long> questionIds) {
+        List<ExamRequests.ExamQuestionItem> items = new ArrayList<>();
+        int sortOrder = 1;
+        for (Long questionId : questionIds) {
+            items.add(new ExamRequests.ExamQuestionItem(questionId, sortOrder++, 5.0));
+        }
+        return new ExamRequests.UpdateExamRequest(
+                title,
+                "",
+                1L,
+                OffsetDateTime.now().minusHours(1),
+                OffsetDateTime.now().plusHours(1),
+                30,
+                null,
+                items,
+                shuffleQuestions
+        );
+    }
+
+    private Long createExamWithVisibility(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode mode) {
+        return createExamWithVisibility(mode, false);
+    }
+
+    private Long createExamWithVisibility(com.opencode.teachingplatform.common.enums.ScoreVisibilityMode mode,
+                                          boolean shuffleQuestions) {
+        Map<String, Object> created = (Map<String, Object>) examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(
+                        "解析考试-" + System.nanoTime(),
+                        "",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        "PUBLISHED",
+                        mode,
+                        List.of(
+                                new ExamRequests.ExamQuestionItem(1L, 1, 5.0),
+                                new ExamRequests.ExamQuestionItem(2L, 2, 3.0),
+                                new ExamRequests.ExamQuestionItem(3L, 3, 10.0)
+                        ),
+                        shuffleQuestions
+                )
+        );
+        return ((Number) created.get("id")).longValue();
+    }
+
+    private void insertLegacyInlineExam(Long examId, String status) {
+        jdbcTemplate.update("""
+                INSERT INTO exam (id, title, description, class_id, duration_minutes, status, created_by,
+                                  score_visibility_mode, score_released, shuffle_questions, created_at, updated_at)
+                VALUES (?, '历史内联题考试', '', 1, 60, ?, 1, 'IMMEDIATE', FALSE, FALSE,
+                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, examId, status);
+        jdbcTemplate.update("""
+                INSERT INTO exam_question (exam_id, question_id, sort_order, question_score, question_snapshot_json)
+                VALUES (?, NULL, 1, 2.0, '{}')
+                """, examId);
     }
 
     private Set<String> getColumnNames(String tableName) throws Exception {
@@ -700,7 +951,8 @@ class ExamServiceTests {
                         30,
                         "DRAFT",
                         null,
-                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0))
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        null
                 )
         ))
                 .isInstanceOf(BusinessException.class)
@@ -724,7 +976,8 @@ class ExamServiceTests {
                         OffsetDateTime.now().plusHours(1),
                         30,
                         null,
-                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0))
+                        List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                        null
                 )
         ))
                 .isInstanceOf(BusinessException.class)

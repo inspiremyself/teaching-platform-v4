@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -39,7 +40,7 @@ public class QuestionService {
 
     @Transactional
     public Map<String, Object> create(CurrentUser currentUser, SaveQuestionRequest request) {
-        if (questionBankRepository.existsByCode(request.code())) {
+        if (questionBankRepository.existsByCode(normalizeCode(request.code()))) {
             throw new BusinessException(40900, "题目编码已存在");
         }
         QuestionBank question = new QuestionBank();
@@ -58,7 +59,7 @@ public class QuestionService {
     public Map<String, Object> update(CurrentUser currentUser, Long id, SaveQuestionRequest request) {
         QuestionBank question = questionBankRepository.findByIdAndCreatedBy(id, currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该题目"));
-        if (questionBankRepository.existsByCodeAndIdNotAndCreatedBy(request.code(), id, currentUser.id())) {
+        if (questionBankRepository.existsByCodeAndIdNot(normalizeCode(request.code()), id)) {
             throw new BusinessException(40900, "题目编码已存在");
         }
         apply(question, request);
@@ -81,7 +82,7 @@ public class QuestionService {
 
     private void apply(QuestionBank question, SaveQuestionRequest request) {
         validateJsonPayload(request.optionsJson(), request.answerJson());
-        question.setCode(request.code().trim());
+        question.setCode(normalizeCode(request.code()));
         question.setType(request.type().trim());
         question.setStem(request.stem().trim());
         question.setDifficulty(request.difficulty().trim());
@@ -104,6 +105,10 @@ public class QuestionService {
         view.put("analysisText", question.getAnalysisText() == null ? "" : question.getAnalysisText());
         view.put("createdBy", question.getCreatedBy());
         return view;
+    }
+
+    private String normalizeCode(String code) {
+        return code == null ? null : code.trim().toUpperCase(Locale.ROOT);
     }
 
     private String normalizeNullable(String value) {

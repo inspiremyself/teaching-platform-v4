@@ -242,6 +242,7 @@
 | `created_by` | `BIGINT` | 否 |  | 创建人 |
 | `score_visibility_mode` | `VARCHAR(32)` | 否 | `AFTER_TEACHER_CONFIRM` | 成绩可见模式 |
 | `score_released` | `BOOLEAN` | 否 | `FALSE` | 是否已发布成绩 |
+| `shuffle_questions` | `BOOLEAN` | 否 | `FALSE` | 是否按学生维度乱序展示题目 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
 
@@ -254,7 +255,7 @@
 |---|---|---|---|---|
 | `id` | `BIGINT` | 否 | 自增 | 主键 |
 | `exam_id` | `BIGINT` | 否 |  | 考试 ID |
-| `question_id` | `BIGINT` | 是 |  | 题库题目 ID，可为空以支持内联题 |
+| `question_id` | `BIGINT` | 是 |  | 题库题目 ID；历史数据可能为空（内联题已停用，新数据必填） |
 | `sort_order` | `INT` | 否 |  | 排序 |
 | `question_score` | `DOUBLE` | 否 |  | 分值 |
 | `question_snapshot_json` | `TEXT` | 否 | `'{}'` | 题目快照 |
@@ -529,5 +530,5 @@
 
 - 最终实验模块以 `t_experiment`、`t_experiment_item`、`experiment_submission`、`experiment_answer`、`experiment_blank_answer_override` 为准。
 - `lab*` 旧表不再作为最终版数据库说明对象。
-- 考试模块中 `exam_question.question_id` 为可空，表示最终版支持内联题。
+- 考试模块中 `exam_question.question_id` 历史数据可能为空（内联题已停用，新数据必填）；发布与开始考试均会阻断历史内联题。
 - 作业模块中 `homework_question.question_id` 为可空，表示题目可以脱离题库快照独立存在。
