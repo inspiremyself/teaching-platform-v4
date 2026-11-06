@@ -149,7 +149,7 @@
 
             <div class="report-row__actions">
               <el-button plain @click="openReportView(row)">实验报告</el-button>
-              <el-button type="primary" plain @click="goBatchGrade(row.id)">
+              <el-button v-if="row.submitStatus !== 'SAVED'" type="primary" plain @click="goBatchGrade(row.id)">
                 {{ row.submitStatus === 'GRADED' ? '查看批量评分' : '进入批量批改' }}
               </el-button>
               <el-button

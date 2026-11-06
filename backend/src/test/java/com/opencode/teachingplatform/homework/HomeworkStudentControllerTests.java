@@ -97,6 +97,29 @@ class HomeworkStudentControllerTests {
     }
 
     @Test
+    void studentSubmitRejectsOverdueHomework() throws Exception {
+        when(homeworkService.submitHomework(any(CurrentUser.class), org.mockito.ArgumentMatchers.eq(1L), any()))
+                .thenThrow(new com.opencode.teachingplatform.common.exception.BusinessException(40000, "作业已截止，不能提交"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/student/homeworks/{id}/submit", 1L)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "answerText": "逾期提交内容",
+                                      "attachment": null
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("作业已截止，不能提交"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void studentHomeworkDetailContainsClassAndAttachmentContext() throws Exception {
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("id", 1);

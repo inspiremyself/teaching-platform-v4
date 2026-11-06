@@ -106,6 +106,74 @@ class AnalysisServiceTests {
     }
 
     @Test
+    void dashboardScopesPlagiarismCountToTeacherCreatedHomework() {
+        seedOwnHomeworkFixture();
+        insertPlagiarismTask(PLAG_OWN_HIGH_ID, "HOMEWORK", SUBMISSION_OWN_ID, 88.0);
+        insertOtherTeacherHighRiskFixture();
+
+        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
+
+        assertEquals(1, summaryCardValue(dashboard, "highRiskPlagiarismCount"));
+    }
+
+    @Test
+    void highRiskPlagiarismCountIgnoresBoundarySimilarityAndNonHomeworkTasks() {
+        seedOwnHomeworkFixture();
+        insertPlagiarismTask(PLAG_BOUNDARY_ID, "HOMEWORK", SUBMISSION_OWN_ID, 50.0);
+        insertPlagiarismTask(PLAG_NON_HOMEWORK_ID, "LAB", SUBMISSION_OWN_ID, 99.0);
+
+        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
+
+        assertEquals(0, summaryCardValue(dashboard, "highRiskPlagiarismCount"));
+    }
+
+    @Test
+    void dashboardScopesTrendToTeacherClassesAndSchool() {
+        seedOwnHomeworkFixture();
+        int baseline = totalTrendScoreCount(analysisService.getDashboard(teacher()));
+        insertTrendScoreRecord(TREND_OWN_SCORE_ID, OWN_CLASS_ID, 85.0);
+
+        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
+
+        assertEquals(baseline + 1, totalTrendScoreCount(dashboard));
+    }
+
+    @Test
+    void teacherTrendExcludesForeignSchoolAndUnassignedClasses() {
+        insertClass(FOREIGN_CLASS_ID, "他校趋势班", "TREND-FOREIGN", 2L);
+        insertClass(UNASSIGNED_CLASS_ID, "未分配趋势班", "TREND-UNASSIGNED", 1L);
+        int baseline = totalTrendScoreCount(analysisService.getDashboard(teacher()));
+        insertTrendScoreRecord(TREND_FOREIGN_SCORE_ID, FOREIGN_CLASS_ID, 66.0);
+        insertTrendScoreRecord(TREND_UNASSIGNED_SCORE_ID, UNASSIGNED_CLASS_ID, 77.0);
+
+        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
+
+        assertEquals(baseline, totalTrendScoreCount(dashboard));
+    }
+
+    @Test
+    void dashboardDoesNotDoubleCountWhenClassHasTwoTeachers() {
+        seedOwnHomeworkFixture();
+        insertClassTeacher(OWN_CLASS_ID, OTHER_TEACHER_ID);
+        int baseline = totalTrendScoreCount(analysisService.getDashboard(teacher()));
+        insertTrendScoreRecord(TREND_OWN_SCORE_ID, OWN_CLASS_ID, 90.0);
+
+        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
+
+        assertEquals(baseline + 1, totalTrendScoreCount(dashboard));
+    }
+
+    @Test
+    void dashboardReturnsEmptyValuesForNewTeacher() {
+        CurrentUser newTeacher = new CurrentUser(8888L, "new-teacher", "新教师", UserRole.TEACHER, 1L, "test-session");
+
+        Map<String, Object> dashboard = analysisService.getDashboard(newTeacher);
+
+        assertEquals(0, summaryCardValue(dashboard, "highRiskPlagiarismCount"));
+        assertTrue(((List<?>) dashboard.get("trend")).isEmpty());
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void teacherOverviewOnlyIncludesAssignedClassesViaClassTeacherJoin() {
         Map<String, Object> overview = analysisService.getTeacherOverview(teacher());
@@ -368,6 +436,113 @@ class AnalysisServiceTests {
     private static final long ORPHAN_SCORE_ID = -9104L;
     private static final long OTHER_STUDENT_SCORE_ID = -9105L;
     private static final long OTHER_STUDENT_ID = 3L;
+    private static final long OTHER_TEACHER_ID = 9999L;
+    private static final long OWN_CLASS_ID = -201L;
+    private static final long FOREIGN_CLASS_ID = -202L;
+    private static final long UNASSIGNED_CLASS_ID = -203L;
+    private static final long HOMEWORK_OWN_ID = -301L;
+    private static final long HOMEWORK_FOREIGN_ID = -302L;
+    private static final long SUBMISSION_OWN_ID = -3021L;
+    private static final long SUBMISSION_FOREIGN_ID = -3022L;
+    private static final long PLAG_OWN_HIGH_ID = -3031L;
+    private static final long PLAG_FOREIGN_HIGH_ID = -3032L;
+    private static final long PLAG_BOUNDARY_ID = -3033L;
+    private static final long PLAG_NON_HOMEWORK_ID = -3034L;
+    private static final long TREND_OWN_SCORE_ID = -3041L;
+    private static final long TREND_FOREIGN_SCORE_ID = -3042L;
+    private static final long TREND_UNASSIGNED_SCORE_ID = -3043L;
+
+    /**
+     * 构造“教师本人作业”基础夹具：所属班级、班级教师归属、作业与提交记录。
+     */
+    private void seedOwnHomeworkFixture() {
+        insertClass(OWN_CLASS_ID, "查重归属班", "PLAG-OWN", 1L);
+        insertClassTeacher(OWN_CLASS_ID, TEACHER_ID);
+        insertHomework(HOMEWORK_OWN_ID, "教师自有作业", OWN_CLASS_ID, TEACHER_ID);
+        insertHomeworkSubmission(SUBMISSION_OWN_ID, HOMEWORK_OWN_ID);
+    }
+
+    /**
+     * 构造“其他教师布置的作业”夹具，用于验证高风险查重数量不会跨教师统计。
+     */
+    private void insertOtherTeacherHighRiskFixture() {
+        insertClass(FOREIGN_CLASS_ID, "他校查重班", "PLAG-FOREIGN", 2L);
+        insertHomework(HOMEWORK_FOREIGN_ID, "他人作业", FOREIGN_CLASS_ID, OTHER_TEACHER_ID);
+        insertHomeworkSubmission(SUBMISSION_FOREIGN_ID, HOMEWORK_FOREIGN_ID);
+        insertPlagiarismTask(PLAG_FOREIGN_HIGH_ID, "HOMEWORK", SUBMISSION_FOREIGN_ID, 95.0);
+    }
+
+    private void insertClass(long id, String name, String code, long schoolId) {
+        jdbcTemplate.update(
+                "INSERT INTO class_room (id, name, code, school_id, status) VALUES (?, ?, ?, ?, 'ACTIVE')",
+                id, name, code, schoolId
+        );
+    }
+
+    private void insertClassTeacher(long classId, long teacherId) {
+        jdbcTemplate.update(
+                "INSERT INTO class_teacher (class_id, teacher_user_id, role, assigned_at) " +
+                        "VALUES (?, ?, 'SUBJECT', CURRENT_TIMESTAMP)",
+                classId, teacherId
+        );
+    }
+
+    private void insertHomework(long id, String title, long classId, long createdBy) {
+        jdbcTemplate.update(
+                "INSERT INTO homework (id, title, class_id, created_by, status) VALUES (?, ?, ?, ?, 'PUBLISHED')",
+                id, title, classId, createdBy
+        );
+    }
+
+    private void insertHomeworkSubmission(long id, long homeworkId) {
+        jdbcTemplate.update(
+                "INSERT INTO homework_submission (id, homework_id, student_id, submit_status) " +
+                        "VALUES (?, ?, ?, 'SUBMITTED')",
+                id, homeworkId, STUDENT_ID
+        );
+    }
+
+    private void insertPlagiarismTask(long id, String businessType, long businessId, double similarityRate) {
+        jdbcTemplate.update(
+                "INSERT INTO plagiarism_task (id, business_type, business_id, student_id, status, similarity_rate) " +
+                        "VALUES (?, ?, ?, ?, 'COMPLETED', ?)",
+                id, businessType, businessId, STUDENT_ID, similarityRate
+        );
+    }
+
+    private void insertTrendScoreRecord(long id, long classId, double score) {
+        jdbcTemplate.update(
+                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at) " +
+                        "VALUES (?, 'HOMEWORK', ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                id, id, STUDENT_ID, classId, score
+        );
+    }
+
+    @SuppressWarnings("unchecked")
+    private static int totalTrendScoreCount(Map<String, Object> dashboard) {
+        List<Map<String, Object>> trend = (List<Map<String, Object>>) dashboard.get("trend");
+        return trend.stream().mapToInt(row -> ((Number) row.get("scoreCount")).intValue()).sum();
+    }
+
+    /**
+     * 清理教师看板归属隔离夹具，避免非事务测试之间互相污染。
+     */
+    @BeforeEach
+    @AfterEach
+    void cleanupTeacherIsolationFixture() {
+        jdbcTemplate.update("DELETE FROM score_record WHERE id IN (?, ?, ?)",
+                TREND_OWN_SCORE_ID, TREND_FOREIGN_SCORE_ID, TREND_UNASSIGNED_SCORE_ID);
+        jdbcTemplate.update("DELETE FROM plagiarism_task WHERE id IN (?, ?, ?, ?)",
+                PLAG_OWN_HIGH_ID, PLAG_FOREIGN_HIGH_ID, PLAG_BOUNDARY_ID, PLAG_NON_HOMEWORK_ID);
+        jdbcTemplate.update("DELETE FROM homework_submission WHERE id IN (?, ?)",
+                SUBMISSION_OWN_ID, SUBMISSION_FOREIGN_ID);
+        jdbcTemplate.update("DELETE FROM homework WHERE id IN (?, ?)",
+                HOMEWORK_OWN_ID, HOMEWORK_FOREIGN_ID);
+        jdbcTemplate.update("DELETE FROM class_teacher WHERE class_id IN (?, ?, ?)",
+                OWN_CLASS_ID, FOREIGN_CLASS_ID, UNASSIGNED_CLASS_ID);
+        jdbcTemplate.update("DELETE FROM class_room WHERE id IN (?, ?, ?)",
+                OWN_CLASS_ID, FOREIGN_CLASS_ID, UNASSIGNED_CLASS_ID);
+    }
 
     /**
      * 构造三域可见性矩阵夹具：业务行 + 当前学生提交行 + 成绩记录。

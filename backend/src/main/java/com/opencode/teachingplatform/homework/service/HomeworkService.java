@@ -397,6 +397,10 @@ public class HomeworkService {
         if (homework.getStatus() == ActivityStatus.CLOSED) {
             throw new BusinessException(40000, "作业已关闭，不能提交");
         }
+        // 截止时间门禁：位于任何写操作之前，命中时不产生提交/答案/查重/成绩写入。
+        if (homework.getDueAt() != null && OffsetDateTime.now().isAfter(homework.getDueAt())) {
+            throw new BusinessException(40000, "作业已截止，不能提交");
+        }
         // 提交状态机：已提交/已批改只能由教师打回后才能再次编辑提交。
         HomeworkSubmission existingSubmission = homeworkSubmissionRepository
                 .findByHomeworkIdAndStudentId(homeworkId, currentUser.id())

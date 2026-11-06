@@ -26,6 +26,11 @@
     <el-empty v-if="!loading && !detail" description="未获取到报告详情" />
 
     <template v-else-if="detail">
+      <div v-if="isSavedPreview" class="preview-banner">
+        <span class="material-symbols-outlined">info</span>
+        <p>学生尚未提交，当前为只读预览</p>
+      </div>
+
       <section class="summary-grid detail-summary-grid">
         <article class="summary-tile summary-tile--primary">
           <span class="summary-tile__label">实验</span>
@@ -145,6 +150,7 @@
                         :min="0"
                         :max="maxScoreOf(item)"
                         style="width: 100%"
+                        :disabled="isSavedPreview"
                       />
                     </el-form-item>
                     <el-form-item label="本题项评语" class="grading-form__item">
@@ -154,12 +160,13 @@
                         :rows="3"
                         maxlength="500"
                         show-word-limit
+                        :disabled="isSavedPreview"
                       />
                     </el-form-item>
                   </el-form>
                   <div class="footer-actions footer-actions--inline">
-                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId" @click="confirmSingleStep(item, false)">确认本题项</el-button>
-                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId || item.suggestedScore == null" @click="confirmSingleStep(item, true)">采纳建议分</el-button>
+                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId || isSavedPreview" @click="confirmSingleStep(item, false)">确认本题项</el-button>
+                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId || item.suggestedScore == null || isSavedPreview" @click="confirmSingleStep(item, true)">采纳建议分</el-button>
                   </div>
                 </article>
               </section>
@@ -176,12 +183,12 @@
             </div>
             <el-form label-position="top">
               <el-form-item label="实验报告评语">
-                <el-input v-model="reportComment" type="textarea" :rows="4" maxlength="1000" show-word-limit />
+                <el-input v-model="reportComment" type="textarea" :rows="4" maxlength="1000" show-word-limit :disabled="isSavedPreview" />
               </el-form-item>
             </el-form>
             <div class="footer-actions">
               <el-button @click="router.back()">取消</el-button>
-              <el-button type="primary" :loading="submitting" @click="submitGrade">提交评分</el-button>
+              <el-button type="primary" :loading="submitting" :disabled="isSavedPreview" @click="submitGrade">提交评分</el-button>
             </div>
           </article>
         </div>
@@ -214,6 +221,9 @@ const pendingScrollContext = ref<{ anchorId: string | null; offset: number; scro
 const reportId = computed(() => Number(route.params.id));
 
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
+
+/** SAVED 表示学生仅保存未提交，整页降级为只读预览。 */
+const isSavedPreview = computed(() => detail.value?.submitStatus === 'SAVED');
 
 /** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
 const stepList = computed<StepBrief[]>(() =>
@@ -438,6 +448,10 @@ const goReport = (targetReportId?: number) => {
 };
 
 const submitGrade = async () => {
+  if (isSavedPreview.value) {
+    ElMessage.warning('学生尚未提交，当前为只读预览');
+    return;
+  }
   const items = answerItems.value
     .map(item => gradeFormMap[gradeKey(item)])
     .filter(entry => entry && isValidItemId(entry.answerId))
@@ -470,6 +484,10 @@ const submitGrade = async () => {
 };
 
 const confirmSingleStep = async (item: LabReportAnswerItem, acceptSuggested: boolean) => {
+  if (isSavedPreview.value) {
+    ElMessage.warning('学生尚未提交，当前为只读预览');
+    return;
+  }
   const entry = gradeFormMap[gradeKey(item)];
   if (!entry?.answerId) {
     ElMessage.warning('当前题项没有可确认的答案记录');
@@ -512,6 +530,24 @@ fetchData();
   justify-content: space-between;
   gap: 14px;
   align-items: flex-start;
+}
+
+/* 学生未提交时的只读预览提示 */
+.preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.preview-banner p {
+  margin: 0;
 }
 
 .page-header__actions {

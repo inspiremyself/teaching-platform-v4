@@ -1270,6 +1270,8 @@ public class LabService {
         LabSubmission submission = labSubmissionRepository
                 .findByLabIdAndStudentIdForUpdate(lab.getId(), head.getStudentId())
                 .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
+        // 批改门禁：仅学生已提交（SUBMITTED）或已批改（GRADED）的报告允许写分。
+        assertReportSubmitted(submission);
         List<LabStepAnswer> submissionAnswers = labStepAnswerRepository.findByLabSubmissionId(submission.getId());
         List<Long> answeredAnswerIds = submissionAnswers.stream()
                 .map(LabStepAnswer::getId)
@@ -1322,6 +1324,8 @@ public class LabService {
         LabSubmission submission = labSubmissionRepository
                 .findByLabIdAndStudentIdForUpdate(lab.getId(), head.getStudentId())
                 .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
+        // 批改门禁：仅学生已提交（SUBMITTED）或已批改（GRADED）的报告允许写分。
+        assertReportSubmitted(submission);
         LabStepAnswer answer = labStepAnswerRepository.findById(request.answerId())
                 .orElseThrow(() -> new BusinessException(40400, "实验答案不存在"));
         if (!Objects.equals(answer.getLabSubmissionId(), submission.getId())) {
@@ -1419,6 +1423,18 @@ public class LabService {
     private void requireTeacher(CurrentUser currentUser) {
         if (currentUser.role() != UserRole.TEACHER) {
             throw new BusinessException(40300, "无教师权限");
+        }
+    }
+
+    /**
+     * 教师批改前的提交状态门禁：学生尚未提交的报告不允许写分。
+     *
+     * @param submission 已加锁重读的实验提交
+     */
+    private void assertReportSubmitted(LabSubmission submission) {
+        SubmissionStatus status = submission.getSubmitStatus();
+        if (status != SubmissionStatus.SUBMITTED && status != SubmissionStatus.GRADED) {
+            throw new BusinessException(40000, "学生尚未提交实验报告，不能批改");
         }
     }
 

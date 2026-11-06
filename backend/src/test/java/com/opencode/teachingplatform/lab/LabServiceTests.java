@@ -2316,6 +2316,106 @@ class LabServiceTests {
     }
 
     @Test
+    void gradeReportRejectsSavedSubmission() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedFillBlankQuestionBankStep(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("cloud,boot", null));
+        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, studentUser().id()).orElseThrow();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submission.getId(), stepId).orElseThrow();
+        assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+
+        assertThatThrownBy(() -> labService.gradeReport(
+                teacherUser(),
+                submission.getId(),
+                new LabRequests.GradeLabReportRequest(
+                        "草稿批改",
+                        List.of(new LabRequests.GradeItem(answer.getId(), 8D, "不该写入"))
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("学生尚未提交实验报告，不能批改");
+
+        LabSubmission unchangedSubmission = labSubmissionRepository.findById(submission.getId()).orElseThrow();
+        LabStepAnswer unchangedAnswer = labStepAnswerRepository.findById(answer.getId()).orElseThrow();
+        assertThat(unchangedSubmission.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(unchangedSubmission.getGradedAt()).isNull();
+        assertThat(unchangedAnswer.getScore()).isNull();
+        assertThat(countLabScoreRecords(labId, studentUser().id())).isZero();
+    }
+
+    @Test
+    void confirmStepScoreRejectsSavedSubmission() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedFillBlankQuestionBankStep(labId, 1);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("cloud,boot", null));
+        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, studentUser().id()).orElseThrow();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submission.getId(), stepId).orElseThrow();
+        assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+
+        assertThatThrownBy(() -> labService.confirmStepScore(
+                teacherUser(),
+                submission.getId(),
+                new LabRequests.ConfirmStepScoreRequest(answer.getId(), 9D, "不该写入", false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("学生尚未提交实验报告，不能批改");
+
+        LabStepAnswer unchangedAnswer = labStepAnswerRepository.findById(answer.getId()).orElseThrow();
+        assertThat(unchangedAnswer.getScore()).isNull();
+        assertThat(countLabScoreRecords(labId, studentUser().id())).isZero();
+    }
+
+    @Test
+    void gradeReportStillAllowsSubmittedAndGraded() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "SINGLE_CHOICE", "{}", "{\"correctAnswer\":\"A\"}", 30);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("A", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("门禁放行小结")).get("submissionId")).longValue();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+
+        labService.gradeReport(
+                teacherUser(),
+                submissionId,
+                new LabRequests.GradeLabReportRequest("首次批改", List.of(new LabRequests.GradeItem(answer.getId(), 25D, "首次")))
+        );
+        LabSubmission submittedToGraded = labSubmissionRepository.findById(submissionId).orElseThrow();
+        assertThat(submittedToGraded.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(submittedToGraded.getTotalScore()).isEqualTo(25D);
+
+        labService.gradeReport(
+                teacherUser(),
+                submissionId,
+                new LabRequests.GradeLabReportRequest("重判批改", List.of(new LabRequests.GradeItem(answer.getId(), 28D, "重判")))
+        );
+        LabSubmission regraded = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer regradedAnswer = labStepAnswerRepository.findById(answer.getId()).orElseThrow();
+        assertThat(regraded.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(regraded.getTotalScore()).isEqualTo(28D);
+        assertThat(regradedAnswer.getScore()).isEqualTo(28D);
+    }
+
+    private int countLabScoreRecords(Long labId, Long studentId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM score_record WHERE business_type = 'LAB' AND business_id = ? AND student_id = ?",
+                Integer.class,
+                labId,
+                studentId
+        );
+        return count == null ? 0 : count;
+    }
+
+    @Test
     void suggestedLabScoreShouldRemainHiddenAndSkipScoreRecordBeforeTeacherConfirmation() {
         Long classId = seedClass(1L);
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);

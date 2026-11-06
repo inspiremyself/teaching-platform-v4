@@ -344,7 +344,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import QuestionAnswerShell from './components/lab-answer/QuestionAnswerShell.vue';
@@ -372,7 +372,17 @@ const form = reactive<SubmitHomeworkRequest>({
 });
 
 const homeworkId = computed(() => Number(route.params.id));
-const readonly = computed(() => detail.value?.submissionStatus === 'SUBMITTED' || detail.value?.submissionStatus === 'GRADED');
+// 响应式时钟：每秒刷新一次，保证截止后页面无需重新加载即可自动进入只读态。
+const nowMs = ref(Date.now());
+const isOverdue = computed(() => {
+  const dueAt = detail.value?.dueAt;
+  if (!dueAt) return false;
+  const dueTime = new Date(dueAt).getTime();
+  return !Number.isNaN(dueTime) && nowMs.value > dueTime;
+});
+const readonly = computed(() => detail.value?.submissionStatus === 'SUBMITTED'
+  || detail.value?.submissionStatus === 'GRADED'
+  || isOverdue.value);
 const hasQuestionItems = computed(() => !!detail.value?.questions?.length);
 const currentQuestion = computed(() => detail.value?.questions?.[currentQuestionIndex.value] ?? null);
 const currentQuestionDraft = computed(() => (currentQuestion.value ? ensureQuestionDraft(currentQuestion.value) : null));
@@ -393,7 +403,7 @@ const countdownLabel = computed(() => {
   const dueTime = new Date(dueAt).getTime();
   if (Number.isNaN(dueTime)) return '时间待确认';
 
-  const diff = dueTime - Date.now();
+  const diff = dueTime - nowMs.value;
   if (diff <= 0) return '已截止';
 
   const hours = Math.floor(diff / (60 * 60 * 1000));
@@ -432,6 +442,10 @@ const resetForm = () => {
 };
 
 const submitForm = async () => {
+  if (isOverdue.value) {
+    ElMessage.warning('作业已截止，不能提交');
+    return;
+  }
   if (!hasQuestionItems.value && !(form.answerText || '').trim()) {
     ElMessage.warning('请输入作业答案后再提交');
     return;
@@ -593,6 +607,19 @@ const formatDateTime = (value?: string | null) => {
 };
 
 fetchData();
+
+let clockTimer: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+  clockTimer = setInterval(() => {
+    nowMs.value = Date.now();
+  }, 1000);
+});
+onUnmounted(() => {
+  if (clockTimer) {
+    clearInterval(clockTimer);
+    clockTimer = undefined;
+  }
+});
 </script>
 
 <style scoped>

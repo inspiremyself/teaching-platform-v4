@@ -58,18 +58,23 @@ public class AnalysisService {
                 Double.class, teacherId, teacher.schoolId());
         double averageScore = avgScore != null ? Math.round(avgScore * 10.0) / 10.0 : 0.0;
 
-        // highRiskPlagiarismCount: similarity_rate > 50
-        int highRiskPlagiarismCount = count("SELECT COUNT(*) FROM plagiarism_task WHERE similarity_rate > 50");
+        // highRiskPlagiarismCount: 仅统计当前教师布置作业中相似度超过 50% 的查重任务
+        int highRiskPlagiarismCount = count(
+                "SELECT COUNT(*) FROM plagiarism_task pt " +
+                        "JOIN homework_submission hs ON hs.id = pt.business_id " +
+                        "JOIN homework h ON h.id = hs.homework_id " +
+                        "WHERE pt.business_type = 'HOMEWORK' AND pt.similarity_rate > 50 AND h.created_by = ?",
+                teacherId);
 
         List<Map<String, Object>> summaryCards = List.of(
                 summaryCard("activityCount", "教学活动总数", activityCount, "实验、作业与考试总量"),
                 summaryCard("pendingGradeCount", "待批改任务", pendingGradeCount, "需要教师处理的提交"),
                 summaryCard("averageScore", "平均成绩", averageScore, "当前教师班级平均分"),
-                summaryCard("highRiskPlagiarismCount", "高风险查重", highRiskPlagiarismCount, "相似度超过 50% 的记录")
+                summaryCard("highRiskPlagiarismCount", "高风险查重", highRiskPlagiarismCount, "我布置的作业中相似度超过 50% 的记录")
         );
 
         // trend: last 7 days — group in Java so H2 (UT/path-b-h2) and MySQL (path-b) both work
-        List<Map<String, Object>> trend = loadScoreTrendLast7Days();
+        List<Map<String, Object>> trend = loadScoreTrendLast7Days(teacher.id(), teacher.schoolId());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("summaryCards", summaryCards);
@@ -295,11 +300,20 @@ public class AnalysisService {
         return item;
     }
 
-    private List<Map<String, Object>> loadScoreTrendLast7Days() {
+    /**
+     * 近 7 天成绩趋势：只统计本校且该教师所带班级的成绩记录。
+     *
+     * @param teacherId 当前教师用户 id
+     * @param schoolId  当前教师所属学校 id
+     */
+    private List<Map<String, Object>> loadScoreTrendLast7Days(Long teacherId, Long schoolId) {
         OffsetDateTime since = OffsetDateTime.now().minusDays(7);
         Map<LocalDate, List<Double>> scoresByDay = new TreeMap<>();
         jdbcTemplate.query(
-                "SELECT graded_at, score FROM score_record WHERE graded_at >= ?",
+                "SELECT sr.graded_at, sr.score FROM score_record sr " +
+                        "JOIN class_room cr ON cr.id = sr.class_id " +
+                        "WHERE sr.graded_at >= ? AND cr.school_id = ? " +
+                        "AND EXISTS (SELECT 1 FROM class_teacher ct WHERE ct.class_id = sr.class_id AND ct.teacher_user_id = ?)",
                 (rs, rowNum) -> {
                     var timestamp = rs.getTimestamp("graded_at");
                     if (timestamp != null) {
@@ -308,7 +322,7 @@ public class AnalysisService {
                     }
                     return null;
                 },
-                since
+                since, schoolId, teacherId
         );
 
         List<Map<String, Object>> trend = new ArrayList<>();

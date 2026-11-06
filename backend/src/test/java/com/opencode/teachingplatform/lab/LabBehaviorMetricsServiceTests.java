@@ -363,7 +363,9 @@ class LabBehaviorMetricsServiceTests {
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, TEACHER.id());
         Long stepId = seedStep(labId, 1, "TEXT");
         seedMembership(classId, STUDENT.id());
-        seedBehaviorEvent(labId, STUDENT.id(), stepId, "LAB_ENTER", time("10:00"), null);
+        // 起始事件固定在过去 30 分钟：若用当天固定时点（如 10:00），在 10 点之前运行时 firstStartedAt 会退化为保存瞬间，
+        // 时长被截断为 0ms，断言随运行时时刻随机失败。
+        seedBehaviorEvent(labId, STUDENT.id(), stepId, "LAB_ENTER", OffsetDateTime.now().minusMinutes(30), null);
 
         labService.saveAnswer(STUDENT, labId, stepId, new LabRequests.SaveStepAnswerRequest("答案", null));
         Map<String, Object> submitResult = labService.submitLab(STUDENT, labId,
@@ -372,7 +374,7 @@ class LabBehaviorMetricsServiceTests {
 
         LabSubmissionMetrics metrics = metricsRepository.findById(submissionId).orElseThrow();
         assertThat(metrics.getTotalDurationMs()).isNotNull();
-        // submittedAt 是提交瞬间（≈ now），firstStartedAt=10:00（事件时间）；时长 > 0
+        // firstStartedAt=30 分钟前（事件时间），submittedAt=提交瞬间；时长必 > 0，与运行时时刻无关
         assertThat(metrics.getTotalDurationMs()).isGreaterThan(0L);
         assertThat(metrics.getSaveCount()).isEqualTo(1);
     }

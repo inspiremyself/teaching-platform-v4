@@ -17,8 +17,12 @@
           <el-button plain :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</el-button>
           <el-button plain :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</el-button>
           <el-button plain @click="goDetail()">回到详细批改</el-button>
-          <el-button type="primary" :loading="submitting" @click="submitGrade">提交全部评分</el-button>
+          <el-button type="primary" :loading="submitting" :disabled="isSavedPreview" @click="submitGrade">提交全部评分</el-button>
         </div>
+      </div>
+      <div v-if="isSavedPreview" class="preview-banner">
+        <span class="material-symbols-outlined">info</span>
+        <p>学生尚未提交，当前为只读预览</p>
       </div>
       <div v-if="detail" class="batch-grade-meta">
         <span class="batch-grade-chip"><strong>{{ detail.studentName || '-' }}</strong>{{ detail.studentNo || detail.studentUsername || '未标注学号' }}</span>
@@ -72,6 +76,7 @@
               size="small"
               controls-position="right"
               style="width: 120px"
+              :disabled="isSavedPreview"
             />
           </template>
         </el-table-column>
@@ -83,6 +88,7 @@
               maxlength="500"
               placeholder="本题评语"
               clearable
+              :disabled="isSavedPreview"
             />
           </template>
         </el-table-column>
@@ -90,8 +96,8 @@
           <template #default="scope">
             <div class="batch-row-actions">
               <el-button plain size="small" @click="goDetail(itemKey(scope.row))">详情</el-button>
-              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId" @click="confirmSingleStep(scope.row, false)">确认</el-button>
-              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || scope.row.suggestedScore == null" @click="confirmSingleStep(scope.row, true)">采纳</el-button>
+              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || isSavedPreview" @click="confirmSingleStep(scope.row, false)">确认</el-button>
+              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || scope.row.suggestedScore == null || isSavedPreview" @click="confirmSingleStep(scope.row, true)">采纳</el-button>
             </div>
           </template>
         </el-table-column>
@@ -124,6 +130,8 @@ const gradeFormMap = reactive<Record<string, { answerId: number; score: number; 
 
 const reportId = computed(() => Number(route.params.id));
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
+/** SAVED 表示学生仅保存未提交，整页降级为只读预览。 */
+const isSavedPreview = computed(() => detail.value?.submitStatus === 'SAVED');
 
 /** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
 const stepList = computed<StepBrief[]>(() =>
@@ -231,6 +239,10 @@ const goReport = (targetReportId?: number) => {
 };
 
 const confirmSingleStep = async (item: LabReportAnswerItem, acceptSuggested: boolean) => {
+  if (isSavedPreview.value) {
+    ElMessage.warning('学生尚未提交，当前为只读预览');
+    return;
+  }
   const entry = gradeFormMap[gradeKey(item)];
   if (!entry?.answerId) {
     ElMessage.warning('当前题项没有可确认的答案记录');
@@ -247,6 +259,10 @@ const confirmSingleStep = async (item: LabReportAnswerItem, acceptSuggested: boo
 };
 
 const submitGrade = async () => {
+  if (isSavedPreview.value) {
+    ElMessage.warning('学生尚未提交，当前为只读预览');
+    return;
+  }
   const items = answerItems.value
     .map(item => gradeFormMap[gradeKey(item)])
     .filter(entry => entry && isValidItemId(entry.answerId))
@@ -371,6 +387,24 @@ fetchData();
 .batch-grade-meta {
   margin-top: 12px;
   justify-content: flex-start;
+}
+
+/* 学生未提交时的只读预览提示 */
+.preview-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.preview-banner p {
+  margin: 0;
 }
 
 .batch-grade-chip {

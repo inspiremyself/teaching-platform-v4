@@ -1144,6 +1144,113 @@ class HomeworkServiceTests {
         assertThat(unchanged.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
     }
 
+    @Test
+    void submitHomeworkRejectsOverdueSubmission() {
+        Homework homework = createHomework(1L, 1L, "已逾期作业", ActivityStatus.PUBLISHED);
+        homework.setDueAt(OffsetDateTime.now().minusMinutes(1));
+        homeworkRepository.save(homework);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        int submissionCountBefore = countHomeworkSubmissions(homework.getId());
+        int answerCountBefore = countHomeworkAnswers(homework.getId());
+        int plagiarismCountBefore = countPlagiarismTasks();
+        int scoreCountBefore = countHomeworkScoreRecords(homework.getId(), student.id());
+
+        assertThatThrownBy(() -> homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("逾期提交内容", null, "/uploads/homework/answer.docx")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已截止，不能提交");
+
+        assertThat(countHomeworkSubmissions(homework.getId())).isEqualTo(submissionCountBefore);
+        assertThat(countHomeworkAnswers(homework.getId())).isEqualTo(answerCountBefore);
+        assertThat(countPlagiarismTasks()).isEqualTo(plagiarismCountBefore);
+        assertThat(countHomeworkScoreRecords(homework.getId(), student.id())).isEqualTo(scoreCountBefore);
+    }
+
+    @Test
+    void submitHomeworkAllowsSubmissionWhenDueAtIsNull() {
+        Homework homework = createHomework(1L, 1L, "不限时作业", ActivityStatus.PUBLISHED);
+        assertThat(homework.getDueAt()).isNull();
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        Map<String, Object> result = homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("不限时提交内容", null, null));
+
+        assertThat(result.get("status")).isEqualTo("SUBMITTED");
+        assertThat(homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homework.getId(), student.id())).isPresent();
+    }
+
+    @Test
+    void submitHomeworkAllowedBeforeDueAt() {
+        Homework homework = createHomework(1L, 1L, "未到期作业", ActivityStatus.PUBLISHED);
+        homework.setDueAt(OffsetDateTime.now().plusHours(1));
+        homeworkRepository.save(homework);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        Map<String, Object> result = homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("未到期提交内容", null, null));
+
+        assertThat(result.get("status")).isEqualTo("SUBMITTED");
+        assertThat(homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homework.getId(), student.id())).isPresent();
+    }
+
+    @Test
+    void submitHomeworkKeepsClosedAndOverdueGatesIndependent() {
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        Homework closedOverdue = createHomework(1L, 1L, "关闭且逾期作业", ActivityStatus.CLOSED);
+        closedOverdue.setDueAt(OffsetDateTime.now().minusHours(1));
+        homeworkRepository.save(closedOverdue);
+
+        assertThatThrownBy(() -> homeworkService.submitHomework(
+                student,
+                closedOverdue.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("关闭且逾期提交内容", null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已关闭");
+
+        Homework publishedOverdue = createHomework(1L, 1L, "发布但逾期作业", ActivityStatus.PUBLISHED);
+        publishedOverdue.setDueAt(OffsetDateTime.now().minusHours(1));
+        homeworkRepository.save(publishedOverdue);
+
+        assertThatThrownBy(() -> homeworkService.submitHomework(
+                student,
+                publishedOverdue.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("发布但逾期提交内容", null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已截止");
+    }
+
+    private int countHomeworkSubmissions(Long homeworkId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM homework_submission WHERE homework_id = ?", Integer.class, homeworkId);
+        return count == null ? 0 : count;
+    }
+
+    private int countHomeworkAnswers(Long homeworkId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*) FROM homework_answer ha
+                JOIN homework_submission hs ON hs.id = ha.homework_submission_id
+                WHERE hs.homework_id = ?
+                """,
+                Integer.class, homeworkId);
+        return count == null ? 0 : count;
+    }
+
+    private int countPlagiarismTasks() {
+        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM plagiarism_task", Integer.class);
+        return count == null ? 0 : count;
+    }
+
     private HomeworkSubmission createSubmission(Homework homework, SubmissionStatus status) {
         HomeworkSubmission submission = new HomeworkSubmission();
         submission.setHomeworkId(homework.getId());

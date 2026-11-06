@@ -61,6 +61,14 @@
         </div>
       </header>
 
+      <div v-if="deadlineSubmitFailed" class="submit-failure-bar">
+        <span class="material-symbols-outlined">error</span>
+        <p>考试已结束，自动交卷失败，请立即重试或联系教师</p>
+        <button class="primary-action primary-action--danger" type="button" :disabled="submitting" @click="doSubmit({ manual: true })">
+          重新交卷
+        </button>
+      </div>
+
       <div class="taking-grid">
         <main class="question-column">
           <div class="exam-banner">
@@ -86,7 +94,7 @@
                 <FillBlankInlineEditor
                   :model-value="currentQuestionDraft"
                   :prompt="currentQuestion.stem"
-                  :disabled="submitting"
+                  :disabled="submitting || deadlineReached"
                   @update:model-value="updateCurrentQuestionDraft"
                 />
               </section>
@@ -109,7 +117,7 @@
                   :model-value="currentQuestionDraft"
                   :options="currentQuestionOptions"
                   mode="single"
-                  :disabled="submitting"
+                  :disabled="submitting || deadlineReached"
                   @update:model-value="updateCurrentQuestionDraft"
                 />
 
@@ -118,7 +126,7 @@
                   :model-value="currentQuestionDraft"
                   :options="currentQuestionOptions"
                   mode="multiple"
-                  :disabled="submitting"
+                  :disabled="submitting || deadlineReached"
                   @update:model-value="updateCurrentQuestionDraft"
                 />
 
@@ -127,7 +135,7 @@
                   :model-value="currentQuestionDraft"
                   :options="currentQuestionOptions"
                   mode="judge"
-                  :disabled="submitting"
+                  :disabled="submitting || deadlineReached"
                   @update:model-value="updateCurrentQuestionDraft"
                 />
 
@@ -137,7 +145,7 @@
                   language="CODE"
                   :rows="14"
                   :maxlength="20000"
-                  :disabled="submitting"
+                  :disabled="submitting || deadlineReached"
                   placeholder="// 请输入代码答案"
                   @update:model-value="updateCurrentQuestionDraft"
                 />
@@ -147,7 +155,7 @@
                   :model-value="currentQuestionDraft"
                   :rows="8"
                   :maxlength="5000"
-                  :disabled="submitting"
+                  :disabled="submitting || deadlineReached"
                   placeholder="请输入简答内容"
                   @update:model-value="updateCurrentQuestionDraft"
                 />
@@ -157,7 +165,7 @@
                   :model-value="currentQuestionDraft"
                   :rows="12"
                   :maxlength="5000"
-                  :disabled="submitting"
+                  :disabled="submitting || deadlineReached"
                   placeholder="请输入答案"
                   @update:model-value="updateCurrentQuestionDraft"
                 />
@@ -168,7 +176,7 @@
               <button class="secondary-action" type="button" :disabled="currentIndex === 0" @click="currentIndex -= 1">上一题</button>
               <div class="question-card__footer-actions">
                 <button class="secondary-action" type="button" :disabled="currentIndex >= questions.length - 1" @click="currentIndex += 1">下一题</button>
-                <button class="primary-action primary-action--danger" type="button" :disabled="submitting" @click="confirmSubmit">
+                <button class="primary-action primary-action--danger" type="button" :disabled="submitting || deadlineReached" @click="confirmSubmit">
                   交卷
                 </button>
               </div>
@@ -210,7 +218,7 @@
               <div><span>已作答</span><strong>{{ answeredCount }}</strong></div>
             </div>
             <p>提交后立即锁定。</p>
-            <button class="primary-action" type="button" :disabled="submitting" @click="confirmSubmit">提交本次考试</button>
+            <button class="primary-action" type="button" :disabled="submitting || deadlineReached" @click="confirmSubmit">提交本次考试</button>
           </section>
         </aside>
       </div>
@@ -329,6 +337,7 @@ import CodeLabAnswerEditor from '../components/lab-answer/CodeLabAnswerEditor.vu
 import { buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText } from '../components/lab-answer/answerPayload'
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from '../components/lab-answer/types'
 import { getExamDetail, startExam, submitExam, saveExamDraft } from '@/api/exams'
+import { ApiError } from '@/utils/request'
 import { useAuthStore } from '@/stores/auth'
 import { shuffleExamQuestions } from '@/utils/examShuffle'
 import type { ExamAnswerDetail, ExamDetail, ExamQuestionView } from '@/types/exam'
@@ -350,6 +359,16 @@ const submitting = ref(false)
 const resultAnswerMap = ref<Record<number, ExamAnswerDetail>>({})
 
 let timer: number | undefined
+// 考试截止时间：来自 startExam 或详情接口，用于截止只读判定与失败后恢复计时
+const deadlineAt = ref<string | null>(null)
+const deadlineReached = computed(() => deadlineAt.value != null && remainingSeconds.value <= 0)
+
+// 截止后自动交卷失败：常驻错误条 + 有限次自动重试，手动「重新交卷」可重置计数
+const MAX_AUTO_RETRIES = 6
+const RETRY_INTERVAL_MS = 10000
+let retryTimer: number | undefined
+let retryCount = 0
+const deadlineSubmitFailed = ref(false)
 
 // 草稿保存：1500ms 防抖 + 串行队列，避免同题并发覆盖与请求乱序
 const DRAFT_DEBOUNCE_MS = 1500
@@ -776,6 +795,7 @@ async function doStart() {
   try {
     const response = await startExam(examId) as { deadlineAt?: string }
     if (response?.deadlineAt) {
+      deadlineAt.value = response.deadlineAt
       detail.value = await getExamDetail(examId)
       questions.value = detail.value ? orderedQuestions(detail.value) : []
       loadSavedAnswers()
@@ -791,20 +811,90 @@ async function doStart() {
   }
 }
 
-async function doSubmit() {
+function clearRetryTimer() {
+  if (retryTimer) {
+    window.clearTimeout(retryTimer)
+    retryTimer = undefined
+  }
+}
+
+/** 清空交卷失败态与自动重试计数，用于手动重试或交卷成功。 */
+function resetSubmitFailure() {
+  clearRetryTimer()
+  retryCount = 0
+  deadlineSubmitFailed.value = false
+}
+
+/** 服务端明确表示「已提交」，可直接回收为结果态，无需继续重试。 */
+function isAlreadySubmittedError(error: unknown): boolean {
+  return error instanceof ApiError && error.code === 40000 && error.message.includes('考试已提交，不能重复提交')
+}
+
+/** 仅网络异常或服务端 5xx 类错误值得自动重试，业务校验失败不重试。 */
+function isRetryableFailure(error: unknown): boolean {
+  return !(error instanceof ApiError) || error.code >= 50000
+}
+
+/** 截止后失败按固定间隔自动重试，次数上限 MAX_AUTO_RETRIES。 */
+function scheduleAutoRetry() {
+  if (retryTimer || retryCount >= MAX_AUTO_RETRIES) return
+  retryTimer = window.setTimeout(() => {
+    retryTimer = undefined
+    retryCount += 1
+    void doSubmit()
+  }, RETRY_INTERVAL_MS)
+}
+
+async function doSubmit(options: { manual?: boolean } = {}) {
   if (submitting.value) return
+  if (options.manual) resetSubmitFailure()
   submitting.value = true
   stopTimer()
   try {
     // 交卷前先 flush 草稿，保证后台自动交卷与手动交卷都使用最新草稿；失败不阻断交卷
-    await flushDraft()
-    await submitExam(examId, buildSubmitPayload())
+    if (!deadlineReached.value) await flushDraft()
+    await submitExam(examId, buildSubmitPayload(), { silent: true })
+    resetSubmitFailure()
     ElMessage.success('交卷成功')
-    await loadExam()
+    try {
+      await loadExam()
+    } catch {
+      // 结果同步失败不影响已完成的交卷，保留当前页面
+    }
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '交卷失败')
+    if (isAlreadySubmittedError(error)) {
+      clearRetryTimer()
+      try {
+        await loadExam()
+        if (state.value !== 'B') {
+          resetSubmitFailure()
+          return
+        }
+      } catch {
+        // 详情同步失败时保留失败态，交由用户手动重试
+      }
+      deadlineSubmitFailed.value = true
+      ElMessage.error('交卷结果未同步，请重试')
+      // 未到截止点仍需继续倒计时，避免计时停摆
+      if (!deadlineReached.value && deadlineAt.value) startTimer(deadlineAt.value)
+      return
+    }
+    if (deadlineReached.value) {
+      deadlineSubmitFailed.value = true
+      if (isRetryableFailure(error)) {
+        scheduleAutoRetry()
+      } else {
+        ElMessage.error(error instanceof Error ? error.message : '交卷失败')
+      }
+    } else {
+      ElMessage.error(error instanceof Error ? error.message : '交卷失败')
+    }
   } finally {
     submitting.value = false
+    // 未到截止点且未处于失败态时恢复倒计时，避免一次失败导致计时永久停摆
+    if (!deadlineSubmitFailed.value && state.value === 'B' && !deadlineReached.value && deadlineAt.value) {
+      startTimer(deadlineAt.value)
+    }
   }
 }
 
@@ -862,12 +952,15 @@ async function loadExam() {
 
   if (data.submissionStatus === 'IN_PROGRESS') {
     loadSavedAnswers()
-    if (data.deadlineAt) {
-      startTimer(data.deadlineAt)
+    // 详情缺省 deadlineAt 时保留已知值，避免已获得的截止时间被覆盖后重新可编辑
+    deadlineAt.value = data.deadlineAt ?? deadlineAt.value
+    if (deadlineAt.value) {
+      startTimer(deadlineAt.value)
     }
     state.value = 'B'
   } else if (data.submissionStatus) {
     // SUBMITTED / AUTO_SUBMITTED / GRADED 统一进结果页，由 resultMode 决定展示哪一态
+    resetSubmitFailure()
     state.value = 'C'
   } else {
     state.value = 'A'
@@ -892,6 +985,7 @@ onUnmounted(() => {
     window.clearTimeout(draftTimer)
     draftTimer = undefined
   }
+  clearRetryTimer()
   stopTimer()
 })
 </script>
@@ -1204,6 +1298,25 @@ onUnmounted(() => {
   color: #c2410c;
   font-size: 11px;
   font-weight: 700;
+}
+
+/* 截止后自动交卷失败的常驻提示条 */
+.submit-failure-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.submit-failure-bar p {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .question-card__header {

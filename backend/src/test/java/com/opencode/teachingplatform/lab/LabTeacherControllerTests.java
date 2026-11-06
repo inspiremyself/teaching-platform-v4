@@ -125,6 +125,56 @@ class LabTeacherControllerTests {
     }
 
     @Test
+    void teacherGradeRejectsSavedReport() throws Exception {
+        when(labService.gradeReport(any(CurrentUser.class), anyLong(), any(LabRequests.GradeLabReportRequest.class)))
+                .thenThrow(new BusinessException(40000, "学生尚未提交实验报告，不能批改"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/lab-reports/{id}/grade", 5L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "teacherComment": "草稿批改",
+                                      "items": [
+                                        {"answerId": 11, "score": 30, "teacherComment": "第一步"}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("学生尚未提交实验报告，不能批改"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherConfirmStepRejectsSavedReport() throws Exception {
+        when(labService.confirmStepScore(any(CurrentUser.class), anyLong(), any(LabRequests.ConfirmStepScoreRequest.class)))
+                .thenThrow(new BusinessException(40000, "学生尚未提交实验报告，不能批改"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/lab-reports/{id}/confirm-step-score", 5L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "answerId": 11,
+                                      "score": 9,
+                                      "teacherComment": "草稿确认",
+                                      "acceptSuggested": false
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("学生尚未提交实验报告，不能批改"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCanReturnSubmittedLabReport() throws Exception {
         when(labService.returnReport(any(CurrentUser.class), anyLong())).thenReturn(Map.of(
                 "submissionId", 5L,
