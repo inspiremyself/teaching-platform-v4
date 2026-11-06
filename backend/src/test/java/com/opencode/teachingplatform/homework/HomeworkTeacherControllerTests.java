@@ -27,8 +27,10 @@ import java.util.Map;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -200,7 +202,7 @@ class HomeworkTeacherControllerTests {
         result.put("questionId", null);
         result.put("sortOrder", 2);
         result.put("questionScore", 15);
-        when(homeworkService.addInlineQuestion(any(CurrentUser.class), anyLong(), any(HomeworkRequests.AddInlineHomeworkQuestionRequest.class))).thenReturn(result);
+        when(homeworkService.addInlineQuestion(any(CurrentUser.class), anyLong(), any(HomeworkRequests.SaveHomeworkQuestionRequest.class))).thenReturn(result);
 
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {
@@ -211,8 +213,8 @@ class HomeworkTeacherControllerTests {
                                       "type": "SUBJECTIVE",
                                       "stem": "请说明策略模式的价值",
                                       "questionScore": 15,
+                                      "answerJson": "[\\"参考要点\\"]",
                                       "scoringConfigJson": "{\\"keywords\\":[{\\"term\\":\\"strategy\\",\\"weight\\":8}],\\"minLength\\":6}",
-                                      "saveToQuestionBank": false,
                                       "sortOrder": 2
                                     }
                                     """))
@@ -220,6 +222,71 @@ class HomeworkTeacherControllerTests {
                     .andExpect(jsonPath("$.code").value(0))
                     .andExpect(jsonPath("$.data.id").value(12))
                     .andExpect(jsonPath("$.data.sortOrder").value(2));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCanReadHomeworkDetailWithQuestions() throws Exception {
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("id", 1);
+        detail.put("title", "分层架构作业");
+        detail.put("questions", List.of(Map.of(
+                "id", 11,
+                "questionId", 9,
+                "sortOrder", 1,
+                "type", "SINGLE",
+                "stem", "题干",
+                "score", 10,
+                "sourceType", "BANK"
+        )));
+        when(homeworkService.getTeacherHomeworkDetail(any(CurrentUser.class), anyLong())).thenReturn(detail);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/teacher/homeworks/{id}", 1L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.questions[0].id").value(11))
+                    .andExpect(jsonPath("$.data.questions[0].sourceType").value("BANK"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCanUpdateAndDeleteHomeworkQuestion() throws Exception {
+        when(homeworkService.updateQuestion(any(CurrentUser.class), anyLong(), anyLong(),
+                any(HomeworkRequests.SaveHomeworkQuestionRequest.class))).thenReturn(Map.of(
+                "id", 11,
+                "sortOrder", 3,
+                "stem", "更新后的题干"
+        ));
+        when(homeworkService.deleteQuestion(any(CurrentUser.class), anyLong(), anyLong()))
+                .thenReturn(Map.of("deleted", true, "id", 11));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(put("/api/v1/teacher/homeworks/{id}/questions/{questionId}", 1L, 11L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "type": "SINGLE",
+                                      "stem": "更新后的题干",
+                                      "questionScore": 5,
+                                      "optionsJson": "[{\\"key\\":\\"A\\",\\"content\\":\\"正确\\"},{\\"key\\":\\"B\\",\\"content\\":\\"错误\\"}]",
+                                      "answerJson": "[\\"A\\"]",
+                                      "sortOrder": 3
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.sortOrder").value(3));
+
+            mockMvc.perform(delete("/api/v1/teacher/homeworks/{id}/questions/{questionId}", 1L, 11L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.deleted").value(true));
         } finally {
             SecurityContextHolder.clearContext();
         }

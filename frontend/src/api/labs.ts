@@ -35,6 +35,7 @@ import type {
   UpdateLabStepPayload,
 } from '@/types/lab';
 import type { PageResult } from '@/types/common';
+import type { CopyQuestionToBankRequest, CopyQuestionToBankResult } from '@/types/homework';
 
 export const listTeacherLabs = () => request.get<LabItem[]>('/teacher/labs');
 
@@ -68,6 +69,10 @@ export const updateTeacherLabStep = (stepId: number | string, data: UpdateLabSte
 
 export const deleteTeacherLabStep = (stepId: number | string) =>
   request.delete<void>(`/teacher/lab-steps/${stepId}`);
+
+/** 把实验题项复制到题库（幂等，重复复制返回已有题目） */
+export const copyLabStepToBank = (stepId: number | string, data: CopyQuestionToBankRequest) =>
+  request.post<CopyQuestionToBankResult>(`/teacher/lab-steps/${stepId}/copy-to-bank`, data);
 
 /** 教师端实验报告队列（分页 + 筛选），供队列页使用 */
 export const listTeacherLabReports = (params?: LabReportQuery) =>

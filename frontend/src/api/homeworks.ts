@@ -1,16 +1,20 @@
 import request from '@/utils/request';
 import type {
   AddHomeworkQuestionFromBankRequest,
-  AddInlineHomeworkQuestionRequest,
   ChangeHomeworkStatusRequest,
+  CopyQuestionToBankRequest,
+  CopyQuestionToBankResult,
   CreateHomeworkRequest,
   GradeHomeworkAnswerRequest,
   GradeHomeworkRequest,
   GradeHomeworkResult,
   HomeworkListItem,
   HomeworkSubmissionItem,
+  SaveHomeworkQuestionRequest,
   StudentHomeworkDetail,
   SubmitHomeworkRequest,
+  TeacherHomeworkDetail,
+  TeacherHomeworkQuestionItem,
 } from '@/types/homework';
 
 export const listTeacherHomeworks = () => request.get<HomeworkListItem[]>('/teacher/homeworks');
@@ -24,10 +28,26 @@ export const changeHomeworkStatus = (id: number | string, data: ChangeHomeworkSt
   request.post<HomeworkListItem>(`/teacher/homeworks/${id}/status`, data);
 
 export const addHomeworkQuestionFromBank = (id: number | string, data: AddHomeworkQuestionFromBankRequest) =>
-  request.post(`/teacher/homeworks/${id}/questions/bank`, data);
+  request.post<TeacherHomeworkQuestionItem>(`/teacher/homeworks/${id}/questions/bank`, data);
 
-export const addInlineHomeworkQuestion = (id: number | string, data: AddInlineHomeworkQuestionRequest) =>
-  request.post(`/teacher/homeworks/${id}/questions/inline`, data);
+export const addInlineHomeworkQuestion = (id: number | string, data: SaveHomeworkQuestionRequest) =>
+  request.post<TeacherHomeworkQuestionItem>(`/teacher/homeworks/${id}/questions/inline`, data);
+
+/** 教师作业详情：编辑弹窗回显与增量提交的入口 */
+export const getTeacherHomeworkDetail = (id: number | string) =>
+  request.get<TeacherHomeworkDetail>(`/teacher/homeworks/${id}`);
+
+/** 更新作业题目快照（BANK 与 INLINE 共用，仅作用于本作业） */
+export const updateHomeworkQuestion = (id: number | string, questionId: number, data: SaveHomeworkQuestionRequest) =>
+  request.put<TeacherHomeworkQuestionItem>(`/teacher/homeworks/${id}/questions/${questionId}`, data);
+
+/** 删除作业题目（仅草稿且无学生作答） */
+export const deleteHomeworkQuestion = (id: number | string, questionId: number) =>
+  request.delete(`/teacher/homeworks/${id}/questions/${questionId}`);
+
+/** 把作业题复制到题库（幂等，重复复制返回已有题目） */
+export const copyHomeworkQuestionToBank = (homeworkQuestionId: number, data: CopyQuestionToBankRequest) =>
+  request.post<CopyQuestionToBankResult>(`/teacher/homework-questions/${homeworkQuestionId}/copy-to-bank`, data);
 
 export const listHomeworkSubmissions = (homeworkId: number | string) =>
   request.get<HomeworkSubmissionItem[]>(`/teacher/homeworks/${homeworkId}/submissions`);

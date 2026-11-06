@@ -11,7 +11,7 @@
           <p class="lab-steps-console__eyebrow">教师实验工作台 / 步骤配置</p>
           <h1 class="lab-steps-console__title">实验题项配置台</h1>
           <p class="lab-steps-console__subtitle">
-            左侧切换实验题项，中间集中维护题干与结构化答案，右侧压缩展示分值、约束与保存时建题选项。
+            左侧切换实验题项，中间集中维护题干与结构化答案，右侧压缩展示分值、约束与质量检查。
           </p>
         </div>
       </div>
@@ -70,14 +70,25 @@
                   <span class="lab-steps-console__step-state" :class="{ 'is-ready': isStepConfigured(row) }">
                     {{ isStepConfigured(row) ? '已配置' : '待完善' }}
                   </span>
-                  <button
-                    type="button"
-                    class="lab-steps-console__inline-delete"
-                    title="删除题项"
-                    @click.stop="remove(row.id)"
-                  >
-                    <span class="material-symbols-outlined">delete</span>
-                  </button>
+                  <div class="lab-steps-console__step-actions">
+                    <button
+                      type="button"
+                      class="lab-steps-console__inline-copy"
+                      title="复制到题库"
+                      @click.stop="openCopyDialog(row)"
+                    >
+                      <span class="material-symbols-outlined">bookmark_add</span>
+                      <span>复制到题库</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="lab-steps-console__inline-delete"
+                      title="删除题项"
+                      @click.stop="remove(row.id)"
+                    >
+                      <span class="material-symbols-outlined">delete</span>
+                    </button>
+                  </div>
                 </div>
               </button>
 
@@ -104,6 +115,7 @@
               <span class="lab-steps-console__save-indicator" :class="{ 'is-ready': isReadyToSubmit }">
                 {{ isReadyToSubmit ? '可保存' : '待完善' }}
               </span>
+              <el-button size="small" plain @click="openQuestionBankPicker">从题库选题</el-button>
             </div>
           </header>
 
@@ -235,7 +247,7 @@
           <header class="lab-steps-console__panel-header">
             <div>
               <p class="lab-steps-console__section-kicker">约束侧栏</p>
-              <h2 class="lab-steps-console__section-title">分值与同步</h2>
+              <h2 class="lab-steps-console__section-title">分值与约束</h2>
             </div>
             <span class="lab-steps-console__summary-chip">支撑信息</span>
           </header>
@@ -336,49 +348,65 @@
               </el-form>
             </section>
 
-            <section class="question-dialog__group lab-steps-console__group">
-              <div class="question-dialog__group-title">保存时题库创建</div>
-              <label class="lab-steps-console__sync-toggle">
-                <el-checkbox v-model="questionSync.enabled">保存实验题项后，同时创建 1 条题库题目</el-checkbox>
-                <p>仅在本次保存成功后创建，首次同步完成后与实验题项互不绑定，后续分别维护。</p>
-              </label>
-
-              <div v-if="questionSync.enabled" class="lab-steps-console__sync-fields">
-                <el-form label-position="top" class="lab-steps-console__form">
-                  <div class="question-dialog__grid question-dialog__grid--rail">
-                    <el-form-item label="题库难度">
-                      <el-select v-model="questionSync.difficulty" placeholder="请选择难度">
-                        <el-option label="基础" value="EASY" />
-                        <el-option label="进阶" value="MEDIUM" />
-                        <el-option label="挑战" value="HARD" />
-                      </el-select>
-                    </el-form-item>
-
-                    <el-form-item label="教师解析">
-                      <el-input
-                        v-model="questionSync.analysisText"
-                        type="textarea"
-                        :rows="4"
-                        maxlength="500"
-                        show-word-limit
-                        resize="vertical"
-                        placeholder="可选：保存到题库题目的教师解析、讲评或评分依据。"
-                      />
-                    </el-form-item>
-                  </div>
-                </el-form>
-
-                <div class="lab-steps-console__sync-preview">
-                  <span>保存顺序</span>
-                  <strong>校验 → 保存实验题项 → 创建题库题目</strong>
-                  <p>题库题型直接使用共享 typed-editor 草稿转换；代码题按现有题库兼容规则以简答题落库。</p>
-                </div>
-              </div>
-            </section>
           </div>
         </section>
       </aside>
     </section>
+
+    <el-dialog v-model="copyDialogVisible" width="640px" class="lab-step-copy-dialog" destroy-on-close>
+      <div v-if="copyPreview" class="lab-step-copy-dialog__shell">
+        <header class="lab-step-copy-dialog__header">
+          <p class="lab-step-copy-dialog__eyebrow">实验题项 / 复制到题库</p>
+          <h2>复制题项 {{ copyPreview.stepNo }} 到题库</h2>
+          <p class="lab-step-copy-dialog__desc">预览基于已保存的题项内容，未保存的修改不会被复制。</p>
+        </header>
+
+        <dl class="lab-step-copy-dialog__list">
+          <div>
+            <dt>题型</dt>
+            <dd>{{ copyPreview.typeLabel }}</dd>
+          </div>
+          <div>
+            <dt>题干</dt>
+            <dd>{{ copyPreview.stem || '未填写' }}</dd>
+          </div>
+          <div v-if="copyPreview.options.length">
+            <dt>选项</dt>
+            <dd>
+              <span v-for="option in copyPreview.options" :key="option" class="lab-step-copy-dialog__option">{{ option }}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>答案</dt>
+            <dd>{{ copyPreview.answer }}</dd>
+          </div>
+          <div>
+            <dt>分值</dt>
+            <dd>{{ copyPreview.score }} 分</dd>
+          </div>
+          <div>
+            <dt>难度</dt>
+            <dd>进阶（固定 MEDIUM）</dd>
+          </div>
+          <div>
+            <dt>解析</dt>
+            <dd>空（复制后可在题库维护）</dd>
+          </div>
+        </dl>
+
+        <label class="lab-step-copy-dialog__code">
+          <span>题目编码</span>
+          <el-input v-model="copyCode" maxlength="64" placeholder="留空使用默认编码" />
+        </label>
+
+        <footer class="lab-step-copy-dialog__footer">
+          <el-button @click="copyDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="copying" @click="confirmCopyToBank">确认复制</el-button>
+        </footer>
+      </div>
+    </el-dialog>
+
+    <QuestionPickerDialog v-model:visible="pickerVisible" @confirm="applyPickedQuestion" />
   </div>
 </template>
 
@@ -386,21 +414,25 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { createQuestion } from '@/api/questions';
-import { createTeacherLabStep, deleteTeacherLabStep, listTeacherLabs, listTeacherLabSteps, updateTeacherLabStep } from '@/api/labs';
-import type { LabItem, LabStepItem } from '@/types/lab';
+import { copyLabStepToBank, createTeacherLabStep, deleteTeacherLabStep, listTeacherLabs, listTeacherLabSteps, updateTeacherLabStep } from '@/api/labs';
+import { listQuestions } from '@/api/questions';
+import type { LabItem, LabQuestionType, LabStepItem } from '@/types/lab';
+import type { ConfiguredQuestionItem } from '@/types/question-config';
+import QuestionPickerDialog from '@/components/question-config/QuestionPickerDialog.vue';
 import FillBlankEditor from './components/typed-editor/FillBlankEditor.vue';
 import ObjectiveEditor from './components/typed-editor/ObjectiveEditor.vue';
 import SubjectiveEditor from './components/typed-editor/SubjectiveEditor.vue';
 import TypedEditorShell from './components/typed-editor/TypedEditorShell.vue';
-import { buildLabStepPayloadFromDraft, buildQuestionPayloadFromLabStepDraft, validateLabStepDraft } from './components/typed-editor/adapters/labStepAdapter';
+import { buildLabStepPayloadFromDraft, validateLabStepDraft } from './components/typed-editor/adapters/labStepAdapter';
 import { useTypedEditor } from './components/typed-editor/useTypedEditor';
+import { hydrateTypedEditorFromQuestion } from './components/typed-editor/hydrators/fromQuestion';
 import {
   createEmptyLabStepEditorState,
   getLabQuestionTypeLabel,
   hydrateTypedEditorFromLabStep,
-  mapLabQuestionTypeToTypedKind,
+  mapTypedKindToLabQuestionType,
   normalizeLabQuestionType,
+  type HydratedLabStepEditorState,
 } from './components/typed-editor/hydrators/fromLabStep';
 
 interface FillBlankEditorExpose {
@@ -454,11 +486,20 @@ const fillSettings = reactive({
 const codeSettings = reactive({
   language: 'JAVA',
 });
-const questionSync = reactive({
-  enabled: false,
-  difficulty: 'EASY' as const,
-  analysisText: '',
-});
+
+const pickerVisible = ref(false);
+const copyDialogVisible = ref(false);
+const copying = ref(false);
+const copyCode = ref('');
+const copyPreview = ref<{
+  stepId: number;
+  stepNo: number;
+  typeLabel: string;
+  stem: string;
+  options: string[];
+  answer: string;
+  score: number;
+} | null>(null);
 
 const labSummaryTitle = computed(() => labs.value.find(item => item.id === labId)?.title?.trim() || `实验 #${labId}`);
 const sortedRows = computed(() => [...rows.value].sort((left, right) => left.stepNo - right.stepNo));
@@ -483,8 +524,8 @@ const summarizeText = (text: string, limit: number) => {
   return normalized.length > limit ? `${normalized.slice(0, limit)}…` : normalized;
 };
 
-const applyHydratedState = (row?: LabStepItem) => {
-  const hydrated = row ? hydrateTypedEditorFromLabStep(row) : createEmptyLabStepEditorState(form.questionType);
+/** 把已水合的编辑器状态写入表单与侧栏约束 */
+const applyHydratedState = (hydrated: HydratedLabStepEditorState) => {
   typedEditor.reset(hydrated.draft.kind);
   typedEditor.draft.prompt = hydrated.draft.prompt;
   typedEditor.draft.objectiveOptions = hydrated.draft.objectiveOptions.map(option => ({ ...option }));
@@ -501,10 +542,9 @@ const applyHydratedState = (row?: LabStepItem) => {
   codeSettings.language = hydrated.codeSettings.language;
 };
 
-const resetQuestionSync = () => {
-  questionSync.enabled = false;
-  questionSync.difficulty = 'EASY';
-  questionSync.analysisText = '';
+/** 按题项行或当前题型重建编辑器状态 */
+const applyHydratedRow = (row?: LabStepItem) => {
+  applyHydratedState(row ? hydrateTypedEditorFromLabStep(row) : createEmptyLabStepEditorState(form.questionType));
 };
 
 const resetForm = () => {
@@ -514,8 +554,7 @@ const resetForm = () => {
   form.questionType = 'SHORT_ANSWER';
   form.stepScore = 10;
   form.allowPaste = true;
-  applyHydratedState();
-  resetQuestionSync();
+  applyHydratedRow();
 };
 
 const populateFormFromRow = (row: LabStepItem) => {
@@ -525,8 +564,7 @@ const populateFormFromRow = (row: LabStepItem) => {
   form.questionType = normalizeLabQuestionType(row.questionType);
   form.stepScore = row.stepScore;
   form.allowPaste = row.allowPaste;
-  applyHydratedState(row);
-  resetQuestionSync();
+  applyHydratedRow(row);
 };
 
 const fetchLabContext = async () => {
@@ -570,7 +608,7 @@ const selectStep = (stepId: number) => {
 };
 
 const handleQuestionTypeChange = () => {
-  applyHydratedState();
+  applyHydratedRow();
 };
 
 const updateObjectiveOptionContent = ({ id, content }: { id: string; content: string }) => {
@@ -689,33 +727,116 @@ const submitForm = async () => {
       ? await updateTeacherLabStep(activeExistingStepId.value, payload)
       : await createTeacherLabStep(labId, payload);
 
-    let partialMessage = '';
-    if (questionSync.enabled) {
-      try {
-        const questionPayload = buildQuestionPayloadFromLabStepDraft(
-          labId,
-          savedStep.stepNo,
-          typedEditor.draft,
-          { difficulty: questionSync.difficulty, analysisText: questionSync.analysisText },
-          Math.max(1, Number(form.stepScore) || 1),
-        );
-        const createdQuestion = await createQuestion(questionPayload);
-        await fetchData(savedStep.id);
-        ElMessage.success(`${wasEditing ? '题项保存成功' : '题项创建成功'}，并已创建题库题目 ${createdQuestion.code}`);
-        return;
-      } catch (error) {
-        partialMessage = error instanceof Error && error.message ? error.message : '题库题目创建失败';
-      }
-    }
-
     await fetchData(savedStep.id);
-    if (partialMessage) {
-      ElMessage.warning(`${wasEditing ? '题项已保存' : '题项已创建'}，但题库题目创建失败：${partialMessage}。本次仅完成实验题项保存，后续请分别维护。`);
-      return;
-    }
     ElMessage.success(wasEditing ? '题项保存成功' : '题项创建成功');
   } finally {
     submitting.value = false;
+  }
+};
+
+/** 生成复制预览：基于已保存题项内容，避免把未保存的编辑带入题库 */
+const buildCopyPreview = (row: LabStepItem) => {
+  const hydrated = hydrateTypedEditorFromLabStep(row);
+  const draft = hydrated.draft;
+  const typeLabel = getLabQuestionTypeLabel(normalizeLabQuestionType(row.questionType));
+
+  const optionLines = draft.kind === 'JUDGE'
+    ? ['T. 正确', 'F. 错误']
+    : draft.objectiveOptions
+        .filter(option => option.key.trim() && option.content.trim())
+        .map(option => `${option.key}. ${option.content.trim()}`);
+
+  let answerLines: string[] = [];
+  if (draft.kind === 'SINGLE' || draft.kind === 'MULTI') {
+    answerLines = draft.objectiveOptions
+      .filter(option => draft.selectedObjectiveOptionIds.includes(option.id))
+      .map(option => option.key.trim())
+      .filter(Boolean);
+  } else if (draft.kind === 'JUDGE') {
+    answerLines = draft.judgeAnswer ? [draft.judgeAnswer === 'T' ? '正确' : '错误'] : [];
+  } else if (draft.kind === 'FILL') {
+    answerLines = draft.fillBlanks
+      .filter(blank => blank.answersText.trim())
+      .map(blank => `【填空${blank.index}】${blank.answersText.split(/\r?\n/).map(item => item.trim()).filter(Boolean).join(' / ')}`);
+  } else {
+    answerLines = draft.subjectiveAnswer.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+  }
+
+  return {
+    stepId: row.id,
+    stepNo: row.stepNo,
+    typeLabel,
+    stem: row.content.trim(),
+    options: optionLines,
+    answer: answerLines.length ? answerLines.join('；') : '未填写',
+    score: row.stepScore,
+  };
+};
+
+const openCopyDialog = (row: LabStepItem) => {
+  copyPreview.value = buildCopyPreview(row);
+  copyCode.value = `LAB${labId}S${row.stepNo}`;
+  copyDialogVisible.value = true;
+};
+
+const confirmCopyToBank = async () => {
+  if (!copyPreview.value) {
+    return;
+  }
+
+  copying.value = true;
+  try {
+    const result = await copyLabStepToBank(copyPreview.value.stepId, { code: copyCode.value.trim() || null });
+    if (result.created) {
+      ElMessage.success(`已创建题库题 ${result.question.code}`);
+    } else {
+      ElMessage.info(`该题项已复制过，返回已有题目 ${result.question.code}`);
+    }
+    if (result.duplicateQuestionId) {
+      ElMessage.warning(`题库已有相同题目（ID ${result.duplicateQuestionId}），请按需合并维护`);
+    }
+    copyDialogVisible.value = false;
+  } finally {
+    copying.value = false;
+  }
+};
+
+const openQuestionBankPicker = () => {
+  pickerVisible.value = true;
+};
+
+/**
+ * 从题库选题预填实验题项：
+ * 题库仅提供题干/选项/答案等内容，题项标题、序号与分值由本页维护，
+ * 分值取选择题配置分值，不回落题库默认分值。
+ */
+const applyPickedQuestion = async (items: ConfiguredQuestionItem[]) => {
+  const item = items[0];
+  if (!item?.questionBankId) {
+    return;
+  }
+
+  try {
+    const bank = await listQuestions();
+    const question = bank.find(row => row.id === item.questionBankId);
+    if (!question) {
+      ElMessage.warning('题库题目不存在或已被删除');
+      return;
+    }
+
+    const hydrated = hydrateTypedEditorFromQuestion(question);
+    const nextQuestionType = mapTypedKindToLabQuestionType(hydrated.draft.kind);
+    form.questionType = nextQuestionType;
+    applyHydratedState({
+      draft: hydrated.draft,
+      subjectiveSettings: { minLength: 0, commentTemplate: '' },
+      fillSettings: { ignoreCase: true },
+      codeSettings: { language: 'JAVA' },
+    });
+    form.stepScore = item.score;
+    ElMessage.success('已带入题库题目，保存后生成新的实验题项');
+  } catch {
+    // 请求错误已由统一拦截器提示
   }
 };
 
@@ -1112,17 +1233,14 @@ onMounted(async () => {
 
 .lab-steps-console__hint,
 .lab-steps-console__blank-summary,
-.lab-steps-console__switch-row p,
-.lab-steps-console__sync-toggle p,
-.lab-steps-console__sync-preview p {
+.lab-steps-console__switch-row p {
   margin: 6px 0 0;
   color: #64748b;
   font-size: 12px;
   line-height: 1.6;
 }
 
-.lab-steps-console__switch-row,
-.lab-steps-console__sync-preview {
+.lab-steps-console__switch-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1137,8 +1255,7 @@ onMounted(async () => {
   margin-bottom: 10px;
 }
 
-.lab-steps-console__rule-list,
-.lab-steps-console__sync-fields {
+.lab-steps-console__rule-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1151,10 +1268,35 @@ onMounted(async () => {
   align-items: center;
 }
 
-.lab-steps-console__sync-toggle {
-  display: flex;
-  flex-direction: column;
+.lab-steps-console__step-actions {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+}
+
+.lab-steps-console__inline-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #ccfbf1;
+  border-radius: 10px;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lab-steps-console__inline-copy:hover {
+  border-color: #14b8a6;
+  background: #ccfbf1;
+}
+
+.lab-steps-console__inline-copy .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .question-dialog__group,
@@ -1294,6 +1436,134 @@ onMounted(async () => {
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.lab-step-copy-dialog :deep(.el-dialog) {
+  border-radius: 26px;
+  overflow: hidden;
+}
+
+.lab-step-copy-dialog :deep(.el-dialog__header) {
+  display: none;
+}
+
+.lab-step-copy-dialog :deep(.el-dialog__body) {
+  padding: 0;
+}
+
+.lab-step-copy-dialog__shell {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.lab-step-copy-dialog__header {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(240, 253, 250, 0.95));
+}
+
+.lab-step-copy-dialog__eyebrow {
+  margin: 0;
+  color: #0f766e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.lab-step-copy-dialog__header h2 {
+  margin: 6px 0 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.lab-step-copy-dialog__desc {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.lab-step-copy-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.lab-step-copy-dialog__list > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.lab-step-copy-dialog__list > div:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.lab-step-copy-dialog__list dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lab-step-copy-dialog__list dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.lab-step-copy-dialog__option {
+  display: inline-flex;
+  margin: 0 8px 6px 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lab-step-copy-dialog__code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.lab-step-copy-dialog__code span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lab-step-copy-dialog__code :deep(.el-input__wrapper) {
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px #e2e8f0 inset;
+  background: #f8fafc;
+}
+
+.lab-step-copy-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 @media (max-width: 1280px) {

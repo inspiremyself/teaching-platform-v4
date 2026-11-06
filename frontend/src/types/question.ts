@@ -15,6 +15,10 @@ export interface QuestionItem {
   optionsJson: string | null;
   answerJson: string;
   analysisText: string;
+  /** 题目来源：MANUAL / HOMEWORK_INLINE / LAB_STEP；null 表示历史或未知来源 */
+  sourceType?: string | null;
+  sourceRef?: string | null;
+  scoringConfigJson?: string | null;
 }
 
 export interface SaveQuestionPayload {

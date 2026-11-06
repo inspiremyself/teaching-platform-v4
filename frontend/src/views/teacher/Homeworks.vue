@@ -129,7 +129,7 @@
           <div>
             <p class="homework-dialog__eyebrow">作业管理台 / {{ editingId ? '配置调整' : '发布准备' }}</p>
             <h2>{{ editingId ? '编辑作业配置' : '新建作业' }}</h2>
-            <p class="homework-dialog__desc">围绕班级、说明、附件和时间窗组织作业发布信息，保持当前真实创建与更新行为不变。</p>
+            <p class="homework-dialog__desc">围绕班级、说明、附件和时间窗组织作业发布信息；题目按清单增量同步，已发布作业仅支持调整排序。</p>
           </div>
           <div class="homework-dialog__badges">
             <span class="homework-dialog__badge">{{ statusLabel(form.status) }}</span>
@@ -207,27 +207,35 @@
               <div>
                 <div class="homework-dialog__group-title">题目配置</div>
                 <p class="homework-dialog__group-desc">
-                  统一复用题库选题、题目配置清单与共享编辑器。{{ editingId ? '保存后会将这里的题目追加到当前作业。' : '创建作业后会按当前清单写入题目。' }}
+                  统一复用题库选题、题目配置清单与共享编辑器。{{ editingId ? '保存时按清单增量同步：新增、修改与删除都会落到当前作业。' : '创建作业后会按当前清单写入题目。' }}
                 </p>
+                <p v-if="questionLockHint" class="homework-dialog__group-lock">{{ questionLockHint }}</p>
               </div>
               <div class="homework-dialog__group-actions">
-                <el-button plain @click="openQuestionPicker">从题库挑题</el-button>
-                <el-button type="primary" plain @click="openInlineQuestionEditor">新增内联题</el-button>
+                <el-switch v-model="saveToQuestionBank" active-text="同时保存到题库" :disabled="submitting || detailLoading" />
+                <el-button plain :disabled="questionContentLocked || detailLoading" @click="openQuestionPicker">从题库挑题</el-button>
+                <el-button type="primary" plain :disabled="questionContentLocked || detailLoading" @click="openInlineQuestionEditor">新增内联题</el-button>
               </div>
             </div>
 
             <QuestionConfigList
               :items="configuredQuestions"
+              :content-locked="questionContentLocked"
+              :reorder-locked="questionReorderLocked"
+              :busy="detailLoading"
+              copyable
+              bank-snapshot-hint
               @edit="editConfiguredQuestion"
               @remove="removeConfiguredQuestion"
               @reorder="handleConfiguredQuestionsReorder"
               @score-change="handleConfiguredQuestionScoreChange"
+              @copy-to-bank="copyConfiguredQuestionToBank"
             />
           </section>
         </el-form>
 
         <footer class="homework-dialog__footer">
-          <div class="homework-dialog__footer-note">保留作业 API、状态字段和时间格式，仅优化教师弹窗的工作台表达与信息密度。</div>
+          <div class="homework-dialog__footer-note">题目按清单增量同步；已发布作业仅支持调整排序，已关闭作业不可再修改题目。</div>
           <div class="homework-dialog__footer-actions">
             <el-button @click="dialogVisible = false">取消</el-button>
             <el-button type="primary" :loading="submitting" @click="submitForm">{{ editingId ? '保存作业' : '创建作业' }}</el-button>
@@ -243,8 +251,6 @@
       :editing="Boolean(currentConfiguredQuestion)"
       :description="questionDialogDescription"
       :submit-text="questionDialogSubmitText"
-      :show-asset-fields="questionEditorMode === 'BANK'"
-      :show-config-fields="questionEditorMode !== 'BANK'"
       @saved="submitConfiguredQuestion"
     />
 
@@ -257,15 +263,18 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { listClasses } from '@/api/classes';
-import { listQuestions, updateQuestion } from '@/api/questions';
 import {
   addHomeworkQuestionFromBank,
   addInlineHomeworkQuestion,
   changeHomeworkStatus,
+  copyHomeworkQuestionToBank,
   createHomework,
+  deleteHomeworkQuestion,
+  getTeacherHomeworkDetail,
   listTeacherHomeworks,
   releaseHomeworkScores,
   updateHomework,
+  updateHomeworkQuestion,
 } from '@/api/homeworks';
 import QuestionConfigList from '@/components/question-config/QuestionConfigList.vue';
 import QuestionEditorDialog, {
@@ -277,12 +286,13 @@ import type { TeachingClass } from '@/types/class';
 import type { ConfiguredQuestionItem } from '@/types/question-config';
 import type {
   AddHomeworkQuestionFromBankRequest,
-  AddInlineHomeworkQuestionRequest,
+  CopyQuestionToBankResult,
   CreateHomeworkRequest,
   HomeworkListItem,
   HomeworkStatus,
+  SaveHomeworkQuestionRequest,
 } from '@/types/homework';
-import type { QuestionItem } from '@/types/question';
+import { ApiError } from '@/utils/request';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from './components/typed-editor/adapters/questionAdapter';
 import { parseQuestionAnswerArray } from './components/typed-editor/hydrators/fromQuestion';
 
@@ -290,14 +300,19 @@ const router = useRouter();
 const loading = ref(false);
 const submitting = ref(false);
 const questionSubmitting = ref(false);
+const detailLoading = ref(false);
 const dialogVisible = ref(false);
 const pickerVisible = ref(false);
 const questionDialogVisible = ref(false);
 const editingId = ref<number | null>(null);
+const originalStatus = ref<HomeworkStatus>('DRAFT');
 const rows = ref<HomeworkListItem[]>([]);
 const classOptions = ref<TeachingClass[]>([]);
-const questionBankRows = ref<QuestionItem[]>([]);
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([]);
+/** 已落库的作业题目 id：用于计算删除集合与增量提交 */
+const originalQuestionIds = ref<number[]>([]);
+/** 作业保存成功后是否把本次内联题复制到题库 */
+const saveToQuestionBank = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref<HomeworkStatus | ''>('');
 const classFilter = ref('0');
@@ -358,56 +373,35 @@ const currentConfiguredQuestion = computed(
   () => configuredQuestions.value.find(item => item.localId === activeConfiguredQuestionLocalId.value) ?? null,
 );
 
-const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
-  if (!questionDialogVisible.value) {
-    return null;
-  }
+/** 已发布/已关闭：禁止新增、编辑、删除与改分 */
+const questionContentLocked = computed(() => form.status === 'PUBLISHED' || form.status === 'CLOSED');
 
-  const current = currentConfiguredQuestion.value;
+/** 已关闭：连排序也禁止 */
+const questionReorderLocked = computed(() => form.status === 'CLOSED');
+
+const questionLockHint = computed(() => {
+  if (form.status === 'PUBLISHED') return '已发布作业仅支持调整排序；新增、编辑、删除与改分均已禁用。';
+  if (form.status === 'CLOSED') return '已关闭作业不可再调整题目。';
+  return '';
+});
+
+const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
+  const current = questionDialogVisible.value ? currentConfiguredQuestion.value : null;
   if (!current) {
     return null;
   }
 
-  if (questionEditorMode.value === 'BANK') {
-    const matchedRow = questionBankRows.value.find(row => row.id === current.questionBankId);
-    if (!matchedRow) {
-      return null;
-    }
-
-    return {
-      ...current,
-      code: matchedRow.code,
-      difficulty: matchedRow.difficulty as QuestionEditorDialogValue['difficulty'],
-      defaultScore: matchedRow.defaultScore,
-      analysisText: matchedRow.analysisText,
-      options: parseQuestionAnswerArray(matchedRow.optionsJson).map((option, index) => {
-        if (option && typeof option === 'object') {
-          const record = option as Record<string, unknown>;
-          return {
-            key: String(record.key ?? String.fromCharCode(65 + index)),
-            label: String(record.content ?? record.label ?? record.text ?? ''),
-          };
-        }
-
-        return {
-          key: String.fromCharCode(65 + index),
-          label: String(option ?? ''),
-        };
-      }),
-      answerJson: matchedRow.answerJson,
-    };
-  }
-
-  return current;
+  // 编辑器要求 analysisText 为字符串，历史快照可能为 null
+  return { ...current, analysisText: current.analysisText ?? '' };
 });
 
 const questionDialogDescription = computed(() =>
   questionEditorMode.value === 'BANK'
-    ? '在作业壳内直接维护题库题目资产，保存后同步更新当前配置清单。'
-    : '使用共享题目编辑器维护内联题的题干、答案与评分配置，保存时走原有内联题接口。',
+    ? '修改仅作用于本作业快照，不同步题库；题库资产请到题库管理台维护。'
+    : '使用共享题目编辑器维护内联题的题干、选项、答案与解析，保存后写入当前作业题目清单。',
 );
 
-const questionDialogSubmitText = computed(() => (questionEditorMode.value === 'BANK' ? '保存题库题' : '保存内联题'));
+const questionDialogSubmitText = computed(() => (questionEditorMode.value === 'BANK' ? '保存作业题目' : '保存内联题'));
 
 const fetchHomeworks = async () => {
   loading.value = true;
@@ -423,10 +417,6 @@ const fetchClasses = async () => {
   classOptions.value = response.items;
 };
 
-const fetchQuestionBank = async () => {
-  questionBankRows.value = await listQuestions();
-};
-
 const resetForm = () => {
   form.title = '';
   form.description = '';
@@ -437,7 +427,10 @@ const resetForm = () => {
   form.dueAt = null;
   form.scoreVisibilityMode = 'AFTER_TEACHER_CONFIRM';
   editingId.value = null;
+  originalStatus.value = 'DRAFT';
   configuredQuestions.value = [];
+  originalQuestionIds.value = [];
+  saveToQuestionBank.value = false;
   activeConfiguredQuestionLocalId.value = null;
 };
 
@@ -463,18 +456,45 @@ const openCreateDialog = () => {
   dialogVisible.value = true;
 };
 
-const openEditDialog = (row: HomeworkListItem) => {
-  editingId.value = row.id;
-  form.title = row.title;
-  form.description = row.description;
-  form.classId = row.classId;
-  form.status = row.status;
-  form.attachmentPath = row.attachmentPath || '';
-  form.startAt = row.startAt || null;
-  form.dueAt = row.dueAt || null;
-  form.scoreVisibilityMode = row.scoreVisibilityMode || 'AFTER_TEACHER_CONFIRM';
-  configuredQuestions.value = [];
-  dialogVisible.value = true;
+const openEditDialog = async (row: HomeworkListItem) => {
+  // 先拉取详情再打开弹窗，避免加载失败时教师面对空题目清单
+  detailLoading.value = true;
+  try {
+    const detail = await getTeacherHomeworkDetail(row.id);
+    editingId.value = row.id;
+    originalStatus.value = detail.status;
+    form.title = detail.title;
+    form.description = detail.description;
+    form.classId = detail.classId;
+    form.status = detail.status;
+    form.attachmentPath = detail.attachmentPath || '';
+    form.startAt = detail.startAt || null;
+    form.dueAt = detail.dueAt || null;
+    form.scoreVisibilityMode = detail.scoreVisibilityMode || 'AFTER_TEACHER_CONFIRM';
+    configuredQuestions.value = detail.questions.map(question => ({
+      localId: `hwq-${question.id}`,
+      homeworkQuestionId: question.id,
+      questionBankId: question.questionId,
+      sourceType: question.questionId != null ? 'BANK' : 'INLINE',
+      questionType: question.type,
+      stem: question.stem,
+      sortOrder: question.sortOrder,
+      score: question.score,
+      options: question.options.map(option => ({ key: option.key, label: option.content })),
+      optionsJson: question.optionsJson,
+      answerJson: question.answerJson,
+      analysisText: question.analysisText,
+      scoringConfigJson: question.scoringConfigJson,
+    }));
+    originalQuestionIds.value = detail.questions.map(question => question.id);
+    saveToQuestionBank.value = false;
+    activeConfiguredQuestionLocalId.value = null;
+    dialogVisible.value = true;
+  } catch {
+    ElMessage.error('作业详情加载失败，请重试');
+  } finally {
+    detailLoading.value = false;
+  }
 };
 
 const resequenceConfiguredQuestions = (items: ConfiguredQuestionItem[]) =>
@@ -482,6 +502,23 @@ const resequenceConfiguredQuestions = (items: ConfiguredQuestionItem[]) =>
     ...item,
     sortOrder: index + 1,
   }));
+
+/** 把选择题 JSON 归一为配置清单使用的 {key,label} 结构 */
+const mapOptionsForList = (optionsJson?: string | null) =>
+  parseQuestionAnswerArray(optionsJson ?? null).map((option, index) => {
+    if (option && typeof option === 'object') {
+      const record = option as Record<string, unknown>;
+      return {
+        key: String(record.key ?? String.fromCharCode(65 + index)),
+        label: String(record.content ?? record.label ?? record.text ?? ''),
+      };
+    }
+
+    return {
+      key: String.fromCharCode(65 + index),
+      label: String(option ?? ''),
+    };
+  });
 
 const buildConfiguredInlineQuestion = (
   editorPayload: QuestionEditorDialogSubmitPayload,
@@ -497,62 +534,32 @@ const buildConfiguredInlineQuestion = (
 
   return {
     localId: current?.localId ?? `inline-${Date.now()}`,
+    homeworkQuestionId: current?.homeworkQuestionId ?? null,
     questionBankId: null,
     sourceType: 'INLINE',
     questionType: questionPayload.type,
     stem: questionPayload.stem,
     sortOrder: current?.sortOrder ?? configuredQuestions.value.length + 1,
-    score: current?.score ?? editorPayload.defaultScore,
-    options: parseQuestionAnswerArray(questionPayload.optionsJson).map((option, index) => {
-      if (option && typeof option === 'object') {
-        const record = option as Record<string, unknown>;
-        return {
-          key: String(record.key ?? String.fromCharCode(65 + index)),
-          label: String(record.content ?? record.label ?? record.text ?? ''),
-        };
-      }
-
-      return {
-        key: String.fromCharCode(65 + index),
-        label: String(option ?? ''),
-      };
-    }),
+    score: editorPayload.defaultScore,
+    options: mapOptionsForList(questionPayload.optionsJson),
+    optionsJson: questionPayload.optionsJson,
     answerJson: questionPayload.answerJson,
-    scoringConfigJson: JSON.stringify({
-      type: questionPayload.type,
-      optionsJson: questionPayload.optionsJson,
-      answerJson: questionPayload.answerJson,
-      analysisText: questionPayload.analysisText,
-    }),
+    analysisText: questionPayload.analysisText,
+    // 编辑态保留原评分参数，避免已发布作业仅改排序时因 scoringConfig 差异被误判为内容变更
+    scoringConfigJson: current?.scoringConfigJson ?? null,
   };
 };
 
-const buildInlineScoringConfigJson = (item: ConfiguredQuestionItem) => {
-  const normalizedType = normalizeQuestionType(item.questionType);
-
-  if (item.scoringConfigJson?.trim()) {
-    try {
-      const parsed = JSON.parse(item.scoringConfigJson);
-      return JSON.stringify(parsed);
-    } catch {
-      // fall through to a clean rebuild from the current configured item
-    }
-  }
-
-  return JSON.stringify({
-    type: normalizedType,
-    optionsJson: item.options?.length
-      ? JSON.stringify(
-          item.options.map(option => ({
-            key: option.key,
-            content: option.label,
-          })),
-        )
-      : null,
-    answerJson: item.answerJson?.trim() || '[]',
-    analysisText: '',
-  });
-};
+/** BANK 行只更新本作业快照：保留原题 id、题库 id 与复制写入的评分参数 */
+const buildConfiguredBankQuestion = (
+  editorPayload: QuestionEditorDialogSubmitPayload,
+  current: ConfiguredQuestionItem,
+): ConfiguredQuestionItem => ({
+  ...buildConfiguredInlineQuestion(editorPayload, current),
+  sourceType: 'BANK',
+  questionBankId: current.questionBankId,
+  homeworkQuestionId: current.homeworkQuestionId ?? null,
+});
 
 const mergeConfiguredQuestions = (items: ConfiguredQuestionItem[]) => {
   const existingByBankId = new Map(
@@ -601,135 +608,186 @@ const removeConfiguredQuestion = (localId: string) => {
   );
 };
 
-const editConfiguredQuestion = async (item: ConfiguredQuestionItem) => {
-  activeConfiguredQuestionLocalId.value = item.localId;
-  questionEditorMode.value = item.sourceType;
-
-  if (item.sourceType === 'BANK') {
-    if (!questionBankRows.value.length) {
-      await fetchQuestionBank();
-    }
-    const matchedRow = questionBankRows.value.find(row => row.id === item.questionBankId);
-    if (!matchedRow) {
-      ElMessage.warning('未在当前题库列表中找到该题目，请刷新后重试。');
-      return;
-    }
+const editConfiguredQuestion = (item: ConfiguredQuestionItem) => {
+  if (questionContentLocked.value || detailLoading.value) {
+    return;
   }
 
+  activeConfiguredQuestionLocalId.value = item.localId;
+  questionEditorMode.value = item.sourceType;
   questionDialogVisible.value = true;
 };
 
-const syncConfiguredBankQuestion = (question: QuestionItem) => {
-  configuredQuestions.value = configuredQuestions.value.map(item =>
-    item.questionBankId === question.id
-      ? {
-          ...item,
-          questionType: question.type,
-          stem: question.stem,
-          options: parseQuestionAnswerArray(question.optionsJson).map((option, index) => {
-            if (option && typeof option === 'object') {
-              const record = option as Record<string, unknown>;
-              return {
-                key: String(record.key ?? String.fromCharCode(65 + index)),
-                label: String(record.content ?? record.label ?? record.text ?? ''),
-              };
-            }
+const submitConfiguredQuestion = (editorPayload: QuestionEditorDialogSubmitPayload) => {
+  const current = currentConfiguredQuestion.value;
 
-            return {
-              key: String.fromCharCode(65 + index),
-              label: String(option ?? ''),
-            };
-          }),
-          answerJson: question.answerJson,
-        }
-      : item,
-  );
-};
-
-const submitConfiguredQuestion = async (editorPayload: QuestionEditorDialogSubmitPayload) => {
-  questionSubmitting.value = true;
-  try {
-    const current = currentConfiguredQuestion.value;
-
-    if (questionEditorMode.value === 'BANK') {
-      if (!current?.questionBankId) {
-        ElMessage.warning('当前题目未绑定题库题。');
-        return;
-      }
-
-      const payload = buildQuestionPayloadFromDraft(editorPayload.draft, {
-        code: editorPayload.code,
-        type: editorPayload.type,
-        difficulty: editorPayload.difficulty,
-        defaultScore: editorPayload.defaultScore,
-        analysisText: editorPayload.analysisText,
-      });
-      await updateQuestion(current.questionBankId, payload);
-      await fetchQuestionBank();
-      const refreshed = questionBankRows.value.find(row => row.id === current.questionBankId);
-      if (refreshed) {
-        syncConfiguredBankQuestion(refreshed);
-      }
-      ElMessage.success('题库题更新成功');
-    } else {
-      const nextItem = buildConfiguredInlineQuestion(editorPayload, current);
-      if (current) {
-        configuredQuestions.value = resequenceConfiguredQuestions(
-          configuredQuestions.value.map(item => (item.localId === current.localId ? nextItem : item)),
-        );
-      } else {
-        configuredQuestions.value = resequenceConfiguredQuestions([...configuredQuestions.value, nextItem]);
-      }
-      ElMessage.success(current ? '内联题已更新' : '内联题已加入当前作业配置');
+  if (questionEditorMode.value === 'BANK') {
+    if (!current) {
+      return;
     }
 
-    questionDialogVisible.value = false;
-    activeConfiguredQuestionLocalId.value = null;
-  } finally {
-    questionSubmitting.value = false;
+    // 题库题在作业内只更新快照，不回写题库资产（TD31）
+    const nextItem = buildConfiguredBankQuestion(editorPayload, current);
+    configuredQuestions.value = resequenceConfiguredQuestions(
+      configuredQuestions.value.map(item => (item.localId === current.localId ? nextItem : item)),
+    );
+    ElMessage.success('题库题配置已更新（仅作用于本作业）');
+  } else {
+    const nextItem = buildConfiguredInlineQuestion(editorPayload, current);
+    if (current) {
+      configuredQuestions.value = resequenceConfiguredQuestions(
+        configuredQuestions.value.map(item => (item.localId === current.localId ? nextItem : item)),
+      );
+    } else {
+      configuredQuestions.value = resequenceConfiguredQuestions([...configuredQuestions.value, nextItem]);
+    }
+    ElMessage.success(current ? '内联题已更新' : '内联题已加入当前作业配置');
   }
+
+  questionDialogVisible.value = false;
+  activeConfiguredQuestionLocalId.value = null;
 };
 
-const persistConfiguredQuestions = async (homeworkId: number) => {
-  for (const item of configuredQuestions.value) {
-    if (item.sourceType === 'BANK' && item.questionBankId) {
-      const questionId = Number(item.questionBankId);
-      const sortOrder = Number(item.sortOrder);
-      const questionScore = Number(item.score);
+/** 把配置清单转换为新增/更新接口共用的题目载荷 */
+const buildQuestionSavePayload = (item: ConfiguredQuestionItem): SaveHomeworkQuestionRequest => ({
+  type: normalizeQuestionType(item.questionType),
+  stem: item.stem.trim(),
+  questionScore: Number(item.score),
+  optionsJson: item.optionsJson?.trim()
+    ? item.optionsJson
+    : item.options?.length
+      ? JSON.stringify(item.options.map(option => ({ key: option.key, content: option.label })))
+      : null,
+  answerJson: item.answerJson?.trim() || '[]',
+  analysisText: item.analysisText ?? '',
+  scoringConfigJson: item.scoringConfigJson ?? null,
+  sortOrder: Number(item.sortOrder),
+});
 
-      if (!Number.isFinite(questionId) || !Number.isFinite(sortOrder) || !Number.isFinite(questionScore)) {
-        ElMessage.warning(`题库题「${item.stem || item.questionBankId}」的配置数据无效，请重新选择后再试`);
+/**
+ * 增量同步作业题目：先删除被移除的题，再按“有 id 走 PUT、无 id 走新增”的顺序落库。
+ *
+ * <p>任一条失败立即中止并抛出，已有的本地配置保持不变；已成功删除/新增的 id 会即时回写到
+ * {@link originalQuestionIds}，便于教师修复后重试而不重复操作。</p>
+ */
+const persistConfiguredQuestions = async (homeworkId: number) => {
+  const currentIds = new Set(
+    configuredQuestions.value
+      .map(item => item.homeworkQuestionId)
+      .filter((id): id is number => typeof id === 'number'),
+  );
+  const toDelete = originalQuestionIds.value.filter(id => !currentIds.has(id));
+
+  for (const homeworkQuestionId of toDelete) {
+    await deleteHomeworkQuestion(homeworkId, homeworkQuestionId);
+    originalQuestionIds.value = originalQuestionIds.value.filter(id => id !== homeworkQuestionId);
+  }
+
+  for (const [index, item] of configuredQuestions.value.entries()) {
+    try {
+      const payload = buildQuestionSavePayload(item);
+      if (!Number.isFinite(payload.questionScore) || !Number.isFinite(payload.sortOrder)) {
+        throw new Error('配置数据无效，请重新编辑后再试');
+      }
+
+      if (item.homeworkQuestionId) {
+        await updateHomeworkQuestion(homeworkId, item.homeworkQuestionId, payload);
         continue;
       }
 
-      const payload: AddHomeworkQuestionFromBankRequest = {
-        questionId,
-        sortOrder,
-        questionScore,
-      };
-      const normalizedPayload = JSON.parse(JSON.stringify(payload)) as AddHomeworkQuestionFromBankRequest;
-      await addHomeworkQuestionFromBank(homeworkId, normalizedPayload);
-      continue;
+      if (item.sourceType === 'BANK') {
+        const questionId = Number(item.questionBankId);
+        if (!Number.isFinite(questionId)) {
+          throw new Error('未绑定题库题目');
+        }
+
+        const fromBankPayload: AddHomeworkQuestionFromBankRequest = {
+          questionId,
+          sortOrder: payload.sortOrder,
+          questionScore: payload.questionScore,
+        };
+        const created = await addHomeworkQuestionFromBank(homeworkId, fromBankPayload);
+        item.homeworkQuestionId = created.id;
+      } else {
+        const created = await addInlineHomeworkQuestion(homeworkId, payload);
+        item.homeworkQuestionId = created.id;
+      }
+
+      if (typeof item.homeworkQuestionId === 'number') {
+        originalQuestionIds.value = [...originalQuestionIds.value, item.homeworkQuestionId];
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '保存失败';
+      throw new Error(`第 ${index + 1} 题保存失败：${message}`);
     }
+  }
+};
 
-    const questionScore = Number(item.score);
-    const sortOrder = Number(item.sortOrder);
+/** 汇总复制结果提示，失败不回滚作业保存 */
+const copyInlineQuestionsAfterSave = async () => {
+  if (!saveToQuestionBank.value) {
+    return;
+  }
 
-    if (!Number.isFinite(questionScore) || !Number.isFinite(sortOrder)) {
-      ElMessage.warning(`内联题「${item.stem || item.localId}」的配置数据无效，请重新编辑后再试`);
-      continue;
+  const candidates = configuredQuestions.value.filter(
+    item => item.sourceType === 'INLINE' && typeof item.homeworkQuestionId === 'number',
+  );
+  if (!candidates.length) {
+    return;
+  }
+
+  const createdCodes: string[] = [];
+  const duplicateIds: number[] = [];
+  const failures: string[] = [];
+
+  for (const item of candidates) {
+    try {
+      const result = await copyHomeworkQuestionToBank(item.homeworkQuestionId as number, {});
+      if (result.created) {
+        createdCodes.push(result.question.code);
+      }
+      if (result.duplicateQuestionId) {
+        duplicateIds.push(result.duplicateQuestionId);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '复制失败';
+      failures.push(`${item.stem || item.localId}：${message}`);
     }
+  }
 
-    const payload: AddInlineHomeworkQuestionRequest = {
-      type: normalizeQuestionType(item.questionType),
-      stem: item.stem.trim(),
-      questionScore,
-      sortOrder,
-      saveToQuestionBank: false,
-      scoringConfigJson: buildInlineScoringConfigJson(item),
-    };
-    const normalizedPayload = JSON.parse(JSON.stringify(payload)) as AddInlineHomeworkQuestionRequest;
-    await addInlineHomeworkQuestion(homeworkId, normalizedPayload);
+  if (createdCodes.length) {
+    ElMessage.success(`已复制 ${createdCodes.length} 道内联题到题库：${createdCodes.join('、')}`);
+  }
+  if (duplicateIds.length) {
+    ElMessage.warning(`题库已有相同题目，可前往题库查看：ID ${duplicateIds.join('、')}`);
+  }
+  if (failures.length) {
+    ElMessage.error(`部分题目复制失败：${failures.join('；')}`);
+  }
+};
+
+/** 配置行“复制到题库”：失败重试与后续手动沉淀的唯一入口 */
+const copyConfiguredQuestionToBank = async (item: ConfiguredQuestionItem) => {
+  if (item.sourceType !== 'INLINE') {
+    return;
+  }
+  if (typeof item.homeworkQuestionId !== 'number') {
+    ElMessage.warning('请先保存作业，保存成功后才能复制到题库');
+    return;
+  }
+
+  try {
+    const result: CopyQuestionToBankResult = await copyHomeworkQuestionToBank(item.homeworkQuestionId, {});
+    if (!result.created) {
+      ElMessage.info('已保存到题库');
+      return;
+    }
+    ElMessage.success(`已复制到题库：${result.question.code}`);
+    if (result.duplicateQuestionId) {
+      ElMessage.warning('题库已有相同题目');
+    }
+  } catch {
+    // 错误提示已由统一请求拦截器呈现
   }
 };
 
@@ -746,24 +804,38 @@ const submitForm = async () => {
   submitting.value = true;
   try {
     const payload = buildPayload();
-    let homeworkId = editingId.value;
+
     if (editingId.value) {
-      await updateHomework(editingId.value, payload);
-      if (configuredQuestions.value.length) {
+      // TD32：先落题目再落作业状态，允许同一次保存完成 DRAFT → PUBLISHED 与题目修改
+      // 已关闭作业的题目不可变更，跳过题目写入避免命中锁定规则
+      if (originalStatus.value !== 'CLOSED') {
         await persistConfiguredQuestions(editingId.value);
       }
-      ElMessage.success(configuredQuestions.value.length ? `作业更新成功，并追加了 ${configuredQuestions.value.length} 道题目` : '作业更新成功');
+      await updateHomework(editingId.value, payload);
+      await copyInlineQuestionsAfterSave();
+      ElMessage.success(`作业已保存，题目共 ${configuredQuestions.value.length} 道`);
     } else {
-      const created = await createHomework(payload);
-      homeworkId = created.id;
-      if (homeworkId && configuredQuestions.value.length) {
-        await persistConfiguredQuestions(homeworkId);
+      // 新建时先以草稿落库，题目写入后再更新为目标状态
+      const created = await createHomework({ ...payload, status: 'DRAFT' });
+      if (!created.id) {
+        throw new Error('作业创建失败：未返回作业 ID');
       }
-      ElMessage.success(configuredQuestions.value.length ? `作业创建成功，并写入了 ${configuredQuestions.value.length} 道题目` : '作业创建成功');
+      await persistConfiguredQuestions(created.id);
+      if (payload.status !== 'DRAFT') {
+        await updateHomework(created.id, payload);
+      }
+      await copyInlineQuestionsAfterSave();
+      ElMessage.success(`作业已创建，题目共 ${configuredQuestions.value.length} 道`);
     }
+
     dialogVisible.value = false;
     resetForm();
     await fetchHomeworks();
+  } catch (error) {
+    // 接口错误已由统一请求拦截器提示，这里只补充本地组装出的题目保存错误
+    if (!(error instanceof ApiError)) {
+      ElMessage.error(error instanceof Error ? error.message : '保存失败，请稍后重试');
+    }
   } finally {
     submitting.value = false;
   }
@@ -822,7 +894,7 @@ const formatDateTime = (value?: string | null) => {
 };
 
 onMounted(async () => {
-  await Promise.all([fetchClasses(), fetchQuestionBank()]);
+  await fetchClasses();
   resetForm();
   await fetchHomeworks();
 });
@@ -1339,6 +1411,42 @@ onMounted(async () => {
   color: #0f172a;
   font-size: 16px;
   font-weight: 800;
+}
+
+.homework-dialog__group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.homework-dialog__group-head .homework-dialog__group-title {
+  margin-bottom: 6px;
+}
+
+.homework-dialog__group-desc {
+  margin: 0;
+  max-width: 560px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.homework-dialog__group-lock {
+  margin: 6px 0 0;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.homework-dialog__group-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .homework-dialog__form :deep(.el-form-item) {

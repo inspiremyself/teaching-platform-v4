@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.question;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencode.teachingplatform.assessment.service.QuestionContentValidator;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditResourceType;
@@ -10,6 +10,7 @@ import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.question.dto.QuestionRequests.SaveQuestionRequest;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
+import com.opencode.teachingplatform.question.service.QuestionBankViewMapper;
 import com.opencode.teachingplatform.question.service.QuestionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,13 +37,21 @@ class QuestionServiceTests {
     @Mock
     private AuditLogService auditLogService;
 
+    @Mock
+    private QuestionContentValidator questionContentValidator;
+
     private QuestionService questionService;
 
     private final CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
-        questionService = new QuestionService(questionBankRepository, auditLogService, new ObjectMapper());
+        questionService = new QuestionService(
+                questionBankRepository,
+                auditLogService,
+                questionContentValidator,
+                new QuestionBankViewMapper()
+        );
     }
 
     @Test

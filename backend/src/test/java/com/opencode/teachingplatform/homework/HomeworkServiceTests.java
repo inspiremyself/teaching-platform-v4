@@ -46,6 +46,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @Import({
         HomeworkService.class,
+        HomeworkServiceTests.JacksonTestConfig.class,
+        com.opencode.teachingplatform.assessment.service.QuestionContentValidator.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         LocalPlagiarismService.class,
         ScoringEngine.class,
@@ -56,6 +58,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         SubjectiveRecommendationStrategy.class
 })
 class HomeworkServiceTests {
+
+    /**
+     * DataJpaTest 切片默认不加载 Jackson，这里补一个 ObjectMapper 供内容校验器使用。
+     */
+    @org.springframework.boot.test.context.TestConfiguration
+    static class JacksonTestConfig {
+
+        @org.springframework.context.annotation.Bean
+        com.fasterxml.jackson.databind.ObjectMapper objectMapper() {
+            return new com.fasterxml.jackson.databind.ObjectMapper();
+        }
+    }
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -786,6 +800,150 @@ class HomeworkServiceTests {
         assertThat(detail.get("answerFilePath")).isEqualTo("/uploads/homework/student.docx");
         assertThat(detail.get("attachmentAnswerPath")).isEqualTo("/uploads/homework/student.docx");
         assertThat(detail.get("hasSubmittedAttachment")).isEqualTo(true);
+    }
+
+    @Test
+    void inlineQuestionSnapshotCarriesOptionsAnswerAndAnalysis() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "内联题落库作业", ActivityStatus.DRAFT);
+
+        Map<String, Object> created = homeworkService.addInlineQuestion(teacher, homework.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SINGLE",
+                        "下列说法正确的是",
+                        5D,
+                        "[{\"key\":\"A\",\"content\":\"正确\"},{\"key\":\"B\",\"content\":\"错误\"}]",
+                        "[\"A\"]",
+                        "解析文本",
+                        null,
+                        1
+                ));
+
+        HomeworkQuestion saved = homeworkQuestionRepository
+                .findById(Long.valueOf(String.valueOf(created.get("id")))).orElseThrow();
+        assertThat(saved.getQuestionSnapshotJson())
+                .contains("\"key\":\"A\"")
+                .contains("\"content\":\"正确\"")
+                .contains("\"answer\":[\"A\"]")
+                .contains("解析文本");
+        assertThat(created.get("optionsJson")).isNotNull();
+        assertThat(created.get("answerJson")).isEqualTo("[\"A\"]");
+    }
+
+    @Test
+    void inlineQuestionWithMissingOptionsOrAnswerIsRejected() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "非法内联题作业", ActivityStatus.DRAFT);
+
+        assertThatThrownBy(() -> homeworkService.addInlineQuestion(teacher, homework.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SINGLE", "缺选项", 5D, null, "[\"A\"]", null, null, 1)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("至少需要 2 个选项");
+    }
+
+    @Test
+    void publishedHomeworkOnlyAllowsSortOrderUpdate() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "已发布作业", ActivityStatus.DRAFT);
+        HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 15D, "请说明策略模式的价值");
+        homework.setStatus(ActivityStatus.PUBLISHED);
+        homeworkRepository.save(homework);
+
+        assertThatThrownBy(() -> homeworkService.addInlineQuestion(teacher, homework.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SHORT", "新增题", 10D, null, "[\"参考\"]", null, null, 2)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("仅草稿状态");
+
+        assertThatThrownBy(() -> homeworkService.updateQuestion(teacher, homework.getId(), question.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SHORT", "修改题干", 15D, null, "[]", null,
+                        "{\"keywords\":[{\"term\":\"strategy\",\"weight\":12}],\"minLength\":6}", 1)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("仅支持调整排序");
+
+        // 历史内联题快照答案为空对象，排序保存时须原样回传才能通过一致性比较
+        homeworkService.updateQuestion(teacher, homework.getId(), question.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SUBJECTIVE", "请说明策略模式的价值", 15D, null, "{}", null,
+                        "{\"keywords\":[{\"term\":\"strategy\",\"weight\":12}],\"minLength\":6}", 5));
+        assertThat(homeworkQuestionRepository.findById(question.getId()).orElseThrow().getSortOrder()).isEqualTo(5);
+    }
+
+    @Test
+    void closedHomeworkRejectsQuestionChanges() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "已关闭作业", ActivityStatus.DRAFT);
+        HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 15D, "题干");
+        homework.setStatus(ActivityStatus.CLOSED);
+        homeworkRepository.save(homework);
+
+        assertThatThrownBy(() -> homeworkService.updateQuestion(teacher, homework.getId(), question.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SUBJECTIVE", "题干", 15D, null, "[]", null, null, 1)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已关闭");
+        assertThatThrownBy(() -> homeworkService.deleteQuestion(teacher, homework.getId(), question.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不能删除题目");
+    }
+
+    @Test
+    void draftQuestionWithAnswersCannotChangeScoreOrBeDeleted() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "已有作答作业", ActivityStatus.DRAFT);
+        HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 15D, "请说明策略模式的价值");
+
+        HomeworkSubmission submission = new HomeworkSubmission();
+        submission.setHomeworkId(homework.getId());
+        submission.setStudentId(2L);
+        submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
+        HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
+        HomeworkAnswer answer = new HomeworkAnswer();
+        answer.setHomeworkSubmissionId(savedSubmission.getId());
+        answer.setHomeworkQuestionId(question.getId());
+        answer.setAnswerText("strategy 提升扩展性");
+        homeworkAnswerRepository.save(answer);
+
+        assertThatThrownBy(() -> homeworkService.updateQuestion(teacher, homework.getId(), question.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SUBJECTIVE", "请说明策略模式的价值", 20D, null, "[]", null,
+                        "{\"keywords\":[{\"term\":\"strategy\",\"weight\":12}],\"minLength\":6}", 1)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不能修改分值");
+
+        homeworkService.updateQuestion(teacher, homework.getId(), question.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SUBJECTIVE", "请说明策略模式的复用价值", 15D, null, "[]", null,
+                        "{\"keywords\":[{\"term\":\"strategy\",\"weight\":12}],\"minLength\":6}", 1));
+        assertThat(homeworkQuestionRepository.findById(question.getId()).orElseThrow().getQuestionSnapshotJson())
+                .contains("复用价值");
+
+        assertThatThrownBy(() -> homeworkService.deleteQuestion(teacher, homework.getId(), question.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不能删除");
+    }
+
+    @Test
+    void updatingBankRowSnapshotDoesNotModifyQuestionBank() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "引用题库作业", ActivityStatus.DRAFT);
+        // 直接使用迁移种子中的题库题目，避免在 DataJpaTest 里与种子自增主键冲突
+        QuestionBank bankQuestion = questionBankRepository.findById(1L).orElseThrow();
+        String originalStem = bankQuestion.getStem();
+
+        Map<String, Object> created = homeworkService.addQuestionFromBank(teacher, homework.getId(),
+                new HomeworkRequests.AddHomeworkQuestionFromBankRequest(bankQuestion.getId(), 1, 5D));
+        Long homeworkQuestionId = Long.valueOf(String.valueOf(created.get("id")));
+
+        homeworkService.updateQuestion(teacher, homework.getId(), homeworkQuestionId,
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SINGLE", "作业内改题干", 5D,
+                        "[{\"key\":\"A\",\"content\":\"降低复杂度\"},{\"key\":\"B\",\"content\":\"增加偶然性\"}]",
+                        "[\"A\"]", null, null, 1));
+
+        assertThat(questionBankRepository.findById(bankQuestion.getId()).orElseThrow().getStem()).isEqualTo(originalStem);
     }
 
     private Homework createHomework(Long teacherId, Long classId, String title, ActivityStatus status) {

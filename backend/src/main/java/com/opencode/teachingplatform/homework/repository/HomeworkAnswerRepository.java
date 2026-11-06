@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface HomeworkAnswerRepository extends JpaRepository<HomeworkAnswer, Long> {
     List<HomeworkAnswer> findByHomeworkSubmissionId(Long homeworkSubmissionId);
     Optional<HomeworkAnswer> findByHomeworkSubmissionIdAndHomeworkQuestionId(Long homeworkSubmissionId, Long homeworkQuestionId);
+    boolean existsByHomeworkQuestionId(Long homeworkQuestionId);
 }

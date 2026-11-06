@@ -64,6 +64,81 @@ class GradingAdapterTests {
     }
 
     @Test
+    void shouldScoreSingleChoiceFromArrayAnswerJson() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "SINGLE", "单选题", 1, 5D,
+                "[{\"key\":\"A\",\"content\":\"正确\"},{\"key\":\"B\",\"content\":\"错误\"}]",
+                "[\"A\"]", null, true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "SINGLE", null, null, List.of("A"), null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertEquals(5D, result.autoScore());
+        assertEquals(5D, result.finalScore());
+        assertTrue(result.correct());
+    }
+
+    @Test
+    void shouldNormalizeJudgeAnswerAliases() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "JUDGE", "判断题", 1, 5D, null, "[\"true\"]", null, true);
+
+        GradingResultView upperCaseAnswer = gradingAdapter.grade(snapshot,
+                new QuestionAnswerPayload(1L, "JUDGE", null, null, List.of("T"), null));
+        GradingResultView lowerCaseAnswer = gradingAdapter.grade(snapshot,
+                new QuestionAnswerPayload(2L, "JUDGE", null, null, List.of("true"), null));
+
+        assertEquals(5D, upperCaseAnswer.autoScore());
+        assertEquals(5D, lowerCaseAnswer.autoScore());
+    }
+
+    @Test
+    void shouldReadMultipleChoiceAnswersEvenWhenScoringConfigPresent() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "MULTI", "多选题", 1, 10D, null,
+                "[\"A\",\"B\"]", "{\"mode\":\"FULL_MATCH\"}", true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "MULTI", null, null, List.of("A", "B"), null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertEquals(10D, result.autoScore());
+        assertTrue(result.correct());
+    }
+
+    @Test
+    void shouldDeriveFillBlankScoresFromArrayAnswerJson() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "FILL", "填空题", 1, 10D, null,
+                "[{\"index\":1,\"answers\":[\"x\"]},{\"index\":2,\"answers\":[\"y\"]},{\"index\":3,\"answers\":[\"z\"]}]",
+                null, true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "FILL", null, "[\"x\",\"y\",\"z\"]", null, null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertEquals(10D, result.autoScore());
+        assertTrue(result.judgeDetail().contains("blank 1: matched"));
+        assertTrue(result.judgeDetail().contains("blank 3: matched"));
+    }
+
+    @Test
+    void shouldReturnZeroWhenExpectedAnswerIsBlank() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "SINGLE", "空答案题", 1, 5D,
+                "[{\"key\":\"A\",\"content\":\"正确\"},{\"key\":\"B\",\"content\":\"错误\"}]",
+                "[]", null, true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "SINGLE", null, null, List.of("A"), null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertEquals(0D, result.autoScore());
+        assertEquals(false, result.correct());
+    }
+
+    @Test
     void shouldReturnRecommendationForSubjectiveSnapshotWithoutAutoFinalizing() {
         QuestionSnapshot snapshot = new QuestionSnapshot(
                 null,

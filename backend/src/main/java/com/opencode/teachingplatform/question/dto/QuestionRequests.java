@@ -3,10 +3,19 @@ package com.opencode.teachingplatform.question.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Size;
 
 public final class QuestionRequests {
 
     private QuestionRequests() {
+    }
+
+    /**
+     * 复制到题库的请求体：编码可选，不传时由服务端按来源自动生成。
+     */
+    public record CopyQuestionToBankRequest(
+            @Size(max = 64) String code
+    ) {
     }
 
     public record SaveQuestionRequest(

@@ -7,6 +7,8 @@ import com.opencode.teachingplatform.assessment.model.QuestionAnswerPayload;
 import com.opencode.teachingplatform.assessment.model.QuestionSnapshot;
 import com.opencode.teachingplatform.assessment.service.AnswerPayloadNormalizer;
 import com.opencode.teachingplatform.assessment.service.GradingAdapter;
+import com.opencode.teachingplatform.assessment.service.QuestionContentSupport;
+import com.opencode.teachingplatform.assessment.service.QuestionContentValidator;
 import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
 import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
 import com.opencode.teachingplatform.common.enums.BusinessType;
@@ -68,6 +70,7 @@ public class HomeworkService {
     private final QuestionBankRepository questionBankRepository;
     private final GradingAdapter gradingAdapter;
     private final ObjectMapper objectMapper;
+    private final QuestionContentValidator questionContentValidator;
 
     public HomeworkService(HomeworkRepository homeworkRepository,
                            HomeworkSubmissionRepository homeworkSubmissionRepository,
@@ -83,7 +86,8 @@ public class HomeworkService {
                            QuestionBankRepository questionBankRepository,
                            ObjectProvider<GradingAdapter> gradingAdapterProvider,
                            ObjectProvider<ScoringEngine> scoringEngineProvider,
-                           ObjectProvider<ObjectMapper> objectMapperProvider) {
+                           ObjectProvider<ObjectMapper> objectMapperProvider,
+                           QuestionContentValidator questionContentValidator) {
         this.homeworkRepository = homeworkRepository;
         this.homeworkSubmissionRepository = homeworkSubmissionRepository;
         this.homeworkQuestionRepository = homeworkQuestionRepository;
@@ -98,6 +102,7 @@ public class HomeworkService {
         this.questionBankRepository = questionBankRepository;
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
         this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
+        this.questionContentValidator = questionContentValidator;
     }
 
     @Transactional(readOnly = true)
@@ -209,10 +214,38 @@ public class HomeworkService {
         return detail;
     }
 
+    /**
+     * 教师作业详情：用于编辑弹窗回显与前端增量提交。
+     *
+     * <p>返回作业基础字段与题目列表，题目字段与新增/更新接口的响应保持一致。</p>
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTeacherHomeworkDetail(CurrentUser currentUser, Long homeworkId) {
+        requireTeacher(currentUser);
+        Homework homework = ownedHomework(currentUser, homeworkId);
+        ClassRoom classRoom = classRoomRepository.findById(homework.getClassId()).orElse(null);
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("id", homework.getId());
+        detail.put("title", homework.getTitle());
+        detail.put("description", defaultString(homework.getDescription()));
+        detail.put("classId", homework.getClassId());
+        detail.put("className", classRoom == null ? "" : classRoom.getName());
+        detail.put("status", homework.getStatus().name());
+        detail.put("scoreVisibilityMode", homework.getScoreVisibilityMode().name());
+        detail.put("startAt", homework.getStartAt() == null ? null : homework.getStartAt().toString());
+        detail.put("dueAt", homework.getDueAt() == null ? null : homework.getDueAt().toString());
+        detail.put("attachmentPath", homework.getAttachmentPath());
+        detail.put("questions", homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(homeworkId).stream()
+                .map(this::toHomeworkQuestionAdminView)
+                .toList());
+        return detail;
+    }
+
     @Transactional
     public Map<String, Object> addQuestionFromBank(CurrentUser currentUser, Long homeworkId, HomeworkRequests.AddHomeworkQuestionFromBankRequest request) {
         requireTeacher(currentUser);
         Homework homework = ownedHomework(currentUser, homeworkId);
+        assertDraftOnly(homework, "新增题目");
         QuestionBank questionBank = questionBankRepository.findById(request.getQuestionId())
                 .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
         HomeworkQuestion question = new HomeworkQuestion();
@@ -227,15 +260,26 @@ public class HomeworkService {
                 questionBank.getOptionsJson(),
                 questionBank.getAnswerJson(),
                 questionBank.getScoringConfigJson(),
+                questionBank.getAnalysisText(),
+                questionBank.getDifficulty(),
                 true
         )));
-        return toHomeworkQuestionView(homeworkQuestionRepository.save(question));
+        return toHomeworkQuestionAdminView(homeworkQuestionRepository.save(question));
     }
 
     @Transactional
-    public Map<String, Object> addInlineQuestion(CurrentUser currentUser, Long homeworkId, HomeworkRequests.AddInlineHomeworkQuestionRequest request) {
+    public Map<String, Object> addInlineQuestion(CurrentUser currentUser, Long homeworkId, HomeworkRequests.SaveHomeworkQuestionRequest request) {
         requireTeacher(currentUser);
         Homework homework = ownedHomework(currentUser, homeworkId);
+        assertDraftOnly(homework, "新增题目");
+        questionContentValidator.validate(
+                request.type(),
+                request.stem(),
+                request.questionScore(),
+                request.optionsJson(),
+                request.answerJson(),
+                request.scoringConfigJson()
+        );
         HomeworkQuestion question = new HomeworkQuestion();
         question.setHomeworkId(homework.getId());
         question.setQuestionId(null);
@@ -245,12 +289,96 @@ public class HomeworkService {
                 request.type(),
                 request.stem(),
                 request.questionScore(),
-                null,
-                null,
+                request.optionsJson(),
+                request.answerJson(),
                 request.scoringConfigJson(),
+                request.analysisText(),
+                "MEDIUM",
                 false
         )));
-        return toHomeworkQuestionView(homeworkQuestionRepository.save(question));
+        return toHomeworkQuestionAdminView(homeworkQuestionRepository.save(question));
+    }
+
+    /**
+     * 更新作业题目。
+     *
+     * <p>锁定矩阵：草稿可全量修改（已有作答的题禁止改分值）；已发布仅允许调整排序；
+     * 已关闭全部禁止。已发布场景使用归一后结构做一致性比较，避免原始字符串差异被误判为内容变更。</p>
+     */
+    @Transactional
+    public Map<String, Object> updateQuestion(CurrentUser currentUser,
+                                              Long homeworkId,
+                                              Long homeworkQuestionId,
+                                              HomeworkRequests.SaveHomeworkQuestionRequest request) {
+        requireTeacher(currentUser);
+        Homework homework = ownedHomework(currentUser, homeworkId);
+        HomeworkQuestion question = homeworkQuestionRepository.findByIdAndHomeworkId(homeworkQuestionId, homeworkId)
+                .orElseThrow(() -> new BusinessException(40400, "作业题目不存在"));
+        Map<String, Object> snapshot = readJsonMap(question.getQuestionSnapshotJson());
+        ActivityStatus status = homework.getStatus();
+        if (status == ActivityStatus.CLOSED) {
+            throw new BusinessException(40000, "作业已关闭，不能修改题目");
+        }
+        if (status == ActivityStatus.PUBLISHED) {
+            if (!isContentUnchanged(snapshot, request)) {
+                throw new BusinessException(40000, "已发布作业仅支持调整排序");
+            }
+        } else {
+            questionContentValidator.validate(
+                    request.type(),
+                    request.stem(),
+                    request.questionScore(),
+                    request.optionsJson(),
+                    request.answerJson(),
+                    request.scoringConfigJson()
+            );
+            if (homeworkAnswerRepository.existsByHomeworkQuestionId(homeworkQuestionId)
+                    && !sameScore(snapshot.get("questionScore"), request.questionScore())) {
+                throw new BusinessException(40000, "该题目已有学生作答，不能修改分值");
+            }
+        }
+
+        Map<String, Object> rebuilt = new LinkedHashMap<>();
+        rebuilt.put("type", request.type().trim());
+        rebuilt.put("stem", request.stem().trim());
+        rebuilt.put("questionScore", request.questionScore());
+        rebuilt.put("options", QuestionContentSupport.normalizeOptions(request.optionsJson()));
+        rebuilt.put("answer", readJsonRaw(request.answerJson()));
+        Object requestScoringConfig = readJsonRawObject(request.scoringConfigJson());
+        // 请求未携带评分参数时保留原快照值，避免已发布排序保存时丢失 keywords / rubric
+        rebuilt.put("scoringConfig", requestScoringConfig instanceof Map<?, ?> ? requestScoringConfig : snapshot.getOrDefault("scoringConfig", Map.of()));
+        rebuilt.put("analysisText", request.analysisText() == null ? "" : request.analysisText().trim());
+        rebuilt.put("difficulty", snapshot.get("difficulty") == null ? "MEDIUM" : snapshot.get("difficulty"));
+        rebuilt.put("fromBank", Boolean.TRUE.equals(snapshot.get("fromBank")));
+        question.setSortOrder(request.sortOrder());
+        question.setQuestionScore(request.questionScore());
+        question.setQuestionSnapshotJson(writeJson(rebuilt));
+        return toHomeworkQuestionAdminView(homeworkQuestionRepository.save(question));
+    }
+
+    /**
+     * 删除作业题目：仅草稿允许，且已有学生作答的题目不允许删除。
+     */
+    @Transactional
+    public Map<String, Object> deleteQuestion(CurrentUser currentUser, Long homeworkId, Long homeworkQuestionId) {
+        requireTeacher(currentUser);
+        Homework homework = ownedHomework(currentUser, homeworkId);
+        HomeworkQuestion question = homeworkQuestionRepository.findByIdAndHomeworkId(homeworkQuestionId, homeworkId)
+                .orElseThrow(() -> new BusinessException(40400, "作业题目不存在"));
+        if (homework.getStatus() != ActivityStatus.DRAFT) {
+            throw new BusinessException(40000, "已发布或已关闭作业不能删除题目");
+        }
+        if (homeworkAnswerRepository.existsByHomeworkQuestionId(homeworkQuestionId)) {
+            throw new BusinessException(40000, "该题目已有学生作答，不能删除");
+        }
+        homeworkQuestionRepository.delete(question);
+        return Map.of("deleted", true, "id", homeworkQuestionId);
+    }
+
+    private void assertDraftOnly(Homework homework, String action) {
+        if (homework.getStatus() != ActivityStatus.DRAFT) {
+            throw new BusinessException(40000, "仅草稿状态的作业可以" + action);
+        }
     }
 
     @Transactional
@@ -443,30 +571,181 @@ public class HomeworkService {
         return submissionCandidateText(submission);
     }
 
-    private Map<String, Object> toHomeworkQuestionView(HomeworkQuestion question) {
+    /**
+     * 作业题目的教师端视图，供详情、新增、更新三处共用，字段固定不漂移。
+     */
+    private Map<String, Object> toHomeworkQuestionAdminView(HomeworkQuestion question) {
+        Map<String, Object> snapshot = readJsonMap(question.getQuestionSnapshotJson());
+        List<Map<String, Object>> options = QuestionContentSupport.normalizeOptions(writeJson(snapshot.get("options")));
+        Object answer = snapshot.get("answer");
+        Object scoringConfig = snapshot.get("scoringConfig");
         Map<String, Object> view = new LinkedHashMap<>();
         view.put("id", question.getId());
-        view.put("homeworkId", question.getHomeworkId());
         view.put("questionId", question.getQuestionId());
         view.put("sortOrder", question.getSortOrder());
-        view.put("questionScore", question.getQuestionScore());
+        view.put("type", snapshot.get("type"));
+        view.put("stem", snapshot.get("stem") == null ? "" : snapshot.get("stem"));
+        view.put("options", options);
+        view.put("optionsJson", writeJson(options));
+        view.put("answerJson", writeJson(answer == null ? List.of() : answer));
+        view.put("analysisText", snapshot.get("analysisText") == null ? "" : snapshot.get("analysisText"));
+        view.put("scoringConfigJson",
+                scoringConfig instanceof Map<?, ?> map && !map.isEmpty() ? writeJson(map) : null);
+        view.put("score", question.getQuestionScore());
+        view.put("sourceType", question.getQuestionId() != null ? "BANK" : "INLINE");
+        view.put("difficulty", snapshot.get("difficulty") == null ? "MEDIUM" : snapshot.get("difficulty"));
         return view;
     }
 
+    /**
+     * 判断已发布作业的题目除排序外是否被修改。
+     *
+     * <p>比较全部基于归一后结构：选项按 key 排序后比较 key/content，答案按 JSON 结构深比较，
+     * 评分配置以 Map 深比较，空串与 null 等价。</p>
+     */
+    private boolean isContentUnchanged(Map<String, Object> snapshot, HomeworkRequests.SaveHomeworkQuestionRequest request) {
+        String snapshotType = snapshot.get("type") == null ? "" : String.valueOf(snapshot.get("type")).trim().toUpperCase();
+        String requestType = request.type() == null ? "" : request.type().trim().toUpperCase();
+        if (!snapshotType.equals(requestType)) {
+            return false;
+        }
+        String snapshotStem = snapshot.get("stem") == null ? "" : String.valueOf(snapshot.get("stem")).trim();
+        if (!snapshotStem.equals(request.stem().trim())) {
+            return false;
+        }
+        List<Map<String, Object>> snapshotOptions = QuestionContentSupport.normalizeOptions(writeJson(snapshot.get("options")));
+        List<Map<String, Object>> requestOptions = QuestionContentSupport.normalizeOptions(request.optionsJson());
+        if (!optionsEqual(snapshotOptions, requestOptions)) {
+            return false;
+        }
+        Object snapshotAnswer = snapshot.get("answer");
+        Object requestAnswer = readJsonRaw(request.answerJson());
+        if (!jsonDeepEquals(snapshotAnswer, requestAnswer)) {
+            return false;
+        }
+        String snapshotAnalysis = snapshot.get("analysisText") == null ? "" : String.valueOf(snapshot.get("analysisText")).trim();
+        String requestAnalysis = request.analysisText() == null ? "" : request.analysisText().trim();
+        if (!snapshotAnalysis.equals(requestAnalysis)) {
+            return false;
+        }
+        if (!sameScore(snapshot.get("questionScore"), request.questionScore())) {
+            return false;
+        }
+        Map<String, Object> snapshotScoring = snapshot.get("scoringConfig") instanceof Map<?, ?> map
+                ? toStringObjectMap(map)
+                : Map.of();
+        Map<String, Object> requestScoring = readJsonMap(request.scoringConfigJson());
+        return snapshotScoring.equals(requestScoring);
+    }
+
+    private boolean optionsEqual(List<Map<String, Object>> left, List<Map<String, Object>> right) {
+        if (left.size() != right.size()) {
+            return false;
+        }
+        List<Map<String, Object>> sortedLeft = sortOptionsByKey(left);
+        List<Map<String, Object>> sortedRight = sortOptionsByKey(right);
+        for (int index = 0; index < sortedLeft.size(); index++) {
+            Map<String, Object> leftOption = sortedLeft.get(index);
+            Map<String, Object> rightOption = sortedRight.get(index);
+            if (!String.valueOf(leftOption.get("key")).equals(String.valueOf(rightOption.get("key")))) {
+                return false;
+            }
+            if (!String.valueOf(leftOption.get("content")).equals(String.valueOf(rightOption.get("content")))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private List<Map<String, Object>> sortOptionsByKey(List<Map<String, Object>> options) {
+        return options.stream()
+                .sorted((left, right) -> String.valueOf(left.get("key")).compareTo(String.valueOf(right.get("key"))))
+                .toList();
+    }
+
+    private boolean sameScore(Object left, Double right) {
+        if (!(left instanceof Number number) || right == null) {
+            return false;
+        }
+        return Math.abs(number.doubleValue() - right) < 0.0001D;
+    }
+
+    /**
+     * JSON 结构深比较：数字按数值比较，数组按顺序比较（填空题按 index 升序归一后再比较）。
+     */
+    private boolean jsonDeepEquals(Object left, Object right) {
+        if (left == null || right == null) {
+            return left == right;
+        }
+        if (left instanceof Number leftNumber && right instanceof Number rightNumber) {
+            return Math.abs(leftNumber.doubleValue() - rightNumber.doubleValue()) < 0.0001D;
+        }
+        if (left instanceof Map<?, ?> leftMap && right instanceof Map<?, ?> rightMap) {
+            if (!leftMap.keySet().equals(rightMap.keySet())) {
+                return false;
+            }
+            for (Object key : leftMap.keySet()) {
+                if (!jsonDeepEquals(leftMap.get(key), rightMap.get(key))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if (left instanceof List<?> leftList && right instanceof List<?> rightList) {
+            if (leftList.size() != rightList.size()) {
+                return false;
+            }
+            for (int index = 0; index < leftList.size(); index++) {
+                if (!jsonDeepEquals(leftList.get(index), rightList.get(index))) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return String.valueOf(left).equals(String.valueOf(right));
+    }
+
+    private Map<String, Object> toStringObjectMap(Map<?, ?> map) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        map.forEach((key, value) -> result.put(String.valueOf(key), value));
+        return result;
+    }
+
+    private Object readJsonRawObject(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<Object>() {});
+        } catch (Exception ex) {
+            throw new BusinessException(40000, "JSON 数据格式不正确");
+        }
+    }
+
+    /**
+     * 构造作业题目快照。
+     *
+     * <p>快照是作业运行时的唯一真相：选项统一归一为 {@code [{key, content}]}，
+     * 答案保留原始 JSON 数组形态，评分参数与解析文本独立存放。</p>
+     */
     private Map<String, Object> buildQuestionSnapshot(String type,
                                                       String stem,
                                                       Double questionScore,
                                                       String optionsJson,
                                                       String answerJson,
                                                       String scoringConfigJson,
+                                                      String analysisText,
+                                                      String difficulty,
                                                       boolean fromBank) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         snapshot.put("type", type);
         snapshot.put("stem", stem);
         snapshot.put("questionScore", questionScore);
-        snapshot.put("options", readJsonValue(optionsJson, new TypeReference<List<Map<String, Object>>>() {}, List.of()));
+        snapshot.put("options", QuestionContentSupport.normalizeOptions(optionsJson));
         snapshot.put("answer", readJsonRaw(answerJson));
         snapshot.put("scoringConfig", readJsonValue(scoringConfigJson, new TypeReference<Map<String, Object>>() {}, Map.of()));
+        snapshot.put("analysisText", analysisText == null ? "" : analysisText.trim());
+        snapshot.put("difficulty", difficulty == null || difficulty.isBlank() ? "MEDIUM" : difficulty);
         snapshot.put("fromBank", fromBank);
         return snapshot;
     }

@@ -22,7 +22,8 @@ public class MultipleChoiceScoringStrategy extends AbstractObjectiveScoringSuppo
         String mode = normalizeToken(context.scoringConfig().getOrDefault("mode", "FULL_MATCH"));
         Set<String> expected = normalizeSet(context.scoringConfig().get("correctAnswers"));
         Set<String> actual = normalizeSet(context.studentAnswer());
-        double score = switch (mode) {
+        // 预期答案缺失时直接判 0，避免 FULL_MATCH 下“空集等于空集”得分
+        double score = expected.isEmpty() ? 0D : switch (mode) {
             case "average_partial" -> averagePartialScore(context, expected, actual);
             default -> expected.equals(actual) ? scoreOf(context) : 0D;
         };

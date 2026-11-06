@@ -1,7 +1,5 @@
 import type { CreateLabStepPayload, FillBlankRuleConfig, LabQuestionType, LabTextKeywordRule, TextQuestionRuleConfig } from '@/types/lab';
-import type { QuestionDifficulty, SaveQuestionPayload } from '@/types/question';
 import type { TypedEditorDraft } from '../types';
-import { buildQuestionPayloadFromDraft } from './questionAdapter';
 import { splitTypedEditorAnswerLines } from '../hydrators/fromQuestion';
 import { normalizeLabQuestionType } from '../hydrators/fromLabStep';
 
@@ -97,26 +95,6 @@ export const buildLabStepPayloadFromDraft = (
   questionType: normalizeLabQuestionType(payload.questionType),
   content: draft.prompt.trim(),
   answerConfigJson: serializeLabStepAnswerConfig(payload.questionType, draft, settings),
-});
-
-export const buildQuestionCodeFromLabStep = (labId: number, stepNo: number, kind: TypedEditorDraft['kind']) => {
-  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(2, 14);
-  return `LAB${labId}-S${String(stepNo).padStart(2, '0')}-${kind.slice(0, 3)}-${stamp}`;
-};
-
-export const buildQuestionPayloadFromLabStepDraft = (
-  labId: number,
-  stepNo: number,
-  draft: TypedEditorDraft,
-  syncSettings: { difficulty: QuestionDifficulty; analysisText: string },
-  defaultScore: number,
-): SaveQuestionPayload => buildQuestionPayloadFromDraft(draft, {
-  code: buildQuestionCodeFromLabStep(labId, stepNo, draft.kind),
-  // 实验域保留 TEXT/CODE 两类编辑器形态，同步题库时统一归入简答题
-  type: draft.kind === 'CODE' || draft.kind === 'TEXT' ? 'SHORT' : draft.kind,
-  difficulty: syncSettings.difficulty,
-  defaultScore,
-  analysisText: syncSettings.analysisText,
 });
 
 export const validateLabStepDraft = (

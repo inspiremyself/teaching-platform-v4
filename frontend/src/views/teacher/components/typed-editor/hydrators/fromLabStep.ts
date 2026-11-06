@@ -154,6 +154,25 @@ export const mapLabQuestionTypeToTypedKind = (questionType: LabQuestionType): Ty
   }
 };
 
+/** typed-editor 题型反解为实验题项题型：用于从题库预填实验题项 */
+export const mapTypedKindToLabQuestionType = (kind: TypedEditorKind): LabQuestionType => {
+  switch (kind) {
+    case 'SINGLE':
+      return 'SINGLE_CHOICE';
+    case 'MULTI':
+      return 'MULTIPLE_CHOICE';
+    case 'JUDGE':
+      return 'TRUE_FALSE';
+    case 'FILL':
+      return 'FILL_BLANK';
+    case 'CODE':
+      return 'CODE';
+    case 'SHORT':
+    default:
+      return 'SHORT_ANSWER';
+  }
+};
+
 export const getLabQuestionTypeLabel = (questionType: LabQuestionType) => {
   switch (normalizeLabQuestionType(questionType)) {
     case 'SHORT_ANSWER':

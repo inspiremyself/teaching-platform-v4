@@ -141,6 +141,7 @@ class QuestionControllerTests {
         owned.setOptionsJson("[\"A\",\"B\"]");
         owned.setAnswerJson("[\"A\"]");
         owned.setAnalysisText("own");
+        owned.setSourceType("MANUAL");
         questionBankRepository.save(owned);
 
         QuestionBank foreign = new QuestionBank();
@@ -160,7 +161,9 @@ class QuestionControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].code").value("Q-OWN-001"));
+                .andExpect(jsonPath("$.data[0].code").value("Q-OWN-001"))
+                .andExpect(jsonPath("$.data[0].sourceType").value("MANUAL"))
+                .andExpect(jsonPath("$.data[0].sourceRef").value(org.hamcrest.Matchers.nullValue()));
     }
 
     @Test

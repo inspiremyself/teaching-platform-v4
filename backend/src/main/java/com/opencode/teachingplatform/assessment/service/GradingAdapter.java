@@ -117,48 +117,134 @@ public class GradingAdapter {
         return result.finalScore() != null && result.finalScore() > 0D;
     }
 
+    /**
+     * 解析评分参数：先按 {@code answerJson} 推导答案键，再用 {@code scoringConfigJson} 覆盖评分参数。
+     *
+     * <p>此前实现只要 {@code scoringConfigJson} 非空就直接返回，导致前端把选项/答案塞进
+     * 评分配置后，真正的答案键完全读不到，客观题一律判 0。现在改为“先推导、后覆盖”：
+     * 答案键始终来自题目答案，评分参数（模式、关键词、语言等）仍以配置为准。</p>
+     */
     private Map<String, Object> resolveScoringConfig(QuestionSnapshot snapshot, QuestionType questionType) {
+        Map<String, Object> derived = deriveAnswerConfig(snapshot.answerJson(), questionType, snapshot.score());
         Map<String, Object> configured = readJsonMap(snapshot.scoringConfigJson());
-        if (!configured.isEmpty()) {
-            return configured;
-        }
+        Map<String, Object> merged = new LinkedHashMap<>(derived);
+        merged.putAll(configured);
+        return merged;
+    }
 
-        Object answerData = readJsonObject(snapshot.answerJson());
+    /**
+     * 从题目答案 JSON 推导评分策略需要的答案键。
+     *
+     * <p>写入侧约定 {@code answerJson} 为数组形态（单选 {@code ["A"]}、多选 {@code ["A","B"]}、
+     * 判断 {@code ["T"]}、填空 {@code [{"index":1,"answers":[...]}]}），
+     * 读取侧同时兼容历史对象形态，保证历史题目仍可评分。</p>
+     */
+    private Map<String, Object> deriveAnswerConfig(String answerJson, QuestionType questionType, Double questionScore) {
+        Object answerData = readJsonObject(answerJson);
+        if (answerData == null) {
+            return Map.of();
+        }
         Map<String, Object> derived = new LinkedHashMap<>();
         switch (questionType) {
             case SINGLE_CHOICE, TRUE_FALSE -> {
                 Object correctAnswer = firstNonNull(
+                        firstListValue(answerData),
                         readMapValue(answerData, "correctAnswer"),
                         readMapValue(answerData, "correct"),
                         readMapValue(answerData, "answer"),
-                        firstListValue(answerData),
                         answerData instanceof Map<?, ?> ? null : answerData
                 );
                 if (correctAnswer != null) {
-                    derived.put("correctAnswer", correctAnswer);
+                    derived.put("correctAnswer", String.valueOf(correctAnswer));
                 }
             }
             case MULTIPLE_CHOICE -> {
                 List<String> answers = toStringList(firstNonNull(
+                        answerData instanceof List<?> ? answerData : null,
                         readMapValue(answerData, "correctAnswers"),
                         readMapValue(answerData, "correctAnswer"),
-                        readMapValue(answerData, "answers"),
-                        answerData
+                        readMapValue(answerData, "answers")
                 ));
                 if (!answers.isEmpty()) {
                     derived.put("correctAnswers", answers);
                 }
             }
             case FILL_BLANK -> {
-                Object blanks = readMapValue(answerData, "blanks");
-                if (blanks instanceof List<?> list && !list.isEmpty()) {
-                    derived.put("blanks", list);
+                List<Map<String, Object>> blanks = deriveBlanks(answerData, questionScore);
+                if (!blanks.isEmpty()) {
+                    derived.put("blanks", blanks);
                 }
             }
             case SUBJECTIVE -> {
             }
         }
         return derived;
+    }
+
+    /**
+     * 推导填空题的每题空答案与分值。
+     *
+     * <p>数组形态 {@code [{"index","answers"}]} 按 index 升序排列；单空分值取
+     * {@code floor(总分/空数*100)/100}，最后一空补差，保证各空分值合计等于题目分值。</p>
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> deriveBlanks(Object answerData, Double questionScore) {
+        if (answerData instanceof List<?> list && !list.isEmpty()) {
+            List<Map<String, Object>> ordered = list.stream()
+                    .filter(item -> item instanceof Map<?, ?>)
+                    .map(item -> {
+                        Map<?, ?> blank = (Map<?, ?>) item;
+                        Map<String, Object> copy = new LinkedHashMap<>();
+                        copy.put("index", blank.get("index"));
+                        copy.put("answers", blank.get("answers"));
+                        return copy;
+                    })
+                    .sorted((left, right) -> Integer.compare(asInt(left.get("index")), asInt(right.get("index"))))
+                    .toList();
+            if (ordered.isEmpty()) {
+                return List.of();
+            }
+            double total = questionScore == null ? 0D : questionScore;
+            int count = ordered.size();
+            double perBlank = Math.floor(total / count * 100D) / 100D;
+            List<Map<String, Object>> blanks = new java.util.ArrayList<>(count);
+            for (int index = 0; index < count; index++) {
+                Map<String, Object> blank = new LinkedHashMap<>(ordered.get(index));
+                double blankScore = index == count - 1
+                        ? Math.round((total - perBlank * (count - 1)) * 100D) / 100D
+                        : perBlank;
+                blank.put("score", blankScore);
+                blanks.add(blank);
+            }
+            return blanks;
+        }
+        Object legacyBlanks = readMapValue(answerData, "blanks");
+        if (legacyBlanks instanceof List<?> list && !list.isEmpty()) {
+            List<Map<String, Object>> blanks = new java.util.ArrayList<>(list.size());
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    Map<String, Object> copy = new LinkedHashMap<>();
+                    map.forEach((key, value) -> copy.put(String.valueOf(key), value));
+                    blanks.add(copy);
+                }
+            }
+            return blanks;
+        }
+        return List.of();
+    }
+
+    private int asInt(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String text && !text.isBlank()) {
+            try {
+                return Integer.parseInt(text.trim());
+            } catch (NumberFormatException ex) {
+                return 0;
+            }
+        }
+        return 0;
     }
 
     private Object resolveStudentAnswer(QuestionAnswerPayload payload, QuestionType questionType) {

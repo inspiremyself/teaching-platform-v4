@@ -57,6 +57,13 @@
           </el-select>
         </label>
 
+        <label class="question-console__field">
+          <span class="question-console__field-label">来源</span>
+          <el-select v-model="filters.source" clearable placeholder="全部来源">
+            <el-option v-for="item in sourceFilterOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </label>
+
         <div class="question-console__quick-tags">
           <span class="question-console__field-label">快捷视图</span>
           <div class="question-console__quick-tag-list">
@@ -128,6 +135,12 @@
                 <span class="question-chip question-chip--score">{{ row.defaultScore }} 分</span>
               </div>
             </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="来源" width="140">
+          <template #default="{ row }">
+            <span class="question-chip question-chip--source">{{ getSourceLabel(row.sourceType) }}</span>
           </template>
         </el-table-column>
 
@@ -205,7 +218,7 @@
       :initial-question="currentEditorQuestion"
       :loading="submitting"
       :editing="Boolean(editingId)"
-      description="按题型直接维护题干、答案和结构数据，保存时统一组装 API 所需字段。"
+      :description="editorDescription"
       :submit-text="editingId ? '保存题目' : '创建题目'"
       :show-asset-fields="true"
       :show-config-fields="false"
@@ -236,6 +249,7 @@ import QuestionPickerDialog from '@/components/question-config/QuestionPickerDia
 import QuestionImportDialog from '@/components/question-config/QuestionImportDialog.vue';
 
 type QuickViewKey = 'ALL' | 'INCOMPLETE' | 'HARD' | 'OBJECTIVE';
+type SourceFilterKey = 'MANUAL' | 'HOMEWORK_INLINE' | 'LAB_STEP' | 'UNKNOWN';
 
 interface HealthStatus {
   label: string;
@@ -264,6 +278,20 @@ const difficultyLabelMap: Record<QuestionDifficulty, string> = {
   HARD: '挑战',
 };
 
+/** 题目来源文案：MANUAL/HOMEWORK_INLINE/LAB_STEP，空值视为历史或未知来源 */
+const sourceLabelMap: Record<string, string> = {
+  MANUAL: '手工创建',
+  HOMEWORK_INLINE: '作业内联题',
+  LAB_STEP: '实验题项',
+};
+
+const sourceFilterOptions: Array<{ value: SourceFilterKey; label: string }> = [
+  { value: 'MANUAL', label: '手工创建' },
+  { value: 'HOMEWORK_INLINE', label: '作业内联题' },
+  { value: 'LAB_STEP', label: '实验题项' },
+  { value: 'UNKNOWN', label: '历史/未知' },
+];
+
 const loading = ref(false);
 const submitting = ref(false);
 const dialogVisible = ref(false);
@@ -273,7 +301,7 @@ const editingId = ref<number | null>(null);
 const rows = ref<QuestionItem[]>([]);
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([]);
 const activeQuickView = ref<QuickViewKey>('ALL');
-const filters = reactive({ type: '', difficulty: '', keyword: '' });
+const filters = reactive({ type: '', difficulty: '', keyword: '', source: '' });
 const form = reactive<QuestionFormState>({
   code: '',
   type: 'SINGLE',
@@ -341,6 +369,13 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
   };
 });
 
+/** 编辑弹窗顶部说明：区分新建与编辑，编辑时明确快照影响范围 */
+const editorDescription = computed(() =>
+  editingId.value
+    ? '修改仅影响后续新引用，已生成的作业/考试/实验快照不受影响。'
+    : '按题型直接维护题干、答案和结构数据，保存时统一组装 API 所需字段。',
+);
+
 const filterSummaryText = computed(() => {
   const parts: string[] = [];
   if (filters.type) {
@@ -348,6 +383,12 @@ const filterSummaryText = computed(() => {
   }
   if (filters.difficulty) {
     parts.push(`难度 ${getDifficultyLabel(filters.difficulty)}`);
+  }
+  if (filters.source) {
+    const matchedSource = sourceFilterOptions.find(option => option.value === filters.source);
+    if (matchedSource) {
+      parts.push(`来源 ${matchedSource.label}`);
+    }
   }
   if (filters.keyword.trim()) {
     parts.push(`关键词“${filters.keyword.trim()}”`);
@@ -369,6 +410,9 @@ const filteredRows = computed(() => {
     .filter(item => {
       const matchesType = !filters.type || item.type === filters.type;
       const matchesDifficulty = !filters.difficulty || item.difficulty === filters.difficulty;
+      const matchesSource =
+        !filters.source ||
+        (filters.source === 'UNKNOWN' ? !item.sourceType : item.sourceType === filters.source);
       const matchesKeyword =
         !keyword ||
         item.code.toLowerCase().includes(keyword) ||
@@ -381,7 +425,7 @@ const filteredRows = computed(() => {
         (activeQuickView.value === 'HARD' && item.difficulty === 'HARD') ||
         (activeQuickView.value === 'OBJECTIVE' && ['SINGLE', 'MULTI', 'JUDGE'].includes(item.type));
 
-      return matchesType && matchesDifficulty && matchesKeyword && matchesQuickView;
+      return matchesType && matchesDifficulty && matchesSource && matchesKeyword && matchesQuickView;
     })
     .sort((left, right) => left.code.localeCompare(right.code));
 });
@@ -400,6 +444,7 @@ const resetFilters = () => {
   filters.type = '';
   filters.difficulty = '';
   filters.keyword = '';
+  filters.source = '';
   activeQuickView.value = 'ALL';
 };
 
@@ -502,7 +547,7 @@ const submit = async (editorPayload: QuestionEditorDialogSubmitPayload) => {
 };
 
 const remove = async (id: number) => {
-  await ElMessageBox.confirm('删除题目后无法恢复，是否继续？', '删除确认', { type: 'warning' });
+  await ElMessageBox.confirm('删除题目后无法恢复；已生成的作业/考试/实验快照不受影响，是否继续？', '删除确认', { type: 'warning' });
   await deleteQuestion(id);
   ElMessage.success('题目删除成功');
   await fetchData();
@@ -522,6 +567,9 @@ const copyCode = async (code: string) => {
 };
 
 const getTypeLabel = (type: string) => (isQuestionType(type) ? typeLabelMap[type] : type);
+
+const getSourceLabel = (sourceType?: string | null) =>
+  (sourceType ? sourceLabelMap[sourceType] ?? sourceType : '历史/未知');
 
 const getDifficultyLabel = (difficulty: string) =>
   isQuestionDifficulty(difficulty) ? difficultyLabelMap[difficulty] : difficulty;
@@ -759,7 +807,7 @@ onMounted(() => {
 
 .question-console__filters-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.4fr;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1.4fr;
   gap: 14px;
   margin-top: 14px;
 }
@@ -849,6 +897,11 @@ onMounted(() => {
 .question-chip--score {
   background: #ecfeff;
   color: #0f766e;
+}
+
+.question-chip--source {
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .question-row__stem {

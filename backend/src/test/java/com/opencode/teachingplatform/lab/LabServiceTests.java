@@ -2974,6 +2974,39 @@ class LabServiceTests {
     }
 
     @Test
+    void createStepDoesNotWriteQuestionBankRows() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        Integer before = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM question_bank", Integer.class);
+
+        labService.createStep(teacherUser(), labId, new LabRequests.CreateStepRequest(
+                1, "选择题题项", "SINGLE_CHOICE", "以下哪项是策略模式的核心？",
+                "{\"options\":[{\"key\":\"A\",\"label\":\"封装可替换算法\"},{\"key\":\"B\",\"label\":\"减少注释\"}],\"correctAnswer\":[\"A\"]}",
+                10, true));
+
+        Integer after = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM question_bank", Integer.class);
+        // 保存题项只落实验题项，题库写入必须由教师显式复制触发
+        assertThat(after).isEqualTo(before);
+    }
+
+    @Test
+    void copyLabPreservesHistoricalQuestionReferenceOnCopiedSteps() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        String snapshotJson = "{\"type\":\"SINGLE\",\"stem\":\"历史题目\"}";
+        seedStep(sourceLabId, 1, "SINGLE_CHOICE", "{}", "{}", 10, 9001L, snapshotJson);
+
+        Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null));
+        Long newLabId = ((Number) view.get("id")).longValue();
+
+        LabStep copied = labStepRepository.findByLabIdOrderByStepNoAsc(newLabId).getFirst();
+        // copyStep 继续复制历史 questionId / questionSnapshotJson，不清空旧字段
+        assertThat(copied.getQuestionId()).isEqualTo(9001L);
+        assertThat(copied.getQuestionSnapshotJson()).isEqualTo(snapshotJson);
+    }
+
+    @Test
     void copyLabDuplicatesConfigurationAndItems() {
         Long classId = seedClass(teacherUser().id());
         Long sourceLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());

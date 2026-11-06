@@ -1,4 +1,5 @@
 import type { UnifiedQuestionAnswerPayload } from './question-answer';
+import type { QuestionItem } from './question';
 
 export type HomeworkStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | string;
 
@@ -136,13 +137,58 @@ export interface AddHomeworkQuestionFromBankRequest {
   questionScore: number;
 }
 
-export interface AddInlineHomeworkQuestionRequest {
+/** 作业内联题 / 作业内 BANK 题快照的统一保存请求。 */
+export interface SaveHomeworkQuestionRequest {
   type: string;
   stem: string;
   questionScore: number;
+  optionsJson?: string | null;
+  answerJson: string;
+  analysisText?: string | null;
   scoringConfigJson?: string | null;
-  saveToQuestionBank?: boolean;
   sortOrder: number;
+}
+
+/** 教师作业详情中的题目视图（含快照内容与来源）。 */
+export interface TeacherHomeworkQuestionItem {
+  id: number;
+  questionId: number | null;
+  sortOrder: number;
+  type: string;
+  stem: string;
+  options: Array<{ key: string; content: string }>;
+  optionsJson: string | null;
+  answerJson: string;
+  analysisText: string;
+  scoringConfigJson: string | null;
+  score: number;
+  sourceType: 'BANK' | 'INLINE';
+  difficulty: string;
+}
+
+export interface CopyQuestionToBankRequest {
+  code?: string | null;
+}
+
+export interface CopyQuestionToBankResult {
+  created: boolean;
+  question: QuestionItem;
+  duplicateQuestionId: number | null;
+}
+
+/** 教师作业详情：编辑弹窗回显与增量提交的数据来源。 */
+export interface TeacherHomeworkDetail {
+  id: number;
+  title: string;
+  description: string;
+  classId: number;
+  className: string;
+  status: string;
+  scoreVisibilityMode: string;
+  startAt: string | null;
+  dueAt: string | null;
+  attachmentPath: string | null;
+  questions: TeacherHomeworkQuestionItem[];
 }
 
 export interface GradeHomeworkAnswerRequest {

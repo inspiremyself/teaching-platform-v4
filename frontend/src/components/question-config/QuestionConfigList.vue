@@ -21,6 +21,10 @@
               {{ option.key }}. {{ option.label }}
             </span>
           </div>
+
+          <p v-if="bankSnapshotHint && item.sourceType === 'BANK'" class="question-config-list__hint">
+            修改仅作用于本作业快照，不同步题库。
+          </p>
         </div>
 
         <div class="question-config-list__side">
@@ -30,28 +34,50 @@
               :model-value="item.score"
               :min="1"
               :max="100"
+              :disabled="busy || contentLocked"
               @update:model-value="handleScoreChange(item.localId, $event)"
             />
           </label>
 
           <div class="question-config-list__actions">
-            <button type="button" class="question-config-list__icon-button" :disabled="index === 0" @click="moveItem(index, -1)">
+            <button
+              type="button"
+              class="question-config-list__icon-button"
+              :disabled="busy || reorderLocked || index === 0"
+              @click="moveItem(index, -1)"
+            >
               <span class="material-symbols-outlined">arrow_upward</span>
             </button>
             <button
               type="button"
               class="question-config-list__icon-button"
-              :disabled="index === items.length - 1"
+              :disabled="busy || reorderLocked || index === items.length - 1"
               @click="moveItem(index, 1)"
             >
               <span class="material-symbols-outlined">arrow_downward</span>
             </button>
-            <button type="button" class="question-config-list__icon-button" @click="$emit('edit', item)">
+            <button
+              v-if="copyable && item.sourceType !== 'BANK'"
+              type="button"
+              class="question-config-list__icon-button"
+              title="复制到题库"
+              :disabled="busy"
+              @click="$emit('copyToBank', item)"
+            >
+              <span class="material-symbols-outlined">bookmark_add</span>
+            </button>
+            <button
+              type="button"
+              class="question-config-list__icon-button"
+              :disabled="busy || contentLocked"
+              @click="$emit('edit', item)"
+            >
               <span class="material-symbols-outlined">edit</span>
             </button>
             <button
               type="button"
               class="question-config-list__icon-button question-config-list__icon-button--danger"
+              :disabled="busy || contentLocked"
               @click="$emit('remove', item.localId)"
             >
               <span class="material-symbols-outlined">delete</span>
@@ -69,13 +95,35 @@
 import { TYPED_EDITOR_LABELS } from '@/views/teacher/components/typed-editor/constants'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
 
-const props = defineProps<{ items: ConfiguredQuestionItem[] }>()
+const props = withDefaults(
+  defineProps<{
+    items: ConfiguredQuestionItem[]
+    /** 内容锁定：禁用改分、编辑、删除，但仍允许调整顺序（已发布作业） */
+    contentLocked?: boolean
+    /** 排序锁定：连排序一并禁用（已关闭作业或加载中） */
+    reorderLocked?: boolean
+    /** 加载中：禁用全部操作 */
+    busy?: boolean
+    /** 是否渲染“复制到题库”按钮，题库题（BANK）始终不渲染 */
+    copyable?: boolean
+    /** BANK 行是否展示“仅作用于本作业快照”提示 */
+    bankSnapshotHint?: boolean
+  }>(),
+  {
+    contentLocked: false,
+    reorderLocked: false,
+    busy: false,
+    copyable: false,
+    bankSnapshotHint: false,
+  },
+)
 
 const emit = defineEmits<{
   edit: [ConfiguredQuestionItem]
   remove: [string]
   reorder: [ConfiguredQuestionItem[]]
   scoreChange: [{ localId: string; score: number }]
+  copyToBank: [ConfiguredQuestionItem]
 }>()
 
 const typeLabelMap = TYPED_EDITOR_LABELS as Record<string, string>
@@ -87,6 +135,10 @@ const resequence = (items: ConfiguredQuestionItem[]) =>
   }))
 
 const moveItem = (index: number, direction: -1 | 1) => {
+  if (props.busy || props.reorderLocked) {
+    return
+  }
+
   const targetIndex = index + direction
   if (targetIndex < 0 || targetIndex >= props.items.length) {
     return
@@ -99,6 +151,10 @@ const moveItem = (index: number, direction: -1 | 1) => {
 }
 
 const handleScoreChange = (localId: string, value: number | undefined) => {
+  if (props.busy || props.contentLocked) {
+    return
+  }
+
   emit('scoreChange', {
     localId,
     score: value ?? 1,
@@ -200,6 +256,13 @@ const handleScoreChange = (localId: string, value: number | undefined) => {
   background: #ffffff;
   color: #475569;
   border: 1px solid #dbe4f0;
+}
+
+.question-config-list__hint {
+  margin: 0;
+  color: #b45309;
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .question-config-list__score-field {

@@ -49,6 +49,13 @@ public class HomeworkController {
         return ApiResponse.ok(homeworkService.updateHomework(currentUser, id, request));
     }
 
+    @GetMapping("/teacher/homeworks/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> getTeacherHomeworkDetail(@PathVariable Long id) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(homeworkService.getTeacherHomeworkDetail(currentUser, id));
+    }
+
     @PostMapping("/teacher/homeworks/{id}/status")
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> changeHomeworkStatus(@PathVariable Long id, @Valid @RequestBody HomeworkRequests.ChangeHomeworkStatusRequest request) {
@@ -66,9 +73,25 @@ public class HomeworkController {
 
     @PostMapping("/teacher/homeworks/{id}/questions/inline")
     @PreAuthorize("hasRole('TEACHER')")
-    public ApiResponse<?> addInlineQuestion(@PathVariable Long id, @Valid @RequestBody HomeworkRequests.AddInlineHomeworkQuestionRequest request) {
+    public ApiResponse<?> addInlineQuestion(@PathVariable Long id, @Valid @RequestBody HomeworkRequests.SaveHomeworkQuestionRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(homeworkService.addInlineQuestion(currentUser, id, request));
+    }
+
+    @PutMapping("/teacher/homeworks/{id}/questions/{homeworkQuestionId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> updateQuestion(@PathVariable Long id,
+                                         @PathVariable Long homeworkQuestionId,
+                                         @Valid @RequestBody HomeworkRequests.SaveHomeworkQuestionRequest request) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(homeworkService.updateQuestion(currentUser, id, homeworkQuestionId, request));
+    }
+
+    @DeleteMapping("/teacher/homeworks/{id}/questions/{homeworkQuestionId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> deleteQuestion(@PathVariable Long id, @PathVariable Long homeworkQuestionId) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(homeworkService.deleteQuestion(currentUser, id, homeworkQuestionId));
     }
 
     @PostMapping("/teacher/homeworks/{id}/questions/bank-debug")

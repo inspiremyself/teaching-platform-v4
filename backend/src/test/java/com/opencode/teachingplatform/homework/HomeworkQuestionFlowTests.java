@@ -50,19 +50,21 @@ class HomeworkQuestionFlowTests {
 
     @Test
     void teacherShouldBeAbleToAttachQuestionBankQuestionsAndInlineQuestions() {
-        Homework homework = savePublishedHomework();
+        Homework homework = saveHomework(ActivityStatus.DRAFT);
         QuestionBank bankQuestion = saveBankQuestion();
 
         homeworkService.addQuestionFromBank(TEACHER, homework.getId(),
                 new HomeworkRequests.AddHomeworkQuestionFromBankRequest(bankQuestion.getId(), 1, 10D));
 
         homeworkService.addInlineQuestion(TEACHER, homework.getId(),
-                new HomeworkRequests.AddInlineHomeworkQuestionRequest(
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
                         "SUBJECTIVE",
                         "请说明策略模式的价值",
                         15D,
+                        null,
+                        "[\"参考要点\"]",
+                        null,
                         "{\"keywords\":[{\"term\":\"strategy\",\"weight\":8}],\"minLength\":6}",
-                        false,
                         2
                 ));
 
@@ -76,21 +78,27 @@ class HomeworkQuestionFlowTests {
 
     @Test
     void studentSubmissionShouldCreatePerQuestionAnswersAndRecommendationScores() {
-        Homework homework = savePublishedHomework();
+        Homework homework = saveHomework(ActivityStatus.DRAFT);
         QuestionBank bankQuestion = saveBankQuestion();
 
         Map<String, Object> objectiveQuestion = homeworkService.addQuestionFromBank(TEACHER, homework.getId(),
                 new HomeworkRequests.AddHomeworkQuestionFromBankRequest(bankQuestion.getId(), 1, 10D));
 
         Map<String, Object> subjectiveQuestion = homeworkService.addInlineQuestion(TEACHER, homework.getId(),
-                new HomeworkRequests.AddInlineHomeworkQuestionRequest(
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
                         "SUBJECTIVE",
                         "请说明 strategy 扩展与复用能力",
                         15D,
+                        null,
+                        "[\"参考要点\"]",
+                        null,
                         "{\"keywords\":[{\"term\":\"strategy\",\"weight\":8},{\"term\":\"复用\",\"weight\":4}],\"minLength\":6}",
-                        false,
                         2
                 ));
+
+        // 题目只能在草稿状态下编辑，作答前把作业切到已发布状态
+        homework.setStatus(ActivityStatus.PUBLISHED);
+        homeworkRepository.save(homework);
 
         homeworkService.submitHomework(STUDENT, homework.getId(),
                 new HomeworkRequests.SubmitHomeworkRequest(
@@ -112,13 +120,50 @@ class HomeworkQuestionFlowTests {
         assertThat(subjective.getJudgeDetail()).contains("strategy");
     }
 
-    private Homework savePublishedHomework() {
+    @Test
+    void repeatedSavesOfSameInlineQuestionDoNotAppendRows() {
+        Homework homework = saveHomework(ActivityStatus.DRAFT);
+
+        Map<String, Object> created = homeworkService.addInlineQuestion(TEACHER, homework.getId(),
+                new HomeworkRequests.SaveHomeworkQuestionRequest(
+                        "SUBJECTIVE",
+                        "请说明策略模式的价值",
+                        15D,
+                        null,
+                        "[\"参考要点\"]",
+                        null,
+                        null,
+                        1
+                ));
+        Long homeworkQuestionId = (Long) created.get("id");
+
+        // 同一题连续保存（新增 1 次 + 更新 2 次）后题目数量必须保持不变
+        for (int round = 1; round <= 2; round++) {
+            homeworkService.updateQuestion(TEACHER, homework.getId(), homeworkQuestionId,
+                    new HomeworkRequests.SaveHomeworkQuestionRequest(
+                            "SUBJECTIVE",
+                            "请说明策略模式的价值（第 " + round + " 次修改）",
+                            15D,
+                            null,
+                            "[\"参考要点\"]",
+                            null,
+                            null,
+                            1
+                    ));
+        }
+
+        List<HomeworkQuestion> questions = homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(homework.getId());
+        assertThat(questions).hasSize(1);
+        assertThat(questions.getFirst().getQuestionSnapshotJson()).contains("第 2 次修改");
+    }
+
+    private Homework saveHomework(ActivityStatus status) {
         Homework homework = new Homework();
         homework.setTitle("评分系统作业");
         homework.setDescription("题目化作业");
         homework.setClassId(1L);
         homework.setCreatedBy(1L);
-        homework.setStatus(ActivityStatus.PUBLISHED);
+        homework.setStatus(status);
         homework.setStartAt(OffsetDateTime.now().minusHours(1));
         homework.setDueAt(OffsetDateTime.now().plusDays(1));
         return homeworkRepository.save(homework);

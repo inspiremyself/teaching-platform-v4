@@ -4,6 +4,7 @@ import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
@@ -113,13 +114,21 @@ public final class HomeworkRequests {
         }
     }
 
-    public record AddInlineHomeworkQuestionRequest(
+    /**
+     * 作业题目新增/更新共用的请求体。
+     *
+     * <p>新增与更新字段完全一致，因此合并为一个 DTO，避免两套结构漂移。
+     * 选项与答案独立成字段，评分参数只承载 mode / keywords / blanks 等评分键。</p>
+     */
+    public record SaveHomeworkQuestionRequest(
             @NotBlank String type,
             @NotBlank String stem,
-            @NotNull Double questionScore,
+            @NotNull @Positive Double questionScore,
+            String optionsJson,
+            @NotBlank String answerJson,
+            String analysisText,
             String scoringConfigJson,
-            boolean saveToQuestionBank,
-            @NotNull Integer sortOrder
+            @NotNull @Positive Integer sortOrder
     ) {
     }
 
