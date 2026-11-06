@@ -60,7 +60,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @DataJpaTest
-@Import({LabService.class, LabScoringSupport.class, com.opencode.teachingplatform.clazz.service.ClassAccessService.class, LabServiceTests.TestBeans.class})
+@Import({LabService.class, LabScoringSupport.class, com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
+        com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class, LabServiceTests.TestBeans.class})
 @ActiveProfiles("test")
 class LabServiceTests {
 
@@ -1136,6 +1137,171 @@ class LabServiceTests {
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("无权限访问该资源");
+    }
+
+    // ------------------------------------------------------------------
+    // 实验题项结构变更、状态回退、所属班级变更的守卫（TD8–TD12）
+    // ------------------------------------------------------------------
+
+    @Test
+    void draftLabWithoutSubmissionsAllowsStepCreateUpdateDelete() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        Long stepId = seedStep(labId, 1);
+
+        Map<String, Object> created = labService.createStep(teacherUser(), labId, new LabRequests.CreateStepRequest(
+                2, "新增步骤", "TEXT", "新增内容", "{}", 10, true));
+        Map<String, Object> updated = labService.updateStep(teacherUser(), stepId, new LabRequests.UpdateStepRequest(
+                1, "更新后的步骤", "TEXT", "更新内容", "{}", 20, false));
+        Map<String, Object> deleted = labService.deleteStep(teacherUser(), stepId);
+
+        // 草稿 + 零提交：三类结构变更都必须放行
+        assertThat(created.get("stepNo")).isEqualTo(2);
+        assertThat(updated.get("title")).isEqualTo("更新后的步骤");
+        assertThat(deleted.get("deleted")).isEqualTo(true);
+        assertThat(labSubmissionRepository.countByLabId(labId)).isZero();
+        assertThat(labStepRepository.findById(stepId)).isEmpty();
+        assertThat(labStepRepository.findByLabIdOrderByStepNoAsc(labId)).hasSize(1);
+    }
+
+    @Test
+    void publishedLabRejectsStepCreateUpdateDelete() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1);
+
+        // 已发布实验：题项增删改一律拒绝，且拒绝路径不落库
+        assertThatThrownBy(() -> labService.createStep(teacherUser(), labId, new LabRequests.CreateStepRequest(
+                2, "发布后新增", "TEXT", "内容", "{}", 10, true)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验已发布或已关闭，不能修改题项");
+        assertThatThrownBy(() -> labService.updateStep(teacherUser(), stepId, new LabRequests.UpdateStepRequest(
+                1, "发布后修改", "TEXT", "内容", "{}", 10, true)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验已发布或已关闭，不能修改题项");
+        assertThatThrownBy(() -> labService.deleteStep(teacherUser(), stepId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验已发布或已关闭，不能修改题项");
+
+        assertThat(labStepRepository.findByLabIdOrderByStepNoAsc(labId)).hasSize(1);
+        assertThat(labStepRepository.findById(stepId).orElseThrow().getTitle()).isEqualTo("步骤1");
+    }
+
+    @Test
+    void draftLabWithStudentSubmissionRejectsStepCreateUpdateDelete() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        Long stepId = seedStep(labId, 1);
+        seedMembership(classId, studentUser().id());
+        // 复用既有 helper：发布 → 学生保存并提交 → 直接改实体回草稿，
+        // 模拟修复前遗留的「草稿态但已有学生提交」数据，用于校验结构变更的第二道守卫
+        seedSubmittedReportOnPublishedLabThenDraft(labId, stepId, "实验小结");
+
+        assertThatThrownBy(() -> labService.createStep(teacherUser(), labId, new LabRequests.CreateStepRequest(
+                2, "有提交后新增", "TEXT", "内容", "{}", 10, true)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已有学生作答，不能修改题项");
+        assertThatThrownBy(() -> labService.updateStep(teacherUser(), stepId, new LabRequests.UpdateStepRequest(
+                1, "有提交后修改", "TEXT", "内容", "{}", 10, true)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已有学生作答，不能修改题项");
+        assertThatThrownBy(() -> labService.deleteStep(teacherUser(), stepId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已有学生作答，不能修改题项");
+
+        assertThat(labSubmissionRepository.countByLabId(labId)).isEqualTo(1);
+        assertThat(labStepRepository.findByLabIdOrderByStepNoAsc(labId)).hasSize(1);
+    }
+
+    @Test
+    void changeLabStatusRejectsDraftWhenLabHasStudentSubmission() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedSubmittedStudent(classId, labId);
+
+        assertThatThrownBy(() -> labService.changeLabStatus(
+                teacherUser(),
+                labId,
+                new LabRequests.ChangeLabStatusRequest("DRAFT")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已有学生作答，不能退回草稿");
+
+        assertThat(labRepository.findById(labId).orElseThrow().getStatus()).isEqualTo(ActivityStatus.PUBLISHED);
+    }
+
+    @Test
+    void updateLabRejectsExplicitDraftWhenLabHasStudentSubmission() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedSubmittedStudent(classId, labId);
+
+        assertThatThrownBy(() -> labService.updateLab(
+                teacherUser(),
+                labId,
+                new LabRequests.UpdateLabRequest("退回草稿", "desc", "content", 1, classId, "DRAFT", null, null, false)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已有学生作答，不能退回草稿");
+
+        Lab unchanged = labRepository.findById(labId).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo(ActivityStatus.PUBLISHED);
+        assertThat(unchanged.getTitle()).isEqualTo("实验-" + labId);
+    }
+
+    @Test
+    void updateLabWithoutStatusKeepsCurrentStatusWhenLabHasStudentSubmission() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedSubmittedStudent(classId, labId);
+
+        // status 为 null：视为保持当前状态，不触发回退校验，即使已有提交也必须成功
+        Map<String, Object> nullStatus = labService.updateLab(
+                teacherUser(),
+                labId,
+                new LabRequests.UpdateLabRequest("空状态更新", "desc", "content", 1, classId, null, null, null, false));
+        // status 为空白串：同样视为保持当前状态
+        Map<String, Object> blankStatus = labService.updateLab(
+                teacherUser(),
+                labId,
+                new LabRequests.UpdateLabRequest("空白状态更新", "desc", "content", 1, classId, "   ", null, null, false));
+
+        assertThat(nullStatus.get("status")).isEqualTo("PUBLISHED");
+        assertThat(blankStatus.get("status")).isEqualTo("PUBLISHED");
+        Lab preserved = labRepository.findById(labId).orElseThrow();
+        assertThat(preserved.getStatus()).isEqualTo(ActivityStatus.PUBLISHED);
+        assertThat(preserved.getTitle()).isEqualTo("空白状态更新");
+    }
+
+    @Test
+    void updateLabRejectsClassChangeWhenLabHasStudentSubmission() {
+        Long classId = seedClass(teacherUser().id());
+        Long anotherClassId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedSubmittedStudent(classId, labId);
+
+        assertThatThrownBy(() -> labService.updateLab(
+                teacherUser(),
+                labId,
+                new LabRequests.UpdateLabRequest("改班级", "desc", "content", 1, anotherClassId, null, null, null, false)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已有学生作答，不能变更所属班级");
+
+        assertThat(labRepository.findById(labId).orElseThrow().getClassId()).isEqualTo(classId);
+    }
+
+    @Test
+    void updateLabAllowsSameClassIdWhenLabHasStudentSubmission() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedSubmittedStudent(classId, labId);
+
+        // 传入相同 classId 不构成「变更所属班级」，不得拦截
+        Map<String, Object> result = labService.updateLab(
+                teacherUser(),
+                labId,
+                new LabRequests.UpdateLabRequest("同班更新", "desc", "content", 1, classId, null, null, null, false));
+
+        assertThat(result.get("classId")).isEqualTo(classId);
+        assertThat(labRepository.findById(labId).orElseThrow().getClassId()).isEqualTo(classId);
     }
 
     @Test
@@ -2733,7 +2899,11 @@ class LabServiceTests {
     private Long seedSubmittedReportOnPublishedLabThenDraft(Long labId, Long stepId, String summaryText) {
         labService.changeLabStatus(teacherUser(), labId, new LabRequests.ChangeLabStatusRequest("PUBLISHED"));
         Long submissionId = seedSubmittedReport(labId, stepId, summaryText);
-        labService.changeLabStatus(teacherUser(), labId, new LabRequests.ChangeLabStatusRequest("DRAFT"));
+        // 现有校验已禁止“有作答后退回草稿”，此处直接改写实体状态构造 draft + 有提交的历史脏状态，
+        // 用于验证 returnReport 的“实验未发布”保护分支。
+        Lab draftLab = labRepository.findById(labId).orElseThrow();
+        draftLab.setStatus(ActivityStatus.DRAFT);
+        labRepository.saveAndFlush(draftLab);
         return submissionId;
     }
 
@@ -3048,6 +3218,21 @@ class LabServiceTests {
          );
          return id;
      }
+
+    /**
+     * 通过真实学生流程（保存答案 + 正式提交）为 PUBLISHED 实验造出一条提交行。
+     *
+     * <p>复用 {@link #seedSubmittedReport}：只用一条 TEXT 主观题，提交后停留在 SUBMITTED，
+     * 不产生成绩记录，便于「已有学生作答」类守卫用例专注校验提交数分支。</p>
+     *
+     * @return 该实验下唯一题项的 id，供题项更新/删除用例复用
+     */
+    private Long seedSubmittedStudent(Long classId, Long labId) {
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+        seedSubmittedReport(labId, stepId, "实验小结");
+        return stepId;
+    }
 
     private Long seedSubmissionAnswer(Long labId, Long stepId, Long studentId, String answerText) {
         seedStudentAccount(new CurrentUser(studentId, "student-" + studentId, "学生" + studentId, UserRole.STUDENT));

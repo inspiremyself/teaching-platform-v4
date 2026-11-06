@@ -346,12 +346,71 @@ class HomeworkTeacherControllerTests {
         }
     }
 
+    @Test
+    void teacherCanReturnHomeworkSubmission() throws Exception {
+        when(homeworkService.returnHomeworkSubmission(any(CurrentUser.class), anyLong())).thenReturn(Map.of(
+                "submissionId", 5,
+                "status", "SAVED",
+                "homeworkId", 1,
+                "studentId", 2
+        ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homework-submissions/{id}/return", 5L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionId").value(5))
+                    .andExpect(jsonPath("$.data.status").value("SAVED"))
+                    .andExpect(jsonPath("$.data.homeworkId").value(1))
+                    .andExpect(jsonPath("$.data.studentId").value(2));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void studentCannotReturnHomeworkSubmission() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homework-submissions/{id}/return", 5L))
+                    .andExpect(status().isForbidden());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void returningNonReturnableSubmissionReturns400Message() throws Exception {
+        when(homeworkService.returnHomeworkSubmission(any(CurrentUser.class), anyLong()))
+                .thenThrow(new BusinessException(40000, "仅已提交或已批改的作业可打回"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homework-submissions/{id}/return", 5L))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("仅已提交或已批改的作业可打回"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
     private UsernamePasswordAuthenticationToken authenticateTeacher() {
         CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
         return new UsernamePasswordAuthenticationToken(
                 currentUser,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_TEACHER"))
+        );
+    }
+
+    private UsernamePasswordAuthenticationToken authenticateStudent() {
+        CurrentUser currentUser = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        return new UsernamePasswordAuthenticationToken(
+                currentUser,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_STUDENT"))
         );
     }
 }

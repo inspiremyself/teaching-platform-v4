@@ -7,11 +7,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "score_record")
+@Table(name = "score_record", uniqueConstraints = @UniqueConstraint(
+        name = "uk_score_record_business_student",
+        columnNames = {"business_type", "business_id", "student_id"}))
 public class ScoreRecord extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "business_type", nullable = false, length = 16)

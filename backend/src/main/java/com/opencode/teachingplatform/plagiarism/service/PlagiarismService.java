@@ -74,11 +74,19 @@ public class PlagiarismService {
         PlagiarismTask task = plagiarismTaskRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(40400, "查重任务不存在"));
 
-        if (user.role() == UserRole.STUDENT && !Objects.equals(task.getStudentId(), user.id())) {
-            throw new BusinessException(40300, "无权限访问该查重记录");
-        }
-        if (user.role() == UserRole.TEACHER && !teacherOwnsTask(user, task)) {
-            throw new BusinessException(40300, "无权限访问该查重记录");
+        // 角色白名单 + 归属校验：只允许任务归属学生本人或任务所属活动的创建教师。
+        switch (user.role()) {
+            case STUDENT -> {
+                if (!Objects.equals(task.getStudentId(), user.id())) {
+                    throw new BusinessException(40300, "无权限访问该查重记录");
+                }
+            }
+            case TEACHER -> {
+                if (!teacherOwnsTask(user, task)) {
+                    throw new BusinessException(40300, "无权限访问该查重记录");
+                }
+            }
+            default -> throw new BusinessException(40300, "无权限访问该查重记录");
         }
 
         Map<String, Object> view = new LinkedHashMap<>();
@@ -258,7 +266,7 @@ public class PlagiarismService {
 
     private boolean teacherOwnsTask(CurrentUser teacher, PlagiarismTask task) {
         if (teacher.role() != UserRole.TEACHER) {
-            return true;
+            return false;
         }
         return switch (task.getBusinessType()) {
             case HOMEWORK -> ownsHomeworkSubmission(teacher.id(), task.getBusinessId());

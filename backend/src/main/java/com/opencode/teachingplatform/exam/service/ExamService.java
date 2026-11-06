@@ -9,8 +9,6 @@ import com.opencode.teachingplatform.assessment.model.QuestionSnapshot;
 import com.opencode.teachingplatform.assessment.service.AnswerPayloadNormalizer;
 import com.opencode.teachingplatform.assessment.service.GradingAdapter;
 import com.opencode.teachingplatform.assessment.service.QuestionSnapshotFactory;
-import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
-import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
 import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
@@ -36,9 +34,13 @@ import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
+import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -57,7 +59,8 @@ public class ExamService {
     private final ClassAccessService classAccessService;
     private final ExamScoringService examScoringService;
     private final SysUserRepository sysUserRepository;
-    private final ScoreRecordRepository scoreRecordRepository;
+    private final ScoreRecordWriter scoreRecordWriter;
+    private final TransactionTemplate transactionTemplate;
     private final GradingAdapter gradingAdapter;
     private final ObjectMapper objectMapper;
 
@@ -71,7 +74,8 @@ public class ExamService {
                        ClassAccessService classAccessService,
                        ExamScoringService examScoringService,
                        SysUserRepository sysUserRepository,
-                       ScoreRecordRepository scoreRecordRepository,
+                       ScoreRecordWriter scoreRecordWriter,
+                       PlatformTransactionManager transactionManager,
                        ObjectProvider<GradingAdapter> gradingAdapterProvider,
                        ObjectProvider<ScoringEngine> scoringEngineProvider,
                        ObjectProvider<ObjectMapper> objectMapperProvider) {
@@ -85,7 +89,10 @@ public class ExamService {
         this.classAccessService = classAccessService;
         this.examScoringService = examScoringService;
         this.sysUserRepository = sysUserRepository;
-        this.scoreRecordRepository = scoreRecordRepository;
+        this.scoreRecordWriter = scoreRecordWriter;
+        // 开始考试需要“创建提交”独立事务：唯一键冲突必须在外层捕获后再重读，
+        // 因此这里用事务模板实现，不新增 Bean 与独立类。
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
         this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
     }
@@ -179,6 +186,7 @@ public class ExamService {
         exam.setShuffleQuestions(Boolean.TRUE.equals(request.shuffleQuestions()));
         exam.setCreatedBy(currentUser.id());
         assertBankQuestions(request.questions());
+        assertNoDuplicateQuestions(request.questions());
         Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id());
         examRepository.save(exam);
 
@@ -211,6 +219,7 @@ public class ExamService {
 
         // Validate question-bank ownership before any mutation so a 404 leaves the exam untouched.
         assertBankQuestions(request.questions());
+        assertNoDuplicateQuestions(request.questions());
         Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id());
 
         exam.setTitle(request.title());
@@ -300,13 +309,14 @@ public class ExamService {
             Optional<ExamSubmission> submissionOpt = examSubmissionRepository.findByExamIdAndStudentId(id, currentUser.id());
             if (submissionOpt.isPresent()) {
                 ExamSubmission submission = submissionOpt.get();
+                boolean scoreVisible = canStudentSeeScore(exam, submission);
                 result.put("submissionId", submission.getId());
                 result.put("submissionStatus", submission.getStatus().name());
                 result.put("startedAt", submission.getStartedAt());
                 result.put("submittedAt", submission.getSubmittedAt());
-                result.put("autoScore", submission.getAutoScore());
-                result.put("manualScore", submission.getManualScore());
-                boolean scoreVisible = canStudentSeeScore(exam, submission);
+                // 成绩不可见时不泄露任何判分字段，避免提前推断客观题对错。
+                result.put("autoScore", scoreVisible ? submission.getAutoScore() : null);
+                result.put("manualScore", scoreVisible ? submission.getManualScore() : null);
                 result.put("totalScore", scoreVisible ? submission.getTotalScore() : null);
                 result.put("resultAvailable", scoreVisible);
 
@@ -333,7 +343,7 @@ public class ExamService {
                         ExamAnswer ea = answerMap.get(questionId);
                         if (ea != null) {
                             qMap.put("studentAnswer", ea.getAnswerJson());
-                            qMap.put("isCorrect", ea.getIsCorrect());
+                            qMap.put("isCorrect", scoreVisible ? ea.getIsCorrect() : null);
                             qMap.put("earnedScore", scoreVisible ? ea.getScore() : null);
                             qMap.put("teacherComment", scoreVisible ? ea.getTeacherComment() : null);
                         }
@@ -402,7 +412,6 @@ public class ExamService {
         return Map.of("released", true, "scoreVisibilityMode", exam.getScoreVisibilityMode().name());
     }
 
-    @Transactional
     public Object startExam(CurrentUser currentUser, Long examId) {
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
@@ -448,20 +457,33 @@ public class ExamService {
         }
 
         // Create new submission, deadline capped by exam end time
-        OffsetDateTime deadlineAt = now.plusMinutes(exam.getDurationMinutes());
-        if (exam.getEndAt() != null && deadlineAt.isAfter(exam.getEndAt())) {
-            deadlineAt = exam.getEndAt();
+        OffsetDateTime deadline = now.plusMinutes(exam.getDurationMinutes());
+        if (exam.getEndAt() != null && deadline.isAfter(exam.getEndAt())) {
+            deadline = exam.getEndAt();
         }
+        final OffsetDateTime deadlineAt = deadline;
 
-        ExamSubmission submission = new ExamSubmission();
-        submission.setExamId(examId);
-        submission.setStudentId(currentUser.id());
-        submission.setStartedAt(now);
-        submission.setDeadlineAt(deadlineAt);
-        submission.setStatus(ExamSubmissionStatus.IN_PROGRESS);
-        examSubmissionRepository.save(submission);
-
-        return buildStartResult(submission, now);
+        // 创建提交走独立事务：唯一键冲突必须在外层事务之外捕获，否则事务已被标记回滚。
+        try {
+            ExamSubmission created = Objects.requireNonNull(transactionTemplate.execute(status -> {
+                ExamSubmission submission = new ExamSubmission();
+                submission.setExamId(examId);
+                submission.setStudentId(currentUser.id());
+                submission.setStartedAt(now);
+                submission.setDeadlineAt(deadlineAt);
+                submission.setStatus(ExamSubmissionStatus.IN_PROGRESS);
+                return examSubmissionRepository.saveAndFlush(submission);
+            }));
+            return buildStartResult(created, now);
+        } catch (DataIntegrityViolationException ex) {
+            ExamSubmission existing = examSubmissionRepository
+                    .findByExamIdAndStudentId(examId, currentUser.id())
+                    .orElseThrow(() -> new BusinessException(40900, "考试提交创建冲突，请重试"));
+            if (existing.getStatus() == ExamSubmissionStatus.IN_PROGRESS) {
+                return buildStartResult(existing, now);
+            }
+            throw new BusinessException(40000, "考试已提交，不能重新开始");
+        }
     }
 
     /**
@@ -481,8 +503,9 @@ public class ExamService {
 
     @Transactional
     public Object submitExam(CurrentUser currentUser, Long examId, ExamRequests.SubmitExamRequest request) {
-        // 1. Load the student's IN_PROGRESS submission for this exam
-        ExamSubmission submission = examSubmissionRepository.findByExamIdAndStudentId(examId, currentUser.id())
+        // 1. 对“单学生 + 单考试”提交行加悲观写锁：并发双击时后到事务阻塞，
+        //    待前一事务提交后读到非 IN_PROGRESS 状态并被拒绝，避免重复答案。
+        ExamSubmission submission = examSubmissionRepository.findByExamIdAndStudentIdForUpdate(examId, currentUser.id())
                 .orElseThrow(() -> new BusinessException(40400, "未找到考试提交记录"));
 
         // 2. Validate submission status is IN_PROGRESS
@@ -522,11 +545,17 @@ public class ExamService {
         }
 
         // 6. For each exam_question: score and persist ExamAnswer
+        //    按 questionId 去重：存量试卷可能含重复题目，只让 sortOrder 最小的首行生效，
+        //    否则会触发 uk_exam_answer_submission_question。
         List<ExamQuestion> examQuestions = examQuestionRepository.findByExamIdOrderBySortOrder(examId);
+        Set<Long> processedQuestionIds = new HashSet<>();
         double autoScore = 0.0;
         boolean hasManualGrading = false;
 
         for (ExamQuestion eq : examQuestions) {
+            if (!processedQuestionIds.add(eq.getQuestionId())) {
+                continue;
+            }
             QuestionSnapshot snapshot = resolveQuestionSnapshot(eq);
             ExamRequests.SubmitAnswerItem submitItem = submitItems.get(eq.getQuestionId());
             String studentAnswer = studentAnswers.get(eq.getQuestionId());
@@ -581,15 +610,17 @@ public class ExamService {
         examSubmissionRepository.save(submission);
 
         if (!hasManualGrading && canStudentSeeScore(exam, submission)) {
-            upsertScoreRecord(examId, submission, autoScore);
+            upsertScoreRecord(exam, submission, autoScore);
         }
 
-        // 10. Return result
+        // 10. Return result：成绩不可见时不下发任何分数，前端以 resultAvailable 判定。
+        boolean scoreVisible = canStudentSeeScore(exam, submission);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("submissionId", submission.getId());
         result.put("status", submission.getStatus().name());
-        result.put("autoScore", autoScore);
-        result.put("totalScore", autoScore);
+        result.put("resultAvailable", scoreVisible);
+        result.put("autoScore", scoreVisible ? autoScore : null);
+        result.put("totalScore", scoreVisible ? autoScore : null);
         result.put("hasManualGrading", hasManualGrading);
         return result;
     }
@@ -788,13 +819,17 @@ public class ExamService {
 
     @Transactional
     public Object gradeSubmission(CurrentUser currentUser, Long submissionId, ExamRequests.GradeExamSubmissionRequest request) {
-        ExamSubmission submission = examSubmissionRepository.findById(submissionId)
+        ExamSubmission head = examSubmissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BusinessException(40400, "提交记录不存在"));
-        Exam exam = examRepository.findById(submission.getExamId())
+        Exam exam = examRepository.findById(head.getExamId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限批改该考试");
         }
+        // 先取业务键 (examId, studentId)，再在锁内重读并重跑状态校验，保证成绩写入串行化。
+        ExamSubmission submission = examSubmissionRepository
+                .findByExamIdAndStudentIdForUpdate(exam.getId(), head.getStudentId())
+                .orElseThrow(() -> new BusinessException(40400, "提交记录不存在"));
         if (submission.getStatus() != ExamSubmissionStatus.SUBMITTED
                 && submission.getStatus() != ExamSubmissionStatus.AUTO_SUBMITTED) {
             throw new BusinessException(40000, "当前状态不允许批改");
@@ -847,13 +882,17 @@ public class ExamService {
 
     @Transactional
     public Object confirmAnswer(CurrentUser currentUser, Long submissionId, ExamRequests.ConfirmExamAnswerRequest request) {
-        ExamSubmission submission = examSubmissionRepository.findById(submissionId)
+        ExamSubmission head = examSubmissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BusinessException(40400, "提交记录不存在"));
-        Exam exam = examRepository.findById(submission.getExamId())
+        Exam exam = examRepository.findById(head.getExamId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限批改该考试");
         }
+        // 先取业务键 (examId, studentId)，再在锁内重读并重跑状态校验。
+        ExamSubmission submission = examSubmissionRepository
+                .findByExamIdAndStudentIdForUpdate(exam.getId(), head.getStudentId())
+                .orElseThrow(() -> new BusinessException(40400, "提交记录不存在"));
         if (submission.getStatus() != ExamSubmissionStatus.SUBMITTED
                 && submission.getStatus() != ExamSubmissionStatus.AUTO_SUBMITTED
                 && submission.getStatus() != ExamSubmissionStatus.GRADED) {
@@ -896,19 +935,9 @@ public class ExamService {
         };
     }
 
-    private void upsertScoreRecord(Long examId, ExamSubmission submission, double totalScore) {
-        Exam exam = examRepository.findById(examId)
-                .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
-        ScoreRecord scoreRecord = scoreRecordRepository
-                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.EXAM, exam.getId(), submission.getStudentId())
-                .orElse(new ScoreRecord());
-        scoreRecord.setBusinessType(BusinessType.EXAM);
-        scoreRecord.setBusinessId(exam.getId());
-        scoreRecord.setStudentId(submission.getStudentId());
-        scoreRecord.setClassId(exam.getClassId());
-        scoreRecord.setScore(totalScore);
-        scoreRecord.setGradedAt(OffsetDateTime.now());
-        scoreRecordRepository.save(scoreRecord);
+    private void upsertScoreRecord(Exam exam, ExamSubmission submission, double totalScore) {
+        scoreRecordWriter.write(BusinessType.EXAM, exam.getId(), submission.getStudentId(),
+                exam.getClassId(), totalScore, OffsetDateTime.now());
     }
 
     private Map<String, Object> recomputeSubmissionAfterTeacherConfirmation(Exam exam, ExamSubmission submission) {
@@ -939,7 +968,7 @@ public class ExamService {
         submission.setStatus(allConfirmed ? ExamSubmissionStatus.GRADED : ExamSubmissionStatus.SUBMITTED);
         examSubmissionRepository.save(submission);
         if (allConfirmed) {
-            upsertScoreRecord(exam.getId(), submission, totalScore);
+            upsertScoreRecord(exam, submission, totalScore);
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("submissionId", submission.getId());
@@ -1000,6 +1029,28 @@ public class ExamService {
         for (ExamRequests.ExamQuestionItem item : items) {
             if (item == null || item.questionId() == null || !"BANK".equalsIgnoreCase(item.resolvedSourceType())) {
                 throw new BusinessException(40000, "考试题目必须来自题库");
+            }
+        }
+    }
+
+    /**
+     * 组卷题目不能重复。
+     *
+     * <p>{@code exam_answer(exam_submission_id, question_id)} 已有唯一约束，
+     * 若试卷本身含重复题目，交卷会同时插入多行同 questionId 答案而触发约束。
+     * 写入侧直接拒绝，存量数据由交卷链路按 questionId 去重兼容。</p>
+     */
+    private void assertNoDuplicateQuestions(List<ExamRequests.ExamQuestionItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        Set<Long> seen = new HashSet<>();
+        for (ExamRequests.ExamQuestionItem item : items) {
+            if (item == null || item.questionId() == null) {
+                continue;
+            }
+            if (!seen.add(item.questionId())) {
+                throw new BusinessException(40000, "试卷题目不能重复");
             }
         }
     }

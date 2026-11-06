@@ -4,9 +4,12 @@ import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "exam_answer")
+@Table(name = "exam_answer", uniqueConstraints = @UniqueConstraint(
+        name = "uk_exam_answer_submission_question",
+        columnNames = {"exam_submission_id", "question_id"}))
 public class ExamAnswer extends BaseEntity {
     @Column(name = "exam_submission_id", nullable = false)
     private Long examSubmissionId;

@@ -65,9 +65,10 @@ export interface ExamDetail {
   submissionStatus?: string
   deadlineAt?: string
   remainingSeconds?: number
-  autoScore?: number
-  manualScore?: number
-  totalScore?: number
+  // 成绩可见性由 resultAvailable 控制；未发布时后端将以下分数遮蔽为 null
+  autoScore?: number | null
+  manualScore?: number | null
+  totalScore?: number | null
   resultAvailable?: boolean
   teacherComment?: string | null
 }

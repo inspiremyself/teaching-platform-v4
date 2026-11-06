@@ -2,7 +2,6 @@ package com.opencode.teachingplatform.lab.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
 import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.entity.SysUser;
@@ -40,6 +39,7 @@ import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import com.opencode.teachingplatform.material.repository.CourseMaterialRepository;
 import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
+import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import jakarta.persistence.criteria.Predicate;
@@ -102,6 +102,7 @@ public class LabService {
     private final SysUserRepository sysUserRepository;
     private final LabScoringSupport labScoringSupport;
     private final ScoreRecordRepository scoreRecordRepository;
+    private final ScoreRecordWriter scoreRecordWriter;
     private final ObjectMapper objectMapper;
     private final LocalFileStorageService localFileStorageService;
     private final LabBehaviorMetricsService labBehaviorMetricsService;
@@ -122,6 +123,7 @@ public class LabService {
                       SysUserRepository sysUserRepository,
                       LabScoringSupport labScoringSupport,
                       ScoreRecordRepository scoreRecordRepository,
+                      ScoreRecordWriter scoreRecordWriter,
                       ObjectMapper objectMapper,
                       LocalFileStorageService localFileStorageService,
                       LabBehaviorMetricsService labBehaviorMetricsService,
@@ -141,6 +143,7 @@ public class LabService {
         this.sysUserRepository = sysUserRepository;
         this.labScoringSupport = labScoringSupport;
         this.scoreRecordRepository = scoreRecordRepository;
+        this.scoreRecordWriter = scoreRecordWriter;
         this.objectMapper = objectMapper;
         this.localFileStorageService = localFileStorageService;
         this.labBehaviorMetricsService = labBehaviorMetricsService;
@@ -324,11 +327,21 @@ public class LabService {
         requireTeacher(currentUser);
         Lab lab = ownedLab(currentUser, labId);
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
+        boolean statusProvided = request.status() != null && !request.status().isBlank();
+        // 不传 status 表示保持当前状态，只有显式传值才可能触发状态回退。
+        ActivityStatus targetStatus = statusProvided ? parseStatus(request.status()) : lab.getStatus();
+        if (statusProvided) {
+            assertLabRevertible(lab, targetStatus);
+        }
+        if (request.classId() != null && !Objects.equals(request.classId(), lab.getClassId())
+                && labSubmissionRepository.countByLabId(labId) > 0) {
+            throw new BusinessException(40000, "已有学生作答，不能变更所属班级");
+        }
         // 发布校验必须先于 applyLab：若先写实体再抛异常，同一持久化上下文会残留被污染的 PUBLISHED 状态
-        if (parseStatus(request.status()) == ActivityStatus.PUBLISHED) {
+        if (targetStatus == ActivityStatus.PUBLISHED) {
             assertLabPublishable(lab);
         }
-        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
+        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), targetStatus.name(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
         return toTeacherLabView(labRepository.save(lab));
     }
 
@@ -337,6 +350,7 @@ public class LabService {
         requireTeacher(currentUser);
         Lab lab = ownedLab(currentUser, labId);
         ActivityStatus nextStatus = parseStatus(request.status());
+        assertLabRevertible(lab, nextStatus);
         if (nextStatus == ActivityStatus.PUBLISHED) {
             assertLabPublishable(lab);
         }
@@ -485,13 +499,20 @@ public class LabService {
                 if (answer == null) {
                     continue;
                 }
+                // 重判会改写总分与成绩记录：先锁提交行再重读，避免与并发提交/批改互相覆盖。
+                LabSubmission lockedSubmission = labSubmissionRepository
+                        .findByLabIdAndStudentIdForUpdate(labId, submission.getStudentId())
+                        .orElse(null);
+                if (lockedSubmission == null) {
+                    continue;
+                }
                 applyScoringResult(answer, labScoringSupport.score(step, answer));
                 labStepAnswerRepository.save(answer);
                 regradedCount++;
-                if (submission.getSubmitStatus() == SubmissionStatus.SAVED) {
-                    refreshSavedSubmissionAfterScoring(submission);
+                if (lockedSubmission.getSubmitStatus() == SubmissionStatus.SAVED) {
+                    refreshSavedSubmissionAfterScoring(lockedSubmission);
                 } else {
-                    refreshSubmissionAfterScoring(lab, submission);
+                    refreshSubmissionAfterScoring(lab, lockedSubmission);
                 }
             }
         }
@@ -507,7 +528,8 @@ public class LabService {
     @Transactional
     public Map<String, Object> createStep(CurrentUser currentUser, Long labId, LabRequests.CreateStepRequest request) {
         requireTeacher(currentUser);
-        ownedLab(currentUser, labId);
+        Lab lab = ownedLab(currentUser, labId);
+        assertLabStructureEditable(lab);
         LabStep step = new LabStep();
         applyStep(step, labId, request.stepNo(), request.title(), request.questionType(), request.content(), request.answerConfigJson(), request.stepScore(), request.allowPaste());
         return toStepView(labStepRepository.save(step));
@@ -517,7 +539,8 @@ public class LabService {
     public Map<String, Object> updateStep(CurrentUser currentUser, Long stepId, LabRequests.UpdateStepRequest request) {
         requireTeacher(currentUser);
         LabStep step = labStepRepository.findById(stepId).orElseThrow(() -> new BusinessException(40400, "实验步骤不存在"));
-        ownedLab(currentUser, step.getLabId());
+        Lab lab = ownedLab(currentUser, step.getLabId());
+        assertLabStructureEditable(lab);
         applyStep(step, step.getLabId(), request.stepNo(), request.title(), request.questionType(), request.content(), request.answerConfigJson(), request.stepScore(), request.allowPaste());
         return toStepView(labStepRepository.save(step));
     }
@@ -526,9 +549,37 @@ public class LabService {
     public Map<String, Object> deleteStep(CurrentUser currentUser, Long stepId) {
         requireTeacher(currentUser);
         LabStep step = labStepRepository.findById(stepId).orElseThrow(() -> new BusinessException(40400, "实验步骤不存在"));
-        ownedLab(currentUser, step.getLabId());
+        Lab lab = ownedLab(currentUser, step.getLabId());
+        assertLabStructureEditable(lab);
         labStepRepository.delete(step);
         return Map.of("deleted", true, "id", stepId);
+    }
+
+    /**
+     * 校验实验题项结构是否可变更。
+     *
+     * <p>题项的新增/修改/删除会破坏已产生的答案与成绩，因此仅允许在草稿态且零提交时执行。</p>
+     */
+    private void assertLabStructureEditable(Lab lab) {
+        if (lab.getStatus() != ActivityStatus.DRAFT) {
+            throw new BusinessException(40000, "实验已发布或已关闭，不能修改题项");
+        }
+        if (labSubmissionRepository.countByLabId(lab.getId()) > 0) {
+            throw new BusinessException(40000, "已有学生作答，不能修改题项");
+        }
+    }
+
+    /**
+     * 校验实验状态回退是否允许。
+     *
+     * <p>仅当目标状态为草稿且当前状态非草稿时，要求该实验提交数为 0：
+     * 已有学生作答的实验不能退回草稿，否则学生可重新作答并覆盖已产生的成绩。</p>
+     */
+    private void assertLabRevertible(Lab lab, ActivityStatus nextStatus) {
+        if (nextStatus == ActivityStatus.DRAFT && lab.getStatus() != ActivityStatus.DRAFT
+                && labSubmissionRepository.countByLabId(lab.getId()) > 0) {
+            throw new BusinessException(40000, "已有学生作答，不能退回草稿");
+        }
     }
 
     /**
@@ -1213,8 +1264,12 @@ public class LabService {
      */
     public Map<String, Object> gradeReport(CurrentUser currentUser, Long reportId, LabRequests.GradeLabReportRequest request) {
         requireTeacher(currentUser);
-        LabSubmission submission = labSubmissionRepository.findById(reportId).orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
-        Lab lab = ownedLab(currentUser, submission.getLabId());
+        LabSubmission head = labSubmissionRepository.findById(reportId).orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
+        Lab lab = ownedLab(currentUser, head.getLabId());
+        // 先取业务键 (labId, studentId)，再在锁内重读，保证成绩写入与并发批改串行化。
+        LabSubmission submission = labSubmissionRepository
+                .findByLabIdAndStudentIdForUpdate(lab.getId(), head.getStudentId())
+                .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
         List<LabStepAnswer> submissionAnswers = labStepAnswerRepository.findByLabSubmissionId(submission.getId());
         List<Long> answeredAnswerIds = submissionAnswers.stream()
                 .map(LabStepAnswer::getId)
@@ -1260,9 +1315,13 @@ public class LabService {
      */
     public Map<String, Object> confirmStepScore(CurrentUser currentUser, Long reportId, LabRequests.ConfirmStepScoreRequest request) {
         requireTeacher(currentUser);
-        LabSubmission submission = labSubmissionRepository.findById(reportId)
+        LabSubmission head = labSubmissionRepository.findById(reportId)
                 .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
-        Lab lab = ownedLab(currentUser, submission.getLabId());
+        Lab lab = ownedLab(currentUser, head.getLabId());
+        // 先取业务键 (labId, studentId)，再在锁内重读，保证总分与成绩记录写入串行化。
+        LabSubmission submission = labSubmissionRepository
+                .findByLabIdAndStudentIdForUpdate(lab.getId(), head.getStudentId())
+                .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
         LabStepAnswer answer = labStepAnswerRepository.findById(request.answerId())
                 .orElseThrow(() -> new BusinessException(40400, "实验答案不存在"));
         if (!Objects.equals(answer.getLabSubmissionId(), submission.getId())) {
@@ -1768,16 +1827,8 @@ public class LabService {
     }
 
     private void upsertScoreRecord(Lab lab, LabSubmission submission, Double totalScore) {
-        ScoreRecord scoreRecord = scoreRecordRepository
-                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.LAB, lab.getId(), submission.getStudentId())
-                .orElseGet(ScoreRecord::new);
-        scoreRecord.setBusinessType(BusinessType.LAB);
-        scoreRecord.setBusinessId(lab.getId());
-        scoreRecord.setStudentId(submission.getStudentId());
-        scoreRecord.setClassId(lab.getClassId());
-        scoreRecord.setScore(totalScore);
-        scoreRecord.setGradedAt(OffsetDateTime.now());
-        scoreRecordRepository.save(scoreRecord);
+        scoreRecordWriter.write(BusinessType.LAB, lab.getId(), submission.getStudentId(),
+                lab.getClassId(), totalScore, OffsetDateTime.now());
     }
 
     /**

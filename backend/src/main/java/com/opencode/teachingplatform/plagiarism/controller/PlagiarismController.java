@@ -39,6 +39,7 @@ public class PlagiarismController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('TEACHER','STUDENT')")
     public ApiResponse<?> detail(@PathVariable Long id) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(plagiarismService.getTaskDetail(currentUser, id));

@@ -22,10 +22,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -303,6 +305,82 @@ class ExamStudentControllerTests {
                     .andExpect(jsonPath("$.code").value(0))
                     .andExpect(jsonPath("$.data[0].submissionStatus").value("GRADED"))
                     .andExpect(jsonPath("$.data[0].canViewResult").value(true));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void studentExamDetailHidesScoreFieldsWhenResultUnavailable() throws Exception {
+        Map<String, Object> question = new LinkedHashMap<>();
+        question.put("questionId", 1);
+        question.put("studentAnswer", "[\"A\"]");
+        question.put("isCorrect", null);
+        question.put("earnedScore", null);
+        question.put("teacherComment", null);
+        List<Map<String, Object>> questions = new ArrayList<>();
+        questions.add(question);
+
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("id", -1);
+        detail.put("title", "体系结构阶段测验");
+        detail.put("submissionStatus", "SUBMITTED");
+        detail.put("resultAvailable", false);
+        detail.put("autoScore", null);
+        detail.put("manualScore", null);
+        detail.put("totalScore", null);
+        detail.put("questions", questions);
+
+        when(examService.getExamDetail(any(CurrentUser.class), eq(-1L))).thenReturn(detail);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(get("/api/v1/exams/{id}", -1L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionStatus").value("SUBMITTED"))
+                    .andExpect(jsonPath("$.data.resultAvailable").value(false))
+                    .andExpect(jsonPath("$.data.autoScore").value(nullValue()))
+                    .andExpect(jsonPath("$.data.manualScore").value(nullValue()))
+                    .andExpect(jsonPath("$.data.totalScore").value(nullValue()))
+                    // 学生自己的作答不受遮蔽影响
+                    .andExpect(jsonPath("$.data.questions[0].studentAnswer").value("[\"A\"]"))
+                    .andExpect(jsonPath("$.data.questions[0].isCorrect").value(nullValue()))
+                    .andExpect(jsonPath("$.data.questions[0].earnedScore").value(nullValue()))
+                    .andExpect(jsonPath("$.data.questions[0].teacherComment").value(nullValue()));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void submitExamResponseHidesScoresWhenResultUnavailable() throws Exception {
+        Map<String, Object> submitResult = new LinkedHashMap<>();
+        submitResult.put("submissionId", 100);
+        submitResult.put("status", "SUBMITTED");
+        submitResult.put("resultAvailable", false);
+        submitResult.put("autoScore", null);
+        submitResult.put("totalScore", null);
+        submitResult.put("hasManualGrading", true);
+
+        when(examService.submitExam(any(CurrentUser.class), eq(-1L), any(ExamRequests.SubmitExamRequest.class)))
+                .thenReturn(submitResult);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/exams/{id}/submit", -1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"answers": [{"questionId": 1, "answerJson": "[\\"A\\"]"}]}
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionId").value(100))
+                    .andExpect(jsonPath("$.data.status").value("SUBMITTED"))
+                    .andExpect(jsonPath("$.data.resultAvailable").value(false))
+                    .andExpect(jsonPath("$.data.autoScore").value(nullValue()))
+                    .andExpect(jsonPath("$.data.totalScore").value(nullValue()))
+                    .andExpect(jsonPath("$.data.hasManualGrading").value(true));
         } finally {
             SecurityContextHolder.clearContext();
         }

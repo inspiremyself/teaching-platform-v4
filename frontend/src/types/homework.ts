@@ -131,6 +131,14 @@ export interface GradeHomeworkResult {
   totalScore: number;
 }
 
+/** 教师打回作业提交后的结果：提交状态回到 SAVED，学生可重新编辑提交。 */
+export interface HomeworkSubmissionReturnResult {
+  submissionId: number;
+  status: HomeworkSubmissionStatus;
+  homeworkId: number;
+  studentId: number;
+}
+
 export interface AddHomeworkQuestionFromBankRequest {
   questionId: number;
   sortOrder: number;

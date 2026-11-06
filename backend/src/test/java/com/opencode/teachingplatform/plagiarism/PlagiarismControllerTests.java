@@ -156,6 +156,21 @@ class PlagiarismControllerTests {
     }
 
     @Test
+    void schoolAdminCannotSeeTaskDetail() throws Exception {
+        // 控制器 @PreAuthorize 只放行 TEACHER / STUDENT，校管请求在方法级鉴权阶段即被拒绝
+        SecurityContextHolder.getContext().setAuthentication(authenticateSchoolAdmin());
+        try {
+            mockMvc.perform(get("/api/v1/plagiarism/tasks/{id}", 1L))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value(40300))
+                    .andExpect(jsonPath("$.message").value("Access Denied"))
+                    .andExpect(jsonPath("$.timestamp").exists());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCannotSeeOtherTeachersTask() throws Exception {
         when(plagiarismService.getTaskDetail(any(CurrentUser.class), eq(1L)))
                 .thenThrow(new com.opencode.teachingplatform.common.exception.BusinessException(40300, "无权限访问该查重记录"));
@@ -177,6 +192,15 @@ class PlagiarismControllerTests {
                 currentUser,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_TEACHER"))
+        );
+    }
+
+    private UsernamePasswordAuthenticationToken authenticateSchoolAdmin() {
+        CurrentUser currentUser = new CurrentUser(1L, "admin9001", "演示校管", UserRole.SCHOOL_ADMIN);
+        return new UsernamePasswordAuthenticationToken(
+                currentUser,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_SCHOOL_ADMIN"))
         );
     }
 

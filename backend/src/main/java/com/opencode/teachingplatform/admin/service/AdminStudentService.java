@@ -187,14 +187,10 @@ public class AdminStudentService {
         student.setMustChangePassword(false);
         sysUserRepository.save(student);
 
+        // 校管重置密码后该学生全部在线设备失去登录态，不保留任何会话。
         OffsetDateTime now = OffsetDateTime.now();
-        userLoginSessionRepository
-                .findFirstByUser_IdAndStatusOrderByCreatedAtDesc(studentId, LoginSessionStatus.ACTIVE)
-                .ifPresent(session -> {
-                    session.setStatus(LoginSessionStatus.KICKED);
-                    session.setInvalidatedAt(now);
-                    userLoginSessionRepository.save(session);
-                });
+        userLoginSessionRepository.kickActiveSessionsByUserId(
+                studentId, LoginSessionStatus.ACTIVE, LoginSessionStatus.KICKED, now);
 
         auditLogService.log(currentUser, AuditAction.STUDENT_PASSWORD_RESET, AuditResourceType.STUDENT, studentId, Map.of(
                 "username", student.getUsername(),

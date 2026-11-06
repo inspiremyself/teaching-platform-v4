@@ -7,5 +7,6 @@ public enum AuditResourceType {
     CLASS,
     STUDENT,
     SUBJECT,
-    QUESTION
+    QUESTION,
+    HOMEWORK_SUBMISSION
 }

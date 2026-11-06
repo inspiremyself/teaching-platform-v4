@@ -9,8 +9,10 @@ import com.opencode.teachingplatform.assessment.service.AnswerPayloadNormalizer;
 import com.opencode.teachingplatform.assessment.service.GradingAdapter;
 import com.opencode.teachingplatform.assessment.service.QuestionContentSupport;
 import com.opencode.teachingplatform.assessment.service.QuestionContentValidator;
-import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
 import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
+import com.opencode.teachingplatform.common.audit.AuditAction;
+import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.enums.BusinessType;
 import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
@@ -41,6 +43,7 @@ import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
+import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,6 +70,8 @@ public class HomeworkService {
     private final PlagiarismTaskRepository plagiarismTaskRepository;
     private final LocalPlagiarismService localPlagiarismService;
     private final ScoreRecordRepository scoreRecordRepository;
+    private final ScoreRecordWriter scoreRecordWriter;
+    private final AuditLogService auditLogService;
     private final QuestionBankRepository questionBankRepository;
     private final GradingAdapter gradingAdapter;
     private final ObjectMapper objectMapper;
@@ -83,6 +88,8 @@ public class HomeworkService {
                            PlagiarismTaskRepository plagiarismTaskRepository,
                            LocalPlagiarismService localPlagiarismService,
                            ScoreRecordRepository scoreRecordRepository,
+                           ScoreRecordWriter scoreRecordWriter,
+                           AuditLogService auditLogService,
                            QuestionBankRepository questionBankRepository,
                            ObjectProvider<GradingAdapter> gradingAdapterProvider,
                            ObjectProvider<ScoringEngine> scoringEngineProvider,
@@ -99,6 +106,8 @@ public class HomeworkService {
         this.plagiarismTaskRepository = plagiarismTaskRepository;
         this.localPlagiarismService = localPlagiarismService;
         this.scoreRecordRepository = scoreRecordRepository;
+        this.scoreRecordWriter = scoreRecordWriter;
+        this.auditLogService = auditLogService;
         this.questionBankRepository = questionBankRepository;
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
         this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
@@ -388,7 +397,19 @@ public class HomeworkService {
         if (homework.getStatus() == ActivityStatus.CLOSED) {
             throw new BusinessException(40000, "作业已关闭，不能提交");
         }
-        HomeworkSubmission submission = homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homeworkId, currentUser.id()).orElseGet(HomeworkSubmission::new);
+        // 提交状态机：已提交/已批改只能由教师打回后才能再次编辑提交。
+        HomeworkSubmission existingSubmission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentId(homeworkId, currentUser.id())
+                .orElse(null);
+        if (existingSubmission != null) {
+            if (existingSubmission.getSubmitStatus() == SubmissionStatus.SUBMITTED) {
+                throw new BusinessException(40000, "作业已提交，如需修改请联系教师打回");
+            }
+            if (existingSubmission.getSubmitStatus() == SubmissionStatus.GRADED) {
+                throw new BusinessException(40000, "作业已批改，如需修改请联系教师打回");
+            }
+        }
+        HomeworkSubmission submission = existingSubmission == null ? new HomeworkSubmission() : existingSubmission;
         submission.setHomeworkId(homeworkId);
         submission.setStudentId(currentUser.id());
         submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
@@ -418,9 +439,13 @@ public class HomeworkService {
     @Transactional
     public Map<String, Object> gradeSubmission(CurrentUser currentUser, Long submissionId, HomeworkRequests.GradeHomeworkRequest request) {
         requireTeacher(currentUser);
-        HomeworkSubmission submission = homeworkSubmissionRepository.findById(submissionId)
+        HomeworkSubmission head = homeworkSubmissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
-        ownedHomework(currentUser, submission.getHomeworkId());
+        Homework homework = ownedHomework(currentUser, head.getHomeworkId());
+        // 先取业务键 (homeworkId, studentId)，再在锁内重读并重跑状态校验，保证成绩写入串行化。
+        HomeworkSubmission submission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentIdForUpdate(homework.getId(), head.getStudentId())
+                .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
         if (submission.getSubmitStatus() != SubmissionStatus.SUBMITTED) {
             throw new BusinessException(40000, "仅已提交作业允许批改");
         }
@@ -429,22 +454,64 @@ public class HomeworkService {
         submission.setSubmitStatus(SubmissionStatus.GRADED);
         submission.setGradedAt(OffsetDateTime.now());
         homeworkSubmissionRepository.save(submission);
-        Homework homework = homeworkRepository.findById(submission.getHomeworkId())
-                .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
-        ScoreRecord scoreRecord = scoreRecordRepository
-                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId())
-                .orElseGet(ScoreRecord::new);
-        scoreRecord.setBusinessType(BusinessType.HOMEWORK);
-        scoreRecord.setBusinessId(homework.getId());
-        scoreRecord.setStudentId(submission.getStudentId());
-        scoreRecord.setClassId(homework.getClassId());
-        scoreRecord.setScore(request.totalScore());
-        scoreRecord.setGradedAt(OffsetDateTime.now());
-        scoreRecordRepository.save(scoreRecord);
+        scoreRecordWriter.write(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId(),
+                homework.getClassId(), request.totalScore(), OffsetDateTime.now());
         return Map.of(
                 "graded", true,
                 "totalScore", submission.getTotalScore()
         );
+    }
+
+    /**
+     * 教师打回作业提交。
+     *
+     * <p>语义：状态回到 {@code SAVED}，清空提交时间以外的评分痕迹（总分、教师评语、逐题得分与判定），
+     * 但保留学生作答内容；无论打回前是已提交还是已批改，均删除对应成绩记录。
+     * 学生因此可重新编辑并提交。</p>
+     */
+    @Transactional
+    public Map<String, Object> returnHomeworkSubmission(CurrentUser currentUser, Long submissionId) {
+        requireTeacher(currentUser);
+        HomeworkSubmission head = homeworkSubmissionRepository.findById(submissionId)
+                .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
+        Homework homework = ownedHomework(currentUser, head.getHomeworkId());
+        if (homework.getStatus() == ActivityStatus.CLOSED) {
+            throw new BusinessException(40000, "作业已关闭，不能打回");
+        }
+        HomeworkSubmission submission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentIdForUpdate(homework.getId(), head.getStudentId())
+                .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
+        SubmissionStatus from = submission.getSubmitStatus();
+        if (from != SubmissionStatus.SUBMITTED && from != SubmissionStatus.GRADED) {
+            throw new BusinessException(40000, "仅已提交或已批改的作业可打回");
+        }
+        // 清空提交级评分痕迹，保留作答内容与查重结果。
+        submission.setSubmitStatus(SubmissionStatus.SAVED);
+        submission.setGradedAt(null);
+        submission.setTotalScore(null);
+        submission.setTeacherComment("");
+        homeworkSubmissionRepository.save(submission);
+        // 清空逐题评分痕迹，作答文本 / JSON / 附件保持不动。
+        for (HomeworkAnswer answer : homeworkAnswerRepository.findByHomeworkSubmissionId(submission.getId())) {
+            answer.setScore(null);
+            answer.setAutoScore(null);
+            answer.setSuggestedScore(null);
+            answer.setJudgeDetail(null);
+            answer.setTeacherComment("");
+            answer.setScoreSource("TEACHER");
+            answer.setAcceptedAutoScore(false);
+            homeworkAnswerRepository.save(answer);
+        }
+        // 删除成绩记录，避免打回后统计仍保留旧分数。
+        scoreRecordRepository
+                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId())
+                .ifPresent(scoreRecordRepository::delete);
+        auditLogService.log(currentUser, AuditAction.HOMEWORK_SUBMISSION_RETURN,
+                AuditResourceType.HOMEWORK_SUBMISSION, submission.getId(),
+                Map.of("homeworkId", homework.getId(), "studentId", submission.getStudentId(),
+                        "fromStatus", from.name()));
+        return Map.of("submissionId", submission.getId(), "status", "SAVED",
+                "homeworkId", homework.getId(), "studentId", submission.getStudentId());
     }
 
     @Transactional
@@ -452,9 +519,13 @@ public class HomeworkService {
         requireTeacher(currentUser);
         HomeworkAnswer answer = homeworkAnswerRepository.findById(answerId)
                 .orElseThrow(() -> new BusinessException(40400, "作业答案不存在"));
-        HomeworkSubmission submission = homeworkSubmissionRepository.findById(answer.getHomeworkSubmissionId())
+        HomeworkSubmission head = homeworkSubmissionRepository.findById(answer.getHomeworkSubmissionId())
                 .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
-        ownedHomework(currentUser, submission.getHomeworkId());
+        Homework homework = ownedHomework(currentUser, head.getHomeworkId());
+        // 先取业务键 (homeworkId, studentId)，再在锁内重读，总分与成绩记录由该对象写入。
+        HomeworkSubmission submission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentIdForUpdate(homework.getId(), head.getStudentId())
+                .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
 
         if (request.acceptSuggested()) {
             if (answer.getSuggestedScore() == null) {
@@ -870,16 +941,8 @@ public class HomeworkService {
     }
 
     private void upsertScoreRecord(Homework homework, Long studentId, Double score, OffsetDateTime gradedAt) {
-        ScoreRecord scoreRecord = scoreRecordRepository
-                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.HOMEWORK, homework.getId(), studentId)
-                .orElseGet(ScoreRecord::new);
-        scoreRecord.setBusinessType(BusinessType.HOMEWORK);
-        scoreRecord.setBusinessId(homework.getId());
-        scoreRecord.setStudentId(studentId);
-        scoreRecord.setClassId(homework.getClassId());
-        scoreRecord.setScore(score);
-        scoreRecord.setGradedAt(gradedAt == null ? OffsetDateTime.now() : gradedAt);
-        scoreRecordRepository.save(scoreRecord);
+        scoreRecordWriter.write(BusinessType.HOMEWORK, homework.getId(), studentId,
+                homework.getClassId(), score, gradedAt);
     }
 
     private List<Map<String, Object>> buildQuestionViews(Long homeworkId,

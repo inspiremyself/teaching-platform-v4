@@ -41,6 +41,17 @@ public interface LabSubmissionRepository extends JpaRepository<LabSubmission, Lo
 
     Optional<LabSubmission> findFirstByLabIdAndStudentIdOrderByIdDesc(Long labId, Long studentId);
 
+    /**
+     * 统计某实验下的提交数。
+     *
+     * <p>用于实验题项结构变更、状态回退与所属班级变更的前置校验：
+     * 只要已有学生作答，这些操作都会破坏已产生的答案与成绩。</p>
+     *
+     * @param labId 实验 id
+     * @return 提交数
+     */
+    long countByLabId(Long labId);
+
     List<LabSubmission> findByStudentId(Long studentId);
 
     List<LabSubmission> findByLabId(Long labId);

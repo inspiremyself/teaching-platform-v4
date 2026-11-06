@@ -2,6 +2,7 @@ package com.opencode.teachingplatform.exam;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
+import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.exam.dto.ExamRequests;
@@ -40,6 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         ExamService.class,
         ExamScoringService.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
+        com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         ScoringEngine.class,
         SingleChoiceScoringStrategy.class,
         MultipleChoiceScoringStrategy.class,
@@ -63,6 +65,11 @@ class ExamServiceTests {
 
     @SuppressWarnings("unchecked")
     private Long createPublishedExamForStudent() {
+        return createPublishedExamForStudent(ScoreVisibilityMode.IMMEDIATE);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Long createPublishedExamForStudent(ScoreVisibilityMode scoreVisibilityMode) {
         Map<String, Object> created = (Map<String, Object>) examService.createExam(
                 teacher,
                 new ExamRequests.CreateExamRequest(
@@ -73,7 +80,7 @@ class ExamServiceTests {
                         OffsetDateTime.now().plusHours(2),
                         30,
                         "PUBLISHED",
-                        null,
+                        scoreVisibilityMode,
                         List.of(
                                 new ExamRequests.ExamQuestionItem(1L, 1, 5.0),
                                 new ExamRequests.ExamQuestionItem(2L, 2, 3.0),
@@ -247,7 +254,7 @@ class ExamServiceTests {
     @Test
     @SuppressWarnings("unchecked")
     void submittedExamShouldHideCurrentScoreFromStudentUntilTeacherConfirmation() {
-        Long examId = createPublishedExamForStudent();
+        Long examId = createPublishedExamForStudent(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
         examService.startExam(student, examId);
 
         examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
@@ -1470,5 +1477,282 @@ class ExamServiceTests {
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getCode())
                 .isEqualTo(40300);
+    }
+
+    // ------------------------------------------------------------------
+    // P0 回归：考试判分遮蔽（TD13–TD15）与重复题目防护（TD37）
+    // ------------------------------------------------------------------
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void studentDetailMasksScoreFieldsAcrossVisibilityModes() {
+        // AFTER_TEACHER_CONFIRM：已交卷但教师未确认 → 判分字段全部遮蔽
+        Long confirmExamId = createPublishedExamForStudent(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        startExamAndGetSubmissionId(confirmExamId);
+        examService.submitExam(student, confirmExamId, submitFullAnswers());
+        assertStudentDetailScoreHidden(
+                (Map<String, Object>) examService.getExamDetail(student, confirmExamId));
+
+        // AFTER_DEADLINE：考试尚未结束 → 判分字段全部遮蔽
+        Long deadlineExamId = createExamWithVisibility(ScoreVisibilityMode.AFTER_DEADLINE, false);
+        startExamAndGetSubmissionId(deadlineExamId);
+        examService.submitExam(student, deadlineExamId, submitFullAnswers());
+        assertStudentDetailScoreHidden(
+                (Map<String, Object>) examService.getExamDetail(student, deadlineExamId));
+
+        // MANUAL_RELEASE：教师尚未发布成绩 → 判分字段全部遮蔽
+        Long manualExamId = createExamWithVisibility(ScoreVisibilityMode.MANUAL_RELEASE, false);
+        startExamAndGetSubmissionId(manualExamId);
+        examService.submitExam(student, manualExamId, submitFullAnswers());
+        assertStudentDetailScoreHidden(
+                (Map<String, Object>) examService.getExamDetail(student, manualExamId));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void studentDetailRevealsScoresWhenVisibilityReached() {
+        // IMMEDIATE：0 分同样可见，不能被当成“无成绩”而返回 null
+        Long immediateExamId = createObjectiveOnlyExam(ScoreVisibilityMode.IMMEDIATE);
+        startExamAndGetSubmissionId(immediateExamId);
+        examService.submitExam(student, immediateExamId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("B"), null, null, null)
+        )));
+        Map<String, Object> immediateDetail =
+                (Map<String, Object>) examService.getExamDetail(student, immediateExamId);
+        assertThat(immediateDetail.get("resultAvailable")).isEqualTo(true);
+        assertThat(immediateDetail.get("autoScore")).isNotNull();
+        assertThat(((Number) immediateDetail.get("autoScore")).doubleValue()).isEqualTo(0.0);
+        assertThat(immediateDetail.get("manualScore")).isNotNull();
+        assertThat(((Number) immediateDetail.get("manualScore")).doubleValue()).isEqualTo(0.0);
+        assertThat(immediateDetail.get("totalScore")).isNotNull();
+        assertThat(((Number) immediateDetail.get("totalScore")).doubleValue()).isEqualTo(0.0);
+        Map<String, Object> immediateQuestion = findQuestion(
+                (List<Map<String, Object>>) immediateDetail.get("questions"), 1L);
+        assertThat(immediateQuestion.get("isCorrect")).isEqualTo(false);
+        assertThat(immediateQuestion.get("earnedScore")).isNotNull();
+        assertThat(((Number) immediateQuestion.get("earnedScore")).doubleValue()).isEqualTo(0.0);
+
+        // AFTER_TEACHER_CONFIRM：教师确认后可见
+        Long confirmExamId = createPublishedExamForStudent(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        Long confirmSubmissionId = startExamAndGetSubmissionId(confirmExamId);
+        examService.submitExam(student, confirmExamId, submitFullAnswers());
+        examService.gradeSubmission(teacher, confirmSubmissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of(
+                        new ExamRequests.GradeExamAnswerItem(3L, 7.0, "回答正确")
+                )));
+        Map<String, Object> confirmDetail =
+                (Map<String, Object>) examService.getExamDetail(student, confirmExamId);
+        assertThat(confirmDetail.get("resultAvailable")).isEqualTo(true);
+        assertThat(((Number) confirmDetail.get("autoScore")).doubleValue()).isEqualTo(8.0);
+        assertThat(((Number) confirmDetail.get("manualScore")).doubleValue()).isEqualTo(7.0);
+        assertThat(((Number) confirmDetail.get("totalScore")).doubleValue()).isEqualTo(15.0);
+        assertThat(findQuestion((List<Map<String, Object>>) confirmDetail.get("questions"), 1L).get("isCorrect"))
+                .isEqualTo(true);
+
+        // AFTER_DEADLINE：结束时间已过 → 可见
+        Long deadlineExamId = createExamWithVisibility(ScoreVisibilityMode.AFTER_DEADLINE, false);
+        startExamAndGetSubmissionId(deadlineExamId);
+        examService.submitExam(student, deadlineExamId, submitFullAnswers());
+        assertThat(((Map<String, Object>) examService.getExamDetail(student, deadlineExamId))
+                .get("resultAvailable")).isEqualTo(false);
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE exam SET end_at = ? WHERE id = ?",
+                OffsetDateTime.now().minusMinutes(1), deadlineExamId);
+        entityManager.clear();
+        Map<String, Object> deadlineDetail =
+                (Map<String, Object>) examService.getExamDetail(student, deadlineExamId);
+        assertThat(deadlineDetail.get("resultAvailable")).isEqualTo(true);
+        assertThat(((Number) deadlineDetail.get("totalScore")).doubleValue()).isEqualTo(8.0);
+
+        // MANUAL_RELEASE：教师发布后可见
+        Long manualExamId = createExamWithVisibility(ScoreVisibilityMode.MANUAL_RELEASE, false);
+        startExamAndGetSubmissionId(manualExamId);
+        examService.submitExam(student, manualExamId, submitFullAnswers());
+        examService.releaseScores(teacher, manualExamId);
+        Map<String, Object> manualDetail =
+                (Map<String, Object>) examService.getExamDetail(student, manualExamId);
+        assertThat(manualDetail.get("resultAvailable")).isEqualTo(true);
+        assertThat(((Number) manualDetail.get("totalScore")).doubleValue()).isEqualTo(8.0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitResponseMasksScoresWhenScoreHidden() {
+        Long examId = createPublishedExamForStudent(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        startExamAndGetSubmissionId(examId);
+
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(
+                student, examId, submitFullAnswers());
+
+        assertThat(submitResult).containsKeys(
+                "submissionId", "status", "resultAvailable", "autoScore", "totalScore", "hasManualGrading");
+        assertThat(submitResult.get("resultAvailable")).isEqualTo(false);
+        assertThat(submitResult.get("autoScore")).isNull();
+        assertThat(submitResult.get("totalScore")).isNull();
+        // 状态与人工判分标记不受遮蔽影响
+        assertThat(submitResult.get("status")).isEqualTo("SUBMITTED");
+        assertThat(submitResult.get("hasManualGrading")).isEqualTo(true);
+        assertThat(submitResult.get("submissionId")).isNotNull();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitResponseExposesScoresWhenImmediateVisibility() {
+        Long examId = createPublishedExamForStudent(ScoreVisibilityMode.IMMEDIATE);
+        startExamAndGetSubmissionId(examId);
+
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(
+                student, examId, submitFullAnswers());
+
+        assertThat(submitResult.get("resultAvailable")).isEqualTo(true);
+        assertThat(((Number) submitResult.get("autoScore")).doubleValue()).isEqualTo(8.0);
+        assertThat(((Number) submitResult.get("totalScore")).doubleValue()).isEqualTo(8.0);
+    }
+
+    @Test
+    void createExamRejectsDuplicateQuestionIds() {
+        String title = "重复题目考试-" + System.nanoTime();
+
+        assertThatThrownBy(() -> examService.createExam(
+                teacher,
+                new ExamRequests.CreateExamRequest(
+                        title,
+                        "",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        "DRAFT",
+                        null,
+                        List.of(
+                                new ExamRequests.ExamQuestionItem(1L, 1, 5.0),
+                                new ExamRequests.ExamQuestionItem(1L, 2, 5.0)
+                        ),
+                        null
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("试卷题目不能重复");
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM exam WHERE title = ?", Integer.class, title)).isZero();
+    }
+
+    @Test
+    void updateExamRejectsDuplicateQuestionIdsAndKeepsOriginalQuestions() {
+        String title = "待更新考试-" + System.nanoTime();
+        Long examId = createExamWithWindow(title, OffsetDateTime.now().minusHours(1),
+                OffsetDateTime.now().plusHours(1), 30, "DRAFT");
+
+        assertThatThrownBy(() -> examService.updateExam(
+                teacher,
+                examId,
+                new ExamRequests.UpdateExamRequest(
+                        "改名后考试",
+                        "",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(1),
+                        30,
+                        null,
+                        List.of(
+                                new ExamRequests.ExamQuestionItem(1L, 1, 5.0),
+                                new ExamRequests.ExamQuestionItem(1L, 2, 5.0)
+                        ),
+                        null
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("试卷题目不能重复");
+
+        // 拒绝路径不得留下任何写入：标题与原有题目保持不变
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT title FROM exam WHERE id = ?", String.class, examId)).isEqualTo(title);
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT question_id FROM exam_question WHERE exam_id = ?", Long.class, examId))
+                .containsExactly(1L);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void submitExamDeduplicatesLegacyDuplicatePaperQuestions() {
+        Long examId = createObjectiveOnlyExam(ScoreVisibilityMode.IMMEDIATE);
+        // 绕过 createExam 的重复校验直插第二行同 questionId，模拟存量含重复题目的试卷
+        // （exam_question 无唯一约束，V23 也不对其加约束）
+        jdbcTemplate.update("""
+                INSERT INTO exam_question (exam_id, question_id, sort_order, question_score)
+                VALUES (?, 1, 2, 5)
+                """, examId);
+        Long submissionId = startExamAndGetSubmissionId(examId);
+
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(
+                student, examId, submitObjectiveAnswers());
+        entityManager.flush();
+
+        Integer answerCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM exam_answer WHERE exam_submission_id = ? AND question_id = 1",
+                Integer.class, submissionId);
+        Double persistedAutoScore = jdbcTemplate.queryForObject(
+                "SELECT auto_score FROM exam_submission WHERE id = ?", Double.class, submissionId);
+
+        // 只落一行答案，且同题只计一次分
+        assertThat(answerCount).isEqualTo(1);
+        assertThat(((Number) submitResult.get("autoScore")).doubleValue()).isEqualTo(5.0);
+        assertThat(persistedAutoScore).isEqualTo(5.0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void resubmissionReplacesAnswersWithoutResidualRows() {
+        Long examId = createObjectiveOnlyExam(ScoreVisibilityMode.IMMEDIATE);
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, submitObjectiveAnswers());
+        entityManager.flush();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM exam_answer WHERE exam_submission_id = ?",
+                Integer.class, submissionId)).isEqualTo(1);
+
+        // 回置为进行中后再次交卷，验证 deleteByExamSubmissionId 的批量删除不会残留旧答案行
+        resetSubmissionStatus(submissionId, "IN_PROGRESS");
+        Map<String, Object> secondSubmit = (Map<String, Object>) examService.submitExam(
+                student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                        new ExamRequests.SubmitAnswerItem(1L, List.of("B"), null, null, null)
+                )));
+        entityManager.flush();
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT question_id, answer_json, score FROM exam_answer WHERE exam_submission_id = ?",
+                submissionId);
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).get("ANSWER_JSON")).asString().contains("B");
+        assertThat(((Number) rows.get(0).get("SCORE")).doubleValue()).isEqualTo(0.0);
+        assertThat(((Number) secondSubmit.get("autoScore")).doubleValue()).isEqualTo(0.0);
+    }
+
+    /**
+     * 断言学生详情的判分字段已被遮蔽，但学生自己的作答仍然返回。
+     */
+    @SuppressWarnings("unchecked")
+    private void assertStudentDetailScoreHidden(Map<String, Object> detail) {
+        assertThat(detail).containsKeys("autoScore", "manualScore", "totalScore", "resultAvailable");
+        assertThat(detail.get("resultAvailable")).isEqualTo(false);
+        assertThat(detail.get("autoScore")).isNull();
+        assertThat(detail.get("manualScore")).isNull();
+        assertThat(detail.get("totalScore")).isNull();
+        assertThat(detail.get("submissionStatus")).isEqualTo("SUBMITTED");
+
+        List<Map<String, Object>> questions = (List<Map<String, Object>>) detail.get("questions");
+        Map<String, Object> firstQuestion = findQuestion(questions, 1L);
+        // 学生答案始终可见（TD15）
+        assertThat(firstQuestion.get("studentAnswer")).isNotNull();
+        // 逐题判分与正确答案、解析均不泄露
+        assertThat(firstQuestion).containsKeys("isCorrect", "earnedScore", "teacherComment");
+        assertThat(firstQuestion.get("isCorrect")).isNull();
+        assertThat(firstQuestion.get("earnedScore")).isNull();
+        assertThat(firstQuestion.get("teacherComment")).isNull();
+        assertThat(firstQuestion).doesNotContainKey("answerJson");
+        assertThat(firstQuestion).doesNotContainKey("analysisText");
     }
 }

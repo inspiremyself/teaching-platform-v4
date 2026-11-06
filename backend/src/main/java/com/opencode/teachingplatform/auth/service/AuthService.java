@@ -168,6 +168,18 @@ public class AuthService {
         user.setPasswordHash("{noop}" + request.newPassword());
         user.setMustChangePassword(false);
         sysUserRepository.save(user);
+
+        // 密码变更后使旧登录态立即失效：保留当前会话，其余 ACTIVE 会话置 KICKED。
+        OffsetDateTime now = OffsetDateTime.now();
+        String sessionKey = currentUser.sessionKey();
+        if (sessionKey == null || sessionKey.isBlank()) {
+            userLoginSessionRepository.kickActiveSessionsByUserId(
+                    user.getId(), LoginSessionStatus.ACTIVE, LoginSessionStatus.KICKED, now);
+        } else {
+            userLoginSessionRepository.kickActiveSessionsByUserIdExceptSessionKey(
+                    user.getId(), sessionKey, LoginSessionStatus.ACTIVE, LoginSessionStatus.KICKED, now);
+        }
+
         auditLogService.log(currentUser, AuditAction.PASSWORD_CHANGED, AuditResourceType.USER, currentUser.id(), Map.of("changed", true));
         return Map.of("changed", true);
     }

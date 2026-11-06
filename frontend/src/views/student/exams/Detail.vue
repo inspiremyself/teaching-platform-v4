@@ -241,7 +241,7 @@
           </article>
         <article class="result-summary-card result-summary-card--accent">
           <div class="result-summary-card__label">总分</div>
-          <div class="result-summary-card__value">{{ canShowResult ? displayScore(detail.totalScore) : '-' }}</div>
+          <div class="result-summary-card__value">{{ totalScoreText }}</div>
           </article>
       </section>
 
@@ -356,13 +356,23 @@ const showPendingAlert = computed(() => {
   const status = detail.value?.submissionStatus
   return status === 'SUBMITTED' || status === 'AUTO_SUBMITTED'
 })
-const canShowResult = computed(() => !!detail.value?.resultAvailable || typeof detail.value?.totalScore === 'number')
+/** 是否允许展示成绩：只以后端 resultAvailable 为准，避免前端凭状态值猜测可见性。 */
+const canShowResult = computed(() => detail.value?.resultAvailable === true)
+/** 总分卡文案：成绩未发布但答卷已提交/已批改时，明确提示等待教师发布。 */
+const totalScoreText = computed(() => {
+  if (canShowResult.value) return displayScore(detail.value?.totalScore)
+  const status = detail.value?.submissionStatus
+  if (status === 'SUBMITTED' || status === 'AUTO_SUBMITTED' || status === 'GRADED') {
+    return '成绩待教师发布'
+  }
+  return '-'
+})
 const resultStatusDescription = computed(() => {
+  if (!canShowResult.value) {
+    return '答卷已记录，但成绩和评语尚未开放，请等待教师确认。'
+  }
   if (detail.value?.submissionStatus === 'GRADED') {
     return '教师已完成批改，本页展示自动评分与人工评分的完整结果。'
-  }
-   if (!canShowResult.value) {
-    return '答卷已记录，但成绩和评语尚未开放，请等待教师确认。'
   }
   return '系统已记录你的答卷，主观题部分可能仍在等待教师评分。'
 })
@@ -739,20 +749,22 @@ async function loadExam() {
   } else {
     questions.value.forEach(question => {
       const earnedScore = question.earnedScore ?? question.score ?? null
-      if ((question as ExamQuestionView & { isCorrect?: boolean | null }).isCorrect !== undefined || question.teacherComment !== undefined || earnedScore !== null) {
-        map[question.questionId] = {
-          questionId: question.questionId,
-          questionType: qType(question),
-          stem: question.stem,
-          optionsJson: question.optionsJson ?? null,
-          standardAnswer: question.standardAnswer ?? question.answerJson ?? null,
-          studentAnswer: question.studentAnswer ?? question.answer ?? null,
-          isCorrect: question.isCorrect ?? null,
-          score: earnedScore,
-          teacherComment: question.teacherComment ?? null,
-          questionScore: question.questionScore ?? question.score ?? 0,
-          analysisText: question.analysisText ?? null,
-        }
+      const isCorrect = question.isCorrect ?? null
+      const teacherComment = question.teacherComment ?? null
+      // 仅当判分/得分/评语任一存在时才构建逐题结果，未判分题不生成占位结果
+      if (isCorrect == null && earnedScore == null && teacherComment == null) return
+      map[question.questionId] = {
+        questionId: question.questionId,
+        questionType: qType(question),
+        stem: question.stem,
+        optionsJson: question.optionsJson ?? null,
+        standardAnswer: question.standardAnswer ?? question.answerJson ?? null,
+        studentAnswer: question.studentAnswer ?? question.answer ?? null,
+        isCorrect,
+        score: earnedScore,
+        teacherComment,
+        questionScore: question.questionScore ?? question.score ?? 0,
+        analysisText: question.analysisText ?? null,
       }
     })
   }

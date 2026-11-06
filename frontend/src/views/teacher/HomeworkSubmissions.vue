@@ -275,6 +275,13 @@
       </template>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button
+          v-if="canReturnSubmission"
+          type="warning"
+          plain
+          :loading="returning"
+          @click="confirmReturnSubmission"
+        >打回</el-button>
           <el-button type="primary" :loading="submitting" :disabled="selectedSubmission?.submitStatus === 'GRADED'" @click="submitGrade">{{ selectedSubmission?.submitStatus === 'GRADED' ? '已完成批改' : '保存评分' }}</el-button>
       </template>
     </el-dialog>
@@ -284,12 +291,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   getHomeworkSubmissionDetail,
   gradeHomeworkAnswer,
   gradeHomeworkSubmission,
   listHomeworkSubmissions,
+  returnHomeworkSubmission,
 } from '@/api/homeworks';
 import type { GradeHomeworkRequest, HomeworkQuestionAnswer, HomeworkSubmissionItem, HomeworkSubmissionStatus } from '@/types/homework';
 
@@ -297,6 +305,7 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const submitting = ref(false);
+const returning = ref(false);
 const dialogVisible = ref(false);
 const rows = ref<HomeworkSubmissionItem[]>([]);
 const selectedSubmission = ref<HomeworkSubmissionItem | null>(null);
@@ -431,6 +440,39 @@ const submitGrade = async () => {
   ElMessage.success('作业批改成功');
   dialogVisible.value = false;
   await fetchData();
+};
+
+/** 仅已提交或已批改的提交支持打回；打回后学生可重新编辑并再次提交。 */
+const canReturnSubmission = computed(() => {
+  const status = selectedSubmission.value?.submitStatus;
+  return status === 'SUBMITTED' || status === 'GRADED';
+});
+
+const doReturnSubmission = async () => {
+  if (!selectedSubmission.value) return;
+  returning.value = true;
+  try {
+    await returnHomeworkSubmission(selectedSubmission.value.id);
+    ElMessage.success('已打回');
+    dialogVisible.value = false;
+    await fetchData();
+  } finally {
+    returning.value = false;
+  }
+};
+
+const confirmReturnSubmission = () => {
+  ElMessageBox.confirm(
+    '打回后学生可重新编辑并提交，已录入评分将被清除，是否继续？',
+    '确认打回',
+    {
+      confirmButtonText: '确认打回',
+      cancelButtonText: '取消',
+      type: 'warning',
+    },
+  )
+    .then(() => doReturnSubmission())
+    .catch(() => undefined);
 };
 
 const resetFilters = () => {

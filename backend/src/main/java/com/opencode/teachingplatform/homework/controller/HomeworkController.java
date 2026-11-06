@@ -184,6 +184,16 @@ public class HomeworkController {
         return ApiResponse.ok(homeworkService.gradeSubmission(currentUser, id, request));
     }
 
+    /**
+     * 教师打回作业提交：状态回到可编辑草稿态，清除评分痕迹并保留作答。
+     */
+    @PostMapping("/teacher/homework-submissions/{id}/return")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> returnHomeworkSubmission(@PathVariable Long id) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(homeworkService.returnHomeworkSubmission(currentUser, id));
+    }
+
     @PostMapping("/teacher/homework-answers/{id}/grade")
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> gradeHomeworkAnswer(@PathVariable Long id, @Valid @RequestBody HomeworkRequests.GradeHomeworkAnswerRequest request) {

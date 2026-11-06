@@ -49,6 +49,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         HomeworkServiceTests.JacksonTestConfig.class,
         com.opencode.teachingplatform.assessment.service.QuestionContentValidator.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
+        com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
+        com.opencode.teachingplatform.common.audit.AuditLogService.class,
         LocalPlagiarismService.class,
         ScoringEngine.class,
         SingleChoiceScoringStrategy.class,
@@ -985,6 +987,219 @@ class HomeworkServiceTests {
         List<HomeworkQuestion> questions = homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(homework.getId());
         assertThat(questions).hasSize(1);
         assertThat(questions.get(0).getQuestionId()).isEqualTo(ownQuestion.getId());
+    }
+
+    @Test
+    void resubmitRejectedWhenSubmissionAlreadySubmitted() {
+        Homework homework = createHomework(1L, 1L, "重复提交已提交作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission existing = createSubmission(homework, SubmissionStatus.SUBMITTED);
+        existing.setAnswerText("第一次提交内容");
+        homeworkSubmissionRepository.save(existing);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        assertThatThrownBy(() -> homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("第二次提交内容", null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已提交，如需修改请联系教师打回");
+
+        HomeworkSubmission unchanged = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentId(homework.getId(), 2L).orElseThrow();
+        assertThat(unchanged.getAnswerText()).isEqualTo("第一次提交内容");
+    }
+
+    @Test
+    void resubmitRejectedWhenSubmissionAlreadyGraded() {
+        Homework homework = createHomework(1L, 1L, "重复提交已批改作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission existing = createSubmission(homework, SubmissionStatus.GRADED);
+        existing.setAnswerText("已批改的作答内容");
+        homeworkSubmissionRepository.save(existing);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        assertThatThrownBy(() -> homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("重新提交内容", null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已批改，如需修改请联系教师打回");
+
+        HomeworkSubmission unchanged = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentId(homework.getId(), 2L).orElseThrow();
+        assertThat(unchanged.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(unchanged.getAnswerText()).isEqualTo("已批改的作答内容");
+    }
+
+    @Test
+    void teacherReturnSubmittedHomeworkResetsToSavedDeletesScoreAndWritesAudit() {
+        Homework homework = createHomework(1L, 1L, "打回已提交作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.SUBMITTED);
+        insertHomeworkScoreRecord(homework.getId(), 2L, 10D);
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Map<String, Object> result = homeworkService.returnHomeworkSubmission(teacher, submission.getId());
+        // 显式刷盘，确保成绩记录的删除在后续 JDBC 统计前落到同一事务连接上
+        homeworkSubmissionRepository.flush();
+
+        assertThat(result)
+                .containsEntry("submissionId", submission.getId())
+                .containsEntry("status", "SAVED")
+                .containsEntry("homeworkId", homework.getId())
+                .containsEntry("studentId", 2L);
+
+        HomeworkSubmission returned = homeworkSubmissionRepository.findById(submission.getId()).orElseThrow();
+        assertThat(returned.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(returned.getGradedAt()).isNull();
+        assertThat(returned.getTotalScore()).isNull();
+        assertThat(returned.getTeacherComment()).isEqualTo("");
+        assertThat(countHomeworkScoreRecords(homework.getId(), 2L)).isZero();
+        assertThat(countReturnAuditLogs(submission.getId())).isEqualTo(1);
+
+        String detailJson = jdbcTemplate.queryForObject(
+                "SELECT detail_json FROM audit_log WHERE action = 'HOMEWORK_SUBMISSION_RETURN' AND resource_id = ?",
+                String.class, submission.getId());
+        assertThat(detailJson)
+                .contains("\"homeworkId\":" + homework.getId())
+                .contains("\"studentId\":2")
+                .contains("\"fromStatus\":\"SUBMITTED\"");
+    }
+
+    @Test
+    void teacherReturnGradedHomeworkResetsToSavedAndDeletesScore() {
+        Homework homework = createHomework(1L, 1L, "打回已批改作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.GRADED);
+        insertHomeworkScoreRecord(homework.getId(), 2L, 10D);
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Map<String, Object> result = homeworkService.returnHomeworkSubmission(teacher, submission.getId());
+        // 显式刷盘，确保成绩记录的删除在后续 JDBC 统计前落到同一事务连接上
+        homeworkSubmissionRepository.flush();
+
+        HomeworkSubmission returned = homeworkSubmissionRepository.findById(submission.getId()).orElseThrow();
+        assertThat(result.get("status")).isEqualTo("SAVED");
+        assertThat(returned.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(returned.getGradedAt()).isNull();
+        assertThat(returned.getTotalScore()).isNull();
+        assertThat(countHomeworkScoreRecords(homework.getId(), 2L)).isZero();
+
+        String detailJson = jdbcTemplate.queryForObject(
+                "SELECT detail_json FROM audit_log WHERE action = 'HOMEWORK_SUBMISSION_RETURN' AND resource_id = ?",
+                String.class, submission.getId());
+        assertThat(detailJson).contains("\"fromStatus\":\"GRADED\"");
+    }
+
+    @Test
+    void teacherReturnSubmissionClearsAnswerGradingTraceButKeepsAnswerContent() {
+        Homework homework = createHomework(1L, 1L, "打回清痕作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.GRADED);
+        HomeworkAnswer answer = createScoredAnswer(submission, "保留的学生作答文本", "{\"text\":\"保留的学生作答\"}");
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        homeworkService.returnHomeworkSubmission(teacher, submission.getId());
+
+        HomeworkAnswer returnedAnswer = homeworkAnswerRepository.findById(answer.getId()).orElseThrow();
+        assertThat(returnedAnswer.getScore()).isNull();
+        assertThat(returnedAnswer.getAutoScore()).isNull();
+        assertThat(returnedAnswer.getSuggestedScore()).isNull();
+        assertThat(returnedAnswer.getJudgeDetail()).isNull();
+        assertThat(returnedAnswer.getTeacherComment()).isEqualTo("");
+        assertThat(returnedAnswer.getScoreSource()).isEqualTo("TEACHER");
+        assertThat(returnedAnswer.isAcceptedAutoScore()).isFalse();
+        assertThat(returnedAnswer.getAnswerText()).isEqualTo("保留的学生作答文本");
+        assertThat(returnedAnswer.getAnswerJson()).isEqualTo("{\"text\":\"保留的学生作答\"}");
+
+        HomeworkSubmission returned = homeworkSubmissionRepository.findById(submission.getId()).orElseThrow();
+        assertThat(returned.getAnswerFilePath()).isEqualTo("/uploads/homework/answer.docx");
+    }
+
+    @Test
+    void teacherCannotReturnSavedSubmission() {
+        Homework homework = createHomework(1L, 1L, "打回草稿作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.SAVED);
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+
+        assertThatThrownBy(() -> homeworkService.returnHomeworkSubmission(teacher, submission.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("仅已提交或已批改的作业可打回");
+
+        HomeworkSubmission unchanged = homeworkSubmissionRepository.findById(submission.getId()).orElseThrow();
+        assertThat(unchanged.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+    }
+
+    @Test
+    void teacherCannotReturnSubmissionOfClosedHomework() {
+        Homework homework = createHomework(1L, 1L, "打回已关闭作业", ActivityStatus.CLOSED);
+        HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.SUBMITTED);
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+
+        assertThatThrownBy(() -> homeworkService.returnHomeworkSubmission(teacher, submission.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已关闭，不能打回");
+
+        HomeworkSubmission unchanged = homeworkSubmissionRepository.findById(submission.getId()).orElseThrow();
+        assertThat(unchanged.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+    }
+
+    private HomeworkSubmission createSubmission(Homework homework, SubmissionStatus status) {
+        HomeworkSubmission submission = new HomeworkSubmission();
+        submission.setHomeworkId(homework.getId());
+        submission.setStudentId(2L);
+        submission.setSubmitStatus(status);
+        submission.setTotalScore(10D);
+        submission.setTeacherComment("原教师评语");
+        submission.setGradedAt(OffsetDateTime.now());
+        submission.setAnswerFilePath("/uploads/homework/answer.docx");
+        return homeworkSubmissionRepository.save(submission);
+    }
+
+    private HomeworkAnswer createScoredAnswer(HomeworkSubmission submission, String answerText, String answerJson) {
+        HomeworkQuestion question = createInlineHomeworkQuestion(
+                submission.getHomeworkId(), 1, 10D, "打回清痕题干");
+        HomeworkAnswer answer = new HomeworkAnswer();
+        answer.setHomeworkSubmissionId(submission.getId());
+        answer.setHomeworkQuestionId(question.getId());
+        answer.setAnswerText(answerText);
+        answer.setAnswerJson(answerJson);
+        answer.setScore(10D);
+        answer.setAutoScore(8D);
+        answer.setSuggestedScore(9D);
+        answer.setJudgeDetail("matched=[strategy]");
+        answer.setTeacherComment("原单题评语");
+        answer.setScoreSource("AUTO_ACCEPTED");
+        answer.setAcceptedAutoScore(true);
+        return homeworkAnswerRepository.save(answer);
+    }
+
+    private void insertHomeworkScoreRecord(Long homeworkId, Long studentId, double score) {
+        jdbcTemplate.update(
+                """
+                INSERT INTO score_record (business_type, business_id, student_id, class_id, score, graded_at, created_at, updated_at)
+                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
+                """,
+                "HOMEWORK", homeworkId, studentId, score);
+    }
+
+    private int countHomeworkScoreRecords(Long homeworkId, Long studentId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM score_record WHERE business_type = 'HOMEWORK' AND business_id = ? AND student_id = ?",
+                Integer.class, homeworkId, studentId);
+        return count == null ? 0 : count;
+    }
+
+    private int countReturnAuditLogs(Long submissionId) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*) FROM audit_log
+                WHERE action = 'HOMEWORK_SUBMISSION_RETURN'
+                  AND resource_type = 'HOMEWORK_SUBMISSION'
+                  AND resource_id = ?
+                """,
+                Integer.class, submissionId);
+        return count == null ? 0 : count;
     }
 
     private Homework createHomework(Long teacherId, Long classId, String title, ActivityStatus status) {

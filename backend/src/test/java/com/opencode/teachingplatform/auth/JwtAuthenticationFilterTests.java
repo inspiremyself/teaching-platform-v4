@@ -140,6 +140,10 @@ class JwtAuthenticationFilterTests {
 
         assertEquals(401, response.getStatus());
         assertTrue(response.getContentAsString().contains("40102"));
+        // 响应体业务码固定为 40102，且不建立认证上下文、不回写会话
+        assertTrue(response.getContentAsString().contains("\"code\":40102"));
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+        verify(userLoginSessionRepository, never()).save(any());
     }
 
     @Test

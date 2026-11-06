@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -564,6 +565,151 @@ class LabTeacherControllerTests {
             mockMvc.perform(get("/api/v1/teacher/lab-reports/{id}/behavior", 123L))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.code").value(40300));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void publishedLabStepEndpointsReturnBadRequest() throws Exception {
+        // 已发布实验的题项增删改在服务层被拒绝，控制器应把 40000 原样映射为 HTTP 400
+        BusinessException rejected = new BusinessException(40000, "实验已发布或已关闭，不能修改题项");
+        when(labService.createStep(any(CurrentUser.class), anyLong(), any(LabRequests.CreateStepRequest.class)))
+                .thenThrow(rejected);
+        when(labService.updateStep(any(CurrentUser.class), anyLong(), any(LabRequests.UpdateStepRequest.class)))
+                .thenThrow(rejected);
+        when(labService.deleteStep(any(CurrentUser.class), anyLong())).thenThrow(rejected);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/labs/{id}/steps", 1001L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "stepNo": 2,
+                                      "title": "发布后新增步骤",
+                                      "questionType": "TEXT",
+                                      "content": "内容",
+                                      "answerConfigJson": "{}",
+                                      "stepScore": 10,
+                                      "allowPaste": true
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value(
+                            org.hamcrest.Matchers.containsString("实验已发布或已关闭，不能修改题项")));
+
+            mockMvc.perform(put("/api/v1/teacher/lab-steps/{stepId}", 2005L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "stepNo": 1,
+                                      "title": "发布后修改步骤",
+                                      "questionType": "TEXT",
+                                      "content": "内容",
+                                      "answerConfigJson": "{}",
+                                      "stepScore": 10,
+                                      "allowPaste": true
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value(
+                            org.hamcrest.Matchers.containsString("实验已发布或已关闭，不能修改题项")));
+
+            mockMvc.perform(delete("/api/v1/teacher/lab-steps/{stepId}", 2005L))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value(
+                            org.hamcrest.Matchers.containsString("实验已发布或已关闭，不能修改题项")));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void updateLabClassChangeReturnsBadRequestWhenLabHasSubmissions() throws Exception {
+        when(labService.updateLab(any(CurrentUser.class), anyLong(), any(LabRequests.UpdateLabRequest.class)))
+                .thenThrow(new BusinessException(40000, "已有学生作答，不能变更所属班级"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(put("/api/v1/teacher/labs/{id}", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "改班级实验",
+                                      "description": "已有学生作答",
+                                      "classId": 2,
+                                      "status": "PUBLISHED"
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value(
+                            org.hamcrest.Matchers.containsString("已有学生作答，不能变更所属班级")));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void copiedLabStillAllowsStepEditing() throws Exception {
+        // 复制出来的副本是草稿态且无提交，题项接口必须继续可用（题项锁定的唯一替代路径）
+        when(labService.copyLab(any(CurrentUser.class), anyLong(), any(LabRequests.CopyLabRequest.class)))
+                .thenReturn(Map.of(
+                        "id", 123456,
+                        "title", "分层架构分析实验（副本）",
+                        "classId", 1,
+                        "status", "DRAFT",
+                        "stepCount", 1
+                ));
+        when(labService.createStep(any(CurrentUser.class), anyLong(), any(LabRequests.CreateStepRequest.class)))
+                .thenReturn(Map.of(
+                        "id", 9001,
+                        "labId", 123456,
+                        "stepNo", 2,
+                        "title", "副本新增步骤",
+                        "questionType", "TEXT",
+                        "content", "内容",
+                        "answerConfigJson", "{}",
+                        "stepScore", 10,
+                        "allowPaste", true
+                ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/labs/{sourceLabId}/copy", 1001L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "classId": 1
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.id").value(123456))
+                    .andExpect(jsonPath("$.data.status").value("DRAFT"));
+
+            mockMvc.perform(post("/api/v1/teacher/labs/{id}/steps", 123456L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "stepNo": 2,
+                                      "title": "副本新增步骤",
+                                      "questionType": "TEXT",
+                                      "content": "内容",
+                                      "answerConfigJson": "{}",
+                                      "stepScore": 10,
+                                      "allowPaste": true
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.id").value(9001))
+                    .andExpect(jsonPath("$.data.labId").value(123456))
+                    .andExpect(jsonPath("$.data.stepNo").value(2));
         } finally {
             SecurityContextHolder.clearContext();
         }

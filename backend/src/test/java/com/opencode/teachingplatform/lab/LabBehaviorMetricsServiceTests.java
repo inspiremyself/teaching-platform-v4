@@ -75,6 +75,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DataJpaTest
 @Import({LabService.class, LabScoringSupport.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
+        com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         LabBehaviorMetricsService.class, BehaviorConfig.class,
         LabBehaviorMetricsServiceTests.TestBeans.class})
 @ActiveProfiles("test")

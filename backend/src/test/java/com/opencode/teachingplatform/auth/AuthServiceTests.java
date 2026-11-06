@@ -1,5 +1,6 @@
 package com.opencode.teachingplatform.auth;
 
+import com.opencode.teachingplatform.auth.dto.ChangePasswordRequest;
 import com.opencode.teachingplatform.auth.dto.LoginRequest;
 import com.opencode.teachingplatform.auth.dto.UpdateProfileRequest;
 import com.opencode.teachingplatform.auth.entity.SysUser;
@@ -36,9 +37,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -199,6 +202,60 @@ class AuthServiceTests {
         assertThat((List<String>) profile.get("permissions"))
                 .contains("CLASS_READ")
                 .doesNotContain("CLASS_WRITE");
+    }
+
+    @Test
+    void changePasswordKeepsCurrentSessionAndKicksOtherSessions() {
+        SysUser user = activeTeacher();
+        when(sysUserRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("123456", "123456")).thenReturn(true);
+        when(sysUserRepository.save(user)).thenReturn(user);
+
+        authService.changePassword(
+                new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER, 1L, "current-session"),
+                new ChangePasswordRequest("123456", "654321")
+        );
+
+        verify(userLoginSessionRepository).kickActiveSessionsByUserIdExceptSessionKey(
+                eq(1L), eq("current-session"), eq(LoginSessionStatus.ACTIVE), eq(LoginSessionStatus.KICKED), any(OffsetDateTime.class));
+        verify(userLoginSessionRepository, never()).kickActiveSessionsByUserId(
+                anyLong(), any(), any(), any());
+    }
+
+    @Test
+    void changePasswordWithoutSessionKeyKicksAllSessions() {
+        SysUser user = activeTeacher();
+        when(sysUserRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("123456", "123456")).thenReturn(true);
+        when(sysUserRepository.save(user)).thenReturn(user);
+
+        authService.changePassword(
+                new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER),
+                new ChangePasswordRequest("123456", "654321")
+        );
+
+        verify(userLoginSessionRepository).kickActiveSessionsByUserId(
+                eq(1L), eq(LoginSessionStatus.ACTIVE), eq(LoginSessionStatus.KICKED), any(OffsetDateTime.class));
+        verify(userLoginSessionRepository, never()).kickActiveSessionsByUserIdExceptSessionKey(
+                anyLong(), any(), any(), any(), any());
+    }
+
+    @Test
+    void changePasswordWithWrongOldPasswordDoesNotKickSessions() {
+        SysUser user = activeTeacher();
+        when(sysUserRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "123456")).thenReturn(false);
+
+        BusinessException exception = assertThrows(BusinessException.class, () -> authService.changePassword(
+                new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER, 1L, "current-session"),
+                new ChangePasswordRequest("wrong", "654321")
+        ));
+
+        assertEquals(40010, exception.getCode());
+        verify(userLoginSessionRepository, never()).kickActiveSessionsByUserId(
+                anyLong(), any(), any(), any());
+        verify(userLoginSessionRepository, never()).kickActiveSessionsByUserIdExceptSessionKey(
+                anyLong(), any(), any(), any(), any());
     }
 
     private SysUser activeTeacher() {

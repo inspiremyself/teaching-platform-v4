@@ -10,6 +10,7 @@ import type {
   GradeHomeworkResult,
   HomeworkListItem,
   HomeworkSubmissionItem,
+  HomeworkSubmissionReturnResult,
   SaveHomeworkQuestionRequest,
   StudentHomeworkDetail,
   SubmitHomeworkRequest,
@@ -57,6 +58,10 @@ export const getHomeworkSubmissionDetail = (submissionId: number | string) =>
 
 export const gradeHomeworkSubmission = (submissionId: number | string, data: GradeHomeworkRequest) =>
   request.post<GradeHomeworkResult>(`/teacher/homework-submissions/${submissionId}/grade`, data);
+
+/** 教师打回已提交/已批改的作业提交，学生可重新编辑提交 */
+export const returnHomeworkSubmission = (submissionId: number | string) =>
+  request.post<HomeworkSubmissionReturnResult>(`/teacher/homework-submissions/${submissionId}/return`);
 
 export const releaseHomeworkScores = (id: number | string) =>
   request.post(`/teacher/homeworks/${id}/release-scores`);
