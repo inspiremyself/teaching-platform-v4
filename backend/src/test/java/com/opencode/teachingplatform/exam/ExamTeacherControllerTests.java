@@ -422,6 +422,59 @@ class ExamTeacherControllerTests {
         }
     }
 
+    @Test
+    void teacherExamDetailExposesScoreReleasedFlag() throws Exception {
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("id", -1);
+        detail.put("title", "体系结构阶段测验");
+        detail.put("scoreReleased", true);
+        detail.put("questions", List.of());
+
+        when(examService.getExamDetail(any(CurrentUser.class), eq(-1L))).thenReturn(detail);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(get("/api/v1/exams/{id}", -1L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.scoreReleased").value(true));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCanReleaseScoresAndResponsePassesThrough() throws Exception {
+        when(examService.releaseScores(any(CurrentUser.class), eq(-1L)))
+                .thenReturn(Map.of("released", true, "scoreVisibilityMode", "MANUAL_RELEASE"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/exams/{id}/release-scores", -1L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.released").value(true))
+                    .andExpect(jsonPath("$.data.scoreVisibilityMode").value("MANUAL_RELEASE"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void teacherCannotReleaseScoresOfAnotherTeachersExam() throws Exception {
+        when(examService.releaseScores(any(CurrentUser.class), eq(-2L)))
+                .thenThrow(new BusinessException(40300, "无权限发布该考试成绩"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/exams/{id}/release-scores", -2L))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value(40300));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
     private UsernamePasswordAuthenticationToken authenticateTeacher() {
         CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
         return new UsernamePasswordAuthenticationToken(

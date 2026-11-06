@@ -67,6 +67,18 @@ public class ExamController {
         return ApiResponse.ok(examService.submitExam(currentUser, id, request));
     }
 
+    /**
+     * 保存考试草稿：仅学生、仅 IN_PROGRESS 提交可写。
+     * 请求体与交卷一致，草稿只落 answer_json，不评分、不改提交状态。
+     */
+    @PutMapping("/exams/{id}/draft")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ApiResponse<?> saveDraft(@PathVariable Long id,
+                                    @Valid @RequestBody ExamRequests.SubmitExamRequest request) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(examService.saveDraft(currentUser, id, request));
+    }
+
     @GetMapping("/teacher/exams/{id}/results")
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> examResults(@PathVariable Long id) {

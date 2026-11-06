@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -381,6 +382,75 @@ class ExamStudentControllerTests {
                     .andExpect(jsonPath("$.data.autoScore").value(nullValue()))
                     .andExpect(jsonPath("$.data.totalScore").value(nullValue()))
                     .andExpect(jsonPath("$.data.hasManualGrading").value(true));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void saveExamDraftRoutesToPutAndPassesThroughSavedFields() throws Exception {
+        Map<String, Object> draftResult = new LinkedHashMap<>();
+        draftResult.put("submissionId", 100);
+        draftResult.put("savedAt", "2026-11-07T10:15:30+08:00");
+        draftResult.put("savedCount", 2);
+
+        when(examService.saveDraft(any(CurrentUser.class), eq(-1L), any(ExamRequests.SubmitExamRequest.class)))
+                .thenReturn(draftResult);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(put("/api/v1/exams/{id}/draft", -1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"answers": [
+                                      {"questionId": 1, "selectedOptions": ["A"]},
+                                      {"questionId": 3, "answerJson": "{\\"kind\\":\\"text\\",\\"text\\":\\"草稿\\"}"}
+                                    ]}
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionId").value(100))
+                    .andExpect(jsonPath("$.data.savedAt").value("2026-11-07T10:15:30+08:00"))
+                    .andExpect(jsonPath("$.data.savedCount").value(2));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void inProgressExamDetailPassesThroughDraftAnswerWithoutGradingFields() throws Exception {
+        Map<String, Object> question = new LinkedHashMap<>();
+        question.put("questionId", 1);
+        question.put("type", "SINGLE");
+        question.put("stem", "软件体系结构的核心目标是什么？");
+        question.put("studentAnswer", "{\"kind\":\"single\",\"selectedKey\":\"A\"}");
+        List<Map<String, Object>> questions = new ArrayList<>();
+        questions.add(question);
+
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("id", -1);
+        detail.put("title", "体系结构阶段测验");
+        detail.put("submissionStatus", "IN_PROGRESS");
+        detail.put("resultAvailable", false);
+        detail.put("gradingInProgress", false);
+        detail.put("remainingSeconds", 1200);
+        detail.put("questions", questions);
+
+        when(examService.getExamDetail(any(CurrentUser.class), eq(-1L))).thenReturn(detail);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(get("/api/v1/exams/{id}", -1L))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionStatus").value("IN_PROGRESS"))
+                    .andExpect(jsonPath("$.data.resultAvailable").value(false))
+                    .andExpect(jsonPath("$.data.gradingInProgress").value(false))
+                    .andExpect(jsonPath("$.data.questions[0].studentAnswer")
+                            .value("{\"kind\":\"single\",\"selectedKey\":\"A\"}"))
+                    .andExpect(jsonPath("$.data.questions[0].isCorrect").doesNotExist())
+                    .andExpect(jsonPath("$.data.questions[0].answerJson").doesNotExist())
+                    .andExpect(jsonPath("$.data.questions[0].analysisText").doesNotExist());
         } finally {
             SecurityContextHolder.clearContext();
         }

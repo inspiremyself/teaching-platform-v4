@@ -70,6 +70,10 @@ export interface ExamDetail {
   manualScore?: number | null
   totalScore?: number | null
   resultAvailable?: boolean
+  // 主观题未批完时为 true，前端显示「阅卷中」而非分数
+  gradingInProgress?: boolean
+  // 教师端专用：成绩是否已发布，用于「发布 / 重新发布成绩」入口
+  scoreReleased?: boolean
   teacherComment?: string | null
 }
 

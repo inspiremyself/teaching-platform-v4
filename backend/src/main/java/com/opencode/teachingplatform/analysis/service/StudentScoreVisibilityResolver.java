@@ -186,6 +186,10 @@ public class StudentScoreVisibilityResolver {
         if (row.submissionStatus() == null) {
             return false;
         }
+        // 考试额外要求最终成绩已产生（GRADED）；LAB / HOMEWORK 保持现有矩阵不变。
+        if (type == BusinessType.EXAM && !"GRADED".equals(row.submissionStatus())) {
+            return false;
+        }
         ScoreVisibilityMode mode = (row.visibilityMode() == null || row.visibilityMode().isBlank())
                 ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM
                 : ScoreVisibilityMode.valueOf(row.visibilityMode());

@@ -183,7 +183,8 @@ class AnalysisServiceTests {
 
     @Test
     void afterDeadlineVisibilityDependsOnDeadline() {
-        seedVisibilityFixture("AFTER_DEADLINE", false, futureDeadline(), "SUBMITTED", 10.0);
+        // 考试需先进入 GRADED 最终态，AFTER_DEADLINE 只决定最终成绩的读取时点
+        seedVisibilityFixture("AFTER_DEADLINE", false, futureDeadline(), "GRADED", 10.0);
 
         List<Long> hiddenIds = visibleScoreIds(student());
         assertFalse(hiddenIds.contains(EXAM_SCORE_ID));
@@ -200,7 +201,8 @@ class AnalysisServiceTests {
 
     @Test
     void immediateModeRequiresSubmissionAndLabTotalScore() {
-        seedVisibilityFixture("IMMEDIATE", false, futureDeadline(), "SUBMITTED", null);
+        // 考试需先进入 GRADED 最终态，IMMEDIATE 才立即可见
+        seedVisibilityFixture("IMMEDIATE", false, futureDeadline(), "GRADED", null);
 
         List<Long> visibleIds = visibleScoreIds(student());
         assertTrue(visibleIds.contains(EXAM_SCORE_ID));

@@ -143,18 +143,100 @@ class ExamSubmitConcurrencyTests {
         assertThat(countSubmissions(examId)).isEqualTo(1);
     }
 
+    @Test
+    void saveDraftTwiceKeepsSingleAnswerRow() {
+        Long examId = createPublishedObjectiveOnlyExam();
+        seedInProgressSubmission(examId);
+
+        examService.saveDraft(student(), examId, submitObjectiveAnswer());
+        examService.saveDraft(student(), examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("B"), null, null, null)
+        )));
+
+        assertThat(countAnswers(examId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT answer_json FROM exam_answer
+                 WHERE exam_submission_id IN (SELECT id FROM exam_submission WHERE exam_id = ?)
+                """, String.class, examId)).contains("B");
+    }
+
+    @Test
+    void submitExamUsesDraftAnswersWhenPayloadOmitsQuestion() {
+        Long examId = createPublishedObjectiveOnlyExam();
+        seedInProgressSubmission(examId);
+        examService.saveDraft(student(), examId, submitObjectiveAnswer());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(
+                student(), examId, new ExamRequests.SubmitExamRequest(List.of()));
+
+        // payload 缺失该题，回退草稿答案参与评分
+        assertThat(submitResult.get("status")).isEqualTo("GRADED");
+        assertThat(((Number) submitResult.get("autoScore")).doubleValue()).isEqualTo(5.0);
+        assertThat(countAnswers(examId)).isEqualTo(1);
+    }
+
+    @Test
+    void submitExamDoesNotFallBackToDraftWhenPayloadCarriesEmptyAnswer() {
+        Long examId = createPublishedObjectiveOnlyExam();
+        seedInProgressSubmission(examId);
+        examService.saveDraft(student(), examId, submitObjectiveAnswer());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> submitResult = (Map<String, Object>) examService.submitExam(
+                student(), examId, new ExamRequests.SubmitExamRequest(List.of(
+                        new ExamRequests.SubmitAnswerItem(1L, null, null, null, null)
+                )));
+
+        // payload 显式携带空答案时不回退草稿，按空答案评分
+        assertThat(submitResult.get("status")).isEqualTo("GRADED");
+        assertThat(((Number) submitResult.get("autoScore")).doubleValue()).isEqualTo(0.0);
+    }
+
+    @Test
+    void concurrentDraftAndSubmitSerializeWithoutDuplicateRows() throws Exception {
+        Long examId = createPublishedObjectiveOnlyExam();
+        seedInProgressSubmission(examId);
+
+        List<Object> outcomes = runConcurrently(
+                () -> examService.saveDraft(student(), examId, submitObjectiveAnswer()),
+                () -> examService.submitExam(student(), examId, submitObjectiveAnswer()));
+
+        // 串行化后允许草稿被状态机拒绝，但不得出现数据库异常或重复答案行
+        List<Throwable> failures = new ArrayList<>();
+        for (Object outcome : outcomes) {
+            if (outcome instanceof Throwable failure) {
+                failures.add(failure);
+            }
+        }
+        assertThat(failures).allSatisfy(failure -> assertThat(failure).isInstanceOf(BusinessException.class));
+        assertThat(countAnswers(examId)).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM exam_submission WHERE exam_id = ? AND student_id = ?",
+                String.class, examId, STUDENT_ID)).isEqualTo("GRADED");
+    }
+
     /**
      * 两线程同刻起跑：ready 保证两个线程都已就绪，start 放行让它们尽量同时进入业务方法。
      *
      * @return 每个线程的结果：正常返回值为业务对象，异常返回 Throwable
      */
     private List<Object> runConcurrently(Callable<Object> action) throws Exception {
+        return runConcurrently(action, action);
+    }
+
+    /**
+     * 两个不同动作同刻起跑，用于草稿保存与交卷的并发串行验证。
+     *
+     * @return 每个线程的结果：正常返回值为业务对象，异常返回 Throwable
+     */
+    private List<Object> runConcurrently(Callable<Object> first, Callable<Object> second) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
         List<Future<Object>> futures = new ArrayList<>();
         try {
-            for (int i = 0; i < 2; i++) {
+            for (Callable<Object> action : List.of(first, second)) {
                 futures.add(executor.submit(() -> {
                     ready.countDown();
                     start.await(5, TimeUnit.SECONDS);

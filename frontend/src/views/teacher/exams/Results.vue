@@ -12,6 +12,10 @@
             <span class="material-symbols-outlined">arrow_back</span>
             返回考试管理
           </button>
+          <button class="header-button header-button--secondary" type="button" :disabled="releasing" @click="releaseScores">
+            <span class="material-symbols-outlined">campaign</span>
+            {{ scoreReleased ? '重新发布成绩' : '发布成绩' }}
+          </button>
           <button class="header-button header-button--primary" type="button" @click="fetchData" :disabled="loading">
             <span class="material-symbols-outlined">refresh</span>
             刷新结果
@@ -236,7 +240,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { confirmExamAnswer, getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
 import type { ConfirmExamAnswerPayload, ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
 
@@ -249,6 +253,8 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const submitting = ref(false)
+const releasing = ref(false)
+const scoreReleased = ref(false)
 const rows = ref<ExamSubmissionListItem[]>([])
 const detail = ref<ExamSubmissionDetail | null>(null)
 const examTitle = ref('考试批改工作流')
@@ -329,6 +335,7 @@ const fetchData = async () => {
     const [resultRows, examDetail] = await Promise.all([getExamResults(examId.value), getExamDetail(examId.value)])
     rows.value = resultRows
     examTitle.value = examDetail.title || '考试批改工作流'
+    scoreReleased.value = examDetail.scoreReleased === true
     const target = resultRows.find(row => row.submissionId === activeSubmissionId.value) ?? resultRows[0] ?? null
     if (target) {
       await selectSubmission(target)
@@ -368,9 +375,28 @@ const submitGrade = async () => {
 }
 
 const releaseScores = async () => {
-  await releaseExamScores(examId.value)
-  ElMessage.success('考试成绩已发布')
-  await fetchData()
+  if (releasing.value) return
+  try {
+    await ElMessageBox.confirm('确认发布本次考试成绩？发布后学生即可查看。', '发布成绩', {
+      confirmButtonText: '确认发布',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  releasing.value = true
+  try {
+    await releaseExamScores(examId.value)
+    // 文案读取发布前的状态：原值 true 表示本次为「重新发布」
+    ElMessage.success(scoreReleased.value ? '考试成绩已重新发布' : '考试成绩已发布')
+    await fetchData()
+  } catch {
+    // 错误提示已由 request.ts 响应拦截器统一弹出，这里只阻止未捕获的 Promise 拒绝
+    return
+  } finally {
+    releasing.value = false
+  }
 }
 
 const confirmAnswer = async (questionId: number, acceptSuggested: boolean) => {

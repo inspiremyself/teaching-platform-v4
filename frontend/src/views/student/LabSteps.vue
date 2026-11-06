@@ -249,7 +249,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import QuestionAnswerShell from './components/lab-answer/QuestionAnswerShell.vue';
 import ChoiceAnswerEditor from './components/lab-answer/ChoiceAnswerEditor.vue';
@@ -484,6 +484,12 @@ const selectItem = async (index: number) => {
   if (!target) {
     return;
   }
+  // 切题前先保存当前题；保存失败不切换，避免静默丢失已输入内容
+  const saved = await persistCurrentItem({ silent: true });
+  if (!saved) {
+    ElMessage.error('当前题保存失败，请重试');
+    return;
+  }
   const previousStepId = currentItem.value?.id ?? null;
   currentIndex.value = index;
   await updateItemQuery(target.id);
@@ -566,14 +572,16 @@ const persistCurrentItem = (options: { silent?: boolean } = {}) => {
 };
 
 const scheduleAutosave = () => {
-  if (!currentItem.value || readonly.value || !isItemDirty(currentItem.value)) {
+  const item = currentItem.value;
+  if (!item || readonly.value || !isItemDirty(item)) {
     return;
   }
   clearAutosaveTimer();
-  itemAutosaveStates[currentItem.value.id] = 'pending';
+  itemAutosaveStates[item.id] = 'pending';
   autosaveTimer = setTimeout(() => {
     autosaveTimer = null;
-    void persistCurrentItem({ silent: true });
+    // 定时器绑定创建时刻的题项，切题不会把待保存内容写到新题上
+    void persistItem(item, { silent: true });
   }, 1200);
 };
 
@@ -581,13 +589,7 @@ const saveCurrent = async () => {
   if (!currentItem.value) {
     return;
   }
-
-  const draft = ensureDraft(currentItem.value);
-  if (!isDraftAnswered(draft)) {
-    ElMessage.warning('请输入文字或上传图片后再保存');
-    return;
-  }
-
+  // 空内容也允许保存，用于清空已保存的答案
   await persistCurrentItem();
 };
 
@@ -595,6 +597,7 @@ const goPrev = async () => {
   if (currentIndex.value > 0) {
     const saved = await persistCurrentItem({ silent: true });
     if (!saved) {
+      ElMessage.error('当前题保存失败，请重试');
       return;
     }
     await selectItem(currentIndex.value - 1);
@@ -605,10 +608,30 @@ const goNext = async () => {
   if (currentIndex.value < labItems.value.length - 1) {
     const saved = await persistCurrentItem({ silent: true });
     if (!saved) {
+      ElMessage.error('当前题保存失败，请重试');
       return;
     }
     await selectItem(currentIndex.value + 1);
   }
+};
+
+/**
+ * 保存全部 dirty 题项：返回第一个失败题目的下标（从 0 开始），全部成功返回 -1。
+ * 提交与路由离开共用同一遍历规则，保证「保存成功才继续」。
+ */
+const persistDirtyItems = async () => {
+  clearAutosaveTimer();
+  for (let index = 0; index < labItems.value.length; index++) {
+    const item = labItems.value[index];
+    if (!isItemDirty(item)) {
+      continue;
+    }
+    const saved = await persistItem(item, { silent: true });
+    if (!saved) {
+      return index;
+    }
+  }
+  return -1;
 };
 
 const submitAll = async () => {
@@ -617,18 +640,17 @@ const submitAll = async () => {
   }
   // 行为采集：提交点击（无论后续是否被拦截）
   behaviorCollector.track('SUBMIT_CLICK', {});
+  // 先保存全部 dirty 题项，再走「至少一题已保存」等校验，避免首次作答被提前拦截
+  const failedIndex = await persistDirtyItems();
+  if (failedIndex >= 0) {
+    behaviorCollector.track('SUBMIT_BLOCKED', { reason: 'autosave-failed' });
+    ElMessage.error(`第 ${failedIndex + 1} 题保存失败，请重试`);
+    return;
+  }
   if (!labItems.value.some((item) => hasSavedAnswer(item))) {
     behaviorCollector.track('SUBMIT_BLOCKED', { reason: 'no-saved-answer' });
     ElMessage.warning('请至少先保存一道题目后再提交');
     return;
-  }
-  if (dirtyItemCount.value > 0) {
-    const saved = await persistCurrentItem({ silent: true });
-    if (!saved) {
-      behaviorCollector.track('SUBMIT_BLOCKED', { reason: 'autosave-failed' });
-      ElMessage.error('当前题项自动保存失败，请稍后重试');
-      return;
-    }
   }
   if (detail.value.summaryRequired && !summaryDraft.value.trim()) {
     behaviorCollector.track('SUBMIT_BLOCKED', { reason: 'summary-required' });
@@ -708,8 +730,18 @@ const itemFeedback = (item: StudentLabStepItem) => {
   return parts.join('；') || '暂无教师反馈';
 };
 
-watch(() => route.query.item, () => {
-  void syncCurrentItemWithQuery();
+watch(() => route.query.item, async () => {
+  // 失败回填 URL 会再次触发本 watch，已与当前题一致时直接返回，避免重复保存与二次弹错
+  if (!currentItem.value || currentItemQueryId.value === currentItem.value.id) {
+    return;
+  }
+  const saved = await persistCurrentItem({ silent: true });
+  if (!saved) {
+    ElMessage.error('当前题保存失败，请重试');
+    await updateItemQuery(currentItem.value.id);
+    return;
+  }
+  await syncCurrentItemWithQuery();
 });
 
 watch(labItems, () => {
@@ -726,7 +758,39 @@ watch(() => (currentItem.value ? buildAnswerPayloadJson(ensureDraft(currentItem.
   scheduleAutosave();
 });
 
+/**
+ * 路由离开兜底：先保存全部 dirty 题项，失败时二次确认是否离开。
+ * 离开页面不是提交意图，因此不记录 SUBMIT_BLOCKED 埋点。
+ */
+onBeforeRouteLeave(async () => {
+  if (readonly.value) {
+    return true;
+  }
+  const failedIndex = await persistDirtyItems();
+  if (failedIndex < 0) {
+    return true;
+  }
+  try {
+    await ElMessageBox.confirm('有未保存答案，仍要离开？', '离开确认', { type: 'warning' });
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+/**
+ * 关闭标签页兜底：存在 dirty 题项时触发浏览器原生离开确认。
+ * 浏览器不保证异步请求发出，因此这里不发起草稿保存。
+ */
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  if (dirtyItemCount.value > 0) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+};
+
 onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
   void fetchData().then(() => {
     // 行为采集：仅在可编辑作答会话内激活；已提交/已批改的只读查看不采集
     if (readonly.value) {
@@ -742,6 +806,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
   clearAutosaveTimer();
   // 行为采集：路由离开收尾并停采；直接关浏览器由采集器 beforeunload 钩子兜底（D17②）
   behaviorCollector.leave('route');

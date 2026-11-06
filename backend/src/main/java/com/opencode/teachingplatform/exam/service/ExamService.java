@@ -45,6 +45,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ExamService {
@@ -303,6 +304,10 @@ public class ExamService {
         result.put("scoreVisibilityMode", exam.getScoreVisibilityMode().name());
         result.put("shuffleQuestions", exam.isShuffleQuestions());
         result.put("questions", questionList);
+        // 教师结果页需要知道当前考试是否已发布成绩，用于「发布 / 重新发布」入口。
+        if (currentUser.role() == UserRole.TEACHER) {
+            result.put("scoreReleased", exam.isScoreReleased());
+        }
 
         // For students: enrich with submission state so frontend can restore progress/result
         if (currentUser.role() == UserRole.STUDENT) {
@@ -319,6 +324,10 @@ public class ExamService {
                 result.put("manualScore", scoreVisible ? submission.getManualScore() : null);
                 result.put("totalScore", scoreVisible ? submission.getTotalScore() : null);
                 result.put("resultAvailable", scoreVisible);
+                // 阅卷中：仅 SUBMITTED / AUTO_SUBMITTED 为 true，IN_PROGRESS 与 GRADED 恒为 false。
+                result.put("gradingInProgress",
+                        submission.getStatus() == ExamSubmissionStatus.SUBMITTED
+                                || submission.getStatus() == ExamSubmissionStatus.AUTO_SUBMITTED);
 
                 if (submission.getStatus() == ExamSubmissionStatus.IN_PROGRESS) {
                     result.put("deadlineAt", submission.getDeadlineAt());
@@ -327,6 +336,16 @@ public class ExamService {
                         remainingSeconds = Math.max(0, Duration.between(OffsetDateTime.now(), submission.getDeadlineAt()).getSeconds());
                     }
                     result.put("remainingSeconds", remainingSeconds);
+                    // 作答中仅回填草稿答案，不返回任何判分与解析字段。
+                    Map<Long, ExamAnswer> draftMap = examAnswerRepository.findByExamSubmissionId(submission.getId())
+                            .stream()
+                            .collect(Collectors.toMap(ExamAnswer::getQuestionId, item -> item, (left, right) -> right));
+                    for (Map<String, Object> qMap : questionList) {
+                        ExamAnswer draft = draftMap.get((Long) qMap.get("questionId"));
+                        if (draft != null) {
+                            qMap.put("studentAnswer", draft.getAnswerJson());
+                        }
+                    }
                 }
 
                 if (submission.getStatus() == ExamSubmissionStatus.SUBMITTED
@@ -409,6 +428,23 @@ public class ExamService {
         }
         exam.setScoreReleased(true);
         examRepository.save(exam);
+        // 幂等补写：对已结案（GRADED）但历史缺失成绩记录的提交补建 score_record。
+        // 逐条对提交行加悲观锁，与教师批改 / 学生交卷串行，避免与批改并发读到中间态。
+        OffsetDateTime now = OffsetDateTime.now();
+        for (ExamSubmission candidate : examSubmissionRepository.findByExamId(examId)) {
+            if (candidate.getStatus() != ExamSubmissionStatus.GRADED) {
+                continue;
+            }
+            ExamSubmission locked = examSubmissionRepository
+                    .findByExamIdAndStudentIdForUpdate(examId, candidate.getStudentId())
+                    .orElse(null);
+            if (locked == null || locked.getStatus() != ExamSubmissionStatus.GRADED) {
+                continue;
+            }
+            Double lockedScore = locked.getTotalScore();
+            scoreRecordWriter.write(BusinessType.EXAM, exam.getId(), locked.getStudentId(),
+                    exam.getClassId(), lockedScore == null ? 0D : lockedScore, now);
+        }
         return Map.of("released", true, "scoreVisibilityMode", exam.getScoreVisibilityMode().name());
     }
 
@@ -531,20 +567,24 @@ public class ExamService {
             submission.setStatus(ExamSubmissionStatus.SUBMITTED);
         }
 
-        // 4. Delete any stale exam_answer rows for this submission
+        // 4. 删除前先快照已持久化草稿：payload 缺失的题目回退草稿，避免刷新后自动交卷提交空白卷。
+        Map<Long, String> draftAnswers = new HashMap<>();
+        for (ExamAnswer existing : examAnswerRepository.findByExamSubmissionId(submission.getId())) {
+            draftAnswers.put(existing.getQuestionId(), existing.getAnswerJson());
+        }
+
+        // 5. Delete any stale exam_answer rows for this submission
         examAnswerRepository.deleteByExamSubmissionId(submission.getId());
 
-        // 5. Build a map of student answers by questionId
-        Map<Long, String> studentAnswers = new HashMap<>();
+        // 6. 仅构建 payload 条目；是否回退草稿在逐题循环内判定
         Map<Long, ExamRequests.SubmitAnswerItem> submitItems = new HashMap<>();
         if (request.answers() != null) {
             for (ExamRequests.SubmitAnswerItem item : request.answers()) {
                 submitItems.put(item.questionId(), item);
-                studentAnswers.put(item.questionId(), resolveAnswerJson(item));
             }
         }
 
-        // 6. For each exam_question: score and persist ExamAnswer
+        // 7. For each exam_question: score and persist ExamAnswer
         //    按 questionId 去重：存量试卷可能含重复题目，只让 sortOrder 最小的首行生效，
         //    否则会触发 uk_exam_answer_submission_question。
         List<ExamQuestion> examQuestions = examQuestionRepository.findByExamIdOrderBySortOrder(examId);
@@ -557,22 +597,22 @@ public class ExamService {
                 continue;
             }
             QuestionSnapshot snapshot = resolveQuestionSnapshot(eq);
-            ExamRequests.SubmitAnswerItem submitItem = submitItems.get(eq.getQuestionId());
-            String studentAnswer = studentAnswers.get(eq.getQuestionId());
             String questionType = snapshot.questionType();
             boolean isObjective = examScoringService.isObjective(questionType);
+            // payload 出现该题（即使字段全空）以 payload 为准；缺失时才回退已持久化草稿。
+            ExamRequests.SubmitAnswerItem effective = submitItems.containsKey(eq.getQuestionId())
+                    ? submitItems.get(eq.getQuestionId())
+                    : resolveDraftAnswerItem(eq.getQuestionId(), questionType, draftAnswers.get(eq.getQuestionId()));
             GradingResultView gradingResult = gradingAdapter.grade(
                     snapshot,
-                    submitItem == null
-                            ? AnswerPayloadNormalizer.normalize(eq.getQuestionId(), questionType, null, studentAnswer, List.of(), null)
-                            : AnswerPayloadNormalizer.normalize(
-                                    eq.getQuestionId(),
-                                    questionType,
-                                    submitItem.answerText(),
-                                    submitItem.answerJson(),
-                                    submitItem.selectedOptions(),
-                                    submitItem.attachmentPath()
-                            )
+                    AnswerPayloadNormalizer.normalize(
+                            eq.getQuestionId(),
+                            questionType,
+                            effective.answerText(),
+                            effective.answerJson(),
+                            effective.selectedOptions(),
+                            effective.attachmentPath()
+                    )
             );
 
             ExamAnswer answer = new ExamAnswer();
@@ -609,8 +649,10 @@ public class ExamService {
         }
         examSubmissionRepository.save(submission);
 
-        if (!hasManualGrading && canStudentSeeScore(exam, submission)) {
-            upsertScoreRecord(exam, submission, autoScore);
+        // 成绩记录在成绩结案（GRADED）时写入，不再依赖可见性；可见性只在读取端收敛。
+        if (submission.getStatus() == ExamSubmissionStatus.GRADED) {
+            Double finalScore = submission.getTotalScore();
+            upsertScoreRecord(exam, submission, finalScore == null ? 0D : finalScore);
         }
 
         // 10. Return result：成绩不可见时不下发任何分数，前端以 resultAvailable 判定。
@@ -621,7 +663,73 @@ public class ExamService {
         result.put("resultAvailable", scoreVisible);
         result.put("autoScore", scoreVisible ? autoScore : null);
         result.put("totalScore", scoreVisible ? autoScore : null);
+        result.put("gradingInProgress",
+                submission.getStatus() == ExamSubmissionStatus.SUBMITTED
+                        || submission.getStatus() == ExamSubmissionStatus.AUTO_SUBMITTED);
         result.put("hasManualGrading", hasManualGrading);
+        return result;
+    }
+
+    /**
+     * 保存考试草稿。
+     *
+     * <p>只写 {@code exam_answer.answer_json}，不评分、不改提交状态、不写成绩记录。
+     * 提交行悲观写锁与交卷串行；同请求内按 questionId 去重（后写覆盖前写）。</p>
+     *
+     * @param currentUser 当前学生
+     * @param examId      考试 id
+     * @param request     作答内容，与交卷请求体一致
+     * @return {@code submissionId / savedAt / savedCount}
+     */
+    @Transactional
+    public Object saveDraft(CurrentUser currentUser, Long examId, ExamRequests.SubmitExamRequest request) {
+        Exam exam = examRepository.findById(examId)
+                .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
+        boolean isMember = classMemberRepository
+                .findByClassIdAndStudentUserId(exam.getClassId(), currentUser.id())
+                .isPresent();
+        if (!isMember) {
+            throw new BusinessException(40300, "无权限保存草稿");
+        }
+        ExamSubmission submission = examSubmissionRepository
+                .findByExamIdAndStudentIdForUpdate(examId, currentUser.id())
+                .orElseThrow(() -> new BusinessException(40400, "未找到考试提交记录"));
+        if (submission.getStatus() != ExamSubmissionStatus.IN_PROGRESS) {
+            throw new BusinessException(40000, "考试已提交，无法保存草稿");
+        }
+        OffsetDateTime now = OffsetDateTime.now();
+        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt().plusSeconds(120))) {
+            throw new BusinessException(40000, "考试已结束，无法保存草稿");
+        }
+
+        Set<Long> examQuestionIds = examQuestionRepository.findByExamIdOrderBySortOrder(examId).stream()
+                .map(ExamQuestion::getQuestionId)
+                .collect(Collectors.toSet());
+
+        Map<Long, ExamRequests.SubmitAnswerItem> deduped = new LinkedHashMap<>();
+        if (request.answers() != null) {
+            for (ExamRequests.SubmitAnswerItem item : request.answers()) {
+                if (!examQuestionIds.contains(item.questionId())) {
+                    throw new BusinessException(40000, "题目不属于该考试");
+                }
+                deduped.put(item.questionId(), item);
+            }
+        }
+
+        for (Map.Entry<Long, ExamRequests.SubmitAnswerItem> entry : deduped.entrySet()) {
+            ExamAnswer answer = examAnswerRepository
+                    .findByExamSubmissionIdAndQuestionId(submission.getId(), entry.getKey())
+                    .orElseGet(ExamAnswer::new);
+            answer.setExamSubmissionId(submission.getId());
+            answer.setQuestionId(entry.getKey());
+            answer.setAnswerJson(resolveAnswerJson(entry.getValue()));
+            examAnswerRepository.save(answer);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("submissionId", submission.getId());
+        result.put("savedAt", now);
+        result.put("savedCount", deduped.size());
         return result;
     }
 
@@ -920,17 +1028,22 @@ public class ExamService {
         return recomputeSubmissionAfterTeacherConfirmation(exam, submission);
     }
 
+    private boolean isFinal(ExamSubmission submission) {
+        return submission != null && submission.getStatus() == ExamSubmissionStatus.GRADED;
+    }
+
     private boolean canStudentSeeScore(Exam exam, ExamSubmission submission) {
-        if (submission == null) {
+        // 只有最终成绩（GRADED）才可能对学生公开；未批完一律不可见。
+        if (!isFinal(submission)) {
             return false;
         }
         ScoreVisibilityMode mode = exam.getScoreVisibilityMode() == null
                 ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM
                 : exam.getScoreVisibilityMode();
         return switch (mode) {
-            case IMMEDIATE -> true;
-            case AFTER_TEACHER_CONFIRM -> submission.getStatus() == ExamSubmissionStatus.GRADED;
-            case AFTER_DEADLINE -> exam.getEndAt() != null && !OffsetDateTime.now().isBefore(exam.getEndAt());
+            case IMMEDIATE, AFTER_TEACHER_CONFIRM -> true;
+            case AFTER_DEADLINE -> exam.getEndAt() != null
+                    && !OffsetDateTime.now().isBefore(exam.getEndAt());
             case MANUAL_RELEASE -> exam.isScoreReleased();
         };
     }
@@ -1071,6 +1184,116 @@ public class ExamService {
             return writeJson(item.selectedOptions());
         }
         return null;
+    }
+
+    /**
+     * 把已持久化草稿（answer_json）解码为交卷用的答题条目。
+     *
+     * <p>草稿写入端保存的是 {@code buildAnswerPayloadJson} 的 {@code {kind:...}} 结构或
+     * 旧版选项数组，评分侧依赖 {@code answerText} 与 {@code selectedOptions}，
+     * 因此这里同时还原这两个字段，{@code answerJson} 原样回填草稿 JSON。</p>
+     *
+     * @param questionId   题目 id
+     * @param questionType 快照题型（当前解码只依赖 kind，不按题型猜测）
+     * @param draftJson    草稿 answer_json，可为 null
+     * @return 交卷条目；草稿为空时返回全空条目，按未作答评分
+     */
+    private ExamRequests.SubmitAnswerItem resolveDraftAnswerItem(Long questionId, String questionType, String draftJson) {
+        if (draftJson == null || draftJson.isBlank()) {
+            return new ExamRequests.SubmitAnswerItem(questionId, List.of(), null, null, null);
+        }
+        JsonNode node = readJsonNode(draftJson);
+        if (node == null) {
+            return new ExamRequests.SubmitAnswerItem(questionId, List.of(), draftJson, draftJson, null);
+        }
+        if (node.isArray()) {
+            List<String> options = new ArrayList<>();
+            node.forEach(item -> options.add(item.asText()));
+            return new ExamRequests.SubmitAnswerItem(questionId, options, String.join(",", options),
+                    draftJson, null);
+        }
+        String kind = jsonText(node, "kind");
+        if (kind == null) {
+            return new ExamRequests.SubmitAnswerItem(questionId, List.of(), jsonText(node, "text"), draftJson, null);
+        }
+        return switch (kind) {
+            case "single" -> {
+                String key = jsonText(node, "selectedKey");
+                yield new ExamRequests.SubmitAnswerItem(questionId,
+                        key == null ? List.of() : List.of(key), key, draftJson, null);
+            }
+            case "multiple" -> {
+                List<String> options = readStringArray(node, "selectedKeys");
+                yield new ExamRequests.SubmitAnswerItem(questionId, options,
+                        String.join(",", options), draftJson, null);
+            }
+            case "judge" -> {
+                String value = jsonText(node, "value");
+                yield new ExamRequests.SubmitAnswerItem(questionId,
+                        value == null ? List.of() : List.of(value), value, draftJson, null);
+            }
+            case "fill" -> {
+                String text = joinBlankAnswers(node);
+                yield new ExamRequests.SubmitAnswerItem(questionId, List.of(), text, draftJson, null);
+            }
+            case "code" -> {
+                String code = jsonText(node, "code");
+                yield new ExamRequests.SubmitAnswerItem(questionId, List.of(), code, draftJson, null);
+            }
+            default -> {
+                String text = jsonText(node, "text");
+                yield new ExamRequests.SubmitAnswerItem(questionId, List.of(), text, draftJson, null);
+            }
+        };
+    }
+
+    /**
+     * 读取 JSON 对象中的字符串数组字段（多选草稿专用），非数组返回空列表并过滤空串。
+     */
+    private List<String> readStringArray(JsonNode node, String field) {
+        if (node == null) {
+            return List.of();
+        }
+        JsonNode array = node.get(field);
+        if (array == null || !array.isArray()) {
+            return List.of();
+        }
+        List<String> values = new ArrayList<>();
+        for (JsonNode element : array) {
+            String text = element.asText();
+            if (text != null && !text.isBlank()) {
+                values.add(text);
+            }
+        }
+        return values;
+    }
+
+    /**
+     * 拼接填空题草稿的作答文本（与前端 {@code buildCompatibilityAnswerText} 的空位语义一致）：
+     * 按 {@code index} 升序、跳过 {@code index <= 0}、逐项 trim 后保留空串用 {@code ,} 拼接。
+     *
+     * @return 无 {@code blanks} 数组时返回 null
+     */
+    private String joinBlankAnswers(JsonNode node) {
+        if (node == null) {
+            return null;
+        }
+        JsonNode blanks = node.get("blanks");
+        if (blanks == null || !blanks.isArray()) {
+            return null;
+        }
+        List<Map.Entry<Integer, String>> entries = new ArrayList<>();
+        for (JsonNode blank : blanks) {
+            int index = blank.path("index").asInt(0);
+            if (index <= 0) {
+                continue;
+            }
+            JsonNode answerNode = blank.get("answer");
+            String answer = answerNode == null || answerNode.isNull() ? "" : answerNode.asText();
+            entries.add(Map.entry(index, answer.trim()));
+        }
+        entries.sort(Map.Entry.comparingByKey());
+        return entries.stream().map(Map.Entry::getValue).collect(Collectors.joining(","));
     }
 
     private String mapString(Object value) {

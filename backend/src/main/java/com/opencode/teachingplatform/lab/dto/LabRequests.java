@@ -100,8 +100,14 @@ public final class LabRequests {
     ) {
     }
 
+    /**
+     * 学生保存单步答案入参。
+     *
+     * <p>{@code answerText} 不再强制非空：图片作答题型的文字可以为空，
+     * 文字与图片同时为空表示清空答案；是否允许图片由服务端按题型判定。</p>
+     */
     public record SaveStepAnswerRequest(
-            @NotBlank String answerText,
+            String answerText,
             String answerPayloadJson
     ) {
     }

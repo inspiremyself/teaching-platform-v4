@@ -231,29 +231,38 @@
           <div class="result-summary-card__label">状态</div>
           <div class="result-summary-card__value">{{ statusLabel(detail.submissionStatus) }}</div>
           </article>
-        <article class="result-summary-card">
-          <div class="result-summary-card__label">自动评分</div>
-          <div class="result-summary-card__value">{{ canShowResult ? displayScore(detail.autoScore) : '-' }}</div>
-          </article>
-        <article class="result-summary-card">
-          <div class="result-summary-card__label">教师评分</div>
-          <div class="result-summary-card__value">{{ canShowResult ? displayScore(detail.manualScore) : '-' }}</div>
-          </article>
-        <article class="result-summary-card result-summary-card--accent">
-          <div class="result-summary-card__label">总分</div>
-          <div class="result-summary-card__value">{{ totalScoreText }}</div>
-          </article>
+        <template v-if="resultMode === 'result'">
+          <article class="result-summary-card">
+            <div class="result-summary-card__label">自动评分</div>
+            <div class="result-summary-card__value">{{ canShowResult ? displayScore(detail.autoScore) : '-' }}</div>
+            </article>
+          <article class="result-summary-card">
+            <div class="result-summary-card__label">教师评分</div>
+            <div class="result-summary-card__value">{{ canShowResult ? displayScore(detail.manualScore) : '-' }}</div>
+            </article>
+          <article class="result-summary-card result-summary-card--accent">
+            <div class="result-summary-card__label">总分</div>
+            <div class="result-summary-card__value">{{ totalScoreText }}</div>
+            </article>
+        </template>
       </section>
 
       <el-alert
-        v-if="showPendingAlert"
-        title="主观题仍在批改中，当前结果可能不是最终成绩。"
+        v-if="resultMode === 'grading'"
+        title="主观题阅卷中，成绩暂不公开"
+        type="info"
+        :closable="false"
+        class="result-alert"
+      />
+      <el-alert
+        v-else-if="resultMode === 'pending'"
+        title="成绩待发布"
         type="info"
         :closable="false"
         class="result-alert"
       />
 
-      <div class="result-grid">
+      <div v-if="resultMode === 'result'" class="result-grid">
         <main class="result-main">
           <article v-for="(question, index) in questions" :key="question.questionId" class="result-question-card">
             <div class="result-question-card__header">
@@ -309,7 +318,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import QuestionAnswerShell from '../components/lab-answer/QuestionAnswerShell.vue'
@@ -319,7 +328,7 @@ import TextAnswerEditor from '../components/lab-answer/TextAnswerEditor.vue'
 import CodeLabAnswerEditor from '../components/lab-answer/CodeLabAnswerEditor.vue'
 import { buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText } from '../components/lab-answer/answerPayload'
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from '../components/lab-answer/types'
-import { getExamDetail, startExam, submitExam } from '@/api/exams'
+import { getExamDetail, startExam, submitExam, saveExamDraft } from '@/api/exams'
 import { useAuthStore } from '@/stores/auth'
 import { shuffleExamQuestions } from '@/utils/examShuffle'
 import type { ExamAnswerDetail, ExamDetail, ExamQuestionView } from '@/types/exam'
@@ -342,6 +351,12 @@ const resultAnswerMap = ref<Record<number, ExamAnswerDetail>>({})
 
 let timer: number | undefined
 
+// 草稿保存：1500ms 防抖 + 串行队列，避免同题并发覆盖与请求乱序
+const DRAFT_DEBOUNCE_MS = 1500
+let draftTimer: number | undefined
+let draftQueue: Promise<boolean> = Promise.resolve(true)
+let draftErrorNotified = false
+
 const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null)
 const currentQuestionDraft = computed(() => (currentQuestion.value ? ensureDraft(currentQuestion.value) : null))
 const currentQuestionType = computed(() => normalizeStudentAnswerQuestionType(qType(currentQuestion.value)))
@@ -352,12 +367,17 @@ const progressPercent = computed(() => {
   if (!questions.value.length) return 0
   return Math.round((answeredCount.value / questions.value.length) * 100)
 })
-const showPendingAlert = computed(() => {
-  const status = detail.value?.submissionStatus
-  return status === 'SUBMITTED' || status === 'AUTO_SUBMITTED'
-})
 /** 是否允许展示成绩：只以后端 resultAvailable 为准，避免前端凭状态值猜测可见性。 */
 const canShowResult = computed(() => detail.value?.resultAvailable === true)
+/**
+ * 结果页三态：已出分 / 主观题阅卷中 / 成绩待发布。
+ * 后两种都不渲染分数字卡、题目结果与解析，防止不完整分数提前泄露。
+ */
+const resultMode = computed<'result' | 'grading' | 'pending'>(() => {
+  if (detail.value?.resultAvailable === true) return 'result'
+  if (detail.value?.gradingInProgress === true) return 'grading'
+  return 'pending'
+})
 /** 总分卡文案：成绩未发布但答卷已提交/已批改时，明确提示等待教师发布。 */
 const totalScoreText = computed(() => {
   if (canShowResult.value) return displayScore(detail.value?.totalScore)
@@ -463,17 +483,39 @@ function resolveQuestionOptions(question?: ExamQuestionView | null): StudentChoi
   }))
 }
 
+function normalizeJudgeSavedValue(raw: string): 'TRUE' | 'FALSE' | null {
+  const normalized = raw.trim().toUpperCase()
+  if (['TRUE', 'T', '正确', 'YES', 'Y', '1', 'A'].includes(normalized)) return 'TRUE'
+  if (['FALSE', 'F', '错误', 'NO', 'N', '0', 'B'].includes(normalized)) return 'FALSE'
+  return null
+}
+
 function normalizeSavedAnswer(question: ExamQuestionView): LabAnswerDraft {
   const saved = question.answer ?? question.studentAnswer ?? question.answerJson ?? ''
   if (!String(saved ?? '').trim()) {
     return hydrateDraftFromAnswerText(toStudentLabStepItem(question), '')
   }
 
-  if (typeof saved === 'string' && saved.trim().startsWith('{')) {
+  if (typeof saved === 'string' && (saved.trim().startsWith('{') || saved.trim().startsWith('['))) {
     try {
       const parsed = JSON.parse(saved) as unknown
-      if (parsed && typeof parsed === 'object' && 'kind' in (parsed as Record<string, unknown>)) {
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && 'kind' in (parsed as Record<string, unknown>)) {
         return parsed as LabAnswerDraft
+      }
+      if (Array.isArray(parsed)) {
+        // 旧版草稿只保存选项数组；按题型还原，空数组表示已清空的多选
+        const values = parsed.map(item => String(item)).filter(Boolean)
+        const type = normalizeStudentAnswerQuestionType(qType(question))
+        if (type === 'SINGLE_CHOICE') {
+          return { kind: 'single', selectedKey: values[0] ?? null }
+        }
+        if (type === 'MULTIPLE_CHOICE') {
+          return { kind: 'multiple', selectedKeys: values }
+        }
+        if (type === 'TRUE_FALSE') {
+          return { kind: 'judge', value: values.length ? normalizeJudgeSavedValue(values[0]) : null }
+        }
+        return hydrateDraftFromAnswerText(toStudentLabStepItem(question), values.join(','))
       }
     } catch {
       // ignore invalid structured payload and fallback to legacy parsing
@@ -499,7 +541,65 @@ function updateCurrentQuestionDraft(value: LabAnswerDraft) {
     ...answers.value,
     [currentQuestion.value.questionId]: value,
   }
+  // 唯一用户编辑入口：写入答案后调度草稿保存，初始化回填不会触发
+  scheduleDraftSave()
 }
+
+/** 组装交卷 / 草稿共用的作答载荷。 */
+function buildSubmitPayload() {
+  return {
+    answers: questions.value.map(question => {
+      const draft = ensureDraft(question)
+      return {
+        questionId: question.questionId,
+        questionType: normalizeStudentAnswerQuestionType(qType(question)),
+        answerText: buildCompatibilityAnswerText(draft),
+        answerJson: buildAnswerPayloadJson(draft),
+        selectedOptions: selectedOptionsOf(draft),
+      }
+    }),
+  }
+}
+
+/** 立即保存草稿；返回是否成功。失败只提示一次，不阻断继续作答。 */
+function flushDraft(): Promise<boolean> {
+  if (draftTimer) {
+    window.clearTimeout(draftTimer)
+    draftTimer = undefined
+  }
+  if (state.value !== 'B' || detail.value?.submissionStatus !== 'IN_PROGRESS') {
+    return Promise.resolve(true)
+  }
+  const task = () => saveExamDraft(examId, buildSubmitPayload())
+    .then(() => {
+      draftErrorNotified = false
+      return true
+    })
+    .catch(() => {
+      if (!draftErrorNotified) {
+        draftErrorNotified = true
+        ElMessage.warning('草稿保存失败，答题内容仍保留在本页，请检查网络')
+      }
+      return false
+    })
+  const next = draftQueue.then(task, task)
+  draftQueue = next
+  return next
+}
+
+function scheduleDraftSave() {
+  if (state.value !== 'B' || detail.value?.submissionStatus !== 'IN_PROGRESS') return
+  if (draftTimer) window.clearTimeout(draftTimer)
+  draftTimer = window.setTimeout(() => {
+    draftTimer = undefined
+    void flushDraft()
+  }, DRAFT_DEBOUNCE_MS)
+}
+
+// 切题时立即落盘，避免切换后草稿停留在上一题的旧内容
+watch(currentIndex, () => {
+  void flushDraft()
+})
 
 function selectedOptionsOf(draft: LabAnswerDraft): string[] | undefined {
   if (draft.kind === 'multiple') return draft.selectedKeys
@@ -696,19 +796,9 @@ async function doSubmit() {
   submitting.value = true
   stopTimer()
   try {
-    const payload = {
-      answers: questions.value.map(question => {
-        const draft = ensureDraft(question)
-        return {
-          questionId: question.questionId,
-          questionType: normalizeStudentAnswerQuestionType(qType(question)),
-          answerText: buildCompatibilityAnswerText(draft),
-          answerJson: buildAnswerPayloadJson(draft),
-          selectedOptions: selectedOptionsOf(draft),
-        }
-      }),
-    }
-    await submitExam(examId, payload)
+    // 交卷前先 flush 草稿，保证后台自动交卷与手动交卷都使用最新草稿；失败不阻断交卷
+    await flushDraft()
+    await submitExam(examId, buildSubmitPayload())
     ElMessage.success('交卷成功')
     await loadExam()
   } catch (error) {
@@ -776,20 +866,32 @@ async function loadExam() {
       startTimer(data.deadlineAt)
     }
     state.value = 'B'
-  } else if (data.submissionStatus === 'GRADED' || data.resultAvailable) {
-    state.value = 'C'
-  } else if (data.submissionStatus === 'SUBMITTED' || data.submissionStatus === 'AUTO_SUBMITTED') {
+  } else if (data.submissionStatus) {
+    // SUBMITTED / AUTO_SUBMITTED / GRADED 统一进结果页，由 resultMode 决定展示哪一态
     state.value = 'C'
   } else {
     state.value = 'A'
   }
 }
 
+/** 页面隐藏（切后台 / 锁屏）时立即落盘；关闭标签页浏览器不保证异步请求，故不注册 beforeunload 保存。 */
+function onVisibilityChange() {
+  if (document.visibilityState === 'hidden') {
+    void flushDraft()
+  }
+}
+
 onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange)
   void loadExam()
 })
 
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  if (draftTimer) {
+    window.clearTimeout(draftTimer)
+    draftTimer = undefined
+  }
   stopTimer()
 })
 </script>

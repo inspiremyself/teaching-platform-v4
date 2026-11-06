@@ -345,6 +345,51 @@ class LabServiceTests {
     }
 
     @Test
+    void saveAnswerAcceptsEmptyAnswerTextAndClearsAnswer() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+        labService.saveAnswer(studentUser(), labId, stepId,
+                new LabRequests.SaveStepAnswerRequest("先写点内容", "{\"kind\":\"text\",\"text\":\"先写点内容\"}"));
+
+        // 清空：answerText 为空且 payload 无图片，作为清空动作正常落盘
+        assertThatCode(() -> labService.saveAnswer(studentUser(), labId, stepId,
+                new LabRequests.SaveStepAnswerRequest("", "{\"kind\":\"text\",\"text\":\"\"}")))
+                .doesNotThrowAnyException();
+
+        Map<String, Object> detail = labService.getStudentLabDetail(studentUser(), labId);
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) detail.get("items");
+        assertThat(items.getFirst().get("answerText")).isEqualTo("");
+    }
+
+    @Test
+    void saveAnswerAcceptsImageOnlyAnswerWithoutText() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "shot1.png", "image/png", new byte[] {1, 2, 3});
+        Map<String, Object> uploaded = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
+        String path = String.valueOf(uploaded.get("path"));
+
+        assertThatCode(() -> labService.saveAnswer(studentUser(), labId, stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "",
+                        "{\"kind\":\"text\",\"text\":\"\",\"images\":[{\"path\":\"" + path
+                                + "\",\"name\":\"shot1.png\",\"contentType\":\"image/png\",\"size\":3}]}")))
+                .doesNotThrowAnyException();
+
+        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, studentUser().id()).orElseThrow();
+        LabStepAnswer answer = labStepAnswerRepository
+                .findByLabSubmissionIdAndLabStepId(submission.getId(), stepId).orElseThrow();
+        assertThat(answer.getAnswerText()).isEqualTo("");
+        assertThat(answer.getAnswerJson()).contains(path);
+    }
+
+    @Test
     void previewAnswerImageAllowsOwnerStudentAndClassTeacher() {
         Long classId = seedClass(teacherUser().id());
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());

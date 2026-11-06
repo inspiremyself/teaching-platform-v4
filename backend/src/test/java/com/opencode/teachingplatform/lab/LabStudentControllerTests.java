@@ -102,6 +102,60 @@ class LabStudentControllerTests {
     }
 
     @Test
+    void savingAnswerAcceptsEmptyAnswerText() throws Exception {
+        when(labService.saveAnswer(any(CurrentUser.class), anyLong(), anyLong(),
+                argThat(request -> request != null && "".equals(request.answerText()))))
+                .thenReturn(Map.of(
+                        "submissionStatus", "SAVED",
+                        "answerId", 11
+                ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            // 清空答案：answerText 为空字符串必须通过 DTO 校验，由 service 决定落盘语义
+            mockMvc.perform(post("/api/v1/student/labs/{id}/answers/{stepId}", 1L, 2L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "answerText": ""
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionStatus").value("SAVED"))
+                    .andExpect(jsonPath("$.data.answerId").value(11));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void savingAnswerAcceptsEmptyPayload() throws Exception {
+        when(labService.saveAnswer(any(CurrentUser.class), anyLong(), anyLong(),
+                argThat(request -> request != null
+                        && request.answerText() == null
+                        && request.answerPayloadJson() == null)))
+                .thenReturn(Map.of(
+                        "submissionStatus", "SAVED",
+                        "answerId", 12
+                ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            // 仅图片作答题目的 payload 由前端携带图片字段，文字与 payload 均为空时也必须放行到 service
+            mockMvc.perform(post("/api/v1/student/labs/{id}/answers/{stepId}", 1L, 2L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionStatus").value("SAVED"))
+                    .andExpect(jsonPath("$.data.answerId").value(12));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void studentLabDetailDoesNotExposeAutoJudgeDetail() throws Exception {
         Map<String, Object> step = new LinkedHashMap<>();
         step.put("id", 2);
