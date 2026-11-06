@@ -23,7 +23,8 @@ services:
       DB_NAME: teaching_platform
       DB_USER: root
       DB_PASS: 123456
-      JWT_SECRET: replace-with-32-char-secret-1234
+      # 必填：未设置时 compose 直接报错退出，避免静默使用仓库内公开密钥
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       FILE_STORAGE_ROOT: /app/data/files
       SERVER_PORT: 8080
     ports:

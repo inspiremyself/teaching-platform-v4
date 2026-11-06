@@ -73,6 +73,13 @@ docker compose up --build -d
 ./scripts/path-a/logs.sh backend
 ```
 
+### 3.1 JWT 密钥（`JWT_SECRET`）
+
+- **必填**：后端启动时校验 `app.jwt-secret`，为空或 UTF-8 字节长度不足 32 会直接启动失败（错误信息指向 `app.jwt-secret`，不会打印密钥值）。`docker-compose.yml` 使用 `${JWT_SECRET:?JWT_SECRET is required}`，未设置时 Compose 直接报错退出。
+- **本地开发**：通过 `./scripts/path-a/up.sh` 启动时，若未设置 `JWT_SECRET`，脚本会用 `openssl rand -hex 32` 生成一个临时密钥并注入本次 Compose 启动，**不落盘、仅限本机开发**。直接执行 `docker compose up` 不会自动生成。
+- **生产 / 共享环境**：必须显式注入 `JWT_SECRET`（≥ 32 字节随机串），禁止使用仓库或脚本生成的开发密钥。
+- **轮换影响**：更换 `JWT_SECRET` 后，所有已签发 token 立即失效，用户需重新登录；本期不做双密钥灰度轮换。
+
 ---
 
 ## 4. 健康检查

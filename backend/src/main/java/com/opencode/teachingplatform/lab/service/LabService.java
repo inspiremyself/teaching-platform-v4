@@ -1165,8 +1165,16 @@ public class LabService {
         if (lab.getStatus() == ActivityStatus.CLOSED) {
             throw new BusinessException(40000, "实验已关闭，不能提交");
         }
-        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, currentUser.id())
+        // 先加行锁再判状态：并发提交时后到事务阻塞，待前一事务提交后读到 SUBMITTED 并被拒绝。
+        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentIdForUpdate(labId, currentUser.id())
                 .orElseThrow(() -> new BusinessException(40000, "请先保存实验答案"));
+        // 状态判定必须早于任何写操作（小结、状态、提交时间、自动评分、行为指标）。
+        if (submission.getSubmitStatus() == SubmissionStatus.SUBMITTED) {
+            throw new BusinessException(40000, "实验已提交，不能重复提交");
+        }
+        if (submission.getSubmitStatus() == SubmissionStatus.GRADED) {
+            throw new BusinessException(40000, "实验已批改，如需修改请联系教师打回");
+        }
         submission.setSummaryText(request == null ? "" : defaultString(request.summaryText()));
         if (lab.isSummaryRequired() && submission.getSummaryText().isBlank()) {
             throw new BusinessException(40000, "实验小结不能为空");

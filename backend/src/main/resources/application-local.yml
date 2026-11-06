@@ -1,3 +1,7 @@
+app:
+  # 本地开发专用默认密钥（仅 local profile 生效），生产必须由 JWT_SECRET 显式注入
+  jwt-secret: ${JWT_SECRET:local-dev-only-jwt-secret-32bytes-0001}
+
 logging:
   level:
     org.springframework.security: INFO

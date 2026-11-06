@@ -1,7 +1,6 @@
 package com.opencode.teachingplatform.analysis.service;
 
-import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
-import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
+import com.opencode.teachingplatform.analysis.service.StudentScoreVisibilityResolver.VisibleScore;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.enums.BusinessType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,11 +20,11 @@ import java.util.TreeMap;
 public class AnalysisService {
 
     private final JdbcTemplate jdbcTemplate;
-    private final ScoreRecordRepository scoreRecordRepository;
+    private final StudentScoreVisibilityResolver visibilityResolver;
 
-    public AnalysisService(JdbcTemplate jdbcTemplate, ScoreRecordRepository scoreRecordRepository) {
+    public AnalysisService(JdbcTemplate jdbcTemplate, StudentScoreVisibilityResolver visibilityResolver) {
         this.jdbcTemplate = jdbcTemplate;
-        this.scoreRecordRepository = scoreRecordRepository;
+        this.visibilityResolver = visibilityResolver;
     }
 
     public Map<String, Object> getDashboard(CurrentUser teacher) {
@@ -149,38 +148,19 @@ public class AnalysisService {
     }
 
     public List<Map<String, Object>> getMyScores(CurrentUser student) {
-        List<ScoreRecord> records = scoreRecordRepository.findByStudentId(student.id());
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (ScoreRecord r : records) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("id", r.getId());
-            item.put("businessType", r.getBusinessType().name());
-            item.put("businessName", lookupBusinessName(r.getBusinessType(), r.getBusinessId()));
-            item.put("score", r.getScore());
-            item.put("gradedAt", r.getGradedAt());
-            result.add(item);
-        }
-        return result;
+        return visibilityResolver.resolve(student.id()).stream()
+                .map(this::toScoreItem)
+                .toList();
     }
 
     public Map<String, Object> getMyScoreOverview(CurrentUser student) {
-        List<Map<String, Object>> records = getMyScores(student);
+        List<VisibleScore> records = visibilityResolver.resolve(student.id());
 
-        Double avgScore = jdbcTemplate.queryForObject(
-                "SELECT AVG(score) FROM score_record WHERE student_id = ?",
-                Double.class,
-                student.id()
-        );
-        Double maxScore = jdbcTemplate.queryForObject(
-                "SELECT MAX(score) FROM score_record WHERE student_id = ?",
-                Double.class,
-                student.id()
-        );
-        Integer completedItems = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM score_record WHERE student_id = ?",
-                Integer.class,
-                student.id()
-        );
+        double averageScore = records.isEmpty() ? 0.0 : roundOne(
+                records.stream().mapToDouble(VisibleScore::score).average().orElse(0.0));
+        double highestScore = records.isEmpty() ? 0.0 : roundOne(
+                records.stream().mapToDouble(VisibleScore::score).max().orElse(0.0));
+        int completedItems = records.size();
         int totalItems = count(
                 "SELECT COUNT(*) FROM t_experiment e JOIN class_member cm ON cm.class_id = e.class_id " +
                         "WHERE cm.student_user_id = ? AND e.status = 'PUBLISHED'",
@@ -195,28 +175,32 @@ public class AnalysisService {
                 student.id()
         );
 
-        List<Map<String, Object>> groupedScores = jdbcTemplate.query(
-                "SELECT business_type, ROUND(AVG(score), 1) AS avg_score, COUNT(*) AS score_count " +
-                        "FROM score_record WHERE student_id = ? GROUP BY business_type ORDER BY business_type",
-                (rs, rowNum) -> {
-                    String businessType = rs.getString("business_type");
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("businessType", businessType);
-                    row.put("label", businessTypeLabel(businessType));
-                    row.put("avgScore", rs.getDouble("avg_score"));
-                    row.put("scoreCount", rs.getInt("score_count"));
-                    return row;
-                },
-                student.id()
-        );
+        // 按业务类型英文名升序聚合（EXAM → HOMEWORK → LAB），只包含可见成绩
+        Map<String, List<Double>> scoresByType = new TreeMap<>();
+        for (VisibleScore record : records) {
+            scoresByType.computeIfAbsent(record.businessType().name(), ignored -> new ArrayList<>())
+                    .add(record.score());
+        }
+        List<Map<String, Object>> groupedScores = new ArrayList<>();
+        scoresByType.forEach((businessType, scores) -> {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("businessType", businessType);
+            row.put("label", businessTypeLabel(businessType));
+            row.put("avgScore", roundOne(scores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0)));
+            row.put("scoreCount", scores.size());
+            groupedScores.add(row);
+        });
 
-        List<Map<String, Object>> recentRecords = records.stream().limit(8).toList();
+        List<Map<String, Object>> recentRecords = records.stream()
+                .limit(8)
+                .map(this::toScoreItem)
+                .toList();
 
         List<Map<String, Object>> summaryCards = List.of(
-                summaryCard("averageScore", "平均成绩", avgScore != null ? roundOne(avgScore) : 0.0, "来自当前学生所有已评分记录"),
-                summaryCard("completedItems", "已评分项目", completedItems != null ? completedItems : 0, "已产生分数的实验、作业与考试数量"),
-                summaryCard("highestScore", "最高分", maxScore != null ? roundOne(maxScore) : 0.0, "当前最高单项得分"),
-                summaryCard("completionRate", "完成进度", totalItems > 0 ? roundOne(((completedItems != null ? completedItems : 0) * 100.0) / totalItems) : 0.0, "按所有关联学习任务估算的完成率")
+                summaryCard("averageScore", "平均成绩", averageScore, "来自当前学生所有已评分记录"),
+                summaryCard("completedItems", "已评分项目", completedItems, "已产生分数的实验、作业与考试数量"),
+                summaryCard("highestScore", "最高分", highestScore, "当前最高单项得分"),
+                summaryCard("completionRate", "完成进度", totalItems > 0 ? roundOne(completedItems * 100.0 / totalItems) : 0.0, "按所有关联学习任务估算的完成率")
         );
 
         List<Map<String, Object>> feedbackNotes = new ArrayList<>();
@@ -236,7 +220,7 @@ public class AnalysisService {
         result.put("groupedScores", groupedScores);
         result.put("recentRecords", recentRecords);
         result.put("feedbackNotes", feedbackNotes);
-        result.put("completedItems", completedItems != null ? completedItems : 0);
+        result.put("completedItems", completedItems);
         result.put("totalItems", totalItems);
         return result;
     }
@@ -265,12 +249,12 @@ public class AnalysisService {
                 studentId);
         int pendingTaskCount = pendingLabCount + pendingHomeworkCount + pendingExamCount;
 
-        Double avgScore = jdbcTemplate.queryForObject(
-                "SELECT AVG(score) FROM score_record WHERE student_id = ?",
-                Double.class,
-                studentId
-        );
-        double averageScore = avgScore != null ? Math.round(avgScore * 10.0) / 10.0 : 0.0;
+        // 学生端平均值与最近反馈统一走可见性解析器，只统计当前学生此刻可见的成绩
+        List<VisibleScore> visibleScores = visibilityResolver.resolve(studentId);
+        // 一次性构建最近反馈，供“最近反馈”与“我的成绩”角标复用，避免重复查询
+        List<Map<String, Object>> recentFeedback = buildRecentFeedback(visibleScores);
+        double averageScore = visibleScores.isEmpty() ? 0.0 : roundOne(
+                visibleScores.stream().mapToDouble(VisibleScore::score).average().orElse(0.0));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("summaryCards", List.of(
@@ -279,7 +263,7 @@ public class AnalysisService {
                 summaryCard("averageScore", "最近平均成绩", averageScore, "来自已评分记录")
         ));
         result.put("upcomingTasks", buildStudentUpcomingTasks(studentId));
-        result.put("recentFeedback", buildStudentRecentFeedback(studentId));
+        result.put("recentFeedback", recentFeedback);
         result.put("recentMaterials", jdbcTemplate.query(
                 "SELECT id, title, category, file_name FROM course_material WHERE visibility = 'ALL' ORDER BY updated_at DESC LIMIT 4",
                 (rs, rowNum) -> Map.<String, Object>of(
@@ -293,22 +277,22 @@ public class AnalysisService {
                 quickLink("我的实验", "/student/labs", pendingLabCount),
                 quickLink("我的作业", "/student/homeworks", pendingHomeworkCount),
                 quickLink("我的考试", "/student/exams", pendingExamCount),
-                quickLink("我的成绩", "/student/scores", buildStudentRecentFeedback(studentId).size())
+                quickLink("我的成绩", "/student/scores", recentFeedback.size())
         ));
         return result;
     }
 
-    private String lookupBusinessName(BusinessType type, Long businessId) {
-        String sql = switch (type) {
-            case LAB -> "SELECT experiment_name FROM t_experiment WHERE experiment_id = ?";
-            case HOMEWORK -> "SELECT title FROM homework WHERE id = ?";
-            case EXAM -> "SELECT title FROM exam WHERE id = ?";
-        };
-        try {
-            return jdbcTemplate.queryForObject(sql, String.class, businessId);
-        } catch (Exception e) {
-            return "未知";
-        }
+    /**
+     * 把可见成绩转换为成绩列表项，字段与顺序保持既有契约。
+     */
+    private Map<String, Object> toScoreItem(VisibleScore record) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("id", record.id());
+        item.put("businessType", record.businessType().name());
+        item.put("businessName", record.businessName());
+        item.put("score", record.score());
+        item.put("gradedAt", record.gradedAt());
+        return item;
     }
 
     private List<Map<String, Object>> loadScoreTrendLast7Days() {
@@ -463,19 +447,23 @@ public class AnalysisService {
         return task;
     }
 
-    private List<Map<String, Object>> buildStudentRecentFeedback(Long studentId) {
-        return jdbcTemplate.query(
-                "SELECT business_type, business_id, score, graded_at FROM score_record WHERE student_id = ? ORDER BY graded_at DESC LIMIT 4",
-                (rs, rowNum) -> {
-                    BusinessType type = BusinessType.valueOf(rs.getString("business_type"));
+    /**
+     * 从可见成绩中构建最近反馈：按 {@code gradedAt DESC, id DESC} 取前 4 条。
+     */
+    private List<Map<String, Object>> buildRecentFeedback(List<VisibleScore> visibleScores) {
+        return visibleScores.stream()
+                .sorted(Comparator
+                        .comparing(VisibleScore::gradedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(VisibleScore::id, Comparator.reverseOrder()))
+                .limit(4)
+                .map(record -> {
                     Map<String, Object> feedback = new LinkedHashMap<>();
-                    feedback.put("businessType", type.name());
-                    feedback.put("businessName", lookupBusinessName(type, rs.getLong("business_id")));
-                    feedback.put("score", rs.getDouble("score"));
-                    feedback.put("gradedAt", rs.getObject("graded_at", OffsetDateTime.class));
+                    feedback.put("businessType", record.businessType().name());
+                    feedback.put("businessName", record.businessName());
+                    feedback.put("score", record.score());
+                    feedback.put("gradedAt", record.gradedAt());
                     return feedback;
-                },
-                studentId
-        );
+                })
+                .toList();
     }
 }

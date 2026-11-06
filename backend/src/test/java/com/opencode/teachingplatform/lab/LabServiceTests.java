@@ -872,6 +872,112 @@ class LabServiceTests {
     }
 
     @Test
+    void submitLabMarksSavedSubmissionAsSubmitted() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        // 主观题只产生建议分（score 为空），提交后应停留在 SUBMITTED 而不是直接 GRADED
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("实验作答", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("实验小结"))
+                .get("submissionId")).longValue();
+
+        LabSubmission submission = labSubmissionRepository.findById(submissionId).orElseThrow();
+        assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(submission.getSubmittedAt()).isNotNull();
+        assertThat(submission.getTotalScore()).isNotNull();
+        verify(labBehaviorMetricsService, times(1)).computeForSubmission(any(LabSubmission.class));
+    }
+
+    @Test
+    void submitLabRejectsRepeatedSubmitWhenAlreadySubmitted() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        // 主观题保持 SUBMITTED，才能命中“重复提交”分支（客观题会直接进入 GRADED）
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("实验作答", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("首次提交"))
+                .get("submissionId")).longValue();
+        LabSubmission afterFirstSubmit = labSubmissionRepository.findById(submissionId).orElseThrow();
+        var submittedAt = afterFirstSubmit.getSubmittedAt();
+        Double totalScore = afterFirstSubmit.getTotalScore();
+        String answerBefore = labStepAnswerRepository
+                .findByLabSubmissionIdAndLabStepId(submissionId, stepId)
+                .orElseThrow()
+                .getAnswerText();
+
+        assertThatThrownBy(() -> labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("重复提交")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验已提交，不能重复提交");
+
+        LabSubmission unchanged = labSubmissionRepository.findById(submissionId).orElseThrow();
+        assertThat(unchanged.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(unchanged.getSummaryText()).isEqualTo("首次提交");
+        assertThat(unchanged.getSubmittedAt()).isEqualTo(submittedAt);
+        assertThat(unchanged.getTotalScore()).isEqualTo(totalScore);
+        // 拒绝路径不得重写答案
+        assertThat(labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId)
+                .orElseThrow()
+                .getAnswerText()).isEqualTo(answerBefore);
+    }
+
+    @Test
+    void submitLabRejectsSubmitWhenAlreadyGraded() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "SINGLE_CHOICE", "{}", "{\"correctAnswer\":\"A\"}", 10);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("A", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("提交"))
+                .get("submissionId")).longValue();
+        LabSubmission submission = labSubmissionRepository.findById(submissionId).orElseThrow();
+        submission.setSubmitStatus(SubmissionStatus.GRADED);
+        submission.setTotalScore(8.0);
+        submission.setTeacherComment("教师评语");
+        submission.setGradedAt(java.time.OffsetDateTime.now());
+        labSubmissionRepository.save(submission);
+        int scoreRecordCount = countLabScoreRecords(labId);
+
+        assertThatThrownBy(() -> labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("批改后重交")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验已批改，如需修改请联系教师打回");
+
+        LabSubmission unchanged = labSubmissionRepository.findById(submissionId).orElseThrow();
+        assertThat(unchanged.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(unchanged.getTotalScore()).isEqualTo(8.0);
+        assertThat(unchanged.getTeacherComment()).isEqualTo("教师评语");
+        assertThat(countLabScoreRecords(labId)).isEqualTo(scoreRecordCount);
+    }
+
+    @Test
+    void submitLabWithoutSavedSubmissionAsksToSaveFirst() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        seedStep(labId, 1, "SINGLE_CHOICE", "{}", "{\"correctAnswer\":\"A\"}", 10);
+        seedMembership(classId, studentUser().id());
+
+        assertThatThrownBy(() -> labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("实验小结")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("请先保存实验答案");
+    }
+
+    /**
+     * 统计指定实验的成绩记录数，用于断言拒绝路径不写成绩表。
+     */
+    private int countLabScoreRecords(Long labId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM score_record WHERE business_type = 'LAB' AND business_id = ?",
+                Integer.class,
+                labId
+        );
+        return count != null ? count : 0;
+    }
+
+    @Test
     void teacherCanUpdateOwnedLab() {
         Long classId = seedClass(1L);
         Long labId = seedLab(classId, ActivityStatus.DRAFT, 1L);

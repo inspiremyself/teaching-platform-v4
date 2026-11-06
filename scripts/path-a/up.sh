@@ -15,6 +15,12 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ -z "${JWT_SECRET:-}" ]]; then
+  JWT_SECRET="$(openssl rand -hex 32)"
+  export JWT_SECRET
+  echo "==> 未检测到 JWT_SECRET，已生成本地开发密钥（仅限本机使用，禁止用于生产）"
+fi
+
 echo "==> 启动路径 A（Docker Compose）..."
 docker compose up --build -d "$@"
 

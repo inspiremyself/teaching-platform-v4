@@ -1,8 +1,10 @@
 package com.opencode.teachingplatform.lab.repository;
 
 import com.opencode.teachingplatform.lab.entity.LabSubmission;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,6 +22,22 @@ public interface LabSubmissionRepository extends JpaRepository<LabSubmission, Lo
         JpaSpecificationExecutor<LabSubmission> {
 
     Optional<LabSubmission> findByLabIdAndStudentId(Long labId, Long studentId);
+
+    /**
+     * 提交场景专用查询：对“单学生 + 单实验”的提交行加悲观写锁。
+     *
+     * <p>学生正式提交时先锁定该行再判定状态，确保并发重复提交只有一个事务能把
+     * {@code SAVED} 推进到 {@code SUBMITTED}，后到的事务阻塞后读到最新状态并被拒绝。</p>
+     *
+     * @param labId     实验 id
+     * @param studentId 学生 id
+     * @return 提交行（不存在时为空）
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from LabSubmission s where s.labId = :labId and s.studentId = :studentId")
+    Optional<LabSubmission> findByLabIdAndStudentIdForUpdate(
+            @Param("labId") Long labId,
+            @Param("studentId") Long studentId);
 
     Optional<LabSubmission> findFirstByLabIdAndStudentIdOrderByIdDesc(Long labId, Long studentId);
 

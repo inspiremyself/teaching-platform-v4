@@ -13,8 +13,9 @@
         </div>
       </div>
       <div class="page-header__actions">
+        <span v-if="submitHint" class="submit-hint">{{ submitHint }}</span>
         <el-button @click="router.push(`/student/labs/${labId}`)">返回实验详情</el-button>
-        <el-button type="success" :loading="submitting" :disabled="readonly || !labItems.length" @click="submitAll">
+        <el-button type="success" :loading="submitting" :disabled="!canSubmit" @click="submitAll">
           提交实验
         </el-button>
       </div>
@@ -306,6 +307,18 @@ const currentItemCodeLanguage = computed(() => {
     : currentCodeEditorLanguage.value || currentItem.value.editorLanguage || 'CODE';
 });
 const readonly = computed(() => ['SUBMITTED', 'GRADED'].includes(detail.value?.submissionStatus || ''));
+// 提交按钮只允许“已保存且存在题项”的草稿推进，与后端“仅 SAVED 可提交”状态机保持一致
+const canSubmit = computed(
+  () => detail.value?.submissionStatus === 'SAVED' && labItems.value.length > 0
+);
+const submitHint = computed(() => {
+  const status = detail.value?.submissionStatus;
+  if (!status) return '请先保存实验答案后再提交';
+  if (status === 'SUBMITTED') return '已提交，如需修改请联系教师打回';
+  if (status === 'GRADED') return '已批改，如需修改请联系教师打回';
+  if (labItems.value.length === 0) return '暂无可提交的实验题项';
+  return '';
+});
 const answeredCount = computed(() => labItems.value.filter((item) => hasSavedAnswer(item)).length);
 const dirtyItemCount = computed(() => labItems.value.filter((item) => isItemDirty(item)).length);
 const progressPercent = computed(() => {
@@ -768,6 +781,13 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.submit-hint {
+  align-self: center;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  margin-right: 8px;
 }
 
 .page-header__meta {

@@ -17,6 +17,10 @@ spring:
       # H2 侧把 V16 的 ALTER 行整行注释掉（行首 -- 前缀），避免重置自增计数器与 V13 种子冲突
       mysqlOnly: "--"
 
+app:
+  # 单元测试专用默认密钥，仅 test profile 生效
+  jwt-secret: ${JWT_SECRET:test-profile-jwt-secret-32bytes-0002}
+
 logging:
   level:
     org.springframework.security: INFO
