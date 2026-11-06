@@ -2,7 +2,7 @@ import type { TypedEditorDraft, TypedEditorKind, TypedEditorJudgeAnswer, TypedEd
 
 export const ALL_TYPED_EDITOR_KIND_OPTIONS: TypedEditorKind[] = ['SINGLE', 'MULTI', 'JUDGE', 'FILL', 'SHORT', 'TEXT', 'CODE'];
 
-export const QUESTION_TYPED_EDITOR_KIND_OPTIONS = ['SINGLE', 'MULTI', 'JUDGE', 'FILL', 'SHORT', 'CODE'] as const;
+export const QUESTION_TYPED_EDITOR_KIND_OPTIONS = ['SINGLE', 'MULTI', 'JUDGE', 'FILL', 'SHORT'] as const;
 
 export const OBJECTIVE_TYPED_EDITOR_KINDS: TypedEditorKind[] = ['SINGLE', 'MULTI'];
 

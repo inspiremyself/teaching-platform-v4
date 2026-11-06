@@ -4,7 +4,7 @@
       <header class="question-editor-dialog__header">
         <div>
           <p class="question-editor-dialog__eyebrow">{{ headerEyebrow }}</p>
-          <h2>{{ title }}</h2>
+          <h2>{{ dialogTitle }}</h2>
           <p class="question-editor-dialog__desc">{{ description }}</p>
         </div>
         <div class="question-editor-dialog__badges">
@@ -97,7 +97,7 @@
           </el-form-item>
         </section>
 
-        <TypedEditorShell title="结构化答案编辑" :messages="validationMessages">
+        <TypedEditorShell title="结构化答案编辑" :messages="validationVisible ? validationMessages : []">
           <ObjectiveEditor
             v-if="form.type === 'SINGLE' || form.type === 'MULTI' || form.type === 'JUDGE'"
             :kind="form.type"
@@ -112,7 +112,7 @@
           />
 
           <SubjectiveEditor
-            v-else-if="form.type === 'SHORT' || form.type === 'CODE'"
+            v-else-if="form.type === 'SHORT'"
             :kind="form.type"
             v-model="typedEditor.draft.subjectiveAnswer"
           />
@@ -140,6 +140,7 @@ import ObjectiveEditor from '@/views/teacher/components/typed-editor/ObjectiveEd
 import SubjectiveEditor from '@/views/teacher/components/typed-editor/SubjectiveEditor.vue'
 import TypedEditorShell from '@/views/teacher/components/typed-editor/TypedEditorShell.vue'
 import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/views/teacher/components/typed-editor/constants'
+import { buildQuestionCode, normalizeQuestionType } from '@/views/teacher/components/typed-editor/adapters/questionAdapter'
 import { useTypedEditor } from '@/views/teacher/components/typed-editor/useTypedEditor'
 import type { TypedEditorDraft } from '@/views/teacher/components/typed-editor/types'
 
@@ -157,6 +158,7 @@ export interface QuestionEditorDialogValue extends ConfiguredQuestionItem {
 
 export interface QuestionEditorDialogSubmitPayload {
   code: string
+  type: QuestionType
   difficulty: QuestionDifficulty
   defaultScore: number
   analysisText: string
@@ -168,7 +170,7 @@ const props = withDefaults(
     visible: boolean
     initialQuestion?: QuestionEditorDialogValue | null
     loading?: boolean
-    title?: string
+    editing?: boolean
     description?: string
     submitText?: string
     showAssetFields?: boolean
@@ -177,8 +179,8 @@ const props = withDefaults(
   {
     initialQuestion: null,
     loading: false,
-    title: '编辑题目配置',
-    description: '复用现有 typed-editor 交互维护题干、结构化答案和配置字段。',
+    editing: false,
+    description: '先选择题型并维护题干与结构化答案；题目编码由系统在打开弹窗时自动生成。',
     submitText: '保存题目',
     showAssetFields: false,
     showConfigFields: true,
@@ -205,7 +207,6 @@ const dialogVisible = computed({
 })
 
 const fillBlankEditorRef = ref<FillBlankEditorExpose | null>(null)
-const draftCodePreview = ref('')
 const typedEditor = useTypedEditor()
 const form = reactive({
   localId: '',
@@ -214,7 +215,6 @@ const form = reactive({
   type: 'SINGLE' as QuestionType,
   sortOrder: 1,
   score: 5,
-  code: '',
   difficulty: 'EASY' as QuestionDifficulty,
   defaultScore: 5,
   analysisText: '',
@@ -224,42 +224,61 @@ const form = reactive({
 const headerEyebrow = computed(() => (props.showAssetFields ? '题库管理台 / 资产维护' : '共享题目配置 / 编辑器'))
 const footerNote = computed(() =>
   props.showAssetFields
-    ? 'Questions.vue 仍保留真实题库保存链路；此组件只承接可复用的配置编辑 UI。'
+    ? '保存后将写入题库，可在题库页查看。'
     : '页面外层负责最终保存与持久化；此处仅输出标准化题目配置数据。',
 )
-const codeSummary = computed(() => {
-  if (!props.showAssetFields) {
-    return ''
-  }
-
-  return props.initialQuestion?.code?.trim() ? `编码 ${props.initialQuestion.code}` : `提交时自动生成编码 ${draftCodePreview.value}`
-})
+const dialogTitle = computed(() => (props.editing ? '编辑题目资产' : '新增题目资产'))
+const lockedCode = ref('')
+const isPersistedEdit = computed(() => Boolean(props.initialQuestion?.code?.trim()))
+const codeSummary = computed(() => (props.showAssetFields ? `系统自动生成编码 ${lockedCode.value}` : ''))
 const editorModeSummary = typedEditor.modeSummary
 const validationMessages = typedEditor.validationMessages
 const stemPlaceholder = computed(() =>
   form.type === 'FILL' ? '填写题干，并在需要的位置插入如【填空1】的填空位。' : '填写完整题干、限制条件与作答要求',
 )
 
-const buildQuestionCode = (type: QuestionType) => {
-  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(2, 14)
-  return `Q-${type.slice(0, 3)}-${stamp}`
-}
+const submitAttempted = ref(false)
+const baselineSignature = ref('')
 
-const refreshDraftCodePreview = () => {
-  draftCodePreview.value = buildQuestionCode(form.type)
-}
+const interactionSignature = computed(() =>
+  JSON.stringify({
+    type: form.type,
+    prompt: typedEditor.draft.prompt,
+    optionContents: typedEditor.draft.objectiveOptions.map(option => option.content),
+    selectedMask: typedEditor.draft.objectiveOptions
+      .map(option => (typedEditor.draft.selectedObjectiveOptionIds.includes(option.id) ? '1' : '0'))
+      .join(''),
+    judgeAnswer: typedEditor.draft.judgeAnswer,
+    fillAnswers: typedEditor.draft.fillBlanks.map(blank => `${blank.index}:${blank.answersText}`),
+    subjectiveAnswer: typedEditor.draft.subjectiveAnswer,
+    analysisText: form.analysisText,
+  }),
+)
+
+const validationVisible = computed(
+  () => submitAttempted.value || interactionSignature.value !== baselineSignature.value,
+)
+
+const editTargetKey = computed(() => {
+  const question = props.initialQuestion
+  if (!question) {
+    return 'new'
+  }
+  return question.questionBankId != null ? `bank-${question.questionBankId}` : question.localId ?? 'new'
+})
 
 const getTypeLabel = (type: QuestionType) => typeLabelMap[type] ?? type
 const getDifficultyLabel = (difficulty: QuestionDifficulty) => difficultyLabelMap[difficulty] ?? difficulty
 
 const hydrateEditor = (question: QuestionEditorDialogValue | null) => {
+  const normalizedType = normalizeQuestionType(question?.questionType)
+
   form.localId = question?.localId ?? `inline-${Date.now()}`
   form.questionBankId = question?.questionBankId ?? null
   form.sourceType = question?.sourceType ?? 'INLINE'
-  form.type = (question?.questionType as QuestionType) ?? 'SINGLE'
+  form.type = normalizedType
   form.sortOrder = question?.sortOrder ?? 1
   form.score = question?.score ?? 5
-  form.code = question?.code ?? ''
   form.difficulty = question?.difficulty ?? 'EASY'
   form.defaultScore = question?.defaultScore ?? question?.score ?? 5
   form.analysisText = question?.analysisText ?? ''
@@ -268,7 +287,7 @@ const hydrateEditor = (question: QuestionEditorDialogValue | null) => {
   const hydratedRow: QuestionItem = {
     id: question?.questionBankId ?? 0,
     code: question?.code ?? '',
-    type: question?.questionType ?? 'SINGLE',
+    type: normalizedType,
     stem: question?.stem ?? '',
     difficulty: question?.difficulty ?? 'EASY',
     defaultScore: question?.defaultScore ?? question?.score ?? 5,
@@ -288,12 +307,25 @@ const hydrateEditor = (question: QuestionEditorDialogValue | null) => {
   if (!question) {
     typedEditor.reset(form.type)
   }
-  refreshDraftCodePreview()
+
+  // 打开即锁定编码：题库题沿用原编码，新建/内联题按归一后的题型生成一次
+  lockedCode.value = question?.code?.trim() || buildQuestionCode(normalizedType)
+  submitAttempted.value = false
+  baselineSignature.value = interactionSignature.value
+  void nextTick(() => {
+    // FILL 题干 watcher 在本轮 flush 中可能重排空位，据此刷新基线
+    baselineSignature.value = interactionSignature.value
+  })
 }
 
 const handleTypeChange = (value: QuestionType) => {
-  typedEditor.setKind(value)
-  refreshDraftCodePreview()
+  const cleared = typedEditor.setKind(value)
+  if (cleared) {
+    ElMessage.warning('已切换为单选题，请重新选择正确答案')
+  }
+  if (!isPersistedEdit.value) {
+    lockedCode.value = buildQuestionCode(value)
+  }
 }
 
 const updateObjectiveOptionContent = ({ id, content }: { id: string; content: string }) => {
@@ -326,13 +358,16 @@ const insertBlankToken = async (selection?: { start: number; end: number }) => {
 }
 
 const submit = () => {
+  submitAttempted.value = true
+
   if (validationMessages.value.length) {
     ElMessage.warning(validationMessages.value[0])
     return
   }
 
   emit('saved', {
-    code: form.code.trim() || draftCodePreview.value,
+    code: lockedCode.value,
+    type: form.type,
     difficulty: form.difficulty,
     defaultScore: form.defaultScore,
     analysisText: form.analysisText.trim(),
@@ -349,13 +384,22 @@ const submit = () => {
 }
 
 watch(
-  () => [props.visible, props.initialQuestion] as const,
+  () => [props.visible, editTargetKey.value] as const,
   ([visible]) => {
     if (visible) {
       hydrateEditor(props.initialQuestion ?? null)
     }
   },
   { immediate: true },
+)
+
+watch(
+  () => props.loading,
+  (loading, previous) => {
+    if (previous && !loading && props.visible && !isPersistedEdit.value) {
+      lockedCode.value = buildQuestionCode(form.type)
+    }
+  },
 )
 </script>
 

@@ -204,8 +204,8 @@
       class="question-dialog"
       :initial-question="currentEditorQuestion"
       :loading="submitting"
-      :title="editingId ? '编辑题目资产' : '新增题目资产'"
-      description="按题型直接维护题干、答案和结构数据，保存时仍由 Questions.vue 组装现有 API 所需字段。"
+      :editing="Boolean(editingId)"
+      description="按题型直接维护题干、答案和结构数据，保存时统一组装 API 所需字段。"
       :submit-text="editingId ? '保存题目' : '创建题目'"
       :show-asset-fields="true"
       :show-config-fields="false"
@@ -223,12 +223,11 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { createQuestion, deleteQuestion, listQuestions, updateQuestion } from '@/api/questions';
 import QuestionConfigList from '@/components/question-config/QuestionConfigList.vue';
-import type { QuestionDifficulty, QuestionItem, QuestionType } from '@/types/question';
+import { isQuestionType, type QuestionDifficulty, type QuestionItem, type QuestionType } from '@/types/question';
 import type { ConfiguredQuestionItem } from '@/types/question-config';
-import { buildQuestionPayloadFromDraft } from './components/typed-editor/adapters/questionAdapter';
+import { buildQuestionPayloadFromDraft, normalizeQuestionType } from './components/typed-editor/adapters/questionAdapter';
 import { parseQuestionAnswerArray } from './components/typed-editor/hydrators/fromQuestion';
 import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from './components/typed-editor/constants';
-import type { TypedEditorKind } from './components/typed-editor/types';
 import QuestionEditorDialog, {
   type QuestionEditorDialogSubmitPayload,
   type QuestionEditorDialogValue,
@@ -425,7 +424,7 @@ const openPickerDialog = () => {
 const openEditDialog = (row: QuestionItem) => {
   editingId.value = row.id;
   form.code = row.code;
-  form.type = isQuestionType(row.type) ? row.type : 'SINGLE';
+  form.type = normalizeQuestionType(row.type);
   form.stem = row.stem;
   form.difficulty = isQuestionDifficulty(row.difficulty) ? row.difficulty : 'EASY';
   form.defaultScore = row.defaultScore;
@@ -473,16 +472,10 @@ const editConfiguredQuestion = (item: ConfiguredQuestionItem) => {
   openEditDialog(matchedRow);
 };
 
-const buildQuestionCode = (type: QuestionType) => {
-  const stamp = new Date().toISOString().replace(/[-:TZ.]/g, '').slice(2, 14);
-  return `Q-${type.slice(0, 3)}-${stamp}`;
-};
-
-const toQuestionType = (kind: TypedEditorKind): QuestionType => (kind === 'TEXT' ? 'SHORT' : kind);
-
 const buildPayload = (editorPayload: QuestionEditorDialogSubmitPayload) =>
   buildQuestionPayloadFromDraft(editorPayload.draft, {
-    code: editorPayload.code.trim() || buildQuestionCode(toQuestionType(editorPayload.draft.kind)),
+    code: editorPayload.code,
+    type: editorPayload.type,
     difficulty: editorPayload.difficulty,
     defaultScore: editorPayload.defaultScore,
     analysisText: editorPayload.analysisText,
@@ -491,13 +484,6 @@ const buildPayload = (editorPayload: QuestionEditorDialogSubmitPayload) =>
 const submit = async (editorPayload: QuestionEditorDialogSubmitPayload) => {
   submitting.value = true;
   try {
-    form.code = editorPayload.code;
-    form.type = toQuestionType(editorPayload.draft.kind);
-    form.stem = editorPayload.draft.prompt.trim();
-    form.difficulty = editorPayload.difficulty;
-    form.defaultScore = editorPayload.defaultScore;
-    form.analysisText = editorPayload.analysisText;
-
     const payload = buildPayload(editorPayload);
 
     if (editingId.value) {
@@ -574,7 +560,7 @@ const hasFillAnswers = (item: QuestionItem) => {
 };
 
 const hasSubjectiveAnswer = (item: QuestionItem) => {
-  if (!['SHORT', 'CODE'].includes(item.type)) {
+  if (item.type !== 'SHORT') {
     return true;
   }
 
@@ -633,8 +619,6 @@ const getHealthStatus = (item: QuestionItem): HealthStatus => {
     barClass: 'is-draft',
   };
 };
-
-const isQuestionType = (value: string): value is QuestionType => typeOptions.includes(value as QuestionType);
 
 const isQuestionDifficulty = (value: string): value is QuestionDifficulty =>
   difficultyOptions.includes(value as QuestionDifficulty);

@@ -112,6 +112,8 @@ export const buildQuestionPayloadFromLabStepDraft = (
   defaultScore: number,
 ): SaveQuestionPayload => buildQuestionPayloadFromDraft(draft, {
   code: buildQuestionCodeFromLabStep(labId, stepNo, draft.kind),
+  // 实验域保留 TEXT/CODE 两类编辑器形态，同步题库时统一归入简答题
+  type: draft.kind === 'CODE' || draft.kind === 'TEXT' ? 'SHORT' : draft.kind,
   difficulty: syncSettings.difficulty,
   defaultScore,
   analysisText: syncSettings.analysisText,

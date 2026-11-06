@@ -98,7 +98,7 @@ import { ElMessage } from 'element-plus'
 import { listQuestions } from '@/api/questions'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
 import type { QuestionDifficulty, QuestionItem, QuestionType } from '@/types/question'
-import { TYPED_EDITOR_LABELS } from '@/views/teacher/components/typed-editor/constants'
+import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/views/teacher/components/typed-editor/constants'
 import { parseQuestionAnswerArray } from '@/views/teacher/components/typed-editor/hydrators/fromQuestion'
 import QuestionConfigList from './QuestionConfigList.vue'
 
@@ -115,7 +115,7 @@ interface TableLike {
   toggleRowSelection?: (row: QuestionItem, selected?: boolean) => void
 }
 
-const typeOptions: QuestionType[] = ['SINGLE', 'MULTI', 'JUDGE', 'FILL', 'SHORT', 'CODE']
+const typeOptions: QuestionType[] = [...QUESTION_TYPED_EDITOR_KIND_OPTIONS]
 const difficultyOptions: QuestionDifficulty[] = ['EASY', 'MEDIUM', 'HARD']
 const typeLabelMap: Record<string, string> = TYPED_EDITOR_LABELS
 const difficultyLabelMap: Record<QuestionDifficulty, string> = {

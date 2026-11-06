@@ -333,7 +333,7 @@
       v-model:visible="questionDialogVisible"
       :initial-question="currentEditorQuestion"
       :loading="questionSubmitting"
-      title="编辑题库题目"
+      :editing="Boolean(currentConfiguredQuestion)"
       description="在考试壳中直接复用共享题目编辑器维护题库题资产；保存后会同步到当前考试配置清单。"
       submit-text="保存题库题"
       :show-asset-fields="true"
@@ -703,6 +703,7 @@ const submitConfiguredQuestion = async (editorPayload: QuestionEditorDialogSubmi
   try {
     const payload = buildQuestionPayloadFromDraft(editorPayload.draft, {
       code: editorPayload.code,
+      type: editorPayload.type,
       difficulty: editorPayload.difficulty,
       defaultScore: editorPayload.defaultScore,
       analysisText: editorPayload.analysisText,

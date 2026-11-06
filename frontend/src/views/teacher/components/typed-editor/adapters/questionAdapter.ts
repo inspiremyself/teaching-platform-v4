@@ -1,13 +1,31 @@
-import type { SaveQuestionPayload } from '@/types/question';
+import type { QuestionType, SaveQuestionPayload } from '@/types/question';
+import { isQuestionType } from '@/types/question';
 import { TYPED_EDITOR_JUDGE_CHOICES } from '../constants';
 import { splitTypedEditorAnswerLines } from '../hydrators/fromQuestion';
-import type { TypedEditorDraft, TypedEditorKind, TypedEditorSerializationResult } from '../types';
+import type { TypedEditorDraft, TypedEditorSerializationResult } from '../types';
 
-export type PersistedQuestionType = Exclude<TypedEditorKind, 'CODE'> | 'CODE';
+/** 存量题型归一：文本题并入简答题，历史别名映射到五类标准题型，CODE 等脏值回退为单选 */
+export const normalizeQuestionType = (type?: string | null): QuestionType => {
+  if (type === 'TEXT') return 'SHORT';
+  if (type === 'SINGLE_CHOICE') return 'SINGLE';
+  if (type === 'MULTIPLE_CHOICE') return 'MULTI';
+  if (type === 'TRUE_FALSE') return 'JUDGE';
+  if (type === 'FILL_BLANK') return 'FILL';
+  return type && isQuestionType(type) ? type : 'SINGLE';
+};
 
-export const serializeQuestionType = (type: TypedEditorKind): PersistedQuestionType => (type === 'CODE' ? 'SHORT' : type);
+const pad2 = (value: number) => String(value).padStart(2, '0');
 
-export const serializeQuestionDraft = (draft: TypedEditorDraft): TypedEditorSerializationResult => {
+/** 题目编码：本地时区 yyMMddHHmmss + 4 位大写 base36 随机位，展示值与落库值同源 */
+export const buildQuestionCode = (type: QuestionType): string => {
+  const now = new Date();
+  const stamp = `${pad2(now.getFullYear() % 100)}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}`
+    + `${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
+  const suffix = Math.random().toString(36).slice(2, 6).padEnd(4, '0').toUpperCase();
+  return `Q-${type.slice(0, 3)}-${stamp}${suffix}`;
+};
+
+const serializeQuestionDraft = (draft: TypedEditorDraft): TypedEditorSerializationResult => {
   if (draft.kind === 'SINGLE' || draft.kind === 'MULTI') {
     const serializedOptions = draft.objectiveOptions.map(option => ({
       key: option.key,
@@ -55,6 +73,7 @@ export const serializeQuestionDraft = (draft: TypedEditorDraft): TypedEditorSeri
 
 interface BuildQuestionPayloadOptions {
   code: string;
+  type: QuestionType;
   difficulty: string;
   defaultScore: number;
   analysisText: string;
@@ -67,8 +86,8 @@ export const buildQuestionPayloadFromDraft = (
   const serialized = serializeQuestionDraft(draft);
 
   return {
-    code: options.code,
-    type: serializeQuestionType(draft.kind),
+    code: options.code.trim(),
+    type: options.type,
     stem: draft.prompt.trim(),
     difficulty: options.difficulty,
     defaultScore: options.defaultScore,

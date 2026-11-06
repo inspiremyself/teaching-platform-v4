@@ -54,14 +54,6 @@ export const useTypedEditor = (options: UseTypedEditorOptions = {}) => {
     }));
   };
 
-  const resetStructuredState = () => {
-    draft.objectiveOptions = [];
-    draft.selectedObjectiveOptionIds = [];
-    draft.judgeAnswer = '';
-    draft.fillBlanks = [];
-    draft.subjectiveAnswer = '';
-  };
-
   const replaceDraft = (nextDraft: TypedEditorDraft) => {
     draft.kind = nextDraft.kind;
     draft.prompt = nextDraft.prompt;
@@ -80,7 +72,7 @@ export const useTypedEditor = (options: UseTypedEditorOptions = {}) => {
   };
 
   const syncFillBlanks = () => {
-    const currentAnswers = new Map(draft.fillBlanks.map(blank => [blank.index, blank.answersText]));
+    const previous = draft.fillBlanks;
     const matches = Array.from(draft.prompt.matchAll(/【填空(\d+)】/g));
 
     if (!matches.length) {
@@ -88,25 +80,25 @@ export const useTypedEditor = (options: UseTypedEditorOptions = {}) => {
       return;
     }
 
-    let normalizedPrompt = draft.prompt;
+    let normalizedPrompt = '';
+    let cursor = 0;
     const nextBlanks: TypedEditorBlankDraft[] = matches.map((match, occurrenceIndex) => {
       const originalIndex = Number(match[1]);
       const nextIndex = occurrenceIndex + 1;
-      if (Number.isFinite(originalIndex) && originalIndex !== nextIndex) {
-        normalizedPrompt = normalizedPrompt.replace(`【填空${originalIndex}】`, `【填空${nextIndex}】`);
-      }
+      const positional = previous[occurrenceIndex];
+      const answersText =
+        positional && positional.index === originalIndex
+          ? positional.answersText
+          : previous.find(blank => blank.index === originalIndex)?.answersText ?? '';
 
-      return {
-        index: nextIndex,
-        token: `【填空${nextIndex}】`,
-        answersText: currentAnswers.get(originalIndex) ?? currentAnswers.get(nextIndex) ?? '',
-      };
+      normalizedPrompt += draft.prompt.slice(cursor, match.index) + `【填空${nextIndex}】`;
+      cursor = (match.index ?? 0) + match[0].length;
+
+      return { index: nextIndex, token: `【填空${nextIndex}】`, answersText };
     });
 
-    if (normalizedPrompt !== draft.prompt) {
-      draft.prompt = normalizedPrompt;
-    }
-
+    normalizedPrompt += draft.prompt.slice(cursor);
+    draft.prompt = normalizedPrompt;
     draft.fillBlanks = nextBlanks;
   };
 
@@ -122,19 +114,17 @@ export const useTypedEditor = (options: UseTypedEditorOptions = {}) => {
     if (kind === 'SINGLE' || kind === 'MULTI') {
       ensureObjectiveDefaults();
       if (kind === 'SINGLE' && draft.selectedObjectiveOptionIds.length > 1) {
-        draft.selectedObjectiveOptionIds = draft.selectedObjectiveOptionIds.slice(0, 1);
+        draft.selectedObjectiveOptionIds = [];
+        return true;
       }
-      return;
-    }
-
-    if (kind === 'JUDGE') {
-      draft.selectedObjectiveOptionIds = [];
-      return;
+      return false;
     }
 
     if (kind === 'FILL') {
       syncFillBlanks();
     }
+
+    return false;
   };
 
   const hydrateFromQuestion = (row: QuestionItem) => {
@@ -270,6 +260,5 @@ export const useTypedEditor = (options: UseTypedEditorOptions = {}) => {
     insertBlankToken,
     removeBlank,
     syncFillBlanks,
-    resetStructuredState,
   };
 };

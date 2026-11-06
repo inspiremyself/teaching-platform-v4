@@ -240,7 +240,7 @@
       v-model:visible="questionDialogVisible"
       :initial-question="currentEditorQuestion"
       :loading="questionSubmitting"
-      :title="questionDialogTitle"
+      :editing="Boolean(currentConfiguredQuestion)"
       :description="questionDialogDescription"
       :submit-text="questionDialogSubmitText"
       :show-asset-fields="questionEditorMode === 'BANK'"
@@ -282,8 +282,8 @@ import type {
   HomeworkListItem,
   HomeworkStatus,
 } from '@/types/homework';
-import type { QuestionItem, QuestionType } from '@/types/question';
-import { buildQuestionPayloadFromDraft, serializeQuestionType } from './components/typed-editor/adapters/questionAdapter';
+import type { QuestionItem } from '@/types/question';
+import { buildQuestionPayloadFromDraft, normalizeQuestionType } from './components/typed-editor/adapters/questionAdapter';
 import { parseQuestionAnswerArray } from './components/typed-editor/hydrators/fromQuestion';
 
 const router = useRouter();
@@ -401,17 +401,10 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
   return current;
 });
 
-const questionDialogTitle = computed(() => {
-  if (questionEditorMode.value === 'BANK') {
-    return '编辑题库题目';
-  }
-  return currentConfiguredQuestion.value ? '编辑内联题' : '新增内联题';
-});
-
 const questionDialogDescription = computed(() =>
   questionEditorMode.value === 'BANK'
     ? '在作业壳内直接维护题库题目资产，保存后同步更新当前配置清单。'
-    : '使用共享题目编辑器维护内联题的题干、答案与评分配置，保存时仍由 Homeworks.vue 走原有内联题接口。',
+    : '使用共享题目编辑器维护内联题的题干、答案与评分配置，保存时走原有内联题接口。',
 );
 
 const questionDialogSubmitText = computed(() => (questionEditorMode.value === 'BANK' ? '保存题库题' : '保存内联题'));
@@ -496,6 +489,7 @@ const buildConfiguredInlineQuestion = (
 ): ConfiguredQuestionItem => {
   const questionPayload = buildQuestionPayloadFromDraft(editorPayload.draft, {
     code: editorPayload.code,
+    type: editorPayload.type,
     difficulty: editorPayload.difficulty,
     defaultScore: editorPayload.defaultScore,
     analysisText: editorPayload.analysisText,
@@ -533,17 +527,8 @@ const buildConfiguredInlineQuestion = (
   };
 };
 
-const normalizeInlineQuestionType = (type: string): string => {
-  if (type === 'SINGLE_CHOICE') return 'SINGLE';
-  if (type === 'MULTIPLE_CHOICE') return 'MULTI';
-  if (type === 'TRUE_FALSE') return 'JUDGE';
-  if (type === 'FILL_BLANK') return 'FILL';
-  if (type === 'TEXT') return 'SHORT';
-  return type;
-};
-
 const buildInlineScoringConfigJson = (item: ConfiguredQuestionItem) => {
-  const normalizedType = normalizeInlineQuestionType(item.questionType);
+  const normalizedType = normalizeQuestionType(item.questionType);
 
   if (item.scoringConfigJson?.trim()) {
     try {
@@ -674,6 +659,7 @@ const submitConfiguredQuestion = async (editorPayload: QuestionEditorDialogSubmi
 
       const payload = buildQuestionPayloadFromDraft(editorPayload.draft, {
         code: editorPayload.code,
+        type: editorPayload.type,
         difficulty: editorPayload.difficulty,
         defaultScore: editorPayload.defaultScore,
         analysisText: editorPayload.analysisText,
@@ -735,7 +721,7 @@ const persistConfiguredQuestions = async (homeworkId: number) => {
     }
 
     const payload: AddInlineHomeworkQuestionRequest = {
-      type: serializeQuestionType(normalizeInlineQuestionType(item.questionType) as QuestionType),
+      type: normalizeQuestionType(item.questionType),
       stem: item.stem.trim(),
       questionScore,
       sortOrder,
