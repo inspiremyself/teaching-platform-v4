@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public final class LabRequests {
@@ -26,7 +27,10 @@ public final class LabRequests {
             String status,
             Long materialId,
             ScoreVisibilityMode scoreVisibilityMode,
-            Boolean summaryRequired
+            Boolean summaryRequired,
+            // 实验开放时间窗：startAt 为空表示不限制开始；dueAt 为空表示不限制截止（实体列 lab.start_at / lab.end_at）
+            OffsetDateTime startAt,
+            OffsetDateTime dueAt
     ) {
     }
 
@@ -52,7 +56,10 @@ public final class LabRequests {
             String status,
             Long materialId,
             ScoreVisibilityMode scoreVisibilityMode,
-            Boolean summaryRequired
+            Boolean summaryRequired,
+            // 与 CreateLabRequest 同义：传 null 表示清空该边界
+            OffsetDateTime startAt,
+            OffsetDateTime dueAt
     ) {
     }
 

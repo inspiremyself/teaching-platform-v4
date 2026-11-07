@@ -44,6 +44,7 @@ import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -109,6 +110,7 @@ public class LabService {
     private final LabSubmissionMetricsRepository labSubmissionMetricsRepository;
     private final BehaviorEventRepository behaviorEventRepository;
     private final Path storageRoot;
+    private final LabSubmissionClaimService labSubmissionClaimService;
 
     public LabService(LabRepository labRepository,
                       LabStepRepository labStepRepository,
@@ -129,6 +131,7 @@ public class LabService {
                       LabBehaviorMetricsService labBehaviorMetricsService,
                       LabSubmissionMetricsRepository labSubmissionMetricsRepository,
                       BehaviorEventRepository behaviorEventRepository,
+                      LabSubmissionClaimService labSubmissionClaimService,
                       @Value("${app.file-storage-root}") String storageRoot) {
         this.labRepository = labRepository;
         this.labStepRepository = labStepRepository;
@@ -149,6 +152,7 @@ public class LabService {
         this.labBehaviorMetricsService = labBehaviorMetricsService;
         this.labSubmissionMetricsRepository = labSubmissionMetricsRepository;
         this.behaviorEventRepository = behaviorEventRepository;
+        this.labSubmissionClaimService = labSubmissionClaimService;
         this.storageRoot = Path.of(storageRoot).toAbsolutePath().normalize();
     }
 
@@ -174,9 +178,11 @@ public class LabService {
         if (parseStatus(request.status()) == ActivityStatus.PUBLISHED) {
             throw new BusinessException(40000, LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE);
         }
+        // 时间顺序校验先于落库：开始时间必须早于结束时间，避免建出不可用的时间窗
+        assertLabTimeWindowValid(request.startAt(), request.dueAt());
         Lab lab = new Lab();
         lab.setCreatedBy(currentUser.id());
-        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
+        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired(), request.startAt(), request.dueAt());
         return toTeacherLabView(labRepository.save(lab));
     }
 
@@ -228,7 +234,10 @@ public class LabService {
         copy.setInstructionType(source.getInstructionType());
         copy.setExperimentContent(source.getExperimentContent());
         copy.setMaterialId(source.getMaterialId());
-        copy.setScoreVisibilityMode(source.getScoreVisibilityMode());
+        // 成绩可见模式不能置 null（列 NOT NULL 且视图调用 .name()）；截止后可见在副本上无截止时间，重置为教师确认后可见
+        copy.setScoreVisibilityMode(source.getScoreVisibilityMode() == ScoreVisibilityMode.AFTER_DEADLINE
+                ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM
+                : source.getScoreVisibilityMode());
         copy.setSummaryRequired(source.isSummaryRequired());
         copy.setScoreReleased(false);
         copy.setStatus(targetStatus);
@@ -337,11 +346,18 @@ public class LabService {
                 && labSubmissionRepository.countByLabId(labId) > 0) {
             throw new BusinessException(40000, "已有学生作答，不能变更所属班级");
         }
+        // 时间顺序校验先于任何赋值：命中时同持久化上下文不残留被污染的时间窗
+        assertLabTimeWindowValid(request.startAt(), request.dueAt());
         // 发布校验必须先于 applyLab：若先写实体再抛异常，同一持久化上下文会残留被污染的 PUBLISHED 状态
         if (targetStatus == ActivityStatus.PUBLISHED) {
             assertLabPublishable(lab);
+            // 用本次请求值判定：请求未传模式时 applyLab 会写成 AFTER_TEACHER_CONFIRM，不能用实体旧值
+            ScoreVisibilityMode effectiveMode = request.scoreVisibilityMode() == null
+                    ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM
+                    : request.scoreVisibilityMode();
+            assertDeadlineVisibilityPublishable(effectiveMode, request.dueAt());
         }
-        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), targetStatus.name(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired());
+        applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), targetStatus.name(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired(), request.startAt(), request.dueAt());
         return toTeacherLabView(labRepository.save(lab));
     }
 
@@ -353,6 +369,8 @@ public class LabService {
         assertLabRevertible(lab, nextStatus);
         if (nextStatus == ActivityStatus.PUBLISHED) {
             assertLabPublishable(lab);
+            // 无请求侧时间字段：以实体现值判定已存时间窗与可见模式是否自洽
+            assertDeadlineVisibilityPublishable(lab.getScoreVisibilityMode(), lab.getEndAt());
         }
         lab.setStatus(nextStatus);
         return toTeacherLabView(labRepository.save(lab));
@@ -393,6 +411,9 @@ public class LabService {
         detail.put("classId", lab.getClassId());
         detail.put("className", resolveClassName(lab.getClassId()));
         detail.put("summaryRequired", lab.isSummaryRequired());
+        // 时间窗回显：该路径独立组装，不经过 toStudentLabView，必须单独补两个字段
+        detail.put("startAt", lab.getStartAt());
+        detail.put("dueAt", lab.getEndAt());
         detail.put("submissionStatus", submission == null ? null : submission.getSubmitStatus().name());
         detail.put("totalScore", submission == null || !scoreVisible ? null : submission.getTotalScore());
         detail.put("teacherComment", submission == null || !scoreVisible ? null : submission.getTeacherComment());
@@ -1082,6 +1103,8 @@ public class LabService {
         if (lab.getStatus() == ActivityStatus.CLOSED) {
             throw new BusinessException(40000, "实验已关闭，不能保存");
         }
+        // 时间窗门禁：未开始/已截止不允许产生任何写操作
+        assertLabWritable(lab);
         LabStep step = labStepRepository.findById(stepId).orElseThrow(() -> new BusinessException(40400, "实验步骤不存在"));
         if (!step.getLabId().equals(labId)) {
             throw new BusinessException(40000, "实验步骤不属于该实验");
@@ -1122,6 +1145,8 @@ public class LabService {
         if (lab.getStatus() == ActivityStatus.CLOSED) {
             throw new BusinessException(40000, "实验已关闭，不能上传");
         }
+        // 时间窗门禁：未开始/已截止不允许上传（与保存答案同一口径）
+        assertLabWritable(lab);
         LabStep step = labStepRepository.findById(stepId).orElseThrow(() -> new BusinessException(40400, "实验步骤不存在"));
         if (!step.getLabId().equals(labId)) {
             throw new BusinessException(40000, "实验步骤不属于该实验");
@@ -1216,6 +1241,8 @@ public class LabService {
         if (lab.getStatus() == ActivityStatus.CLOSED) {
             throw new BusinessException(40000, "实验已关闭，不能提交");
         }
+        // 时间窗门禁：必须先于行锁与任何写操作
+        assertLabWritable(lab);
         // 先加行锁再判状态：并发提交时后到事务阻塞，待前一事务提交后读到 SUBMITTED 并被拒绝。
         LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentIdForUpdate(labId, currentUser.id())
                 .orElseThrow(() -> new BusinessException(40000, "请先保存实验答案"));
@@ -1412,11 +1439,49 @@ public class LabService {
     }
 
     private static final String LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE = "实验尚未配置题项，无法发布";
+    private static final String LAB_NOT_STARTED_MESSAGE = "实验尚未开始";
+    private static final String LAB_DEADLINE_PASSED_MESSAGE = "实验已截止，不能保存/提交";
+    private static final String LAB_TIME_ORDER_MESSAGE = "开始时间必须早于结束时间";
+    private static final String LAB_DEADLINE_MODE_WITHOUT_DUE_MESSAGE = "截止后可见模式必须设置结束时间";
 
     private void assertLabPublishable(Lab lab) {
         List<LabStep> steps = labStepRepository.findByLabIdOrderByStepNoAsc(lab.getId());
         if (steps.isEmpty()) {
             throw new BusinessException(40000, LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE);
+        }
+    }
+
+    /**
+     * 学生写入口（保存答案 / 上传图片 / 提交）的时间窗门禁。
+     *
+     * <p>边界口径：{@code now == startAt} 允许进入；{@code now == dueAt} 视为已截止。
+     * 两个边界为空时完全跳过，保持历史实验不受限。</p>
+     */
+    private void assertLabWritable(Lab lab) {
+        OffsetDateTime now = OffsetDateTime.now();
+        if (lab.getStartAt() != null && now.isBefore(lab.getStartAt())) {
+            throw new BusinessException(40000, LAB_NOT_STARTED_MESSAGE);
+        }
+        if (lab.getEndAt() != null && !now.isBefore(lab.getEndAt())) {
+            throw new BusinessException(40000, LAB_DEADLINE_PASSED_MESSAGE);
+        }
+    }
+
+    /**
+     * 时间窗顺序校验：两者都非空时必须 {@code startAt < dueAt}。
+     */
+    private void assertLabTimeWindowValid(OffsetDateTime startAt, OffsetDateTime dueAt) {
+        if (startAt != null && dueAt != null && !startAt.isBefore(dueAt)) {
+            throw new BusinessException(40000, LAB_TIME_ORDER_MESSAGE);
+        }
+    }
+
+    /**
+     * 发布门禁：截止后可见模式依赖结束时间，没有结束时间时不允许发布。
+     */
+    private void assertDeadlineVisibilityPublishable(ScoreVisibilityMode mode, OffsetDateTime dueAt) {
+        if (mode == ScoreVisibilityMode.AFTER_DEADLINE && dueAt == null) {
+            throw new BusinessException(40000, LAB_DEADLINE_MODE_WITHOUT_DUE_MESSAGE);
         }
     }
 
@@ -1458,16 +1523,25 @@ public class LabService {
         throw new BusinessException(40300, "无权限访问该图片");
     }
 
+    /**
+     * 查找或创建「可编辑」的实验提交。
+     *
+     * <p><b>快路径：</b>自动保存是高频路径，读到既有提交时完全不进独立事务，避免每次多开连接。
+     * <b>慢路径：</b>仅首存时通过 {@link LabSubmissionClaimService} 在独立事务内插入 {@code SAVED} 行，
+     * 唯一键冲突只回滚内层事务。随后一律加锁重读：REPEATABLE READ 下普通读可能看不到并发事务
+     * 刚提交的行，且后续题项答案依赖父行排他锁串行化。</p>
+     */
     private LabSubmission ensureEditableSubmission(CurrentUser currentUser, Long labId) {
-        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentId(labId, currentUser.id()).orElseGet(() -> {
-            LabSubmission created = new LabSubmission();
-            created.setLabId(labId);
-            created.setStudentId(currentUser.id());
-            created.setSubmitStatus(SubmissionStatus.SAVED);
-            created.setPlagiarismRate(0D);
-            created.setTotalScore(0D);
-            return labSubmissionRepository.save(created);
-        });
+        boolean firstSave = labSubmissionRepository.findByLabIdAndStudentId(labId, currentUser.id()).isEmpty();
+        if (firstSave) {
+            try {
+                labSubmissionClaimService.claim(labId, currentUser.id());
+            } catch (DataIntegrityViolationException ignored) {
+                // 并发首存：另一事务已提交，下面锁内重读
+            }
+        }
+        LabSubmission submission = labSubmissionRepository.findByLabIdAndStudentIdForUpdate(labId, currentUser.id())
+                .orElseThrow(() -> new BusinessException(50000, "实验提交创建失败，请重试"));
         if (submission.getSubmitStatus() == SubmissionStatus.SUBMITTED || submission.getSubmitStatus() == SubmissionStatus.GRADED) {
             throw new BusinessException(40000, "实验已提交，不能继续修改");
         }
@@ -1476,7 +1550,10 @@ public class LabService {
     }
 
     private LabStepAnswer prepareStepAnswer(LabSubmission submission, LabStep step) {
-        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submission.getId(), step.getId()).orElseGet(LabStepAnswer::new);
+        // 加锁读：父提交行 X 锁已串行化同一提交的写入；此处再锁答案行，避免快照读旧值后重复插入
+        LabStepAnswer answer = labStepAnswerRepository
+                .findByLabSubmissionIdAndLabStepIdForUpdate(submission.getId(), step.getId())
+                .orElseGet(LabStepAnswer::new);
         answer.setLabSubmissionId(submission.getId());
         answer.setLabStepId(step.getId());
         answer.setQuestionId(step.getQuestionId());
@@ -1623,7 +1700,9 @@ public class LabService {
                           String status,
                           Long materialId,
                           ScoreVisibilityMode scoreVisibilityMode,
-                          Boolean summaryRequired) {
+                          Boolean summaryRequired,
+                          OffsetDateTime startAt,
+                          OffsetDateTime dueAt) {
         lab.setTitle(title);
         lab.setDescription(defaultString(description));
         lab.setExperimentContent(defaultString(experimentContent));
@@ -1633,6 +1712,9 @@ public class LabService {
         lab.setStatus(parseStatus(status));
         lab.setScoreVisibilityMode(scoreVisibilityMode == null ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM : scoreVisibilityMode);
         lab.setSummaryRequired(Boolean.TRUE.equals(summaryRequired));
+        // 对外字段名 dueAt，落到实体列为 end_at
+        lab.setStartAt(startAt);
+        lab.setEndAt(dueAt);
     }
 
     private Map<String, Object> toTeacherLabView(Lab lab) {
@@ -1651,6 +1733,8 @@ public class LabService {
         view.put("status", lab.getStatus().name());
         view.put("scoreVisibilityMode", lab.getScoreVisibilityMode().name());
         view.put("summaryRequired", lab.isSummaryRequired());
+        view.put("startAt", lab.getStartAt());
+        view.put("dueAt", lab.getEndAt());
         view.put("stepCount", steps.size());
         return view;
     }
@@ -1670,6 +1754,8 @@ public class LabService {
         view.put("classId", lab.getClassId());
         view.put("className", resolveClassName(lab.getClassId()));
         view.put("summaryRequired", lab.isSummaryRequired());
+        view.put("startAt", lab.getStartAt());
+        view.put("dueAt", lab.getEndAt());
         view.put("stepCount", steps.size());
         view.put("submissionStatus", submission == null ? null : submission.getSubmitStatus().name());
         boolean scoreVisible = scoreVisible(lab, submission);

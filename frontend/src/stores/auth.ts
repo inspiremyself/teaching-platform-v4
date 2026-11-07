@@ -31,7 +31,6 @@ export const useAuthStore = defineStore('auth', () => {
     setToken(res.token);
     user.value = res.user;
     permissions.value = res.permissions;
-    await fetchUserInfo();
   };
 
   const fetchUserInfo = async () => {

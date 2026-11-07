@@ -47,6 +47,8 @@ class LabSubmitConcurrencyTests {
     private static final long STUDENT_ID = 2L;
     /** 本用例专用提交行，避开种子中的 3001/3002。 */
     private static final long SUBMISSION_ID = 9303L;
+    /** 种子实验 1003 的第 2 步（TEXT 题型），用于并发首次保存答案。 */
+    private static final long TEXT_STEP_ID = 2006L;
 
     @Autowired
     private LabService labService;
@@ -74,9 +76,27 @@ class LabSubmitConcurrencyTests {
 
     @AfterEach
     void cleanupSubmissionFixture() {
+        // 答案按业务关联清理：并发首存用例的提交行 id 是自动生成的，不能只按固定 SUBMISSION_ID 删
+        // 先删答案行为日志（外键指向 experiment_answer），再删答案行
         jdbcTemplate.update(
-                "DELETE FROM experiment_answer WHERE experiment_submission_id = ?",
-                SUBMISSION_ID
+                """
+                DELETE FROM lab_step_answer_log WHERE lab_step_answer_id IN (
+                    SELECT a.id FROM experiment_answer a
+                    JOIN experiment_submission s ON a.experiment_submission_id = s.id
+                    WHERE s.experiment_id = ? AND s.student_id = ?
+                )
+                """,
+                LAB_ID,
+                STUDENT_ID
+        );
+        jdbcTemplate.update(
+                """
+                DELETE FROM experiment_answer WHERE experiment_submission_id IN (
+                    SELECT id FROM experiment_submission WHERE experiment_id = ? AND student_id = ?
+                )
+                """,
+                LAB_ID,
+                STUDENT_ID
         );
         jdbcTemplate.update(
                 "DELETE FROM experiment_submission WHERE experiment_id = ? AND student_id = ?",
@@ -144,6 +164,72 @@ class LabSubmitConcurrencyTests {
         assertThat(rows).hasSize(1);
         assertThat(rows.get(0).get("submit_status")).isEqualTo("SUBMITTED");
         assertThat(rows.get(0).get("submitted_at")).isNotNull();
+    }
+
+    /**
+     * 并发首次保存答案：两个线程同时 saveAnswer 同一实验同一步骤。
+     *
+     * <p>期望：claim 的唯一键冲突被就地捕获并按幂等处理，两边都成功；
+     * 最终只留 1 条提交行与 1 条答案行（方案 TD22/TD23）。</p>
+     */
+    @Test
+    void concurrentFirstSaveAnswerCreatesSingleSubmissionAndAnswer() throws Exception {
+        transactionTemplate.executeWithoutResult(status -> {
+            jdbcTemplate.update(
+                    "DELETE FROM experiment_answer WHERE experiment_submission_id IN "
+                            + "(SELECT id FROM experiment_submission WHERE experiment_id = ? AND student_id = ?)",
+                    LAB_ID,
+                    STUDENT_ID
+            );
+            jdbcTemplate.update(
+                    "DELETE FROM experiment_submission WHERE experiment_id = ? AND student_id = ?",
+                    LAB_ID,
+                    STUDENT_ID
+            );
+        });
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Throwable>> futures = new ArrayList<>();
+        try {
+            for (int i = 0; i < 2; i++) {
+                futures.add(executor.submit(() -> {
+                    ready.countDown();
+                    start.await(5, TimeUnit.SECONDS);
+                    try {
+                        labService.saveAnswer(student(), LAB_ID, TEXT_STEP_ID,
+                                new LabRequests.SaveStepAnswerRequest(
+                                        "实验小结应在提交前完成",
+                                        "{\"kind\":\"text\",\"text\":\"实验小结应在提交前完成\"}"));
+                        return null;
+                    } catch (Throwable ex) {
+                        return ex;
+                    }
+                }));
+            }
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            for (Future<Throwable> future : futures) {
+                assertThat(future.get(30, TimeUnit.SECONDS)).isNull();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer submissionCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM experiment_submission WHERE experiment_id = ? AND student_id = ?",
+                Integer.class, LAB_ID, STUDENT_ID);
+        assertThat(submissionCount).isEqualTo(1);
+        Integer answerCount = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*) FROM experiment_answer a
+                JOIN experiment_submission s ON a.experiment_submission_id = s.id
+                WHERE s.experiment_id = ? AND s.student_id = ?
+                """,
+                Integer.class, LAB_ID, STUDENT_ID);
+        assertThat(answerCount).isEqualTo(1);
     }
 
     /**

@@ -272,7 +272,7 @@
           <article class="detail-card detail-card--dark">
             <span class="detail-card__eyebrow detail-card__eyebrow--light">剩余时间</span>
             <h2>{{ countdownLabel }}</h2>
-            <p>{{ readonly ? '当前为结果查看状态。' : '截止前确认作答后提交。' }}</p>
+            <p>{{ isNotStarted ? '作业尚未开始' : isOverdue ? '作业已截止' : readonly ? '当前为结果查看状态。' : '截止前确认作答后提交。' }}</p>
           </article>
 
           <article class="detail-card">
@@ -380,8 +380,15 @@ const isOverdue = computed(() => {
   const dueTime = new Date(dueAt).getTime();
   return !Number.isNaN(dueTime) && nowMs.value > dueTime;
 });
+const isNotStarted = computed(() => {
+  const startAt = detail.value?.startAt;
+  if (!startAt) return false;
+  const startTime = new Date(startAt).getTime();
+  return !Number.isNaN(startTime) && nowMs.value < startTime;
+});
 const readonly = computed(() => detail.value?.submissionStatus === 'SUBMITTED'
   || detail.value?.submissionStatus === 'GRADED'
+  || isNotStarted.value
   || isOverdue.value);
 const hasQuestionItems = computed(() => !!detail.value?.questions?.length);
 const currentQuestion = computed(() => detail.value?.questions?.[currentQuestionIndex.value] ?? null);
@@ -444,6 +451,10 @@ const resetForm = () => {
 const submitForm = async () => {
   if (isOverdue.value) {
     ElMessage.warning('作业已截止，不能提交');
+    return;
+  }
+  if (isNotStarted.value) {
+    ElMessage.warning('作业尚未开始');
     return;
   }
   if (!hasQuestionItems.value && !(form.answerText || '').trim()) {

@@ -99,8 +99,8 @@ export interface UpdateExamPayload {
   title: string
   description: string
   classId: number
-  startAt: string
-  endAt: string
+  startAt?: string
+  endAt?: string
   durationMinutes: number
   scoreVisibilityMode?: ScoreVisibilityMode
   shuffleQuestions?: boolean

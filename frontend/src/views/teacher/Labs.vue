@@ -273,6 +273,34 @@
             inactive-text="选填"
           />
         </el-form-item>
+        <el-form-item label="开始时间">
+          <el-date-picker
+            v-model="createForm.startAt"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ssZ"
+            clearable
+            placeholder="留空表示不限开始时间"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="结束时间">
+          <el-date-picker
+            v-model="createForm.dueAt"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ssZ"
+            clearable
+            placeholder="留空表示不限截止时间"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="成绩可见">
+          <el-select v-model="createForm.scoreVisibilityMode" style="width: 100%">
+            <el-option label="即时出分" value="IMMEDIATE" />
+            <el-option label="教师确认后可见" value="AFTER_TEACHER_CONFIRM" />
+            <el-option label="截止后可见" value="AFTER_DEADLINE" />
+            <el-option label="教师手动发布" value="MANUAL_RELEASE" />
+          </el-select>
+        </el-form-item>
         </template>
       </el-form>
       <template #footer>
@@ -328,6 +356,9 @@ const createForm = reactive<Omit<CreateLabPayload, 'classId'> & { classId?: numb
   materialTitle: '',
   materialFileName: '',
   materialDownloadUrl: '',
+  startAt: undefined,
+  dueAt: undefined,
+  scoreVisibilityMode: 'AFTER_TEACHER_CONFIRM',
 });
 
 const publishedCount = computed(() => rows.value.filter(row => row.status === 'PUBLISHED').length);
@@ -405,6 +436,9 @@ const resetCreateForm = () => {
   createForm.materialFileName = '';
   createForm.materialDownloadUrl = '';
   createForm.summaryRequired = false;
+  createForm.startAt = undefined;
+  createForm.dueAt = undefined;
+  createForm.scoreVisibilityMode = 'AFTER_TEACHER_CONFIRM';
   editingId.value = null;
 };
 
@@ -442,6 +476,9 @@ const openEditDialog = (row: LabItem) => {
   createForm.materialFileName = row.materialFileName || '';
   createForm.materialDownloadUrl = row.materialDownloadUrl || '';
   createForm.summaryRequired = Boolean(row.summaryRequired);
+  createForm.startAt = row.startAt || undefined;
+  createForm.dueAt = row.dueAt || undefined;
+  createForm.scoreVisibilityMode = row.scoreVisibilityMode || 'AFTER_TEACHER_CONFIRM';
   createDialogVisible.value = true;
 };
 
@@ -524,6 +561,14 @@ const submitCreate = async () => {
     ElMessage.warning('请选择所属班级');
     return;
   }
+  if (createForm.startAt && createForm.dueAt && new Date(createForm.startAt) >= new Date(createForm.dueAt)) {
+    ElMessage.warning('开始时间必须早于结束时间');
+    return;
+  }
+  if (createForm.scoreVisibilityMode === 'AFTER_DEADLINE' && !createForm.dueAt) {
+    ElMessage.warning('请先设置实验结束时间');
+    return;
+  }
 
   submitting.value = true;
   try {
@@ -536,6 +581,9 @@ const submitCreate = async () => {
       status: createForm.status,
       materialId: createForm.materialId,
       summaryRequired: createForm.summaryRequired,
+      startAt: createForm.startAt,
+      dueAt: createForm.dueAt,
+      scoreVisibilityMode: createForm.scoreVisibilityMode,
     };
 
     if (editingId.value) {

@@ -112,7 +112,7 @@
               <p>学号：{{ activeSubmission.studentUsername }}</p>
             </div>
             <el-button type="primary" plain @click="openGradeDialog(activeSubmission)">
-              {{ activeSubmission.submitStatus === 'GRADED' ? '查看/调整' : '批改' }}
+              {{ activeSubmission.submitStatus === 'SAVED' ? '查看' : activeSubmission.submitStatus === 'GRADED' ? '查看/调整' : '批改' }}
             </el-button>
           </div>
 
@@ -211,26 +211,26 @@
                         v-model="answerGradeMap[question.answer?.id || 0].score"
                         :min="0"
                         :max="question.score"
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED'"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || !canGradeAnswer"
                       />
                       <el-input
                         v-model="answerGradeMap[question.answer?.id || 0].teacherComment"
                         type="textarea"
                         :rows="2"
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED'"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || !canGradeAnswer"
                         placeholder="输入本题评语"
                       />
                       <el-button
                         type="primary"
                         plain
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED'"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || !canGradeAnswer"
                         @click="submitAnswerGrade(question.answer?.id || 0, false)"
                       >
                         保存本题
                       </el-button>
                       <el-button
                         plain
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || question.answer?.suggestedScore == null"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || question.answer?.suggestedScore == null || !canGradeAnswer"
                         @click="submitAnswerGrade(question.answer?.id || 0, true)"
                       >
                         采纳推荐分
@@ -246,27 +246,29 @@
             <div class="grade-form-card">
               <div class="grade-dialog__section-title">评分与反馈</div>
               <el-alert
-                v-if="selectedSubmission.submitStatus === 'GRADED'"
+                v-if="!canGradeAnswer"
                 type="info"
                 :closable="false"
-               title="该提交已完成批改，当前以结果查看为主；如需继续评分，请切换到待批改记录。"
+                :title="selectedSubmission.submitStatus === 'SAVED'
+                  ? '学生尚未提交，当前不可评分'
+                  : '该提交已完成批改，当前以结果查看为主；如需继续评分，请切换到待批改记录。'"
                 class="grade-readonly-alert"
               />
               <el-form label-position="top" class="grade-form">
                 <el-form-item label="评分（0-100）" required>
-                  <el-input-number v-model="gradeForm.totalScore" :min="0" :max="100" :precision="1" style="width: 100%" />
+                  <el-input-number v-model="gradeForm.totalScore" :min="0" :max="100" :precision="1" :disabled="!canGradeAnswer" style="width: 100%" />
                 </el-form-item>
                 <el-form-item label="评语">
-                  <el-input v-model="gradeForm.teacherComment" type="textarea" :rows="8" maxlength="500" show-word-limit />
+                  <el-input v-model="gradeForm.teacherComment" type="textarea" :rows="8" maxlength="500" show-word-limit :disabled="!canGradeAnswer" />
                 </el-form-item>
               </el-form>
 
               <div class="quick-comment-block">
                 <p>快捷评语</p>
                 <div class="quick-comment-block__chips">
-                  <button type="button" class="quick-comment-chip" @click="appendQuickComment('论述详尽，结构较完整。')">论述详尽</button>
-                  <button type="button" class="quick-comment-chip" @click="appendQuickComment('逻辑清晰，可继续加强细节论证。')">逻辑清晰</button>
-                  <button type="button" class="quick-comment-chip" @click="appendQuickComment('建议补充格式规范与关键步骤说明。')">需加强格式</button>
+                  <button type="button" class="quick-comment-chip" :disabled="!canGradeAnswer" @click="appendQuickComment('论述详尽，结构较完整。')">论述详尽</button>
+                  <button type="button" class="quick-comment-chip" :disabled="!canGradeAnswer" @click="appendQuickComment('逻辑清晰，可继续加强细节论证。')">逻辑清晰</button>
+                  <button type="button" class="quick-comment-chip" :disabled="!canGradeAnswer" @click="appendQuickComment('建议补充格式规范与关键步骤说明。')">需加强格式</button>
                 </div>
               </div>
             </div>
@@ -282,7 +284,7 @@
           :loading="returning"
           @click="confirmReturnSubmission"
         >打回</el-button>
-          <el-button type="primary" :loading="submitting" :disabled="selectedSubmission?.submitStatus === 'GRADED'" @click="submitGrade">{{ selectedSubmission?.submitStatus === 'GRADED' ? '已完成批改' : '保存评分' }}</el-button>
+          <el-button type="primary" :loading="submitting" :disabled="!canGradeAnswer" @click="submitGrade">{{ selectedSubmission?.submitStatus === 'SAVED' ? '学生尚未提交' : selectedSubmission?.submitStatus === 'GRADED' ? '已完成批改' : '保存评分' }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -322,6 +324,10 @@ const gradeForm = reactive<GradeHomeworkRequest>({
 
 const homeworkId = computed(() => route.params.id as string);
 const homeworkTitle = computed(() => rows.value[0]?.homeworkTitle || '');
+
+const canGradeAnswer = computed(() =>
+  ['SUBMITTED', 'GRADED'].includes(selectedSubmission.value?.submitStatus || ''),
+);
 
 const filteredRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
@@ -403,6 +409,10 @@ const openGradeDialog = async (row: HomeworkSubmissionItem | null) => {
 };
 
 const submitAnswerGrade = async (answerId: number, acceptSuggested: boolean) => {
+  if (!canGradeAnswer.value) {
+    ElMessage.warning('学生尚未提交作业，不能批改');
+    return;
+  }
   const current = answerGradeMap[answerId];
   if (!selectedSubmission.value || !current) return;
   await gradeHomeworkAnswer(answerId, {
@@ -430,6 +440,10 @@ const appendQuickComment = (text: string) => {
 };
 
 const submitGrade = async () => {
+  if (!canGradeAnswer.value) {
+    ElMessage.warning('学生尚未提交作业，不能批改');
+    return;
+  }
   if (!selectedSubmission.value) {
     return;
   }

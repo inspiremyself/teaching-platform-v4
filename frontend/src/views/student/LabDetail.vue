@@ -10,7 +10,10 @@
           <span class="header-meta-chip">{{ experimentTypeLabel(detail.experimentType) }}</span>
           <span class="header-meta-chip">进度：{{ answeredCount }}/{{ labItems.length }}</span>
           <span class="header-meta-chip">{{ labItems.length }} 题</span>
-          <span class="header-meta-chip">截止：{{ formatDateTime(detail.dueAt) }}</span>
+          <span class="header-meta-chip">开始：{{ detail.startAt ? formatDateTime(detail.startAt) : '不限' }}</span>
+          <span class="header-meta-chip">截止：{{ detail.dueAt ? formatDateTime(detail.dueAt) : '不限' }}</span>
+          <span v-if="isNotStarted" class="header-meta-chip header-meta-chip--warning">实验尚未开始</span>
+          <span v-else-if="isOverdue" class="header-meta-chip header-meta-chip--warning">实验已截止</span>
           <span class="header-meta-chip" :class="detail.summaryRequired ? 'header-meta-chip--warning' : ''">
             {{ detail.summaryRequired ? '实验小结必填' : '实验小结选填' }}
           </span>
@@ -95,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { downloadMaterial } from '@/api/materials';
@@ -106,6 +109,21 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const detail = ref<StudentLabDetail | null>(null);
+// 响应式时钟：每秒刷新一次，跨过开始/截止时间后无需重新加载即可更新状态。
+const nowMs = ref(Date.now());
+
+const isNotStarted = computed(() => {
+  const startAt = detail.value?.startAt;
+  if (!startAt) return false;
+  const startTime = new Date(startAt).getTime();
+  return !Number.isNaN(startTime) && nowMs.value < startTime;
+});
+const isOverdue = computed(() => {
+  const dueAt = detail.value?.dueAt;
+  if (!dueAt) return false;
+  const dueTime = new Date(dueAt).getTime();
+  return !Number.isNaN(dueTime) && nowMs.value >= dueTime;
+});
 
 const labId = computed(() => Number(route.params.id));
 const labItems = computed(() => {
@@ -191,7 +209,19 @@ const questionTypeLabel = (type?: LabQuestionType) => {
 
 const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' ').slice(0, 16) : '-');
 
-onMounted(fetchData);
+let clockTimer: ReturnType<typeof setInterval> | undefined;
+onMounted(() => {
+  void fetchData();
+  clockTimer = setInterval(() => {
+    nowMs.value = Date.now();
+  }, 1000);
+});
+onUnmounted(() => {
+  if (clockTimer) {
+    clearInterval(clockTimer);
+    clockTimer = undefined;
+  }
+});
 </script>
 
 <style scoped>

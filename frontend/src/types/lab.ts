@@ -91,6 +91,8 @@ export interface LabItem {
   scoreVisibilityMode?: ScoreVisibilityMode | null;
   summaryRequired?: boolean;
   stepCount?: number;
+  startAt?: string | null;
+  dueAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -108,6 +110,8 @@ export interface CreateLabPayload {
   materialDownloadUrl?: string | null;
   scoreVisibilityMode?: ScoreVisibilityMode | null;
   summaryRequired: boolean;
+  startAt?: string | null;
+  dueAt?: string | null;
 }
 
 export interface UpdateLabPayload extends CreateLabPayload {}

@@ -471,6 +471,57 @@ class LabTeacherControllerTests {
     }
 
     @Test
+    void teacherCreateAndUpdateLabForwardTimeWindow() throws Exception {
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("id", 1);
+        view.put("classId", 1);
+        view.put("status", "DRAFT");
+        view.put("startAt", "2026-11-07T09:00:00+08:00");
+        view.put("dueAt", "2026-11-08T09:00:00+08:00");
+        when(labService.createLab(any(CurrentUser.class), argThat(request ->
+                request != null && request.startAt() != null && request.dueAt() != null)))
+                .thenReturn(view);
+        when(labService.updateLab(any(CurrentUser.class), anyLong(), argThat(request ->
+                request != null && request.startAt() != null && request.dueAt() != null)))
+                .thenReturn(view);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/labs")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "时间窗实验",
+                                      "classId": 1,
+                                      "status": "DRAFT",
+                                      "startAt": "2026-11-07T09:00:00+08:00",
+                                      "dueAt": "2026-11-08T09:00:00+08:00"
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.startAt").value("2026-11-07T09:00:00+08:00"))
+                    .andExpect(jsonPath("$.data.dueAt").value("2026-11-08T09:00:00+08:00"));
+
+            mockMvc.perform(put("/api/v1/teacher/labs/{id}", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "时间窗实验",
+                                      "classId": 1,
+                                      "status": "DRAFT",
+                                      "startAt": "2026-11-07T09:00:00+08:00",
+                                      "dueAt": "2026-11-08T09:00:00+08:00"
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.startAt").value("2026-11-07T09:00:00+08:00"))
+                    .andExpect(jsonPath("$.data.dueAt").value("2026-11-08T09:00:00+08:00"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCanChangeOwnedLabStatus() throws Exception {
         when(labService.changeLabStatus(any(CurrentUser.class), anyLong(), any(LabRequests.ChangeLabStatusRequest.class))).thenReturn(Map.of(
                 "id", 1,

@@ -18,6 +18,7 @@ import com.opencode.teachingplatform.homework.repository.HomeworkQuestionReposit
 import com.opencode.teachingplatform.homework.repository.HomeworkRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkSubmissionRepository;
 import com.opencode.teachingplatform.homework.service.HomeworkService;
+import com.opencode.teachingplatform.homework.service.HomeworkSubmissionClaimService;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.strategy.FillBlankScoringStrategy;
 import com.opencode.teachingplatform.grading.strategy.MultipleChoiceScoringStrategy;
@@ -28,9 +29,11 @@ import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
@@ -41,6 +44,10 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 @DataJpaTest
 @ActiveProfiles("test")
@@ -99,6 +106,34 @@ class HomeworkServiceTests {
 
     @Autowired
     private ClassRoomRepository classRoomRepository;
+
+    /**
+     * 独立事务的领取器在 @DataJpaTest 里看不到测试事务内未提交的种子数据，
+     * 因此替换为「同事务委托仓储」的 stub，真实并发由 @SpringBootTest 用例覆盖。
+     */
+    @MockBean
+    private HomeworkSubmissionClaimService homeworkSubmissionClaimService;
+
+    @BeforeEach
+    void stubSubmissionClaim() {
+        given(homeworkSubmissionClaimService.claim(anyLong(), anyLong()))
+                .willAnswer(invocation -> {
+                    Long homeworkId = invocation.getArgument(0);
+                    Long studentId = invocation.getArgument(1);
+                    return homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homeworkId, studentId)
+                            .map(HomeworkSubmission::getSubmitStatus)
+                            .orElseGet(() -> {
+                                HomeworkSubmission created = new HomeworkSubmission();
+                                created.setHomeworkId(homeworkId);
+                                created.setStudentId(studentId);
+                                created.setSubmitStatus(SubmissionStatus.SAVED);
+                                created.setPlagiarismRate(0D);
+                                created.setTotalScore(0D);
+                                homeworkSubmissionRepository.saveAndFlush(created);
+                                return SubmissionStatus.SAVED;
+                            });
+                });
+    }
 
     @Test
     void homeworkSchemaSupportsWholeSubmissionWorkflow() {
@@ -1227,6 +1262,101 @@ class HomeworkServiceTests {
                 new HomeworkRequests.SubmitHomeworkRequest("发布但逾期提交内容", null, null)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("作业已截止");
+    }
+
+    @Test
+    void submitHomeworkRejectsBeforeStartAt() {
+        Homework homework = createHomework(1L, 1L, "未开始作业", ActivityStatus.PUBLISHED);
+        homework.setStartAt(OffsetDateTime.now().plusHours(2));
+        homeworkRepository.save(homework);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        int submissionCountBefore = countHomeworkSubmissions(homework.getId());
+        int answerCountBefore = countHomeworkAnswers(homework.getId());
+
+        assertThatThrownBy(() -> homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("提前提交内容", null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业尚未开始");
+
+        assertThat(countHomeworkSubmissions(homework.getId())).isEqualTo(submissionCountBefore);
+        assertThat(countHomeworkAnswers(homework.getId())).isEqualTo(answerCountBefore);
+    }
+
+    @Test
+    void submitHomeworkAllowedAfterStartAt() {
+        Homework homework = createHomework(1L, 1L, "已开始作业", ActivityStatus.PUBLISHED);
+        homework.setStartAt(OffsetDateTime.now().minusSeconds(1));
+        homeworkRepository.save(homework);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        Map<String, Object> result = homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("已开始提交内容", null, null));
+
+        assertThat(result.get("status")).isEqualTo("SUBMITTED");
+    }
+
+    @Test
+    void submitHomeworkAllowsSubmissionAtStartBoundary() {
+        // 边界语义：now == startAt 允许提交（门禁只在 now < startAt 时拒绝）
+        Homework homework = createHomework(1L, 1L, "边界开始作业", ActivityStatus.PUBLISHED);
+        homework.setStartAt(OffsetDateTime.now());
+        homeworkRepository.save(homework);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        Map<String, Object> result = homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("边界提交内容", null, null));
+
+        assertThat(result.get("status")).isEqualTo("SUBMITTED");
+    }
+
+    @Test
+    void submitHomeworkSkipsClaimWhenSubmissionAlreadyExists() {
+        Homework homework = createHomework(1L, 1L, "已有草稿作业", ActivityStatus.PUBLISHED);
+        createSubmission(homework, SubmissionStatus.SAVED);
+
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+
+        Map<String, Object> result = homeworkService.submitHomework(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("草稿转提交内容", null, null));
+
+        assertThat(result.get("status")).isEqualTo("SUBMITTED");
+        // 快路径命中时不得开启独立事务领取
+        verify(homeworkSubmissionClaimService, never()).claim(anyLong(), anyLong());
+    }
+
+    @Test
+    void gradeAnswerRejectsSubmissionInSavedStatus() {
+        Homework homework = createHomework(1L, 1L, "未提交作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.SAVED);
+        HomeworkAnswer answer = new HomeworkAnswer();
+        answer.setHomeworkSubmissionId(submission.getId());
+        answer.setAnswerText("草稿答案");
+        answer = homeworkAnswerRepository.save(answer);
+        Long answerId = answer.getId();
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        int scoreCountBefore = countHomeworkScoreRecords(homework.getId(), 2L);
+
+        assertThatThrownBy(() -> homeworkService.gradeAnswer(
+                teacher,
+                answerId,
+                new HomeworkRequests.GradeHomeworkAnswerRequest(5D, "草稿不应被评分", false)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("学生尚未提交作业，不能批改");
+
+        assertThat(homeworkAnswerRepository.findById(answerId).orElseThrow().getScore()).isNull();
+        assertThat(countHomeworkScoreRecords(homework.getId(), 2L)).isEqualTo(scoreCountBefore);
     }
 
     private int countHomeworkSubmissions(Long homeworkId) {

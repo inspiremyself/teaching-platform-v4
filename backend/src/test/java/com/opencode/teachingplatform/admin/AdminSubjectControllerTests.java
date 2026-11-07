@@ -57,7 +57,7 @@ class AdminSubjectControllerTests extends AdminIntegrationTestSupport {
                                 {"name": "重复编码", "code": "SE-ARCH"}
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(40901));
+                .andExpect(jsonPath("$.code").value(40902));
     }
 
     @Test

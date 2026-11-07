@@ -76,6 +76,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Import({LabService.class, LabScoringSupport.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
+        // 类级 NOT_SUPPORTED：claim 的真实 REQUIRES_NEW 可读到已提交种子，直接使用真实 Bean
+        com.opencode.teachingplatform.lab.service.LabSubmissionClaimService.class,
         LabBehaviorMetricsService.class, BehaviorConfig.class,
         LabBehaviorMetricsServiceTests.TestBeans.class})
 @ActiveProfiles("test")

@@ -59,6 +59,8 @@
               <div>
                 <span class="meta-label">截止</span>
                 <strong>{{ formatDateTime(row.dueAt) }}</strong>
+                <el-tag v-if="labTimeState(row) === 'NOT_STARTED'" size="small" type="info" effect="light">未开始</el-tag>
+                <el-tag v-else-if="labTimeState(row) === 'OVERDUE'" size="small" type="warning" effect="light">已截止</el-tag>
               </div>
               <div>
                 <span class="meta-label">结果</span>
@@ -193,6 +195,13 @@ const actionLabel = (row: StudentLabListItem) => {
 };
 
 const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' ').slice(0, 16) : '-');
+
+const labTimeState = (row: StudentLabListItem) => {
+  const now = Date.now();
+  if (row.startAt && now < new Date(row.startAt).getTime()) return 'NOT_STARTED';
+  if (row.dueAt && now >= new Date(row.dueAt).getTime()) return 'OVERDUE';
+  return 'OPEN';
+};
 
 onMounted(fetchData);
 </script>

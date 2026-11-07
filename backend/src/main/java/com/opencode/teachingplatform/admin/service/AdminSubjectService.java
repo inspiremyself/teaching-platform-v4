@@ -57,7 +57,7 @@ public class AdminSubjectService {
         validateName(name);
         validateCode(code);
         if (schoolSubjectRepository.existsBySchoolIdAndCode(schoolId, code)) {
-            throw new BusinessException(40901, "学科编码已存在");
+            throw new BusinessException(40902, "学科编码已存在");
         }
         SchoolSubject subject = new SchoolSubject();
         subject.setSchoolId(schoolId);
@@ -69,7 +69,7 @@ public class AdminSubjectService {
             auditLogService.log(currentUser, AuditAction.SUBJECT_CREATE, AuditResourceType.SUBJECT, saved.getId(), Map.of("code", saved.getCode()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException(40901, "学科编码已存在");
+            throw new BusinessException(40902, "学科编码已存在");
         }
     }
 
@@ -81,7 +81,7 @@ public class AdminSubjectService {
         validateName(name);
         validateCode(code);
         if (!subject.getCode().equals(code) && schoolSubjectRepository.existsBySchoolIdAndCode(subject.getSchoolId(), code)) {
-            throw new BusinessException(40901, "学科编码已存在");
+            throw new BusinessException(40902, "学科编码已存在");
         }
         subject.setName(name);
         subject.setCode(code);
@@ -90,7 +90,7 @@ public class AdminSubjectService {
             auditLogService.log(currentUser, AuditAction.SUBJECT_UPDATE, AuditResourceType.SUBJECT, saved.getId(), Map.of("code", saved.getCode()));
             return toView(saved);
         } catch (DataIntegrityViolationException ex) {
-            throw new BusinessException(40901, "学科编码已存在");
+            throw new BusinessException(40902, "学科编码已存在");
         }
     }
 

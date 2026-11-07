@@ -45,6 +45,7 @@ import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,6 +77,7 @@ public class HomeworkService {
     private final GradingAdapter gradingAdapter;
     private final ObjectMapper objectMapper;
     private final QuestionContentValidator questionContentValidator;
+    private final HomeworkSubmissionClaimService homeworkSubmissionClaimService;
 
     public HomeworkService(HomeworkRepository homeworkRepository,
                            HomeworkSubmissionRepository homeworkSubmissionRepository,
@@ -94,7 +96,8 @@ public class HomeworkService {
                            ObjectProvider<GradingAdapter> gradingAdapterProvider,
                            ObjectProvider<ScoringEngine> scoringEngineProvider,
                            ObjectProvider<ObjectMapper> objectMapperProvider,
-                           QuestionContentValidator questionContentValidator) {
+                           QuestionContentValidator questionContentValidator,
+                           HomeworkSubmissionClaimService homeworkSubmissionClaimService) {
         this.homeworkRepository = homeworkRepository;
         this.homeworkSubmissionRepository = homeworkSubmissionRepository;
         this.homeworkQuestionRepository = homeworkQuestionRepository;
@@ -112,6 +115,7 @@ public class HomeworkService {
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
         this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
         this.questionContentValidator = questionContentValidator;
+        this.homeworkSubmissionClaimService = homeworkSubmissionClaimService;
     }
 
     @Transactional(readOnly = true)
@@ -397,23 +401,47 @@ public class HomeworkService {
         if (homework.getStatus() == ActivityStatus.CLOSED) {
             throw new BusinessException(40000, "作业已关闭，不能提交");
         }
+        // 开始时间门禁：位于任何读提交行/写操作之前，命中时不产生任何数据变更。
+        if (homework.getStartAt() != null && OffsetDateTime.now().isBefore(homework.getStartAt())) {
+            throw new BusinessException(40000, "作业尚未开始");
+        }
         // 截止时间门禁：位于任何写操作之前，命中时不产生提交/答案/查重/成绩写入。
         if (homework.getDueAt() != null && OffsetDateTime.now().isAfter(homework.getDueAt())) {
             throw new BusinessException(40000, "作业已截止，不能提交");
         }
-        // 提交状态机：已提交/已批改只能由教师打回后才能再次编辑提交。
-        HomeworkSubmission existingSubmission = homeworkSubmissionRepository
+        // 快路径：普通读一次取锁前快照（查询次数与改造前持平）；读到即跳过独立事务领取。
+        SubmissionStatus claimStatus = homeworkSubmissionRepository
                 .findByHomeworkIdAndStudentId(homeworkId, currentUser.id())
+                .map(HomeworkSubmission::getSubmitStatus)
                 .orElse(null);
-        if (existingSubmission != null) {
-            if (existingSubmission.getSubmitStatus() == SubmissionStatus.SUBMITTED) {
-                throw new BusinessException(40000, "作业已提交，如需修改请联系教师打回");
-            }
-            if (existingSubmission.getSubmitStatus() == SubmissionStatus.GRADED) {
-                throw new BusinessException(40000, "作业已批改，如需修改请联系教师打回");
+        // 慢路径：仅首存才用独立事务领取，唯一键冲突只回滚内层事务。
+        if (claimStatus == null) {
+            try {
+                claimStatus = homeworkSubmissionClaimService.claim(homeworkId, currentUser.id());
+            } catch (DataIntegrityViolationException ex) {
+                // 并发首存：另一事务已插入，下面锁内重读
+                claimStatus = SubmissionStatus.SAVED;
             }
         }
-        HomeworkSubmission submission = existingSubmission == null ? new HomeworkSubmission() : existingSubmission;
+        // 锁内重读：规避 REPEATABLE READ 快照读不到并发事务新行的问题。
+        HomeworkSubmission submission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentIdForUpdate(homeworkId, currentUser.id())
+                .orElseThrow(() -> new BusinessException(50000, "作业提交创建失败，请重试"));
+        // 锁内状态优先：顺序重复提交沿用原文案；并发重复提交按幂等成功返回。
+        if (submission.getSubmitStatus() == SubmissionStatus.SUBMITTED
+                || submission.getSubmitStatus() == SubmissionStatus.GRADED) {
+            if (claimStatus != SubmissionStatus.SAVED) {
+                if (submission.getSubmitStatus() == SubmissionStatus.SUBMITTED) {
+                    throw new BusinessException(40000, "作业已提交，如需修改请联系教师打回");
+                }
+                throw new BusinessException(40000, "作业已批改，如需修改请联系教师打回");
+            }
+            return Map.of(
+                    "submissionId", submission.getId(),
+                    "status", submission.getSubmitStatus().name(),
+                    "plagiarismRate", Objects.requireNonNullElse(submission.getPlagiarismRate(), 0D)
+            );
+        }
         submission.setHomeworkId(homeworkId);
         submission.setStudentId(currentUser.id());
         submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
@@ -530,6 +558,12 @@ public class HomeworkService {
         HomeworkSubmission submission = homeworkSubmissionRepository
                 .findByHomeworkIdAndStudentIdForUpdate(homework.getId(), head.getStudentId())
                 .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
+
+        // 状态门禁：草稿（SAVED）尚无最终答案，逐题评分会污染总分与成绩记录，必须拒绝。
+        SubmissionStatus submitStatus = submission.getSubmitStatus();
+        if (submitStatus != SubmissionStatus.SUBMITTED && submitStatus != SubmissionStatus.GRADED) {
+            throw new BusinessException(40000, "学生尚未提交作业，不能批改");
+        }
 
         if (request.acceptSuggested()) {
             if (answer.getSuggestedScore() == null) {

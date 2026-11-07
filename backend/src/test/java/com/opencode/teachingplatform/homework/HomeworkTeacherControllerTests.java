@@ -110,6 +110,31 @@ class HomeworkTeacherControllerTests {
     }
 
     @Test
+    void teacherGradeAnswerRejectsSavedSubmission() throws Exception {
+        when(homeworkService.gradeAnswer(any(CurrentUser.class), anyLong(),
+                any(HomeworkRequests.GradeHomeworkAnswerRequest.class)))
+                .thenThrow(new BusinessException(40000, "学生尚未提交作业，不能批改"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homework-answers/{id}/grade", 11L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "score": 8,
+                                      "teacherComment": "草稿批改",
+                                      "acceptSuggested": false
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("学生尚未提交作业，不能批改"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCanGetHomeworkSubmissionDetail() throws Exception {
         when(homeworkService.getTeacherSubmissionDetail(any(CurrentUser.class), anyLong())).thenReturn(Map.of(
                 "id", 5,

@@ -10,6 +10,8 @@
           <span class="header-meta-chip">{{ currentIndex + 1 }}/{{ labItems.length }}</span>
           <span class="header-meta-chip">{{ detail.summaryRequired ? '实验小结必填' : '实验小结选填' }}</span>
           <span class="header-meta-chip">{{ readonly ? '只读' : '可编辑' }}</span>
+          <el-tag v-if="isNotStarted" type="warning" effect="light" size="small">实验尚未开始</el-tag>
+          <el-tag v-else-if="isOverdue" type="warning" effect="light" size="small">实验已截止</el-tag>
         </div>
       </div>
       <div class="page-header__actions">
@@ -280,6 +282,21 @@ const { ensureDraft, getDraft, patchDraft, buildSavePayload, hydrateAllDrafts } 
 
 let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 let saveQueue: Promise<boolean> = Promise.resolve(true);
+let clockTimer: ReturnType<typeof setInterval> | undefined;
+// 响应式时钟：每秒刷新一次，跨过开始/截止时间后自动切换到只读态。
+const nowMs = ref(Date.now());
+const isNotStarted = computed(() => {
+  const startAt = detail.value?.startAt;
+  if (!startAt) return false;
+  const startTime = new Date(startAt).getTime();
+  return !Number.isNaN(startTime) && nowMs.value < startTime;
+});
+const isOverdue = computed(() => {
+  const dueAt = detail.value?.dueAt;
+  if (!dueAt) return false;
+  const dueTime = new Date(dueAt).getTime();
+  return !Number.isNaN(dueTime) && nowMs.value >= dueTime;
+});
 
 const labId = computed(() => Number(route.params.id));
 const currentItemQueryId = computed(() => {
@@ -306,12 +323,19 @@ const currentItemCodeLanguage = computed(() => {
     ? draft.language || currentCodeEditorLanguage.value || currentItem.value.editorLanguage || 'CODE'
     : currentCodeEditorLanguage.value || currentItem.value.editorLanguage || 'CODE';
 });
-const readonly = computed(() => ['SUBMITTED', 'GRADED'].includes(detail.value?.submissionStatus || ''));
+const readonly = computed(() => ['SUBMITTED', 'GRADED'].includes(detail.value?.submissionStatus || '')
+  || isNotStarted.value
+  || isOverdue.value);
 // 提交按钮只允许“已保存且存在题项”的草稿推进，与后端“仅 SAVED 可提交”状态机保持一致
 const canSubmit = computed(
-  () => detail.value?.submissionStatus === 'SAVED' && labItems.value.length > 0
+  () => detail.value?.submissionStatus === 'SAVED'
+    && labItems.value.length > 0
+    && !isNotStarted.value
+    && !isOverdue.value
 );
 const submitHint = computed(() => {
+  if (isNotStarted.value) return '实验尚未开始';
+  if (isOverdue.value) return '实验已截止，不能保存或提交';
   const status = detail.value?.submissionStatus;
   if (!status) return '请先保存实验答案后再提交';
   if (status === 'SUBMITTED') return '已提交，如需修改请联系教师打回';
@@ -363,6 +387,8 @@ const saveStateClass = computed(() => {
 });
 const focusStateClass = computed(() => saveStateClass.value.replace('save-state-banner', 'focus-state-pill'));
 const footerStatusText = computed(() => {
+  if (isNotStarted.value) return '实验尚未开始，暂不可作答。';
+  if (isOverdue.value) return '实验已截止，暂不可作答。';
   if (readonly.value) return '当前实验已提交，可查看作答与反馈。';
   if (submitting.value) return '正在提交实验与实验小结…';
   if (saving.value) return '正在保存当前题目…';
@@ -791,6 +817,9 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
 
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload);
+  clockTimer = setInterval(() => {
+    nowMs.value = Date.now();
+  }, 1000);
   void fetchData().then(() => {
     // 行为采集：仅在可编辑作答会话内激活；已提交/已批改的只读查看不采集
     if (readonly.value) {
@@ -807,6 +836,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
+  if (clockTimer) {
+    clearInterval(clockTimer);
+    clockTimer = undefined;
+  }
   clearAutosaveTimer();
   // 行为采集：路由离开收尾并停采；直接关浏览器由采集器 beforeunload 钩子兜底（D17②）
   behaviorCollector.leave('route');

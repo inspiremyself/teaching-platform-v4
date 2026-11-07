@@ -120,6 +120,29 @@ class HomeworkStudentControllerTests {
     }
 
     @Test
+    void studentSubmitRejectsBeforeStartAt() throws Exception {
+        when(homeworkService.submitHomework(any(CurrentUser.class), org.mockito.ArgumentMatchers.eq(1L), any()))
+                .thenThrow(new com.opencode.teachingplatform.common.exception.BusinessException(40000, "作业尚未开始"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/student/homeworks/{id}/submit", 1L)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "answerText": "提前提交内容",
+                                      "attachment": null
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("作业尚未开始"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void studentHomeworkDetailContainsClassAndAttachmentContext() throws Exception {
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("id", 1);

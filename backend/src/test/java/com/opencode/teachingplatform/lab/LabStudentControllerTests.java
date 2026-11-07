@@ -61,7 +61,9 @@ class LabStudentControllerTests {
         when(labService.listStudentLabs(any(CurrentUser.class))).thenReturn(List.of(Map.of(
                 "id", 1,
                 "title", "体系结构分层实验",
-                "status", "PUBLISHED"
+                "status", "PUBLISHED",
+                "startAt", "2026-11-07T09:00:00+08:00",
+                "dueAt", "2026-11-08T09:00:00+08:00"
         )));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
@@ -70,7 +72,9 @@ class LabStudentControllerTests {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(0))
                     .andExpect(jsonPath("$.data.length()").value(1))
-                    .andExpect(jsonPath("$.data[0].title").value("体系结构分层实验"));
+                    .andExpect(jsonPath("$.data[0].title").value("体系结构分层实验"))
+                    .andExpect(jsonPath("$.data[0].startAt").value("2026-11-07T09:00:00+08:00"))
+                    .andExpect(jsonPath("$.data[0].dueAt").value("2026-11-08T09:00:00+08:00"));
         } finally {
             SecurityContextHolder.clearContext();
         }
@@ -167,6 +171,8 @@ class LabStudentControllerTests {
         detail.put("id", 1);
         detail.put("className", "SE2026-1");
         detail.put("summaryText", "实验小结内容");
+        detail.put("startAt", "2026-11-07T09:00:00+08:00");
+        detail.put("dueAt", "2026-11-08T09:00:00+08:00");
         detail.put("items", List.of(step));
         detail.put("steps", List.of(step));
 
@@ -179,6 +185,8 @@ class LabStudentControllerTests {
                     .andExpect(jsonPath("$.code").value(0))
                     .andExpect(jsonPath("$.data.className").value("SE2026-1"))
                     .andExpect(jsonPath("$.data.summaryText").value("实验小结内容"))
+                    .andExpect(jsonPath("$.data.startAt").value("2026-11-07T09:00:00+08:00"))
+                    .andExpect(jsonPath("$.data.dueAt").value("2026-11-08T09:00:00+08:00"))
                     .andExpect(jsonPath("$.data.items[0].id").value(2))
                     .andExpect(jsonPath("$.data.steps[0].id").value(2))
                     .andExpect(jsonPath("$.data.steps[0].answerText").value("第一步答案"))

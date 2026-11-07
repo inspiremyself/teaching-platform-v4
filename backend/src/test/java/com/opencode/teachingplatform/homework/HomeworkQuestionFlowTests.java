@@ -6,16 +6,22 @@ import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
 import com.opencode.teachingplatform.homework.entity.Homework;
 import com.opencode.teachingplatform.homework.entity.HomeworkAnswer;
+import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.homework.entity.HomeworkQuestion;
+import com.opencode.teachingplatform.homework.entity.HomeworkSubmission;
 import com.opencode.teachingplatform.homework.repository.HomeworkAnswerRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkQuestionRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkRepository;
+import com.opencode.teachingplatform.homework.repository.HomeworkSubmissionRepository;
 import com.opencode.teachingplatform.homework.service.HomeworkService;
+import com.opencode.teachingplatform.homework.service.HomeworkSubmissionClaimService;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +30,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -47,6 +55,37 @@ class HomeworkQuestionFlowTests {
 
     @Autowired
     private QuestionBankRepository questionBankRepository;
+
+    @Autowired
+    private HomeworkSubmissionRepository homeworkSubmissionRepository;
+
+    /**
+     * 首存 claim 走 REQUIRES_NEW 独立连接，在 @Transactional 测试里看不到未提交的作业种子数据，
+     * 会触发 homework_submission 的外键冲突；此处用委托桩替代，语义与真实实现一致（无则建 SAVED 行）。
+     */
+    @MockBean
+    private HomeworkSubmissionClaimService homeworkSubmissionClaimService;
+
+    @BeforeEach
+    void stubSubmissionClaim() {
+        given(homeworkSubmissionClaimService.claim(anyLong(), anyLong()))
+                .willAnswer(invocation -> {
+                    Long homeworkId = invocation.getArgument(0);
+                    Long studentId = invocation.getArgument(1);
+                    return homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homeworkId, studentId)
+                            .map(HomeworkSubmission::getSubmitStatus)
+                            .orElseGet(() -> {
+                                HomeworkSubmission created = new HomeworkSubmission();
+                                created.setHomeworkId(homeworkId);
+                                created.setStudentId(studentId);
+                                created.setSubmitStatus(SubmissionStatus.SAVED);
+                                created.setPlagiarismRate(0D);
+                                created.setTotalScore(0D);
+                                homeworkSubmissionRepository.saveAndFlush(created);
+                                return SubmissionStatus.SAVED;
+                            });
+                });
+    }
 
     @Test
     void teacherShouldBeAbleToAttachQuestionBankQuestionsAndInlineQuestions() {

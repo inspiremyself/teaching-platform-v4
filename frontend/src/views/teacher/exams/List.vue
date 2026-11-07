@@ -775,8 +775,8 @@ const submitForm = async () => {
     if (editingId.value) {
       const payload: UpdateExamPayload = {
         ...basePayload,
-        startAt: form.value.startAt || '',
-        endAt: form.value.endAt || '',
+        startAt: form.value.startAt || undefined,
+        endAt: form.value.endAt || undefined,
       }
       await updateExam(editingId.value, payload)
       ElMessage.success(`考试更新成功，当前共保存 ${questions.length} 道题目`)

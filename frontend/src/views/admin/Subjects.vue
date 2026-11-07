@@ -162,6 +162,8 @@ const submit = async () => {
     dialogVisible.value = false;
     resetForm();
     await fetchData();
+  } catch {
+    // 全局拦截器已提示（40902 不在静默名单内），这里仅阻止异常冒泡并保持弹窗打开
   } finally {
     submitting.value = false;
   }

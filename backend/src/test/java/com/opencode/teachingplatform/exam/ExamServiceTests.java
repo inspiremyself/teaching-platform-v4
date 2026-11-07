@@ -719,6 +719,28 @@ class ExamServiceTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void updateExamClearsTimeWindowWhenBothBoundsNull() {
+        Long examId = createDraftExam(false);
+
+        examService.updateExam(teacher, examId, new ExamRequests.UpdateExamRequest(
+                "清空时间窗",
+                "",
+                1L,
+                null,
+                null,
+                30,
+                null,
+                List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)),
+                null
+        ));
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+        assertThat(detail.get("startAt")).isNull();
+        assertThat(detail.get("endAt")).isNull();
+    }
+
+    @Test
     void updateExamRejectsInlineQuestion() {
         Long examId = createDraftExam(false);
 

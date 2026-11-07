@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { ApiError } from '@/utils/request';
 import Layout from '@/layout/index.vue';
 
 const redirectToRoleHome = (role?: string) => {
@@ -119,9 +120,13 @@ router.beforeEach(async to => {
   if (!authStore.user) {
     try {
       await authStore.fetchUserInfo();
-    } catch {
-      authStore.logout();
-      return '/login';
+    } catch (err) {
+      if (err instanceof ApiError && [401, 40100, 40102].includes(err.code)) {
+        authStore.logout();
+        return '/login';
+      }
+      // 网络/超时/5xx：保留 token 与 user，取消本次导航；提示由请求拦截器统一给出
+      return false;
     }
   }
 

@@ -5,6 +5,7 @@ import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
+import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
@@ -25,6 +26,7 @@ import com.opencode.teachingplatform.lab.repository.LabStepRepository;
 import com.opencode.teachingplatform.lab.repository.LabSubmissionRepository;
 import com.opencode.teachingplatform.lab.service.LabScoringSupport;
 import com.opencode.teachingplatform.lab.service.LabService;
+import com.opencode.teachingplatform.lab.service.LabSubmissionClaimService;
 import com.opencode.teachingplatform.grading.strategy.FillBlankScoringStrategy;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
@@ -49,6 +51,8 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +60,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -86,12 +92,36 @@ class LabServiceTests {
     @MockBean
     private LabBehaviorMetricsService labBehaviorMetricsService;
 
+    /**
+     * 首存 claim 走 REQUIRES_NEW 独立连接，在 @DataJpaTest 事务内看不到未提交的实验种子数据，
+     * 会触发 experiment_submission 的外键冲突；此处用委托桩替代，语义与真实实现一致（无则建 SAVED 行）。
+     */
+    @MockBean
+    private LabSubmissionClaimService labSubmissionClaimService;
+
     @org.junit.jupiter.api.BeforeEach
     void stubBehaviorMetricsService() {
         // 懒算默认返回空集（全部行视为无 metrics → behavior 为 null，不影响既有断言）；verify 场景单独覆盖
         org.mockito.Mockito.lenient()
                 .when(labBehaviorMetricsService.refreshStaleMetrics(org.mockito.ArgumentMatchers.anyList()))
                 .thenReturn(Map.of());
+        // 委托桩：找到即复用，找不到补 SAVED 行（与真实 claim 一致，只是不另开事务）
+        org.mockito.Mockito.lenient()
+                .doAnswer(invocation -> {
+                    Long labId = invocation.getArgument(0);
+                    Long studentId = invocation.getArgument(1);
+                    if (labSubmissionRepository.findByLabIdAndStudentId(labId, studentId).isEmpty()) {
+                        LabSubmission created = new LabSubmission();
+                        created.setLabId(labId);
+                        created.setStudentId(studentId);
+                        created.setSubmitStatus(SubmissionStatus.SAVED);
+                        created.setPlagiarismRate(0D);
+                        created.setTotalScore(0D);
+                        labSubmissionRepository.saveAndFlush(created);
+                    }
+                    return null;
+                })
+                .when(labSubmissionClaimService).claim(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong());
     }
 
     @Autowired
@@ -1032,7 +1062,7 @@ class LabServiceTests {
         Map<String, Object> result = labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("更新后的实验", "新的说明", "新的实验内容", 2, classId, "PUBLISHED", null, null, true)
+                new LabRequests.UpdateLabRequest("更新后的实验", "新的说明", "新的实验内容", 2, classId, "PUBLISHED", null, null, true, null, null)
         );
 
         assertThat(result.get("title")).isEqualTo("更新后的实验");
@@ -1098,7 +1128,7 @@ class LabServiceTests {
 
         assertThatThrownBy(() -> labService.createLab(
                 teacherUser(),
-                new LabRequests.CreateLabRequest("直接发布实验", "说明", "内容", 1, classId, "PUBLISHED", null, null, false)
+                new LabRequests.CreateLabRequest("直接发布实验", "说明", "内容", 1, classId, "PUBLISHED", null, null, false, null, null)
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("尚未配置题项");
@@ -1114,7 +1144,7 @@ class LabServiceTests {
         assertThatThrownBy(() -> labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("更新实验", "说明", "内容", 1, classId, "PUBLISHED", null, null, false)
+                new LabRequests.UpdateLabRequest("更新实验", "说明", "内容", 1, classId, "PUBLISHED", null, null, false, null, null)
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("尚未配置题项");
@@ -1178,7 +1208,7 @@ class LabServiceTests {
         assertThatThrownBy(() -> labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("越权更新", "desc", "content", 1, otherTeacherClassId, "DRAFT", null, null, false)
+                new LabRequests.UpdateLabRequest("越权更新", "desc", "content", 1, otherTeacherClassId, "DRAFT", null, null, false, null, null)
         ))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("无权限访问该资源");
@@ -1283,7 +1313,7 @@ class LabServiceTests {
         assertThatThrownBy(() -> labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("退回草稿", "desc", "content", 1, classId, "DRAFT", null, null, false)))
+                new LabRequests.UpdateLabRequest("退回草稿", "desc", "content", 1, classId, "DRAFT", null, null, false, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("已有学生作答，不能退回草稿");
 
@@ -1302,12 +1332,12 @@ class LabServiceTests {
         Map<String, Object> nullStatus = labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("空状态更新", "desc", "content", 1, classId, null, null, null, false));
+                new LabRequests.UpdateLabRequest("空状态更新", "desc", "content", 1, classId, null, null, null, false, null, null));
         // status 为空白串：同样视为保持当前状态
         Map<String, Object> blankStatus = labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("空白状态更新", "desc", "content", 1, classId, "   ", null, null, false));
+                new LabRequests.UpdateLabRequest("空白状态更新", "desc", "content", 1, classId, "   ", null, null, false, null, null));
 
         assertThat(nullStatus.get("status")).isEqualTo("PUBLISHED");
         assertThat(blankStatus.get("status")).isEqualTo("PUBLISHED");
@@ -1326,7 +1356,7 @@ class LabServiceTests {
         assertThatThrownBy(() -> labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("改班级", "desc", "content", 1, anotherClassId, null, null, null, false)))
+                new LabRequests.UpdateLabRequest("改班级", "desc", "content", 1, anotherClassId, null, null, null, false, null, null)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("已有学生作答，不能变更所属班级");
 
@@ -1343,10 +1373,178 @@ class LabServiceTests {
         Map<String, Object> result = labService.updateLab(
                 teacherUser(),
                 labId,
-                new LabRequests.UpdateLabRequest("同班更新", "desc", "content", 1, classId, null, null, null, false));
+                new LabRequests.UpdateLabRequest("同班更新", "desc", "content", 1, classId, null, null, null, false, null, null));
 
         assertThat(result.get("classId")).isEqualTo(classId);
         assertThat(labRepository.findById(labId).orElseThrow().getClassId()).isEqualTo(classId);
+    }
+
+    // ------------------------------------------------------------------
+    // 实验时间窗门禁 / 发布门禁 / 并发首存快路径（技术方案 TD25–TD29）
+    // ------------------------------------------------------------------
+
+    @Test
+    void saveAnswerRejectsBeforeStartAt() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1);
+        seedMembership(classId, studentUser().id());
+        updateLabStartAt(labId, OffsetDateTime.now().plusHours(2));
+
+        assertThatThrownBy(() -> labService.saveAnswer(studentUser(), labId, stepId,
+                new LabRequests.SaveStepAnswerRequest("答案", "{\"kind\":\"text\",\"text\":\"答案\"}")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验尚未开始");
+
+        // 门禁必须拦在写库之前：不得留下任何提交行
+        assertThat(labSubmissionRepository.findByLabIdAndStudentId(labId, studentUser().id())).isEmpty();
+    }
+
+    @Test
+    void uploadAnswerImageRejectsAfterDeadline() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1);
+        seedMembership(classId, studentUser().id());
+        updateLabEndAt(labId, OffsetDateTime.now().minusMinutes(1));
+
+        MockMultipartFile file = new MockMultipartFile("file", "late.png", "image/png", new byte[] {1, 2, 3});
+
+        assertThatThrownBy(() -> labService.uploadAnswerImage(studentUser(), labId, stepId, file))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验已截止");
+    }
+
+    @Test
+    void submitLabRejectsBeforeStartAt() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedStep(labId, 1);
+        seedMembership(classId, studentUser().id());
+        updateLabStartAt(labId, OffsetDateTime.now().plusHours(2));
+
+        assertThatThrownBy(() -> labService.submitLab(studentUser(), labId,
+                new LabRequests.SubmitLabRequest("实验小结")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("实验尚未开始");
+    }
+
+    @Test
+    void createLabRejectsStartAtNotBeforeDueAt() {
+        Long classId = seedClass(teacherUser().id());
+        OffsetDateTime now = OffsetDateTime.now();
+
+        assertThatThrownBy(() -> labService.createLab(teacherUser(),
+                new LabRequests.CreateLabRequest("倒置时间窗", "desc", "content", 1, classId, "DRAFT",
+                        null, null, false, now, now)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("开始时间必须早于结束时间");
+    }
+
+    @Test
+    void updateLabRejectsPublishWithDeadlineVisibilityWithoutDueAt() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        seedStep(labId, 1);
+
+        assertThatThrownBy(() -> labService.updateLab(teacherUser(), labId,
+                new LabRequests.UpdateLabRequest("发布", "desc", "content", 1, classId, "PUBLISHED",
+                        null, ScoreVisibilityMode.AFTER_DEADLINE, false, null, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("截止后可见模式必须设置结束时间");
+
+        // 发布校验先于 applyLab：异常后实体状态不得被污染
+        assertThat(labRepository.findById(labId).orElseThrow().getStatus()).isEqualTo(ActivityStatus.DRAFT);
+    }
+
+    @Test
+    void changeLabStatusRejectsDeadlineVisibilityWithoutDueAt() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        seedStep(labId, 1);
+        jdbcTemplate.update(
+                "UPDATE t_experiment SET score_visibility_mode = 'AFTER_DEADLINE', end_at = NULL WHERE experiment_id = ?",
+                labId);
+
+        assertThatThrownBy(() -> labService.changeLabStatus(teacherUser(), labId,
+                new LabRequests.ChangeLabStatusRequest("PUBLISHED")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("截止后可见模式必须设置结束时间");
+
+        assertThat(labRepository.findById(labId).orElseThrow().getStatus()).isEqualTo(ActivityStatus.DRAFT);
+    }
+
+    @Test
+    void studentLabDetailEchoesTimeWindow() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        seedStep(labId, 1);
+        seedMembership(classId, studentUser().id());
+        OffsetDateTime startAt = OffsetDateTime.now().minusHours(1).withNano(0);
+        OffsetDateTime dueAt = OffsetDateTime.now().plusHours(1).withNano(0);
+        updateLabTimeWindow(labId, startAt, dueAt);
+
+        Map<String, Object> detail = labService.getStudentLabDetail(studentUser(), labId);
+
+        assertThat(((OffsetDateTime) detail.get("startAt")).toInstant()).isEqualTo(startAt.toInstant());
+        assertThat(((OffsetDateTime) detail.get("dueAt")).toInstant()).isEqualTo(dueAt.toInstant());
+    }
+
+    @Test
+    void teacherLabViewEchoesTimeWindow() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        seedStep(labId, 1);
+        OffsetDateTime startAt = OffsetDateTime.now().minusHours(1).withNano(0);
+        OffsetDateTime dueAt = OffsetDateTime.now().plusHours(1).withNano(0);
+
+        Map<String, Object> view = labService.updateLab(teacherUser(), labId,
+                new LabRequests.UpdateLabRequest("回显实验", "desc", "content", 1, classId, "DRAFT",
+                        null, null, false, startAt, dueAt));
+
+        assertThat(((OffsetDateTime) view.get("startAt")).toInstant()).isEqualTo(startAt.toInstant());
+        assertThat(((OffsetDateTime) view.get("dueAt")).toInstant()).isEqualTo(dueAt.toInstant());
+    }
+
+    @Test
+    void saveAnswerSkipsClaimWhenSubmissionAlreadyExists() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1);
+        seedMembership(classId, studentUser().id());
+        LabSubmission existing = new LabSubmission();
+        existing.setLabId(labId);
+        existing.setStudentId(studentUser().id());
+        existing.setSubmitStatus(SubmissionStatus.SAVED);
+        existing.setPlagiarismRate(0D);
+        existing.setTotalScore(0D);
+        labSubmissionRepository.saveAndFlush(existing);
+
+        labService.saveAnswer(studentUser(), labId, stepId,
+                new LabRequests.SaveStepAnswerRequest("答案", "{\"kind\":\"text\",\"text\":\"答案\"}"));
+
+        // 快路径：已有提交行时不得再走独立事务 claim
+        verify(labSubmissionClaimService, never()).claim(anyLong(), anyLong());
+    }
+
+    @Test
+    void repeatedSaveAnswerReusesSingleSubmissionAndAnswerRow() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        Long stepId = seedStep(labId, 1);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId,
+                new LabRequests.SaveStepAnswerRequest("第一次", "{\"kind\":\"text\",\"text\":\"第一次\"}"));
+        labService.saveAnswer(studentUser(), labId, stepId,
+                new LabRequests.SaveStepAnswerRequest("第二次", "{\"kind\":\"text\",\"text\":\"第二次\"}"));
+
+        assertThat(labSubmissionRepository.countByLabId(labId)).isEqualTo(1);
+        LabSubmission submission = labSubmissionRepository
+                .findByLabIdAndStudentId(labId, studentUser().id()).orElseThrow();
+        List<LabStepAnswer> answers = labStepAnswerRepository.findByLabSubmissionId(submission.getId());
+        assertThat(answers).hasSize(1);
+        assertThat(answers.getFirst().getAnswerText()).isEqualTo("第二次");
     }
 
     @Test
@@ -1821,7 +2019,7 @@ class LabServiceTests {
 
         Map<String, Object> result = labService.createLab(
                 teacherUser(),
-                new LabRequests.CreateLabRequest("自动初始化实验", "自动初始化说明", "自动初始化内容", 1, classId, "DRAFT", null, null, true)
+                new LabRequests.CreateLabRequest("自动初始化实验", "自动初始化说明", "自动初始化内容", 1, classId, "DRAFT", null, null, true, null, null)
         );
 
         Long labId = ((Number) result.get("id")).longValue();
@@ -3207,6 +3405,21 @@ class LabServiceTests {
         );
     }
 
+    private void updateLabStartAt(Long labId, OffsetDateTime startAt) {
+        jdbcTemplate.update("UPDATE t_experiment SET start_at = ? WHERE experiment_id = ?",
+                Timestamp.from(startAt.toInstant()), labId);
+    }
+
+    private void updateLabEndAt(Long labId, OffsetDateTime endAt) {
+        jdbcTemplate.update("UPDATE t_experiment SET end_at = ? WHERE experiment_id = ?",
+                Timestamp.from(endAt.toInstant()), labId);
+    }
+
+    private void updateLabTimeWindow(Long labId, OffsetDateTime startAt, OffsetDateTime endAt) {
+        jdbcTemplate.update("UPDATE t_experiment SET start_at = ?, end_at = ? WHERE experiment_id = ?",
+                Timestamp.from(startAt.toInstant()), Timestamp.from(endAt.toInstant()), labId);
+    }
+
     private void seedStudentAccount(CurrentUser student) {
         jdbcTemplate.update(
                 """
@@ -3506,7 +3719,11 @@ class LabServiceTests {
         Long sourceLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
         seedStep(sourceLabId, 1);
         jdbcTemplate.update(
-                "UPDATE t_experiment SET score_released = TRUE, start_at = CURRENT_TIMESTAMP, end_at = CURRENT_TIMESTAMP WHERE experiment_id = ?",
+                """
+                UPDATE t_experiment SET score_released = TRUE, start_at = CURRENT_TIMESTAMP,
+                       end_at = TIMESTAMPADD(DAY, 1, CURRENT_TIMESTAMP), score_visibility_mode = 'AFTER_DEADLINE'
+                WHERE experiment_id = ?
+                """,
                 sourceLabId);
 
         Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
@@ -3517,6 +3734,8 @@ class LabServiceTests {
         assertThat(copied.isScoreReleased()).isFalse();
         assertThat(copied.getStartAt()).isNull();
         assertThat(copied.getEndAt()).isNull();
+        // 副本没有截止时间，沿用「截止后可见」会让模式与时间窗自相矛盾，必须回落为教师确认后可见
+        assertThat(copied.getScoreVisibilityMode()).isEqualTo(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
         assertThat(copied.getCreatedBy()).isEqualTo(teacherUser().id());
     }
 
