@@ -34,7 +34,7 @@ import type {
   UpdateLabPayload,
   UpdateLabStepPayload,
 } from '@/types/lab';
-import type { PageResult } from '@/types/common';
+import type { PagedResult } from '@/types/common';
 import type { CopyQuestionToBankRequest, CopyQuestionToBankResult } from '@/types/homework';
 
 export const listTeacherLabs = () => request.get<LabItem[]>('/teacher/labs');
@@ -76,7 +76,7 @@ export const copyLabStepToBank = (stepId: number | string, data: CopyQuestionToB
 
 /** 教师端实验报告队列（分页 + 筛选），供队列页使用 */
 export const listTeacherLabReports = (params?: LabReportQuery) =>
-  request.get<PageResult<LabReportItem>>('/teacher/lab-reports', { params });
+  request.get<PagedResult<LabReportItem>>('/teacher/lab-reports', { params });
 
 /** 教师端实验报告导航队列（全量、无分页），供详情页 / 批量批改页构建上一份下一份队列 */
 export const listTeacherLabReportQueue = () => request.get<LabReportItem[]>('/teacher/lab-reports/queue');

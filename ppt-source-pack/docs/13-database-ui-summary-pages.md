@@ -78,21 +78,14 @@
 - 当前展示图以 **占位图 / 原型图 / 已有截图** 为主，后续可替换为最新实现截图
 - 系统已具备真实前后端、真实数据库、真实权限与真实业务闭环基础
 
-### 配图建议
+### 设计资产状态
 
-- 登录页占位：`design/screenshots/refined-login.png`
-- 教师工作台：`design/screenshots/main-teacher-dashboard.png`
-- 学生工作台：`design/screenshots/refined-student-dashboard.png`
-- 实验作答：`design/screenshots/missing-student-lab-detail-answer.png`
-- 考试作答：`design/screenshots/main-student-exam-taking-page.png`
-- 教师分析：`design/screenshots/main-teacher-analytics.png`
+当前阶段无原型资产：本页曾引用的截图与映射文件均为旧阶段占位路径，仓库中不存在对应目录，不作为实现依据。需求输入以 `docs/PRD/` 与 `docs/技术方案/` 为准。
 
 ### 证据路径
 
-- `docs/08-ui-placeholder-notes.md`
-- `design/02-screen-evidence-index.md`
-- `design/03-screen-to-route-contract.md`
-- `design/frontend-implementation-guide.md`
+- `docs/PRD/`
+- `docs/技术方案/`
 
 ### 备注讲稿
 

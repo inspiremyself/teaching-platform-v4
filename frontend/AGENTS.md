@@ -12,7 +12,7 @@ frontend/
 ├─ vite.config.ts             # Vite 构建入口
 ├─ index.html                 # 前端挂载入口
 ├─ src/main.ts                # Vue bootstrap
-├─ src/router/                # 双角色壳层与守卫
+├─ src/router/                # 三角色壳层与守卫
 ├─ src/stores/                # 登录态/权限态
 ├─ src/api/                   # 已有子级 AGENTS
 ├─ src/views/teacher/         # 已有子级 AGENTS
@@ -36,7 +36,7 @@ frontend/
 
 ## CONVENTIONS
 
-- 前端是双角色壳层：教师端与学生端在 `router/index.ts` 里分开定义，不要把二者重新揉成单套导航语义。
+- 前端是三角色壳层：教师端、学生端与校管端在 `router/index.ts` 里分开定义，不要把三者重新揉成单套导航语义。
 - 登录态与角色主页统一收敛在 `stores/auth.ts`；路由守卫依赖这里的 `token/user/homePath`。
 - 前端工程当前只有 `dev/build/preview` 脚本；前端测试/Playwright 规则主要来自上层 AGENTS，而不是本目录内置脚本。
 - 本地联调时，Vite 代理目标现在可通过 `VITE_API_TARGET` 覆盖，不必再假设后端固定跑在 `8080`。

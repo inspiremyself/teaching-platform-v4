@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# 历史入口，仅供 H2 专用场景；MySQL 默认使用 restore-local-data.sh。
+# 数据门禁见 .cursor/rules/path-b-data-backup-gate.mdc 与 protect-data-directory.mdc。
 # 路径 B：从备份恢复 H2 文件库（及可选上传目录）
 # 用法:
 #   ./scripts/common/restore-path-b-data.sh --backup data/backups/2026-09-09_094500

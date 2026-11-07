@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 鉴权入口的注解层例外：登录端点由 SecurityConfig 的 permitAll 放行，
+ * 其余端点由 anyRequest().authenticated() 兜底，均不标注方法级 @PreAuthorize。
+ */
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {

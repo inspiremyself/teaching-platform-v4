@@ -23,7 +23,7 @@ import type {
   UpdateSubjectPayload,
   UpdateTeacherPayload,
 } from '@/types/admin';
-import type { PageResult } from '@/types/common';
+import type { PagedResult } from '@/types/common';
 
 export const getSchool = () => request.get<SchoolInfo>('/admin/school');
 
@@ -86,4 +86,4 @@ export const resetAdminStudentPassword = (id: number, data: ResetStudentPassword
   request.post<{ reset: boolean }>(`/admin/students/${id}/password`, data);
 
 export const listAuditLogs = (params: ListAuditLogsParams = {}) =>
-  request.get<PageResult<AuditLogListItem>>('/admin/audit-logs', { params });
+  request.get<PagedResult<AuditLogListItem>>('/admin/audit-logs', { params });

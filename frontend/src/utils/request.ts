@@ -2,6 +2,7 @@ import axios from 'axios';
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import type { AxiosRequestConfig } from 'axios';
+import type { ApiResponse } from '@/types/common';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -11,7 +12,12 @@ declare module 'axios' {
 }
 
 const KICKED_OUT_NOTICE_KEY = 'kicked_out_notice';
-const SILENT_CODES = new Set([40901, 40101, 40103, 40903, 40102]);
+
+/** toast 静默码：这些错误由调用方自行呈现，不弹全局提示。 */
+export const SILENT_CODES = new Set([40901, 40101, 40103, 40903, 40102]);
+
+/** 登录态失效码：路由守卫与响应拦截器共用，命中即登出。 */
+export const AUTH_FAILURE_CODES = new Set([401, 40100, 40102]);
 
 let kickedOutHandled = false;
 
@@ -54,7 +60,7 @@ instance.interceptors.request.use(
 
 instance.interceptors.response.use(
   response => {
-    const res = response.data;
+    const res: ApiResponse<unknown> = response.data;
     const silent = response.config.silent === true;
     if (res.code !== 0) {
       if (!silent && !SILENT_CODES.has(res.code)) {
@@ -62,18 +68,17 @@ instance.interceptors.response.use(
       }
       if (res.code === 40102) {
         handleKickedOut(res.message);
-      }
-      if (res.code === 401 || res.code === 40100) {
+      } else if (AUTH_FAILURE_CODES.has(res.code)) {
         const authStore = useAuthStore();
         authStore.logout();
         window.location.href = '/login';
       }
       return Promise.reject(new ApiError(res.code, res.message || '请求失败'));
     }
-    return res.data;
+    return response.data.data;
   },
   error => {
-    const responseData = error.response?.data;
+    const responseData: ApiResponse<unknown> | undefined = error.response?.data;
     const silent = error.config?.silent === true;
     if (responseData && typeof responseData.code === 'number') {
       if (!silent && !SILENT_CODES.has(responseData.code)) {
@@ -81,8 +86,7 @@ instance.interceptors.response.use(
       }
       if (responseData.code === 40102) {
         handleKickedOut(responseData.message);
-      }
-      if (responseData.code === 401 || responseData.code === 40100) {
+      } else if (AUTH_FAILURE_CODES.has(responseData.code)) {
         const authStore = useAuthStore();
         authStore.logout();
         window.location.href = '/login';

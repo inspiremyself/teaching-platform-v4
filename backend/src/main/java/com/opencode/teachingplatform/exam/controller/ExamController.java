@@ -20,6 +20,7 @@ public class ExamController {
     }
 
     @GetMapping("/exams")
+    @PreAuthorize("hasAnyRole('TEACHER','STUDENT')")
     public ApiResponse<?> list() {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(examService.listExams(currentUser));

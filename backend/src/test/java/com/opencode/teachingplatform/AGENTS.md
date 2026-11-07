@@ -9,7 +9,7 @@
 | 任务 | 位置 | 说明 |
 |---|---|---|
 | 登录/鉴权测试 | `auth/` | 登录、当前用户、角色错误 |
-| 班级/学生测试 | `clazz/` `student/` | 分页、导入、越权 |
+| 班级/学生/学校测试 | `clazz/` `student/` `school/` | 班级分页、班级成员查询、学校隔离查询 |
 | 实验/作业/考试测试 | `lab/` `homework/` `exam/` | 闭环主链路 |
 | 资料/题库/查重/统计测试 | `material/` `question/` `plagiarism/` `analysis/` | 辅助域与聚合域 |
 | 测试配置 | `../resources/application-test.yml` | H2 + Flyway |

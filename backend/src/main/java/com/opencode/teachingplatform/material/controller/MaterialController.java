@@ -29,6 +29,7 @@ public class MaterialController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('TEACHER','STUDENT','SCHOOL_ADMIN')")
     public ApiResponse<?> list() {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(materialService.listMaterials(currentUser));
@@ -57,6 +58,7 @@ public class MaterialController {
     }
 
     @GetMapping("/{id}/download")
+    @PreAuthorize("hasAnyRole('TEACHER','STUDENT','SCHOOL_ADMIN')")
     public ResponseEntity<ByteArrayResource> download(@PathVariable Long id) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         MaterialService.DownloadedMaterial material = materialService.downloadMaterial(currentUser, id);

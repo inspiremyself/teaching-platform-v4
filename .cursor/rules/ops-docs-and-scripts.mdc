@@ -11,7 +11,7 @@ alwaysApply: false
 ```text
 scripts/
   path-a/     # Docker Compose：up.sh / down.sh / logs.sh
-  path-b/     # 本地 H2：backend.sh / frontend.sh / reset-h2.sh
+  path-b/     # 本机 MySQL（local profile）：backend.sh / frontend.sh / dev.sh；H2 用 backend-h2.sh（test profile）/ reset-h2.sh
   path-c/     # 本机 MySQL：backend.sh / frontend.sh
   common/     # backup-local-data.sh、restore/verify-local-*；H2 别名 backup-path-b-data.sh 等
 docs/运维文档/

@@ -281,6 +281,7 @@ public class LabController {
     }
 
     @GetMapping("/labs/answer-images")
+    @PreAuthorize("hasAnyRole('TEACHER','STUDENT')")
     public ResponseEntity<ByteArrayResource> previewAnswerImage(@RequestParam("path") String path) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         LabService.PreviewAnswerImageResult result = labService.previewAnswerImage(currentUser, path);

@@ -13,6 +13,10 @@
 | [2026-09-11-nvm多项目Node版本与IDE配合.md](./2026-09-11-nvm多项目Node版本与IDE配合.md) | nvm 多版本、`.nvmrc`、Cursor/VS Code 与终端对齐 | （本机 `~/.zshrc` / 项目 `.nvmrc`） |
 | [2026-10-08-路径B-一键启动前后端dev脚本.md](./2026-10-08-路径B-一键启动前后端dev脚本.md) | **单终端一键后台启停前后端**（MySQL 或 H2） | `scripts/path-b/dev.sh` |
 
+## MySQL 口令口径
+
+`docker-compose.yml` 的 `MYSQL_ROOT_PASSWORD: 123456` 只作用于路径 A 容器内的 MySQL；`scripts/path-b/backend.sh` 的 `DB_PASS=12345678` 作用于路径 B 的本机 MySQL。两者各自生效、互不影响，脚本中的口令值不因另一方改动而调整。
+
 ## 快速示例
 
 ```bash

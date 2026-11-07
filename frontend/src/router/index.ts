@@ -1,20 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
-import { ApiError } from '@/utils/request';
+import { ApiError, AUTH_FAILURE_CODES } from '@/utils/request';
 import Layout from '@/layout/index.vue';
-
-const redirectToRoleHome = (role?: string) => {
-  if (role === 'TEACHER') {
-    return '/teacher/dashboard';
-  }
-  if (role === 'STUDENT') {
-    return '/student/dashboard';
-  }
-  if (role === 'SCHOOL_ADMIN') {
-    return '/admin/dashboard';
-  }
-  return '/login';
-};
 
 const router = createRouter({
   history: createWebHistory(),
@@ -112,7 +99,7 @@ router.beforeEach(async to => {
         try {
           await authStore.fetchUserInfo();
         } catch (err) {
-          if (err instanceof ApiError && [401, 40100, 40102].includes(err.code)) {
+          if (err instanceof ApiError && AUTH_FAILURE_CODES.has(err.code)) {
             authStore.logout();
           }
           // 网络/超时/5xx：保留 token 与 user，停留在当前页
@@ -134,7 +121,7 @@ router.beforeEach(async to => {
     try {
       await authStore.fetchUserInfo();
     } catch (err) {
-      if (err instanceof ApiError && [401, 40100, 40102].includes(err.code)) {
+      if (err instanceof ApiError && AUTH_FAILURE_CODES.has(err.code)) {
         authStore.logout();
         return '/login';
       }
@@ -144,7 +131,7 @@ router.beforeEach(async to => {
   }
 
   if (to.meta.role && authStore.user?.role !== to.meta.role) {
-    return redirectToRoleHome(authStore.user?.role);
+    return authStore.homePath;
   }
 
   if (to.path === '/') {

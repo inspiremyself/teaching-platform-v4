@@ -128,28 +128,34 @@ teaching-platform-v4/
 │       ├── question/                # 题库管理
 │       ├── student/                 # 学生管理
 │       ├── clazz/                   # 班级管理
+│       ├── school/                  # 学校/学科实体与仓储
+│       ├── admin/                   # 校管端 API
 │       ├── material/                # 课程资料
 │       ├── plagiarism/              # 查重检测
 │       └── analysis/                # 成绩分析
 ├── frontend/                         # Vue 3 前端
 │   └── src/
 │       ├── api/                     # Typed API 模块
-│       ├── router/                  # 双壳路由（教师/学生）
+│       ├── router/                  # 三壳路由（教师/学生/校管）
 │       ├── stores/                  # Pinia 状态管理
 │       ├── views/teacher/           # 20+ 教师页面
 │       ├── views/student/           # 10+ 学生页面
+│       ├── views/admin/             # 7 个校管页面
 │       ├── components/              # 共享组件（题目配置等）
 │       └── types/                   # TypeScript 类型定义
+├── docs/                             # PRD / 技术方案 / 运维文档
+├── scripts/                          # path-a / path-b / path-c / common
+├── .cursor/rules/                    # 开发流程与运维规则
 ├── docker-compose.yml
-└── AGENTS.md                         # AI Agent 知识库
+└── AGENTS.md                         # 分层 AI Agent 知识库（根 + 8 个子级）
 ```
 
 ## 架构设计要点
 
-- **双角色隔离**：教师/学生完全独立的路由树、API 权限和数据访问，通过 JWT + `@PreAuthorize` 强制执行
+- **三角色隔离**：教师/学生/校管完全独立的路由树、API 权限和数据访问，通过 JWT + `@PreAuthorize` 强制执行
 - **策略模式评分引擎**：`grading/` 模块通过 `QuestionScoringStrategy` 接口支持 5 种题型，可扩展
 - **共享题目能力层**：`assessment/` 模块通过 QuestionSnapshot + GradingAdapter 实现实验/作业/考试的评分复用
-- **数据库版本化**：Flyway 管理 12 个迁移脚本，`ddl-auto=validate` 确保启动时 schema 一致性
+- **数据库版本化**：Flyway 管理 24 个迁移脚本（`V1`–`V24`），`ddl-auto=validate` 确保启动时 schema 一致性
 - **评分与可见性解耦**：成绩生成独立于学生可见性，教师可控制成绩发布时机
 
 ## API 约定
@@ -157,4 +163,4 @@ teaching-platform-v4/
 - 基础路径：`/api/v1`
 - 统一响应格式：`{ code, message, data, timestamp }`
 - 认证：`Authorization: Bearer <JWT>`
-- 权限：`@PreAuthorize("hasRole('TEACHER')")` / `hasRole('STUDENT')`
+- 权限：`@PreAuthorize("hasRole('TEACHER')")` / `hasRole('STUDENT')` / `hasRole('SCHOOL_ADMIN')`

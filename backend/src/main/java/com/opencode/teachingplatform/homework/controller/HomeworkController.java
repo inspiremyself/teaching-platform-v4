@@ -1,19 +1,14 @@
 package com.opencode.teachingplatform.homework.controller;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.SecurityUtils;
 import com.opencode.teachingplatform.common.api.ApiResponse;
-import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
 import com.opencode.teachingplatform.homework.service.HomeworkService;
 import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.Map;
 
 @RestController
@@ -21,11 +16,9 @@ import java.util.Map;
 public class HomeworkController {
 
     private final HomeworkService homeworkService;
-    private final ObjectMapper objectMapper;
 
-    public HomeworkController(HomeworkService homeworkService, ObjectMapper objectMapper) {
+    public HomeworkController(HomeworkService homeworkService) {
         this.homeworkService = homeworkService;
-        this.objectMapper = objectMapper;
     }
 
     @GetMapping("/teacher/homeworks")
@@ -65,9 +58,9 @@ public class HomeworkController {
 
     @PostMapping("/teacher/homeworks/{id}/questions/bank")
     @PreAuthorize("hasRole('TEACHER')")
-    public ApiResponse<?> addQuestionFromBank(@PathVariable Long id, HttpServletRequest servletRequest) {
+    public ApiResponse<?> addQuestionFromBank(@PathVariable Long id,
+                                              @Valid @RequestBody HomeworkRequests.AddHomeworkQuestionFromBankRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
-        HomeworkRequests.AddHomeworkQuestionFromBankRequest request = toAddHomeworkQuestionFromBankRequest(readRequestBody(servletRequest));
         return ApiResponse.ok(homeworkService.addQuestionFromBank(currentUser, id, request));
     }
 
@@ -92,75 +85,6 @@ public class HomeworkController {
     public ApiResponse<?> deleteQuestion(@PathVariable Long id, @PathVariable Long homeworkQuestionId) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(homeworkService.deleteQuestion(currentUser, id, homeworkQuestionId));
-    }
-
-    @PostMapping("/teacher/homeworks/{id}/questions/bank-debug")
-    @PreAuthorize("hasRole('TEACHER')")
-    public ApiResponse<?> addQuestionFromBankDebug(@PathVariable Long id, HttpServletRequest servletRequest) {
-        Map<String, Object> requestBody = readRequestBody(servletRequest);
-        return ApiResponse.ok(Map.of(
-                "homeworkId", id,
-                "questionId", toLong(requestBody.get("questionId"), "questionId"),
-                "sortOrder", toInteger(requestBody.get("sortOrder"), "sortOrder"),
-                "questionScore", toDouble(requestBody.get("questionScore"), "questionScore")
-        ));
-    }
-
-    private Map<String, Object> readRequestBody(HttpServletRequest servletRequest) {
-        try {
-            return objectMapper.readValue(servletRequest.getInputStream(), new TypeReference<Map<String, Object>>() {});
-        } catch (IOException ex) {
-            throw new BusinessException(40000, "请求体 JSON 格式不正确");
-        }
-    }
-
-    private HomeworkRequests.AddHomeworkQuestionFromBankRequest toAddHomeworkQuestionFromBankRequest(Map<String, Object> requestBody) {
-        Long questionId = toLong(requestBody.get("questionId"), "questionId");
-        Integer sortOrder = toInteger(requestBody.get("sortOrder"), "sortOrder");
-        Double questionScore = toDouble(requestBody.get("questionScore"), "questionScore");
-        return new HomeworkRequests.AddHomeworkQuestionFromBankRequest(questionId, sortOrder, questionScore);
-    }
-
-    private Long toLong(Object value, String field) {
-        if (value == null) {
-            throw new BusinessException(40000, field + " 不能为空");
-        }
-        if (value instanceof Number number) {
-            return number.longValue();
-        }
-        try {
-            return Long.parseLong(String.valueOf(value));
-        } catch (NumberFormatException ex) {
-            throw new BusinessException(40000, field + " 格式不正确");
-        }
-    }
-
-    private Integer toInteger(Object value, String field) {
-        if (value == null) {
-            throw new BusinessException(40000, field + " 不能为空");
-        }
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (NumberFormatException ex) {
-            throw new BusinessException(40000, field + " 格式不正确");
-        }
-    }
-
-    private Double toDouble(Object value, String field) {
-        if (value == null) {
-            throw new BusinessException(40000, field + " 不能为空");
-        }
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        try {
-            return Double.parseDouble(String.valueOf(value));
-        } catch (NumberFormatException ex) {
-            throw new BusinessException(40000, field + " 格式不正确");
-        }
     }
 
     @GetMapping("/teacher/homeworks/{id}/submissions")

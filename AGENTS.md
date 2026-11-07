@@ -56,8 +56,7 @@ teaching-platform-v4/
 │  ├─ 技术方案/                    # 技术方案（日期前缀）
 │  ├─ 运维文档/                    # 路径 A/B/C 启动、备份、迁移
 │  └─ superpowers/                 # plans / specs
-├─ design/                         # 原型索引、设计系统、实现映射（解释层）
-├─ design-prototypes/              # HTML/PNG/manifest 原型资产（证据层）
+├─ (当前阶段无原型资产：需求输入见 docs/PRD/ 与 docs/技术方案/)
 ├─ scripts/                        # path-a / path-b / path-c / common
 ├─ docker-compose.yml              # 路径 A：MySQL + 后端 + 前端
 ├─ data/                           # 本地持久化（gitignore）：h2/、files/、logs/
@@ -65,7 +64,7 @@ teaching-platform-v4/
 └─ README.md                       # 运行方式、演示账号、技术栈
 ```
 
-分层知识库：`backend/AGENTS.md`、`frontend/AGENTS.md`，以及 `frontend/src/api/`、`frontend/src/views/teacher/`、`frontend/src/views/student/`、`backend/src/main/java/.../`、`backend/src/test/java/.../` 下的子级 `AGENTS.md`。涉及具体层时继续向下读。
+分层知识库：`backend/AGENTS.md`、`frontend/AGENTS.md`，以及 `frontend/src/api/`、`frontend/src/views/teacher/`、`frontend/src/views/student/`、`frontend/src/views/admin/`、`backend/src/main/java/.../`、`backend/src/test/java/.../` 下的子级 `AGENTS.md`（共 8 个子级）。涉及具体层时继续向下读。`docs/` 与 `scripts/` 不设子级知识库，分别由 `docs/运维文档/README.md` 与 `.cursor/rules/ops-docs-and-scripts.mdc` 承担索引职责。
 
 ## WHERE TO LOOK
 
@@ -89,10 +88,9 @@ teaching-platform-v4/
 | 统一响应/异常 | `backend/.../common/api/`、`common/exception/` | `ApiResponse`、`PagedResult`、错误码 |
 | 行为埋点 | `backend/.../lab/behavior/` | 实验作答事件采集与风险指标 |
 | 审计/访问日志 | `backend/.../common/audit/`、`common/accesslog/` | 操作日志与 HTTP 访问日志 |
-| 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V20`，schema + seed |
-| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像 |
-| 原型资产清单 | `design-prototypes/manifest.csv` | 页面标题与 HTML/PNG 资产总表 |
-| 原型到实现映射 | `design/frontend-implementation-guide.md` | 页面模式、角色差异、落地优先级 |
+| 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V24`（24 个），schema + seed |
+| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（61 个 `*Tests.java`） |
+| 设计资产状态 | `docs/PRD/`、`docs/技术方案/` | 当前阶段无原型资产，需求输入以 PRD 与技术方案为准 |
 | 本地启动（路径 A/B/C） | `docs/运维文档/`、`scripts/` | Compose / 本机 MySQL / H2 文件库 |
 | 本地启动规则 | `.cursor/rules/local-dev-startup.mdc` | 端口、代理、数据目录、探活 |
 
@@ -138,15 +136,15 @@ teaching-platform-v4/
 - 前端页面与原型对齐时，先保信息架构/任务路径，再追求像素复刻。
 - 教师端优先高密度管理台模式；学生端优先任务导向模式；校管端优先组织与治理视角。不要把三种信息节奏混成同一套模板。
 - 后端当前常见模式是 `CurrentUser + service`；角色控制主要由 `@PreAuthorize` 和安全上下文完成；controller 只做参数与转发。
-- 测试当前以业务包镜像分布为主（基线时 41 个 `*Tests.java`），常见拆法是 `controller tests + service tests`；controller 测试多为 `@WebMvcTest` + `MockMvc` + `@AutoConfigureMockMvc(addFilters = false)`。
+- 测试当前以业务包镜像分布为主（当前 61 个 `*Tests.java`），常见拆法是 `controller tests + service tests`；controller 测试多为 `@WebMvcTest` + `MockMvc` + `@AutoConfigureMockMvc(addFilters = false)`。
 - 新增功能先读 `docs/PRD/` 对应需求，再按 `.cursor/rules/feature-dev-workflow.mdc` 与 `tech-spec-decisive.mdc` 输出技术方案并完成自查；方案未定稿不进入编码。
-- `design-prototypes/` 是当前阶段核心输入目录，不是可随意忽略的附件目录。
+- 当前阶段无原型资产；需求输入以 `docs/PRD/` 与 `docs/技术方案/` 为准，不引用不存在的 `design/`、`design-prototypes/` 目录作为依据。
 
 ## ANTI-PATTERNS
 
 - 不要再把目标理解为“只改 CSS / 只做视觉美化”。
 - 不要把现有前端页面结构当成不可动基线；它现在只是业务语义参考实现。
-- 不要绕开原型资产直接拍脑袋改页面信息架构。
+- 不要绕开 `docs/PRD/` 与 `docs/技术方案/` 直接拍脑袋改页面信息架构。
 - 不要在前端散落响应结构假设；统一按 `request.ts` 的解包方式处理。
 - 不要新增假接口、静态假图表、伪查重结果、占位工作流。
 - 不要把状态值散落为硬编码字符串；后端状态以枚举为准，前端类型要跟进契约。
@@ -159,10 +157,10 @@ teaching-platform-v4/
 
 ## UNIQUE STYLES
 
-- 这个仓库同时存在“旧阶段规范导向”和“新阶段 PRD/原型导向”两套文档语境；实现时必须显式偏向后者。
+- 这个仓库同时存在“旧阶段规范导向”和“新阶段 PRD/技术方案导向”两套文档语境；实现时必须显式偏向后者。
 - `frontend/src/views/teacher/` 下既有旧平铺页面，也有已开始重构的新页面；改动前先判断当前文件属于哪一类。
-- `design/` 更像解释层，`design-prototypes/` 更像证据层；两者用途不同，不要混写。
-- 知识库是分层结构：根 `AGENTS.md` 只保留跨层事实，具体 API、教师页、学生页、后端域、测试约定继续下沉到子级 `AGENTS.md`。
+- 当前阶段无原型资产；旧阶段提到的解释层与证据层目录均不存在，需求与方案以 `docs/PRD/`、`docs/技术方案/` 为准。
+- 知识库是分层结构：根 `AGENTS.md` 只保留跨层事实，具体 API、教师页、学生页、校管页、后端域、测试约定继续下沉到子级 `AGENTS.md`。
 
 ## COMMANDS
 
@@ -214,5 +212,18 @@ cd frontend && npm install && npm run dev && npm run build
 
 - 旧阶段原本只留下一份根 `AGENTS.md`；现已更新为 2026-11-06 口径，并向 `backend/`、`frontend/` 及其子目录分层。
 - Java LSP 在当前环境不可用；后端结构判断主要依赖目录边界、控制器/测试组织与配置文件。
-- `SecurityConfig` 仍使用 `NoOpPasswordEncoder`；这是现状事实，不代表后续重构方向。
+- `SecurityConfig` 使用 `PasswordEncoderFactories.createDelegatingPasswordEncoder()`（新写入密码为 `{bcrypt}`），旧的无操作密码编码器已弃用。
 - 根目录 `ppt-source-pack/`、`tmp-qa-material.txt` 是阶段性材料，不作为代码结构或运行依据。
+
+## 事实核对清单
+
+文档变更时逐项与仓库实测核对，避免再次漂移：
+
+| 项 | 当前事实 |
+|---|---|
+| 后端测试数 | 61 个 `*Tests.java`（`backend/src/test/java/`） |
+| 迁移脚本 | `V1`–`V24` 共 24 个（`backend/src/main/resources/db/migration/`） |
+| 角色数 | 3 个：`TEACHER`、`STUDENT`、`SCHOOL_ADMIN` |
+| 密码编码器 | `DelegatingPasswordEncoder` |
+| 分页类型 | `PagedResult<T>`（`backend/.../common/api/PagedResult.java`） |
+| 设计资产状态 | 当前阶段无原型资产；需求输入为 `docs/PRD/` 与 `docs/技术方案/` |
