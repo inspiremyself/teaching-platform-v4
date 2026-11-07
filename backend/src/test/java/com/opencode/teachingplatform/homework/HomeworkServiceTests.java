@@ -53,6 +53,10 @@ import static org.mockito.Mockito.verify;
 @ActiveProfiles("test")
 @Import({
         HomeworkService.class,
+        com.opencode.teachingplatform.homework.service.HomeworkConfigService.class,
+        com.opencode.teachingplatform.homework.service.HomeworkAnswerService.class,
+        com.opencode.teachingplatform.homework.service.HomeworkReportService.class,
+        com.opencode.teachingplatform.homework.service.HomeworkServiceSupport.class,
         HomeworkServiceTests.JacksonTestConfig.class,
         com.opencode.teachingplatform.assessment.service.QuestionContentValidator.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,

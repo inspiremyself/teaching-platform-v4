@@ -74,6 +74,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @DataJpaTest
 @Import({LabService.class, LabScoringSupport.class,
+        com.opencode.teachingplatform.lab.service.LabConfigService.class,
+        com.opencode.teachingplatform.lab.service.LabStepService.class,
+        com.opencode.teachingplatform.lab.service.LabAnswerService.class,
+        com.opencode.teachingplatform.lab.service.LabReportService.class,
+        com.opencode.teachingplatform.lab.service.LabServiceSupport.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         // 类级 NOT_SUPPORTED：claim 的真实 REQUIRES_NEW 可读到已提交种子，直接使用真实 Bean

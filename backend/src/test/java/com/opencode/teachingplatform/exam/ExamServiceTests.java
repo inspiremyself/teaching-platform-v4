@@ -39,6 +39,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @Import({
         ExamService.class,
+        com.opencode.teachingplatform.exam.service.ExamConfigService.class,
+        com.opencode.teachingplatform.exam.service.ExamAnswerService.class,
+        com.opencode.teachingplatform.exam.service.ExamReportService.class,
+        com.opencode.teachingplatform.exam.service.ExamServiceSupport.class,
         ExamScoringService.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,

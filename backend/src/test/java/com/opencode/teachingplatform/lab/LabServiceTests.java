@@ -66,7 +66,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @DataJpaTest
-@Import({LabService.class, LabScoringSupport.class, com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
+@Import({LabService.class, LabScoringSupport.class,
+        com.opencode.teachingplatform.lab.service.LabConfigService.class,
+        com.opencode.teachingplatform.lab.service.LabStepService.class,
+        com.opencode.teachingplatform.lab.service.LabAnswerService.class,
+        com.opencode.teachingplatform.lab.service.LabReportService.class,
+        com.opencode.teachingplatform.lab.service.LabServiceSupport.class,
+        com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService.class,
         com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter.class,
