@@ -236,32 +236,6 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 14px;
 }
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.page-header__main {
-  min-width: 0;
-}
-
-.page-header__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.page-header__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
 .header-meta-chip {
   display: inline-flex;
   align-items: center;
@@ -274,13 +248,11 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 600;
 }
-
 .header-meta-chip--warning {
   border-color: #fdba74;
   background: #fff7ed;
   color: #9a3412;
 }
-
 .detail-eyebrow,
 .catalog-item__meta {
   font-size: 12px;
@@ -288,32 +260,10 @@ onUnmounted(() => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-
 .detail-eyebrow {
   margin-bottom: 8px;
   color: var(--detail-primary);
 }
-
-.page-header h2,
-.catalog-card h3 {
-  margin: 0;
-  font-family: 'DM Sans', sans-serif;
-}
-
-.page-header p,
-.feedback-card p,
-.catalog-card__header p,
-.summary-tile small,
- .catalog-item__meta {
-  color: var(--detail-muted);
-  line-height: 1.6;
-}
-
-.page-header p {
-  margin: 6px 0 0;
-  font-size: 13px;
-}
-
 .feedback-card,
 .catalog-card {
   border: 1px solid var(--detail-border);
@@ -321,36 +271,30 @@ onUnmounted(() => {
   background: #fff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
-
 .catalog-card__header {
   display: flex;
   gap: 8px;
   align-items: flex-start;
 }
-
 .catalog-card__summary {
   margin: 6px 0 0;
   font-size: 12px;
 }
-
 .lab-info-card {
   padding: 16px 18px;
 }
-
 .lab-info-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
-
 .lab-info-block {
   padding: 12px 14px;
   border: 1px solid var(--detail-border);
   border-radius: 12px;
   background: #f8fafc;
 }
-
 .lab-info-block__label,
 .lab-info-section__title {
   margin-bottom: 6px;
@@ -360,45 +304,37 @@ onUnmounted(() => {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-
 .lab-info-block__value {
   color: var(--detail-text);
   font-weight: 700;
 }
-
 .lab-info-section {
   margin-top: 14px;
 }
-
 .lab-info-section p {
   margin: 0;
   color: var(--detail-muted);
   line-height: 1.7;
   white-space: pre-wrap;
 }
-
 .feedback-card {
   padding: 16px 18px;
 }
-
 .feedback-card__header {
   display: flex;
   gap: 8px;
   align-items: center;
   margin-bottom: 8px;
 }
-
 .catalog-card {
   padding: 16px 18px;
 }
-
 .catalog-list {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-
 .catalog-item {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
@@ -412,11 +348,9 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background-color 0.18s ease;
 }
-
 .catalog-item:hover {
   background: #f8fafc;
 }
-
 .catalog-item__index {
   width: 44px;
   height: 44px;
@@ -428,19 +362,16 @@ onUnmounted(() => {
   font-size: 15px;
   font-weight: 700;
 }
-
 .catalog-item__main {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
-
 .catalog-item__title {
   color: var(--detail-text);
   font-size: 15px;
   font-weight: 700;
 }
-
 .catalog-item__meta {
   display: flex;
   flex-wrap: wrap;
@@ -448,35 +379,10 @@ onUnmounted(() => {
   font-size: 11px;
   letter-spacing: 0.04em;
 }
-
 .catalog-item__link {
   align-self: center;
   color: var(--detail-primary);
   font-size: 13px;
   font-weight: 700;
-}
-
-@media (max-width: 900px) {
-  .page-header,
-  .page-header,
-  .page-header__actions,
-  .catalog-card__header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .catalog-item {
-    grid-template-columns: 40px minmax(0, 1fr);
-  }
-
-  .lab-info-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .catalog-item__link {
-    grid-column: 2;
-    justify-self: start;
-    margin-top: 2px;
-  }
 }
 </style>

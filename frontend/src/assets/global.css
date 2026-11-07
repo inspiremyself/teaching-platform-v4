@@ -422,3 +422,241 @@ h1, h2, h3, h4, h5, h6 {
 /* ===== 全局过渡 ===== */
 .el-button { transition: all 0.15s ease !important; }
 .el-input__wrapper { transition: box-shadow 0.2s ease !important; }
+
+
+/* ===== 共享骨架样式（Phase 3 FR-4：从 views 收敛，全局生效） ===== */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.page-header__main {
+  min-width: 0;
+}
+
+.page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.page-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.page-header h2,
+.catalog-card h3 {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.page-header p,
+.feedback-card p,
+.catalog-card__header p,
+.summary-tile small,
+ .catalog-item__meta {
+  color: var(--detail-muted);
+  line-height: 1.6;
+}
+
+.page-header p {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .page-header,
+  .page-header,
+  .page-header__actions,
+  .catalog-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .catalog-item {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .lab-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-item__link {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 2px;
+  }
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.page-header h2,
+.workflow-card h3,
+.question-card h3,
+.summary-card h3 {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.page-header p,
+.progress-panel p,
+.feedback-card p,
+.sticky-footer__status,
+.workflow-card__header p,
+.answer-card__hint,
+.summary-card__desc,
+.code-callout p,
+.choice-callout {
+  color: var(--steps-muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .page-header,
+  .question-focus-strip,
+  .question-card__header,
+  .summary-card__header,
+  .answer-card__header,
+  .sticky-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-header__actions,
+  .sticky-footer__actions {
+    justify-content: flex-start;
+  }
+
+  .question-focus-strip__status {
+    align-items: flex-start;
+  }
+}
+
+.status-chip,
+.exam-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.page-header__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.page-header__button-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.page-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.page-header__meta-item {
+  display: inline-flex;
+  align-items: center;
+   min-height: 28px;
+   padding: 0 10px;
+   border-radius: 999px;
+   background: #f8fafc;
+   color: #475569;
+   font-size: 12px;
+   font-weight: 700;
+}
+
+.page-header__meta-item strong {
+  margin-right: 4px;
+  color: var(--detail-text);
+}
+
+.page-header__meta-item--accent {
+  background: var(--detail-primary-soft);
+  color: var(--detail-primary);
+}
+
+.page-header h2,
+.answer-card h3,
+.final-card h3,
+.sidebar-card__header strong {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.page-header p,
+.summary-tile small,
+.sidebar-card p,
+.insight-detail,
+.final-card p {
+  color: var(--detail-muted);
+  line-height: 1.5;
+}
+
+.page-header p {
+  margin: 6px 0 0;
+  max-width: 680px;
+}
+
+@media (max-width: 900px) {
+  .page-header,
+  .answer-card__header,
+  .final-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-header__actions,
+  .page-header__meta {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .page-header__button-row {
+    justify-content: flex-start;
+  }
+
+  .grading-form {
+    grid-template-columns: 1fr;
+  }
+}
