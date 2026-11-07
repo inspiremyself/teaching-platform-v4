@@ -35,8 +35,10 @@ backend/
 
 - 启动与验证默认优先用 wrapper，不假设全局 Maven 已安装。
 - 数据库结构变更一律通过 `db/migration/` 演进；`ddl-auto=validate` 说明运行时不应依赖自动建表。
+- **迁移脚本规范**：已应用的 `V1`–`V24` 只读，不得修改；新增脚本只使用 `alterModifyColumn` / `fkChecksDisable` / `fkChecksEnable` / `mysqlOnly` 四个双方言占位符，不写 seed / DML。四个值由 `common/config/FlywayPlaceholdersConfig.java` 按 `DataSource` 产品名注入，各 profile 不再声明；`FlywayConfig.repairBeforeMigrateStrategy` 已删除，Spring Boot 默认 `validateOnMigrate=true` 会拦截 checksum 不一致。
+- **`ddl-auto` 例外矩阵**：`local`（MySQL）与 `prod`（MySQL）为 `validate`；`main` 的 `test` profile（H2 文件库）与 `src/test/resources` 的 UT profile（H2 mem）为 `none`，由 Flyway 建表。
 - `application.yml` 是主配置入口；profile 只做环境差异，不要把核心约束散落到多个 profile 难以追踪。
-- 路径 B（`main` 的 `test` profile）使用 H2 文件库持久化；单元测试资源保持 mem。二者有意不同，改迁移时两边都要能过。
+- 路径 B（`main` 的 `test` profile）使用 H2 文件库持久化；单元测试资源保持 mem。二者有意不同；Flyway 占位符按方言由 `FlywayPlaceholdersConfig` 自动注入，两个 test profile 不再分别维护。
 - **调试、联调默认** `./scripts/path-b/backend.sh`（本机 MySQL，`local` profile）。无 MySQL 时用 `./scripts/path-b/backend-h2.sh`（H2 文件库，`test` profile）。
 - Windows MySQL：`cmd /c "set DB_PASS=12345678 && mvnw.cmd spring-boot:run"`。
 - Windows H2：`cmd /c "set SPRING_PROFILES_ACTIVE=test && mvnw.cmd spring-boot:run"`。
@@ -46,7 +48,7 @@ backend/
 ## ANTI-PATTERNS
 
 - 不要直接修改运行中 schema 或手工补表而不写 migration。
-- 不要只改 `src/test/resources/application-test.yml` 而忽略主资源里的 test profile；新增迁移时两边都要验证。
+- 不要只改 `src/test/resources/application-test.yml` 而忽略主资源里的 test profile；新增迁移只需新增一份双方言脚本，并在 H2 mem 单测上下文验证。
 - 不要把路径 B 的文件库改回 mem，除非明确要放弃持久化；也不要把 UT 的 mem 改成文件库。
 - 不要把运行日志、`target/`、`data/` 中的产物当作源码依据。
 - 不要绕过 `mvnw` 另写临时启动说明，除非仓库命令面真的发生变化。
