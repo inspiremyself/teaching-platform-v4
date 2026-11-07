@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.auth.entity;
 
-import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
+import com.opencode.teachingplatform.auth.LoginSessionStatus;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

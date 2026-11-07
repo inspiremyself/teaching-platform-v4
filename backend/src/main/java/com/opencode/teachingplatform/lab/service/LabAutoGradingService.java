@@ -24,10 +24,12 @@ public class LabAutoGradingService {
 
     private final ObjectMapper objectMapper;
     private final ScoringEngine scoringEngine;
+    private final LabAssessmentAdapter labAssessmentAdapter;
 
     public LabAutoGradingService(ObjectMapper objectMapper, ScoringEngine scoringEngine) {
         this.objectMapper = objectMapper;
         this.scoringEngine = scoringEngine;
+        this.labAssessmentAdapter = new LabAssessmentAdapter(scoringEngine);
     }
 
     public AutoGradeResult evaluate(LabStep step, String answerText) {
@@ -41,7 +43,7 @@ public class LabAutoGradingService {
             return fallbackEvaluate(step, answerText, config);
         }
 
-        ScoringResult result = scoringEngine.evaluate(new ScoringContext(
+        ScoringResult result = labAssessmentAdapter.evaluate(new ScoringContext(
                 questionType,
                 scoreOf(step),
                 config,

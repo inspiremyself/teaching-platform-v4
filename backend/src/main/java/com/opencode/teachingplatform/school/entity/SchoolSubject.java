@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.school.entity;
 
-import com.opencode.teachingplatform.common.enums.SubjectStatus;
+import com.opencode.teachingplatform.school.SubjectStatus;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

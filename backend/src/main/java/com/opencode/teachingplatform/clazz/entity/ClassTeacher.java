@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.clazz.entity;
 
-import com.opencode.teachingplatform.common.enums.ClassTeacherRole;
+import com.opencode.teachingplatform.clazz.ClassTeacherRole;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

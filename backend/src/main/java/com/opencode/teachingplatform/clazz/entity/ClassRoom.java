@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.clazz.entity;
 
-import com.opencode.teachingplatform.common.enums.ClassStatus;
+import com.opencode.teachingplatform.clazz.ClassStatus;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

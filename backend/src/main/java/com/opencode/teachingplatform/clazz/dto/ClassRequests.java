@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.clazz.dto;
 
-import com.opencode.teachingplatform.common.enums.ClassStatus;
+import com.opencode.teachingplatform.clazz.ClassStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

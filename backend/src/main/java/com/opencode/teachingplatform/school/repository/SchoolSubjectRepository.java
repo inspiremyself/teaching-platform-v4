@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.school.repository;
 
-import com.opencode.teachingplatform.common.enums.SubjectStatus;
+import com.opencode.teachingplatform.school.SubjectStatus;
 import com.opencode.teachingplatform.school.entity.SchoolSubject;
 import org.springframework.data.jpa.repository.JpaRepository;
 

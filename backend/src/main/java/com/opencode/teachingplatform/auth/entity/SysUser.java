@@ -1,7 +1,7 @@
 package com.opencode.teachingplatform.auth.entity;
 
-import com.opencode.teachingplatform.common.enums.UserRole;
-import com.opencode.teachingplatform.common.enums.UserStatus;
+import com.opencode.teachingplatform.auth.UserRole;
+import com.opencode.teachingplatform.auth.UserStatus;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

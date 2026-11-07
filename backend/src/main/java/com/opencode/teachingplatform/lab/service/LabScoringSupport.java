@@ -33,6 +33,7 @@ public class LabScoringSupport {
 
     private final ObjectMapper objectMapper;
     private final ScoringEngine scoringEngine;
+    private final LabAssessmentAdapter labAssessmentAdapter;
     private final ExperimentBlankAnswerOverrideRepository overrideRepository;
 
     public LabScoringSupport(ObjectMapper objectMapper,
@@ -40,6 +41,7 @@ public class LabScoringSupport {
                              ExperimentBlankAnswerOverrideRepository overrideRepository) {
         this.objectMapper = objectMapper;
         this.scoringEngine = scoringEngine;
+        this.labAssessmentAdapter = new LabAssessmentAdapter(scoringEngine);
         this.overrideRepository = overrideRepository;
     }
 
@@ -65,7 +67,7 @@ public class LabScoringSupport {
                 ? loadExtraAcceptedAnswers(step, scoringConfig)
                 : Map.of();
 
-        return scoringEngine.evaluate(new ScoringContext(
+        return labAssessmentAdapter.evaluate(new ScoringContext(
                 questionType,
                 resolveQuestionScore(step, snapshot),
                 scoringConfig,

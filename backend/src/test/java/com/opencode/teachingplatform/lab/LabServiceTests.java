@@ -7,7 +7,7 @@ import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.common.file.LocalFileStorageService;
 import com.opencode.teachingplatform.lab.behavior.service.LabBehaviorMetricsService;
@@ -2194,7 +2194,7 @@ class LabServiceTests {
         assertThat(submission.getGradedAt()).isNull();
         assertThat(submission.getTotalScore()).isEqualTo(0D);
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         )).isNotPresent();
     }
 
@@ -2226,7 +2226,7 @@ class LabServiceTests {
         assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
         assertThat(submission.getGradedAt()).isNull();
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         )).isNotPresent();
     }
 
@@ -2397,14 +2397,14 @@ class LabServiceTests {
         assertThat(savedSubmissionAfter.getTotalScore()).isEqualTo(10D);
         assertThat(savedSubmissionAfter.getGradedAt()).isNull();
         assertThat(externalSubmissionAfter.getTotalScore()).isEqualTo(6D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()))
                 .isPresent()
                 .get()
                 .extracting(com.opencode.teachingplatform.analysis.entity.ScoreRecord::getScore)
                 .isEqualTo(16D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, savedStudent.id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.grading.BusinessType.LAB, labId, savedStudent.id()))
                 .isNotPresent();
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.common.enums.BusinessType.LAB, otherLabId, otherStudent.id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.grading.BusinessType.LAB, otherLabId, otherStudent.id()))
                 .isPresent()
                 .get()
                 .extracting(com.opencode.teachingplatform.analysis.entity.ScoreRecord::getScore)
@@ -3207,7 +3207,7 @@ class LabServiceTests {
         );
         assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         )).isPresent();
 
         Map<String, Object> result = labService.returnReport(teacherUser(), submissionId);
@@ -3231,7 +3231,7 @@ class LabServiceTests {
         assertThat(afterAnswer.getSuggestedScore()).isNull();
         assertThat(afterAnswer.getScoreSource()).isEqualTo("TEACHER");
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         )).isNotPresent();
     }
 
@@ -3250,7 +3250,7 @@ class LabServiceTests {
         assertThat(beforeReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
         assertThat(beforeReturn.getTotalScore()).isEqualTo(0D);
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         )).isPresent();
 
         labService.returnReport(teacherUser(), submissionId);
@@ -3269,7 +3269,7 @@ class LabServiceTests {
         assertThat(afterAnswer.getSuggestedScore()).isNull();
         assertThat(afterAnswer.getScoreSource()).isEqualTo("TEACHER");
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         )).isNotPresent();
     }
 
@@ -3287,7 +3287,7 @@ class LabServiceTests {
         gradedSubmission.setSubmitStatus(SubmissionStatus.GRADED);
         labSubmissionRepository.saveAndFlush(gradedSubmission);
         scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         ).ifPresent(scoreRecordRepository::delete);
 
         Map<String, Object> result = labService.returnReport(teacherUser(), submissionId);
@@ -3318,7 +3318,7 @@ class LabServiceTests {
         assertThat(resubmitted.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
         assertThat(resubmitted.getTotalScore()).isEqualTo(10D);
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, studentUser().id()
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
         ))
                 .isPresent()
                 .get()

@@ -5,11 +5,11 @@ import com.opencode.teachingplatform.admin.dto.AdminRequests.CreateSubjectReques
 import com.opencode.teachingplatform.admin.dto.AdminRequests.UpdateSubjectRequest;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.clazz.repository.ClassTeacherRepository;
-import com.opencode.teachingplatform.common.audit.AuditAction;
-import com.opencode.teachingplatform.common.audit.AuditLogService;
-import com.opencode.teachingplatform.common.audit.AuditResourceType;
+import com.opencode.teachingplatform.common.infra.audit.AuditAction;
+import com.opencode.teachingplatform.common.infra.audit.AuditLogService;
+import com.opencode.teachingplatform.common.infra.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.enums.EnumValueParser;
-import com.opencode.teachingplatform.common.enums.SubjectStatus;
+import com.opencode.teachingplatform.school.SubjectStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.school.entity.SchoolSubject;
 import com.opencode.teachingplatform.school.repository.SchoolSubjectRepository;

@@ -2,8 +2,8 @@ package com.opencode.teachingplatform.auth;
 
 import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
-import com.opencode.teachingplatform.common.enums.UserRole;
-import com.opencode.teachingplatform.common.enums.UserStatus;
+import com.opencode.teachingplatform.auth.UserRole;
+import com.opencode.teachingplatform.auth.UserStatus;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
 

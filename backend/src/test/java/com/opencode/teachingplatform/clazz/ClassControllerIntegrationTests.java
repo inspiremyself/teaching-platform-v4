@@ -3,7 +3,7 @@ package com.opencode.teachingplatform.clazz;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.testsupport.IntegrationTestAuthSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

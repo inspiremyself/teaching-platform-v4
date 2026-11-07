@@ -13,5 +13,5 @@ import java.util.Optional;
  */
 public interface PlagiarismTaskRepository extends JpaRepository<PlagiarismTask, Long> {
     List<PlagiarismTask> findByStudentId(Long studentId);
-    Optional<PlagiarismTask> findByBusinessTypeAndBusinessId(com.opencode.teachingplatform.common.enums.BusinessType businessType, Long businessId);
+    Optional<PlagiarismTask> findByBusinessTypeAndBusinessId(com.opencode.teachingplatform.grading.BusinessType businessType, Long businessId);
 }

@@ -2,7 +2,7 @@ package com.opencode.teachingplatform.exam;
 
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.exam.dto.ExamRequests;
 import com.opencode.teachingplatform.exam.entity.ExamSubmission;
 import com.opencode.teachingplatform.exam.enums.ExamSubmissionStatus;

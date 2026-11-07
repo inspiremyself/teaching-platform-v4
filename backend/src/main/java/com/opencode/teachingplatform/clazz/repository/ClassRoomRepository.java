@@ -1,7 +1,7 @@
 package com.opencode.teachingplatform.clazz.repository;
 
 import com.opencode.teachingplatform.clazz.entity.ClassRoom;
-import com.opencode.teachingplatform.common.enums.ClassStatus;
+import com.opencode.teachingplatform.clazz.ClassStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

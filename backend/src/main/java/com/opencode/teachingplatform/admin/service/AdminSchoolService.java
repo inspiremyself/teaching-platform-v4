@@ -2,9 +2,9 @@ package com.opencode.teachingplatform.admin.service;
 
 import com.opencode.teachingplatform.admin.dto.AdminRequests.UpdateSchoolRequest;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.audit.AuditAction;
-import com.opencode.teachingplatform.common.audit.AuditLogService;
-import com.opencode.teachingplatform.common.audit.AuditResourceType;
+import com.opencode.teachingplatform.common.infra.audit.AuditAction;
+import com.opencode.teachingplatform.common.infra.audit.AuditLogService;
+import com.opencode.teachingplatform.common.infra.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.school.entity.School;
 import com.opencode.teachingplatform.school.repository.SchoolRepository;

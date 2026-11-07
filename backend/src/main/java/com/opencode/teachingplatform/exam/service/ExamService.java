@@ -13,10 +13,11 @@ import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.common.enums.EnumValueParser;
+import com.opencode.teachingplatform.grading.service.ScoreReleaseSupport;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.exam.dto.ExamRequests;
 import com.opencode.teachingplatform.exam.entity.Exam;
@@ -488,7 +489,7 @@ public class ExamService {
             scoreRecordWriter.write(BusinessType.EXAM, exam.getId(), locked.getStudentId(),
                     exam.getClassId(), lockedScore == null ? 0D : lockedScore, now);
         }
-        return Map.of("released", true, "scoreVisibilityMode", exam.getScoreVisibilityMode().name());
+        return ScoreReleaseSupport.releasedView(exam.getScoreVisibilityMode().name());
     }
 
     public Object startExam(CurrentUser currentUser, Long examId) {

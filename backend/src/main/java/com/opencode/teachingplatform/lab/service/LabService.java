@@ -11,11 +11,13 @@ import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.common.enums.EnumValueParser;
+import com.opencode.teachingplatform.common.util.ActivityStatusParser;
+import com.opencode.teachingplatform.grading.service.ScoreReleaseSupport;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.common.file.LocalFileStorageService;
 import com.opencode.teachingplatform.lab.behavior.entity.BehaviorEvent;
@@ -399,7 +401,7 @@ public class LabService {
         Lab lab = ownedLab(currentUser, labId);
         lab.setScoreReleased(true);
         labRepository.save(lab);
-        return Map.of("released", true, "scoreVisibilityMode", lab.getScoreVisibilityMode().name());
+        return ScoreReleaseSupport.releasedView(lab.getScoreVisibilityMode().name());
     }
 
     @Transactional(readOnly = true)
@@ -1749,9 +1751,7 @@ public class LabService {
     }
 
     private ActivityStatus parseStatus(String value) {
-        return value == null || value.isBlank()
-                ? ActivityStatus.DRAFT
-                : EnumValueParser.parse(ActivityStatus.class, value, "实验状态");
+        return ActivityStatusParser.parse(value, "实验状态");
     }
 
     private void applyLab(Lab lab,

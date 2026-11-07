@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.analysis.entity;
 
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -2,7 +2,7 @@ package com.opencode.teachingplatform.grading.service;
 
 import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
 import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;

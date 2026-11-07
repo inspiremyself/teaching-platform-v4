@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.auth.security;
 
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 
 public record CurrentUser(Long id, String username, String displayName, UserRole role, Long schoolId, String sessionKey) {
     public CurrentUser(Long id, String username, String displayName, UserRole role) {

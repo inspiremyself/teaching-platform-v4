@@ -1,7 +1,7 @@
 package com.opencode.teachingplatform.homework;
 
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
 import com.opencode.teachingplatform.homework.service.HomeworkService;
 import org.junit.jupiter.api.AfterEach;

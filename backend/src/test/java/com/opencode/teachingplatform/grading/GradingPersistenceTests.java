@@ -3,7 +3,7 @@ package com.opencode.teachingplatform.grading;
 import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
 import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import com.opencode.teachingplatform.homework.entity.Homework;

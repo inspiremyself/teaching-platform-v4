@@ -5,15 +5,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.assessment.model.GradingResultView;
 import com.opencode.teachingplatform.assessment.model.QuestionAnswerPayload;
 import com.opencode.teachingplatform.assessment.model.QuestionSnapshot;
+import com.opencode.teachingplatform.assessment.service.QuestionSnapshotFactory;
 import com.opencode.teachingplatform.assessment.service.AnswerPayloadNormalizer;
 import com.opencode.teachingplatform.assessment.service.GradingAdapter;
 import com.opencode.teachingplatform.assessment.service.QuestionContentSupport;
 import com.opencode.teachingplatform.assessment.service.QuestionContentValidator;
 import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
-import com.opencode.teachingplatform.common.audit.AuditAction;
-import com.opencode.teachingplatform.common.audit.AuditLogService;
-import com.opencode.teachingplatform.common.audit.AuditResourceType;
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.common.infra.audit.AuditAction;
+import com.opencode.teachingplatform.common.infra.audit.AuditLogService;
+import com.opencode.teachingplatform.common.infra.audit.AuditResourceType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
@@ -22,9 +23,11 @@ import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.EnumValueParser;
+import com.opencode.teachingplatform.common.util.ActivityStatusParser;
+import com.opencode.teachingplatform.grading.service.ScoreReleaseSupport;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
 import com.opencode.teachingplatform.homework.entity.HomeworkAnswer;
@@ -171,7 +174,7 @@ public class HomeworkService {
         Homework homework = ownedHomework(currentUser, homeworkId);
         homework.setScoreReleased(true);
         homeworkRepository.save(homework);
-        return Map.of("released", true, "scoreVisibilityMode", homework.getScoreVisibilityMode().name());
+        return ScoreReleaseSupport.releasedView(homework.getScoreVisibilityMode().name());
     }
 
     @Transactional(readOnly = true)
@@ -980,7 +983,7 @@ public class HomeworkService {
     }
 
     private QuestionSnapshot toQuestionSnapshot(Map<String, Object> snapshot, HomeworkQuestion homeworkQuestion) {
-        return new QuestionSnapshot(
+        return QuestionSnapshotFactory.fromStored(
                 homeworkQuestion.getQuestionId(),
                 Boolean.TRUE.equals(snapshot.get("fromBank")) ? "BANK" : "INLINE",
                 String.valueOf(snapshot.get("type")),
@@ -1222,9 +1225,7 @@ public class HomeworkService {
     }
 
     private ActivityStatus parseStatus(String value) {
-        return value == null || value.isBlank()
-                ? ActivityStatus.DRAFT
-                : EnumValueParser.parse(ActivityStatus.class, value, "作业状态");
+        return ActivityStatusParser.parse(value, "作业状态");
     }
 
     private Map<String, Object> toTeacherHomeworkView(Homework homework) {

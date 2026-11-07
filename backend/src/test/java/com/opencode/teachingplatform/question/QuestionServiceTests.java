@@ -2,12 +2,12 @@ package com.opencode.teachingplatform.question;
 
 import com.opencode.teachingplatform.assessment.service.QuestionContentValidator;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.audit.AuditAction;
-import com.opencode.teachingplatform.common.audit.AuditResourceType;
-import com.opencode.teachingplatform.common.audit.AuditLogService;
+import com.opencode.teachingplatform.common.infra.audit.AuditAction;
+import com.opencode.teachingplatform.common.infra.audit.AuditResourceType;
+import com.opencode.teachingplatform.common.infra.audit.AuditLogService;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.question.dto.QuestionRequests.SaveQuestionRequest;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.question.service.QuestionBankViewMapper;

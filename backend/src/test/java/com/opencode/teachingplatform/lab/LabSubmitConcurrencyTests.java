@@ -1,7 +1,7 @@
 package com.opencode.teachingplatform.lab;
 
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.lab.behavior.service.LabBehaviorMetricsService;
 import com.opencode.teachingplatform.lab.dto.LabRequests;

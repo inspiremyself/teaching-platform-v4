@@ -3,10 +3,10 @@ package com.opencode.teachingplatform.homework;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
-import com.opencode.teachingplatform.common.enums.ClassStatus;
+import com.opencode.teachingplatform.clazz.ClassStatus;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
 import com.opencode.teachingplatform.homework.entity.HomeworkAnswer;
@@ -57,7 +57,7 @@ import static org.mockito.Mockito.verify;
         com.opencode.teachingplatform.assessment.service.QuestionContentValidator.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
-        com.opencode.teachingplatform.common.audit.AuditLogService.class,
+        com.opencode.teachingplatform.common.infra.audit.AuditLogService.class,
         LocalPlagiarismService.class,
         com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter.class,
         ScoringEngine.class,

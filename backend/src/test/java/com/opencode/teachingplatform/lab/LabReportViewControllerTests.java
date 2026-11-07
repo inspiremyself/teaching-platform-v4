@@ -3,7 +3,7 @@ package com.opencode.teachingplatform.lab;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.JwtAuthenticationFilter;
 import com.opencode.teachingplatform.auth.security.SecurityConfig;
-import com.opencode.teachingplatform.common.accesslog.HttpAccessLogFilter;
+import com.opencode.teachingplatform.common.infra.accesslog.HttpAccessLogFilter;
 import com.opencode.teachingplatform.lab.behavior.service.BehaviorIngestService;
 import com.opencode.teachingplatform.lab.controller.LabController;
 import com.opencode.teachingplatform.lab.service.LabService;
@@ -90,7 +90,7 @@ class LabReportViewControllerTests {
     }
 
     private UsernamePasswordAuthenticationToken authenticateTeacher() {
-        CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", com.opencode.teachingplatform.common.enums.UserRole.TEACHER);
+        CurrentUser currentUser = new CurrentUser(1L, "t9001", "演示教师", com.opencode.teachingplatform.auth.UserRole.TEACHER);
         return new UsernamePasswordAuthenticationToken(
                 currentUser,
                 null,

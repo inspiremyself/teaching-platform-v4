@@ -2,7 +2,7 @@ package com.opencode.teachingplatform.analysis;
 
 import com.opencode.teachingplatform.analysis.service.AnalysisService;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

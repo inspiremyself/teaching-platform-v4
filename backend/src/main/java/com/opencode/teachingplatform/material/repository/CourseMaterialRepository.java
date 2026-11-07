@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.material.repository;
 
-import com.opencode.teachingplatform.common.enums.MaterialVisibility;
+import com.opencode.teachingplatform.material.MaterialVisibility;
 import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import org.springframework.data.jpa.repository.JpaRepository;
 

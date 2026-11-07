@@ -1,8 +1,8 @@
 package com.opencode.teachingplatform.material.service;
 
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.enums.MaterialVisibility;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.material.MaterialVisibility;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.common.file.LocalFileStorageService;
 import com.opencode.teachingplatform.material.dto.MaterialRequests.UpdateMaterialRequest;

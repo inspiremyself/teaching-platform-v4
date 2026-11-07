@@ -1,8 +1,8 @@
 package com.opencode.teachingplatform.auth.repository;
 
 import com.opencode.teachingplatform.auth.entity.SysUser;
-import com.opencode.teachingplatform.common.enums.UserRole;
-import com.opencode.teachingplatform.common.enums.UserStatus;
+import com.opencode.teachingplatform.auth.UserRole;
+import com.opencode.teachingplatform.auth.UserStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

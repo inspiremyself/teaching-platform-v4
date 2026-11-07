@@ -1,7 +1,7 @@
 package com.opencode.teachingplatform.analysis.repository;
 
 import com.opencode.teachingplatform.analysis.entity.ScoreRecord;
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

@@ -1,7 +1,7 @@
 package com.opencode.teachingplatform.auth.repository;
 
 import com.opencode.teachingplatform.auth.entity.UserLoginSession;
-import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
+import com.opencode.teachingplatform.auth.LoginSessionStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

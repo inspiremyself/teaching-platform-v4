@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.analysis.service;
 
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;

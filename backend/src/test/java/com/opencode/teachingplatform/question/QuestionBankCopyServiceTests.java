@@ -2,7 +2,7 @@ package com.opencode.teachingplatform.question;
 
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.homework.entity.Homework;
 import com.opencode.teachingplatform.homework.entity.HomeworkQuestion;

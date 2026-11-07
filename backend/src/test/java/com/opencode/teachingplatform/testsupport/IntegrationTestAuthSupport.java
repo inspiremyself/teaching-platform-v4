@@ -5,7 +5,7 @@ import com.opencode.teachingplatform.auth.entity.UserLoginSession;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
-import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
+import com.opencode.teachingplatform.auth.LoginSessionStatus;
 
 import java.time.OffsetDateTime;
 

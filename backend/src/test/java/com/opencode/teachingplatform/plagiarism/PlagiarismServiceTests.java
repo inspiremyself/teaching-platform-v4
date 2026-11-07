@@ -1,9 +1,9 @@
 package com.opencode.teachingplatform.plagiarism;
 
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.enums.BusinessType;
-import com.opencode.teachingplatform.common.enums.PlagiarismStatus;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.grading.BusinessType;
+import com.opencode.teachingplatform.plagiarism.PlagiarismStatus;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.plagiarism.entity.PlagiarismTask;
 import com.opencode.teachingplatform.plagiarism.repository.PlagiarismTaskRepository;

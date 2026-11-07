@@ -3,7 +3,7 @@ package com.opencode.teachingplatform.exam;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.exam.dto.ExamRequests;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;

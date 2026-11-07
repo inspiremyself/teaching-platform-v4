@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.material.dto;
 
-import com.opencode.teachingplatform.common.enums.MaterialVisibility;
+import com.opencode.teachingplatform.material.MaterialVisibility;
 import org.springframework.web.multipart.MultipartFile;
 
 public final class MaterialRequests {

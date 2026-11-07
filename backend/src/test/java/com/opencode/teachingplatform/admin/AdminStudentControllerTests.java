@@ -1,9 +1,9 @@
 package com.opencode.teachingplatform.admin;
 
-import com.opencode.teachingplatform.common.audit.AuditAction;
+import com.opencode.teachingplatform.common.infra.audit.AuditAction;
 import com.opencode.teachingplatform.auth.entity.UserLoginSession;
-import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.LoginSessionStatus;
+import com.opencode.teachingplatform.auth.UserRole;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,7 +107,7 @@ class AdminStudentControllerTests extends AdminIntegrationTestSupport {
 
         Long studentId = sysUserRepository.findByUsernameAndRole(
                 "20260996",
-                com.opencode.teachingplatform.common.enums.UserRole.STUDENT
+                com.opencode.teachingplatform.auth.UserRole.STUDENT
         ).orElseThrow().getId();
 
         mockMvc.perform(put("/api/v1/admin/students/%d".formatted(studentId))

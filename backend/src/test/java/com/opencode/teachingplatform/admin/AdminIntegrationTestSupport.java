@@ -3,7 +3,7 @@ package com.opencode.teachingplatform.admin;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.repository.UserLoginSessionRepository;
 import com.opencode.teachingplatform.auth.security.JwtTokenService;
-import com.opencode.teachingplatform.common.enums.UserRole;
+import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.school.entity.SchoolSubject;
 import com.opencode.teachingplatform.school.repository.SchoolSubjectRepository;
 import com.opencode.teachingplatform.testsupport.IntegrationTestAuthSupport;

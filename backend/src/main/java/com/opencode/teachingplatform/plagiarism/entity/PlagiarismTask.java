@@ -1,7 +1,7 @@
 package com.opencode.teachingplatform.plagiarism.entity;
 
-import com.opencode.teachingplatform.common.enums.BusinessType;
-import com.opencode.teachingplatform.common.enums.PlagiarismStatus;
+import com.opencode.teachingplatform.grading.BusinessType;
+import com.opencode.teachingplatform.plagiarism.PlagiarismStatus;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

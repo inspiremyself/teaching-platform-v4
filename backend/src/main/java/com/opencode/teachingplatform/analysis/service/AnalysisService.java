@@ -2,7 +2,7 @@ package com.opencode.teachingplatform.analysis.service;
 
 import com.opencode.teachingplatform.analysis.service.StudentScoreVisibilityResolver.VisibleScore;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
-import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.grading.BusinessType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 

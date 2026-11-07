@@ -1,6 +1,6 @@
 package com.opencode.teachingplatform.material.entity;
 
-import com.opencode.teachingplatform.common.enums.MaterialVisibility;
+import com.opencode.teachingplatform.material.MaterialVisibility;
 import com.opencode.teachingplatform.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

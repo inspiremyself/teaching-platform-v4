@@ -24,7 +24,7 @@ public class ClassAccessService {
 
     @Transactional(readOnly = true)
     public void assertTeacherAssignedToClass(CurrentUser currentUser, Long classId) {
-        if (currentUser.role() != com.opencode.teachingplatform.common.enums.UserRole.TEACHER) {
+        if (currentUser.role() != com.opencode.teachingplatform.auth.UserRole.TEACHER) {
             throw new BusinessException(40300, "无权限访问该资源");
         }
         findAssignment(currentUser, classId);
@@ -32,7 +32,7 @@ public class ClassAccessService {
 
     @Transactional(readOnly = true)
     public List<ClassRoom> listAssignedClasses(CurrentUser currentUser) {
-        if (currentUser.role() != com.opencode.teachingplatform.common.enums.UserRole.TEACHER) {
+        if (currentUser.role() != com.opencode.teachingplatform.auth.UserRole.TEACHER) {
             throw new BusinessException(40300, "无权限访问该资源");
         }
         return classTeacherRepository.findByTeacherUserIdAndSchoolId(currentUser.id(), currentUser.schoolId()).stream()
@@ -47,7 +47,7 @@ public class ClassAccessService {
     public ClassTeacher findAssignment(CurrentUser currentUser, Long classId) {
         ClassRoom classRoom = classRoomRepository.findByIdAndSchoolId(classId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该资源"));
-        if (currentUser.role() != com.opencode.teachingplatform.common.enums.UserRole.TEACHER) {
+        if (currentUser.role() != com.opencode.teachingplatform.auth.UserRole.TEACHER) {
             throw new BusinessException(40300, "无权限访问该资源");
         }
         return classTeacherRepository.findByClassIdAndTeacherUserId(classRoom.getId(), currentUser.id())
@@ -55,7 +55,7 @@ public class ClassAccessService {
     }
 
     public void assertActiveTeacher(CurrentUser currentUser) {
-        if (currentUser.role() != com.opencode.teachingplatform.common.enums.UserRole.TEACHER) {
+        if (currentUser.role() != com.opencode.teachingplatform.auth.UserRole.TEACHER) {
             throw new BusinessException(40300, "无权限访问该资源");
         }
     }
