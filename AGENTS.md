@@ -89,7 +89,7 @@ teaching-platform-v4/
 | 行为埋点 | `backend/.../lab/behavior/` | 实验作答事件采集与风险指标 |
 | 审计/访问日志 | `backend/.../common/audit/`、`common/accesslog/` | 操作日志与 HTTP 访问日志 |
 | 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V24`（24 个），schema + seed |
-| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（61 个 `*Tests.java`） |
+| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（65 个 `*Tests.java`） |
 | 设计资产状态 | `docs/PRD/`、`docs/技术方案/` | 当前阶段无原型资产，需求输入以 PRD 与技术方案为准 |
 | 本地启动（路径 A/B/C） | `docs/运维文档/`、`scripts/` | Compose / 本机 MySQL / H2 文件库 |
 | 本地启动规则 | `.cursor/rules/local-dev-startup.mdc` | 端口、代理、数据目录、探活 |
@@ -136,7 +136,7 @@ teaching-platform-v4/
 - 前端页面与原型对齐时，先保信息架构/任务路径，再追求像素复刻。
 - 教师端优先高密度管理台模式；学生端优先任务导向模式；校管端优先组织与治理视角。不要把三种信息节奏混成同一套模板。
 - 后端当前常见模式是 `CurrentUser + service`；角色控制主要由 `@PreAuthorize` 和安全上下文完成；controller 只做参数与转发。
-- 测试当前以业务包镜像分布为主（当前 61 个 `*Tests.java`），常见拆法是 `controller tests + service tests`；controller 测试多为 `@WebMvcTest` + `MockMvc` + `@AutoConfigureMockMvc(addFilters = false)`。
+- 测试当前以业务包镜像分布为主（当前 65 个 `*Tests.java`），常见拆法是 `controller tests + service tests`；controller 测试多为 `@WebMvcTest` + `MockMvc` + `@AutoConfigureMockMvc(addFilters = false)`。
 - 新增功能先读 `docs/PRD/` 对应需求，再按 `.cursor/rules/feature-dev-workflow.mdc` 与 `tech-spec-decisive.mdc` 输出技术方案并完成自查；方案未定稿不进入编码。
 - 当前阶段无原型资产；需求输入以 `docs/PRD/` 与 `docs/技术方案/` 为准，不引用不存在的 `design/`、`design-prototypes/` 目录作为依据。
 
@@ -221,7 +221,7 @@ cd frontend && npm install && npm run dev && npm run build
 
 | 项 | 当前事实 |
 |---|---|
-| 后端测试数 | 61 个 `*Tests.java`（`backend/src/test/java/`） |
+| 后端测试数 | 65 个 `*Tests.java`（`backend/src/test/java/`） |
 | 迁移脚本 | `V1`–`V24` 共 24 个（`backend/src/main/resources/db/migration/`） |
 | 角色数 | 3 个：`TEACHER`、`STUDENT`、`SCHOOL_ADMIN` |
 | 密码编码器 | `DelegatingPasswordEncoder` |
