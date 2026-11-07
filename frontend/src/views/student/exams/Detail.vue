@@ -9,12 +9,17 @@
             <p>{{ detail.description || '确认时间与规则后即可开始。' }}</p>
           </div>
           <div class="intro-actions">
-            <button class="primary-action" type="button" :loading="false" :disabled="starting" @click="doStart">
+            <button class="primary-action" type="button" :loading="false" :disabled="starting || notStarted" @click="doStart">
               <span class="material-symbols-outlined">play_circle</span>
               {{ starting ? '正在开始考试' : '开始考试' }}
             </button>
             <button class="secondary-action" type="button" @click="router.push('/student/exams')">返回考试列表</button>
           </div>
+        </div>
+
+        <div v-if="notStarted" class="intro-notice">
+          <span class="material-symbols-outlined">schedule</span>
+          <span>考试尚未开始，开始时间 {{ formatDateTime(detail.startAt) }}</span>
         </div>
 
         <div class="intro-metrics">
@@ -28,7 +33,7 @@
           </div>
           <div class="intro-metric">
             <span>题目数</span>
-            <strong>{{ questions.length }} 题</strong>
+            <strong>{{ notStarted ? '待开始' : `${questions.length} 题` }}</strong>
           </div>
         </div>
       </article>
@@ -379,6 +384,8 @@ let draftQueue: Promise<boolean> = Promise.resolve(true)
 let draftErrorNotified = false
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] ?? null)
+/** 后端短路详情时会置 notStarted，前端据此禁用开始入口并展示提示。 */
+const notStarted = computed(() => detail.value?.notStarted === true)
 const currentQuestionDraft = computed(() => (currentQuestion.value ? ensureDraft(currentQuestion.value) : null))
 const currentQuestionType = computed(() => normalizeStudentAnswerQuestionType(qType(currentQuestion.value)))
 const currentQuestionOptions = computed(() => resolveQuestionOptions(currentQuestion.value))
@@ -803,6 +810,10 @@ function analysisTextOf(questionId: number, question: ExamQuestionView): string 
 }
 
 async function doStart() {
+  if (notStarted.value) {
+    ElMessage.warning('考试尚未开始')
+    return
+  }
   starting.value = true
   try {
     const response = await startExam(examId) as { deadlineAt?: string; remainingSeconds?: number }
@@ -1091,6 +1102,21 @@ onUnmounted(() => {
   color: #414753;
   line-height: 1.35;
   font-size: 12px;
+}
+
+/* 考试未开始提示：与概览指标保持一致的轻量提示条 */
+.intro-notice {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .intro-metrics,

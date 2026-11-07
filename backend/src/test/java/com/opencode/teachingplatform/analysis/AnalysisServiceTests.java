@@ -26,6 +26,8 @@ class AnalysisServiceTests {
     private static final long STUDENT_ID = 2L;
     private static final long TEACHER_ID = 1L;
     private static final long PENDING_EXPERIMENT_ID = 1003L;
+    private static final long MATERIAL_SAME_SCHOOL_ID = -8001L;
+    private static final long MATERIAL_FOREIGN_SCHOOL_ID = -8002L;
 
     @Autowired
     private AnalysisService analysisService;
@@ -37,12 +39,42 @@ class AnalysisServiceTests {
     @AfterEach
     void cleanupExperimentSubmissionFixture() {
         cleanupVisibilityFixture();
+        jdbcTemplate.update("DELETE FROM course_material WHERE id IN (?, ?)", MATERIAL_SAME_SCHOOL_ID, MATERIAL_FOREIGN_SCHOOL_ID);
         jdbcTemplate.update(
                 "DELETE FROM experiment_submission WHERE experiment_id = ? AND student_id = ?",
                 PENDING_EXPERIMENT_ID,
                 STUDENT_ID
         );
         jdbcTemplate.update("UPDATE score_record SET business_id = -1 WHERE id = -1");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void studentDashboardMaterialsStayInsideStudentSchool() {
+        insertCourseMaterial(MATERIAL_SAME_SCHOOL_ID, "本校可见资料-隔离测试", 1L, "2099-01-02 00:00:00");
+        insertCourseMaterial(MATERIAL_FOREIGN_SCHOOL_ID, "外校资料-隔离测试", 2L, "2099-01-03 00:00:00");
+
+        Map<String, Object> dashboard = analysisService.getStudentDashboard(student());
+
+        int expectedCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM course_material WHERE visibility = 'ALL' AND school_id = 1",
+                Integer.class);
+        assertEquals(expectedCount, summaryCardValue(dashboard, "materials"));
+        List<Map<String, Object>> recentMaterials = (List<Map<String, Object>>) dashboard.get("recentMaterials");
+        List<String> titles = recentMaterials.stream().map(item -> String.valueOf(item.get("title"))).toList();
+        assertTrue(titles.contains("本校可见资料-隔离测试"));
+        assertFalse(titles.contains("外校资料-隔离测试"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void studentDashboardMaterialsEmptyWhenSchoolMissing() {
+        CurrentUser studentWithoutSchool = new CurrentUser(9998L, "no-school-student", "无学校学生", UserRole.STUDENT, null, "test-session");
+
+        Map<String, Object> dashboard = analysisService.getStudentDashboard(studentWithoutSchool);
+
+        assertEquals(0, summaryCardValue(dashboard, "materials"));
+        assertTrue(((List<?>) dashboard.get("recentMaterials")).isEmpty());
     }
 
     @Test
@@ -499,6 +531,14 @@ class AnalysisServiceTests {
         insertHomework(HOMEWORK_FOREIGN_ID, "他人作业", FOREIGN_CLASS_ID, OTHER_TEACHER_ID);
         insertHomeworkSubmission(SUBMISSION_FOREIGN_ID, HOMEWORK_FOREIGN_ID);
         insertPlagiarismTask(PLAG_FOREIGN_HIGH_ID, "HOMEWORK", SUBMISSION_FOREIGN_ID, 95.0);
+    }
+
+    private void insertCourseMaterial(long id, String title, long schoolId, String updatedAt) {
+        jdbcTemplate.update(
+                "INSERT INTO course_material (id, title, category, file_path, file_name, uploader_user_id, visibility, school_id, created_at, updated_at) " +
+                        "VALUES (?, ?, 'COURSEWARE', 'test/isolated.pdf', 'isolated.pdf', 1, 'ALL', ?, CURRENT_TIMESTAMP, TIMESTAMP '" + updatedAt + "')",
+                id, title, schoolId
+        );
     }
 
     private void insertClass(long id, String name, String code, long schoolId) {

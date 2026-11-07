@@ -12,6 +12,7 @@ import type {
   HomeworkSubmissionItem,
   HomeworkSubmissionReturnResult,
   SaveHomeworkQuestionRequest,
+  SaveHomeworkDraftResult,
   StudentHomeworkDetail,
   SubmitHomeworkRequest,
   TeacherHomeworkDetail,
@@ -76,3 +77,7 @@ export const getStudentHomeworkDetail = (id: number | string) =>
 
 export const submitHomework = (id: number | string, data: SubmitHomeworkRequest) =>
   request.post<StudentHomeworkDetail>(`/student/homeworks/${id}/submit`, data);
+
+/** 学生保存作业草稿：不触发查重与评分，仅落库当前作答内容。 */
+export const saveStudentHomeworkDraft = (id: number | string, data: SubmitHomeworkRequest) =>
+  request.put<SaveHomeworkDraftResult>(`/student/homeworks/${id}/draft`, data);

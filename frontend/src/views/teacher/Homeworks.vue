@@ -110,11 +110,20 @@
             <el-button @click="openEditDialog(row)">编辑</el-button>
             <el-button plain @click="releaseScores(row)">发布成绩</el-button>
             <el-button
-              :type="row.status === 'PUBLISHED' ? 'warning' : 'success'"
+              v-if="row.status === 'DRAFT'"
+              type="success"
               plain
               @click="toggleStatus(row)"
             >
-              {{ row.status === 'PUBLISHED' ? '关闭作业' : '发布作业' }}
+              发布作业
+            </el-button>
+            <el-button
+              v-else-if="row.status === 'PUBLISHED'"
+              type="warning"
+              plain
+              @click="toggleStatus(row)"
+            >
+              关闭作业
             </el-button>
           </div>
         </article>
@@ -158,7 +167,7 @@
                 <el-input v-model="form.title" maxlength="100" show-word-limit placeholder="例如：实验一报告" />
               </el-form-item>
               <el-form-item label="所属班级" required>
-                <el-select v-model="form.classId" placeholder="请选择班级">
+                <el-select v-model="form.classId" placeholder="请选择班级" :disabled="editingSubmissionCount > 0">
                   <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="item.id" />
                 </el-select>
               </el-form-item>
@@ -193,10 +202,22 @@
                 />
               </el-form-item>
               <el-form-item label="发布状态">
-                <el-select v-model="form.status" placeholder="请选择状态">
-                  <el-option label="草稿" value="DRAFT" />
+                <el-select v-model="form.status" placeholder="请选择状态" :disabled="originalStatus === 'CLOSED'">
+                  <el-option
+                    label="草稿"
+                    value="DRAFT"
+                    :disabled="originalStatus === 'PUBLISHED' && editingSubmissionCount > 0"
+                  />
                   <el-option label="已发布" value="PUBLISHED" />
-                  <el-option label="已关闭" value="CLOSED" />
+                  <el-option label="已关闭" value="CLOSED" :disabled="originalStatus === 'DRAFT'" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="成绩可见性">
+                <el-select v-model="form.scoreVisibilityMode" placeholder="请选择可见性">
+                  <el-option label="立即可见" value="IMMEDIATE" />
+                  <el-option label="教师确认后可见" value="AFTER_TEACHER_CONFIRM" />
+                  <el-option label="截止后可见" value="AFTER_DEADLINE" />
+                  <el-option label="教师手动发布" value="MANUAL_RELEASE" />
                 </el-select>
               </el-form-item>
             </div>
@@ -325,10 +346,14 @@ const form = reactive<CreateHomeworkRequest>({
   description: '',
   classId: 0,
   status: 'DRAFT',
+  scoreVisibilityMode: 'AFTER_TEACHER_CONFIRM',
   attachmentPath: '',
   startAt: null,
   dueAt: null,
 });
+
+/** 编辑态已存在的提交数量：>0 时锁定班级与“回退草稿”，与后端状态机保持一致。 */
+const editingSubmissionCount = ref(0);
 
 const filteredRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
@@ -426,6 +451,7 @@ const resetForm = () => {
   form.startAt = null;
   form.dueAt = null;
   form.scoreVisibilityMode = 'AFTER_TEACHER_CONFIRM';
+  editingSubmissionCount.value = 0;
   editingId.value = null;
   originalStatus.value = 'DRAFT';
   configuredQuestions.value = [];
@@ -446,6 +472,7 @@ const buildPayload = (): CreateHomeworkRequest => ({
   description: form.description.trim(),
   classId: form.classId,
   status: form.status,
+  scoreVisibilityMode: form.scoreVisibilityMode ?? null,
   attachmentPath: form.attachmentPath?.trim() || null,
   startAt: form.startAt || null,
   dueAt: form.dueAt || null,
@@ -462,6 +489,7 @@ const openEditDialog = async (row: HomeworkListItem) => {
   try {
     const detail = await getTeacherHomeworkDetail(row.id);
     editingId.value = row.id;
+    editingSubmissionCount.value = row.submissionCount ?? 0;
     originalStatus.value = detail.status;
     form.title = detail.title;
     form.description = detail.description;
@@ -806,7 +834,7 @@ const submitForm = async () => {
     const payload = buildPayload();
 
     if (editingId.value) {
-      // TD32：先落题目再落作业状态，允许同一次保存完成 DRAFT → PUBLISHED 与题目修改
+      // 先落题目再落作业状态，允许同一次保存完成 DRAFT → PUBLISHED 与题目修改
       // 已关闭作业的题目不可变更，跳过题目写入避免命中锁定规则
       if (originalStatus.value !== 'CLOSED') {
         await persistConfiguredQuestions(editingId.value);
@@ -842,7 +870,9 @@ const submitForm = async () => {
 };
 
 const toggleStatus = async (row: HomeworkListItem) => {
-  const nextStatus: HomeworkStatus = row.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
+  // 目标态固定为 DRAFT → PUBLISHED、PUBLISHED → CLOSED，CLOSED 不再提供状态操作。
+  if (row.status !== 'DRAFT' && row.status !== 'PUBLISHED') return;
+  const nextStatus: HomeworkStatus = row.status === 'DRAFT' ? 'PUBLISHED' : 'CLOSED';
   await changeHomeworkStatus(row.id, { status: nextStatus });
   ElMessage.success(nextStatus === 'PUBLISHED' ? '作业已发布' : '作业已关闭');
   await fetchHomeworks();

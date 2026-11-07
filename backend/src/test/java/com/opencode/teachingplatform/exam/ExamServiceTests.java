@@ -1198,6 +1198,130 @@ class ExamServiceTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void studentDetailReturnsNoQuestionsBeforeStartAt() {
+        Long examId = createExamWithWindow("未开始详情-" + System.nanoTime(),
+                OffsetDateTime.now().plusHours(1), OffsetDateTime.now().plusHours(2), 30, "PUBLISHED");
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(student, examId);
+
+        assertThat(detail.get("notStarted")).isEqualTo(true);
+        assertThat((List<?>) detail.get("questions")).isEmpty();
+        // 未开始不得回填任何提交与判分字段
+        assertThat(detail).doesNotContainKeys("submissionStatus", "totalScore", "resultAvailable");
+        // 基础字段仍完整下发，供前端展示考试信息
+        assertThat(detail).containsKeys("id", "title", "classId", "className", "startAt", "endAt",
+                "durationMinutes", "status", "scoreVisibilityMode", "shuffleQuestions");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void teacherDetailKeepsQuestionsBeforeStartAt() {
+        Long examId = createExamWithWindow("未开始教师详情-" + System.nanoTime(),
+                OffsetDateTime.now().plusHours(1), OffsetDateTime.now().plusHours(2), 30, "PUBLISHED");
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+
+        assertThat(detail).doesNotContainKey("notStarted");
+        assertThat((List<?>) detail.get("questions")).hasSize(1);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void confirmAnswerRejectsWhenScoreReleased() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(3L, null, "统一错误处理与前端解析", null, null)
+        )));
+        jdbcTemplate.update("UPDATE exam SET score_released = TRUE WHERE id = ?", examId);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThatThrownBy(() -> examService.confirmAnswer(
+                teacher,
+                submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(3L, "发布后改分", 8D, false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessageContaining("成绩已发布或已到期");
+    }
+
+    @Test
+    void confirmAnswerRejectsAfterDeadlineModeReachesEndAt() {
+        Long examId = createPublishedExamForStudent(ScoreVisibilityMode.AFTER_DEADLINE);
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(3L, null, "统一错误处理与前端解析", null, null)
+        )));
+        jdbcTemplate.update("UPDATE exam SET end_at = ? WHERE id = ?",
+                OffsetDateTime.now().minusMinutes(1), examId);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThatThrownBy(() -> examService.confirmAnswer(
+                teacher,
+                submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(3L, "截止后改分", 8D, false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessageContaining("成绩已发布或已到期");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void confirmAnswerAllowedWhenScoreVisibilityStillOpen() {
+        // 冻结只应对「已发布 / AFTER_DEADLINE 且到期」生效，其余可见性下仍必须允许教师改分
+        for (ScoreVisibilityMode mode : List.of(ScoreVisibilityMode.MANUAL_RELEASE, ScoreVisibilityMode.AFTER_TEACHER_CONFIRM)) {
+            Long examId = createPublishedExamForStudent(mode);
+            Long submissionId = startExamAndGetSubmissionId(examId);
+            examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                    new ExamRequests.SubmitAnswerItem(3L, null, "统一错误处理与前端解析", null, null)
+            )));
+
+            Map<String, Object> result = (Map<String, Object>) examService.confirmAnswer(
+                    teacher,
+                    submissionId,
+                    new ExamRequests.ConfirmExamAnswerRequest(3L, "未发布允许改分", 8D, false)
+            );
+
+            assertThat(result.get("status")).isEqualTo("GRADED");
+            assertThat(((Number) result.get("totalScore")).doubleValue()).isEqualTo(8.0);
+            assertThat(countScoreRecords(examId)).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void gradedDowngradeRemovesScoreRecord() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = startExamAndGetSubmissionId(examId);
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(3L, null, "统一错误处理与前端解析", null, null)
+        )));
+        examService.confirmAnswer(teacher, submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(3L, "给分", 8D, false));
+        assertThat(countScoreRecords(examId)).isEqualTo(1);
+
+        // 模拟一条未给分的作答（无题目快照按主观题处理），使再次重算时无法全确认
+        jdbcTemplate.update(
+                "INSERT INTO exam_answer (exam_submission_id, question_id, answer_json, score) VALUES (?, ?, ?, NULL)",
+                submissionId, 999L, "{}");
+        entityManager.flush();
+        entityManager.clear();
+
+        examService.confirmAnswer(teacher, submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(3L, "再次给分", 9D, false));
+        entityManager.flush();
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM exam_submission WHERE id = ?", String.class, submissionId))
+                .isEqualTo("SUBMITTED");
+        assertThat(countScoreRecords(examId)).isZero();
+    }
+
+    @Test
     void startExamRejectsAfterEndAt() {
         Long examId = createExamWithWindow("已结束考试-" + System.nanoTime(),
                 OffsetDateTime.now().minusHours(2), OffsetDateTime.now().minusHours(1), 30, "PUBLISHED");

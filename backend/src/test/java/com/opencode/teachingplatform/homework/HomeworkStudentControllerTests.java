@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -137,6 +138,35 @@ class HomeworkStudentControllerTests {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(40000))
                     .andExpect(jsonPath("$.message").value("作业尚未开始"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void studentCanSaveHomeworkDraft() throws Exception {
+        when(homeworkService.saveHomeworkDraft(any(CurrentUser.class), org.mockito.ArgumentMatchers.eq(1L), any()))
+                .thenReturn(Map.of(
+                        "submissionId", 12,
+                        "status", "SAVED",
+                        "savedAt", "2026-11-07T10:00:00+08:00"
+                ));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(put("/api/v1/student/homeworks/{id}/draft", 1L)
+                            .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "answerText": "草稿正文",
+                                      "attachment": null
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.data.submissionId").value(12))
+                    .andExpect(jsonPath("$.data.status").value("SAVED"))
+                    .andExpect(jsonPath("$.data.savedAt").value("2026-11-07T10:00:00+08:00"));
         } finally {
             SecurityContextHolder.clearContext();
         }

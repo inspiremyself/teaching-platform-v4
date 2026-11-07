@@ -11,7 +11,13 @@
               <span>返回</span>
             </button>
             <div class="detail-hero__actions">
-              <el-button round :disabled="readonly" @click="resetForm">恢复已保存内容</el-button>
+              <el-button
+                round
+                :disabled="readonly || (detail?.submissionStatus !== 'SAVED' && !lastSavedDraft)"
+                @click="restoreSavedDraft"
+              >
+                重置为已保存内容
+              </el-button>
               <el-button type="primary" round :loading="submitting" :disabled="readonly" @click="submitForm">提交作业</el-button>
             </div>
           </div>
@@ -33,6 +39,10 @@
               <span class="detail-chip detail-chip--status">
                 <span class="material-symbols-outlined">task_alt</span>
                 {{ submissionStatusLabel(detail.submissionStatus) }}
+              </span>
+              <span v-if="autoSaveStatus !== 'idle'" class="detail-chip detail-chip--status">
+                <span class="material-symbols-outlined">{{ autoSaveStatus === 'failed' ? 'error' : autoSaveStatus === 'saving' ? 'sync' : 'cloud_done' }}</span>
+                {{ autoSaveStatus === 'saving' ? '保存中…' : autoSaveStatus === 'saved' ? '已保存草稿' : '草稿保存失败' }}
               </span>
             </div>
           </div>
@@ -344,8 +354,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import QuestionAnswerShell from './components/lab-answer/QuestionAnswerShell.vue';
 import ChoiceAnswerEditor from './components/lab-answer/ChoiceAnswerEditor.vue';
@@ -354,7 +364,7 @@ import TextAnswerEditor from './components/lab-answer/TextAnswerEditor.vue';
 import CodeLabAnswerEditor from './components/lab-answer/CodeLabAnswerEditor.vue';
 import { buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromStep } from './components/lab-answer/answerPayload';
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from './components/lab-answer/types';
-import { getStudentHomeworkDetail, submitHomework } from '@/api/homeworks';
+import { getStudentHomeworkDetail, saveStudentHomeworkDraft, submitHomework } from '@/api/homeworks';
 import type { HomeworkQuestionItem, HomeworkSubmissionStatus, StudentHomeworkDetail, SubmitHomeworkRequest } from '@/types/homework';
 import type { StudentChoiceOption, StudentLabStepItem } from '@/types/lab';
 
@@ -370,6 +380,15 @@ const form = reactive<SubmitHomeworkRequest>({
   answerText: '',
   attachmentPath: '',
 });
+
+/** 草稿自动保存状态：顶部状态条三态展示。 */
+const autoSaveStatus = ref<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+/** 详情回填/提交期间抑制自动保存，避免用户未操作就产生草稿请求。 */
+const suppressAutoSave = ref(false);
+/** 最近一次成功保存的载荷快照，供“重置为已保存内容”回填。 */
+const lastSavedDraft = ref<SubmitHomeworkRequest | null>(null);
+let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
+let draftFailureNotified = false;
 
 const homeworkId = computed(() => Number(route.params.id));
 // 响应式时钟：每秒刷新一次，保证截止后页面无需重新加载即可自动进入只读态。
@@ -424,7 +443,15 @@ const countdownLabel = computed(() => {
   return `${remainHours} 小时 ${minutes} 分`;
 });
 
-const syncForm = () => {
+/**
+ * 用服务端详情回填页面表单与各题草稿。
+ *
+ * <p>回填本身会触发 `questionDrafts` / `form` 的深度监听，若不抑制就会产生
+ * 用户未操作却自动保存草稿的请求，因此整个过程用 `suppressAutoSave` 包裹，
+ * 并等待一次 `nextTick`（watcher 默认 pre 刷新）结束后再恢复。</p>
+ */
+const syncForm = async () => {
+  suppressAutoSave.value = true;
   form.answerText = detail.value?.answerText || '';
   form.attachmentPath = detail.value?.attachmentAnswerPath || detail.value?.answerFilePath || '';
   Object.keys(questionDrafts).forEach(key => delete questionDrafts[Number(key)]);
@@ -432,21 +459,37 @@ const syncForm = () => {
     questionDrafts[question.id] = hydrateDraftFromStep(toStudentLabStepItem(question));
   });
   currentQuestionIndex.value = 0;
+  await nextTick();
+  suppressAutoSave.value = false;
 };
 
 const fetchData = async () => {
   loading.value = true;
   try {
     detail.value = await getStudentHomeworkDetail(homeworkId.value);
-    syncForm();
+    await syncForm();
   } finally {
     loading.value = false;
   }
 };
 
-const resetForm = () => {
-  syncForm();
-};
+/**
+ * 组装草稿与正式提交共用的载荷，保证两条链路字段完全一致。
+ * 题目型作业把逐题草稿映射为 `answers[]`，整份文本作业只传 `answerText`。
+ */
+const buildDraftPayload = (): SubmitHomeworkRequest => ({
+  answerText: hasQuestionItems.value ? undefined : form.answerText,
+  attachmentPath: form.attachmentPath?.trim() || null,
+  answers: hasQuestionItems.value
+    ? detail.value?.questions?.map(question => ({
+        homeworkQuestionId: question.id,
+        questionType: normalizeStudentAnswerQuestionType(question.type),
+        answerText: buildCompatibilityAnswerText(ensureQuestionDraft(question)),
+        answerJson: buildAnswerPayloadJson(ensureQuestionDraft(question)),
+        selectedOptions: selectedOptionsOf(ensureQuestionDraft(question)),
+      }))
+    : undefined,
+});
 
 const submitForm = async () => {
   if (isOverdue.value) {
@@ -471,25 +514,116 @@ const submitForm = async () => {
   });
 
   submitting.value = true;
+  // 正式提交期间禁止自动保存，避免草稿请求与提交请求互相覆盖。
+  suppressAutoSave.value = true;
+  clearAutoSaveTimer();
+  let submitSucceeded = false;
   try {
-    await submitHomework(homeworkId.value, {
-      answerText: hasQuestionItems.value ? undefined : form.answerText,
-      attachmentPath: form.attachmentPath?.trim() || null,
-      answers: hasQuestionItems.value
-        ? detail.value?.questions?.map(question => ({
-            homeworkQuestionId: question.id,
-            questionType: normalizeStudentAnswerQuestionType(question.type),
-            answerText: buildCompatibilityAnswerText(ensureQuestionDraft(question)),
-            answerJson: buildAnswerPayloadJson(ensureQuestionDraft(question)),
-            selectedOptions: selectedOptionsOf(ensureQuestionDraft(question)),
-          }))
-        : undefined,
-    });
+    await submitHomework(homeworkId.value, buildDraftPayload());
+    submitSucceeded = true;
     await fetchData();
     ElMessage.success('作业提交成功');
   } finally {
     submitting.value = false;
+    // 成功后保持抑制（此时 readonly 已为真）；失败则恢复自动保存能力。
+    suppressAutoSave.value = submitSucceeded;
   }
+};
+
+/** 清理未触发的防抖定时器。 */
+function clearAutoSaveTimer() {
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = undefined;
+  }
+}
+
+/**
+ * 立即保存草稿。
+ *
+ * <p>成功时同步更新本地提交状态与快照，供“重置为已保存内容”回填；
+ * 失败不阻断作答，只在连续失败序列中提示一次。</p>
+ */
+const saveDraft = async () => {
+  const payload = buildDraftPayload();
+  autoSaveStatus.value = 'saving';
+  try {
+    await saveStudentHomeworkDraft(homeworkId.value, payload);
+    if (isDraftResponseStale()) {
+      autoSaveStatus.value = 'idle';
+      return;
+    }
+    autoSaveStatus.value = 'saved';
+    if (detail.value) {
+      detail.value.submissionStatus = 'SAVED';
+    }
+    lastSavedDraft.value = structuredClone(payload);
+    draftFailureNotified = false;
+  } catch {
+    if (isDraftResponseStale()) {
+      autoSaveStatus.value = 'idle';
+      return;
+    }
+    autoSaveStatus.value = 'failed';
+    if (!draftFailureNotified) {
+      draftFailureNotified = true;
+      ElMessage.warning('草稿保存失败，请检查网络后重试');
+    }
+  }
+};
+
+/**
+ * 迟到的草稿回执判定：提交或详情回填已接管时，不再用旧回执改写页面状态，
+ * 避免提交成功后仍显示“保存中/保存失败”。
+ */
+const isDraftResponseStale = () => submitting.value || suppressAutoSave.value;
+
+/**
+ * 防抖排期自动保存：只读、加载中、提交中、回填期间或作业已关闭时不排期，
+ * 避免必然被后端拒绝的请求与失败提示。
+ */
+const scheduleAutoSave = () => {
+  if (readonly.value || loading.value || submitting.value || suppressAutoSave.value) return;
+  if (detail.value?.status === 'CLOSED') return;
+  clearAutoSaveTimer();
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = undefined;
+    void saveDraft();
+  }, 800);
+};
+
+/**
+ * 离开页面前冲刷未保存的草稿。
+ * 提交后、截止/未开始、加载中、作业已关闭时直接返回，不再发请求。
+ */
+const flushDraft = async () => {
+  clearAutoSaveTimer();
+  if (readonly.value || submitting.value || loading.value) return;
+  if (!detail.value || detail.value.status === 'CLOSED') return;
+  await saveDraft();
+};
+
+/**
+ * 重置为最近一次成功保存的草稿内容。
+ * 有快照时按题目 id 回填逐题草稿；无快照（例如初始即为已保存状态）则回退到服务端详情。
+ */
+const restoreSavedDraft = () => {
+  if (!lastSavedDraft.value) {
+    void syncForm();
+    return;
+  }
+  const snapshot = lastSavedDraft.value;
+  form.answerText = snapshot.answerText ?? '';
+  form.attachmentPath = snapshot.attachmentPath ?? '';
+  snapshot.answers?.forEach(answer => {
+    const question = detail.value?.questions?.find(item => item.id === answer.homeworkQuestionId);
+    if (!question) return;
+    questionDrafts[question.id] = hydrateDraftFromStep({
+      ...toStudentLabStepItem(question),
+      answerText: answer.answerText ?? '',
+      answerPayloadJson: answer.answerJson ?? null,
+    });
+  });
 };
 
 const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => {
@@ -619,17 +753,30 @@ const formatDateTime = (value?: string | null) => {
 
 fetchData();
 
+// 逐题草稿与整份文本/附件任一变化都进入防抖自动保存。
+watch([questionDrafts, () => form.answerText, () => form.attachmentPath], scheduleAutoSave, { deep: true });
+
+// 路由离开前冲刷草稿；浏览器关闭/刷新时只发起不等待结果的保存。
+onBeforeRouteLeave(() => flushDraft());
+
+const handleBeforeUnload = () => {
+  void flushDraft();
+};
+
 let clockTimer: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
   clockTimer = setInterval(() => {
     nowMs.value = Date.now();
   }, 1000);
+  window.addEventListener('beforeunload', handleBeforeUnload);
 });
 onUnmounted(() => {
   if (clockTimer) {
     clearInterval(clockTimer);
     clockTimer = undefined;
   }
+  clearAutoSaveTimer();
+  window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 </script>
 

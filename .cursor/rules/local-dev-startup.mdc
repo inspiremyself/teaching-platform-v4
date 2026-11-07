@@ -48,7 +48,7 @@ alwaysApply: true
 - **H2（可选）**：仓库根 `data/h2/`（`backend-h2.sh` 注入 `H2_FILE`）。
 - **上传根**：仓库根 `data/files/`（`FILE_STORAGE_ROOT`）
   - `materials/` — 课程资料
-  - `lab-answers/{yyyy-MM-dd}/` — 实验答题图
+  - `lab-answers/{yyyy-MM-dd}/{studentId}/` — 实验答题图（历史文件无学生段，仍可读取）
 - 清空 H2：**禁止** `rm -rf data/h2/`；须 `./scripts/path-b/reset-h2.sh`（仅 H2 模式相关）。
 - H2 → MySQL：`./scripts/common/migrate-h2-to-mysql.sh`
 - 日常备份（MySQL 表结构+数据）：`./scripts/common/backup-local-data.sh`；校验 `verify-local-backup.sh`

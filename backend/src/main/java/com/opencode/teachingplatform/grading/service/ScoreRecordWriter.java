@@ -58,4 +58,16 @@ public class ScoreRecordWriter {
             throw new BusinessException(40900, "成绩记录并发冲突，请重试");
         }
     }
+
+    /**
+     * 删除一条成绩记录（幂等：记录不存在时直接返回）。
+     *
+     * <p>用于考试从 {@code GRADED} 降回 {@code SUBMITTED} 时清理残留成绩，
+     * 避免学生成绩列表继续展示已撤销的结果。</p>
+     */
+    @Transactional
+    public void remove(BusinessType businessType, Long businessId, Long studentId) {
+        scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(businessType, businessId, studentId)
+                .ifPresent(scoreRecordRepository::delete);
+    }
 }

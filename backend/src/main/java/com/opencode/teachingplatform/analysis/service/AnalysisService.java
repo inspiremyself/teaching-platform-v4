@@ -241,7 +241,23 @@ public class AnalysisService {
     public Map<String, Object> getStudentDashboard(CurrentUser student) {
         Long studentId = student.id();
 
-        int materialCount = count("SELECT COUNT(*) FROM course_material WHERE visibility = 'ALL'");
+        // 教学资料属于学校级资源，除全局可见外还必须限定在本校范围内，避免跨校元数据泄露
+        Long schoolId = student.schoolId();
+        int materialCount = schoolId == null
+                ? 0
+                : count("SELECT COUNT(*) FROM course_material WHERE visibility = 'ALL' AND school_id = ?", schoolId);
+        List<Map<String, Object>> recentMaterials = schoolId == null
+                ? List.of()
+                : jdbcTemplate.query(
+                        "SELECT id, title, category, file_name FROM course_material WHERE visibility = 'ALL' AND school_id = ? ORDER BY updated_at DESC LIMIT 4",
+                        (rs, rowNum) -> Map.<String, Object>of(
+                                "id", rs.getLong("id"),
+                                "title", rs.getString("title"),
+                                "category", rs.getString("category"),
+                                "fileName", rs.getString("file_name")
+                        ),
+                        schoolId
+                );
         int pendingLabCount = count(
                 "SELECT COUNT(*) FROM t_experiment e JOIN class_member cm ON cm.class_id = e.class_id " +
                         "LEFT JOIN experiment_submission es ON es.experiment_id = e.experiment_id AND es.student_id = cm.student_user_id " +
@@ -277,15 +293,7 @@ public class AnalysisService {
         ));
         result.put("upcomingTasks", buildStudentUpcomingTasks(studentId));
         result.put("recentFeedback", recentFeedback);
-        result.put("recentMaterials", jdbcTemplate.query(
-                "SELECT id, title, category, file_name FROM course_material WHERE visibility = 'ALL' ORDER BY updated_at DESC LIMIT 4",
-                (rs, rowNum) -> Map.<String, Object>of(
-                        "id", rs.getLong("id"),
-                        "title", rs.getString("title"),
-                        "category", rs.getString("category"),
-                        "fileName", rs.getString("file_name")
-                )
-        ));
+        result.put("recentMaterials", recentMaterials);
         result.put("quickLinks", List.of(
                 quickLink("我的实验", "/student/labs", pendingLabCount),
                 quickLink("我的作业", "/student/homeworks", pendingHomeworkCount),

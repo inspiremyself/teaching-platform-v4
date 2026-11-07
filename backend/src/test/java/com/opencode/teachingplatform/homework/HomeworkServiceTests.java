@@ -1436,6 +1436,346 @@ class HomeworkServiceTests {
         assertThat(countHomeworkScoreRecords(homework.getId(), 2L)).isEqualTo(scoreCountBefore);
     }
 
+    @Test
+    void createHomeworkDefaultsVisibilityToAfterTeacherConfirm() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+
+        Map<String, Object> created = homeworkService.createHomework(
+                teacher,
+                new HomeworkRequests.CreateHomeworkRequest(
+                        "默认可见性作业",
+                        "未传可见性",
+                        1L,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        Homework saved = homeworkRepository.findById(Long.valueOf(String.valueOf(created.get("id")))).orElseThrow();
+        assertThat(saved.getScoreVisibilityMode()).isEqualTo(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        assertThat(saved.getStatus()).isEqualTo(ActivityStatus.DRAFT);
+    }
+
+    @Test
+    void updateHomeworkWithoutVisibilityKeepsManualRelease() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "手动发布作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.MANUAL_RELEASE);
+        homeworkRepository.save(homework);
+
+        homeworkService.updateHomework(
+                teacher,
+                homework.getId(),
+                new HomeworkRequests.UpdateHomeworkRequest(
+                        "手动发布作业改名",
+                        "只改标题",
+                        1L,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        Homework updated = homeworkRepository.findById(homework.getId()).orElseThrow();
+        assertThat(updated.getScoreVisibilityMode()).isEqualTo(ScoreVisibilityMode.MANUAL_RELEASE);
+        assertThat(updated.getStatus()).isEqualTo(ActivityStatus.PUBLISHED);
+        assertThat(updated.getTitle()).isEqualTo("手动发布作业改名");
+    }
+
+    @Test
+    void createHomeworkRejectsClosedStatus() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+
+        assertThatThrownBy(() -> homeworkService.createHomework(
+                teacher,
+                new HomeworkRequests.CreateHomeworkRequest(
+                        "非法状态作业",
+                        null,
+                        1L,
+                        "CLOSED",
+                        ScoreVisibilityMode.IMMEDIATE,
+                        null,
+                        null,
+                        null
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业状态不允许从 DRAFT 变更为 CLOSED");
+    }
+
+    @Test
+    void updateHomeworkRejectsRevertingPublishedToDraftWhenSubmissionsExist() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "已发布有提交作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+        createSubmission(homework, SubmissionStatus.SUBMITTED);
+
+        assertThatThrownBy(() -> homeworkService.updateHomework(
+                teacher,
+                homework.getId(),
+                new HomeworkRequests.UpdateHomeworkRequest(
+                        "已发布有提交作业",
+                        null,
+                        1L,
+                        "DRAFT",
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业状态不允许从 PUBLISHED 变更为 DRAFT");
+
+        assertThat(homeworkRepository.findById(homework.getId()).orElseThrow().getStatus())
+                .isEqualTo(ActivityStatus.PUBLISHED);
+    }
+
+    @Test
+    void updateHomeworkAllowsRevertingPublishedToDraftWithoutSubmissions() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "无提交回退作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+
+        homeworkService.updateHomework(
+                teacher,
+                homework.getId(),
+                new HomeworkRequests.UpdateHomeworkRequest(
+                        "无提交回退作业",
+                        null,
+                        1L,
+                        "DRAFT",
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        );
+
+        assertThat(homeworkRepository.findById(homework.getId()).orElseThrow().getStatus())
+                .isEqualTo(ActivityStatus.DRAFT);
+    }
+
+    @Test
+    void updateHomeworkRejectsClassChangeWhenSubmissionsExist() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "换班作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+        createSubmission(homework, SubmissionStatus.SUBMITTED);
+
+        assertThatThrownBy(() -> homeworkService.updateHomework(
+                teacher,
+                homework.getId(),
+                new HomeworkRequests.UpdateHomeworkRequest(
+                        "换班作业",
+                        null,
+                        99L,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已有学生提交，不能变更所属班级");
+    }
+
+    @Test
+    void changeHomeworkStatusRejectsClosedToPublished() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "已关闭作业", ActivityStatus.CLOSED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+
+        assertThatThrownBy(() -> homeworkService.changeHomeworkStatus(
+                teacher,
+                homework.getId(),
+                new HomeworkRequests.ChangeHomeworkStatusRequest("PUBLISHED")
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业状态不允许从 CLOSED 变更为 PUBLISHED");
+    }
+
+    @Test
+    void changeHomeworkStatusAllowsDraftToPublished() {
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Homework homework = createHomework(1L, 1L, "草稿发布作业", ActivityStatus.DRAFT);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+
+        homeworkService.changeHomeworkStatus(
+                teacher,
+                homework.getId(),
+                new HomeworkRequests.ChangeHomeworkStatusRequest("PUBLISHED")
+        );
+
+        assertThat(homeworkRepository.findById(homework.getId()).orElseThrow().getStatus())
+                .isEqualTo(ActivityStatus.PUBLISHED);
+    }
+
+    @Test
+    void saveDraftCreatesSavedSubmissionAndBackfillsAnswers() {
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        Homework homework = createHomework(1L, 1L, "草稿作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+        HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 10D, "草稿题干");
+
+        Map<String, Object> result = homeworkService.saveHomeworkDraft(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest(
+                        "草稿正文",
+                        null,
+                        null,
+                        List.of(new HomeworkRequests.SubmitHomeworkAnswerItem(
+                                question.getId(),
+                                List.of(),
+                                "草稿分题答案",
+                                "{\"value\":\"草稿分题答案\"}",
+                                null
+                        ))
+                )
+        );
+
+        assertThat(result.get("status")).isEqualTo(SubmissionStatus.SAVED.name());
+        assertThat(result.get("savedAt")).isNotNull();
+        HomeworkSubmission submission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentId(homework.getId(), 2L)
+                .orElseThrow();
+        assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
+        assertThat(submission.getAnswerText()).isEqualTo("草稿正文");
+        assertThat(submission.getTotalScore()).isNull();
+        assertThat(countHomeworkScoreRecords(homework.getId(), 2L)).isZero();
+
+        Map<String, Object> detail = homeworkService.getStudentHomeworkDetail(student, homework.getId());
+        assertThat(detail.get("submissionStatus")).isEqualTo(SubmissionStatus.SAVED.name());
+        assertThat(detail.get("answerText")).isEqualTo("草稿正文");
+        List<Map<String, Object>> questions = castQuestions(detail.get("questions"));
+        assertThat(questions).hasSize(1);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> answerView = (Map<String, Object>) questions.get(0).get("answer");
+        assertThat(answerView).isNotNull();
+        assertThat(answerView.get("answerText")).isEqualTo("草稿分题答案");
+    }
+
+    @Test
+    void saveDraftIsIdempotentForRepeatedSaves() {
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        Homework homework = createHomework(1L, 1L, "幂等草稿作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+        HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 10D, "幂等题干");
+
+        HomeworkRequests.SubmitHomeworkRequest request = new HomeworkRequests.SubmitHomeworkRequest(
+                "第一版草稿",
+                null,
+                null,
+                List.of(new HomeworkRequests.SubmitHomeworkAnswerItem(
+                        question.getId(), List.of(), "第一版", null, null))
+        );
+        homeworkService.saveHomeworkDraft(student, homework.getId(), request);
+        homeworkService.saveHomeworkDraft(student, homework.getId(), new HomeworkRequests.SubmitHomeworkRequest(
+                "第二版草稿",
+                null,
+                null,
+                List.of(new HomeworkRequests.SubmitHomeworkAnswerItem(
+                        question.getId(), List.of(), "第二版", null, null))
+        ));
+
+        assertThat(countHomeworkSubmissions(homework.getId())).isEqualTo(1);
+        assertThat(countHomeworkAnswers(homework.getId())).isEqualTo(1);
+        HomeworkSubmission submission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentId(homework.getId(), 2L)
+                .orElseThrow();
+        assertThat(submission.getAnswerText()).isEqualTo("第二版草稿");
+        HomeworkAnswer answer = homeworkAnswerRepository
+                .findByHomeworkSubmissionIdAndHomeworkQuestionId(submission.getId(), question.getId())
+                .orElseThrow();
+        assertThat(answer.getAnswerText()).isEqualTo("第二版");
+    }
+
+    @Test
+    void saveDraftRejectsSubmittedSubmission() {
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        Homework homework = createHomework(1L, 1L, "已提交草稿作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+        createSubmission(homework, SubmissionStatus.SUBMITTED);
+
+        assertThatThrownBy(() -> homeworkService.saveHomeworkDraft(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("再次草稿", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已提交作业不可修改草稿");
+    }
+
+    @Test
+    void saveDraftRejectsClosedHomework() {
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        Homework homework = createHomework(1L, 1L, "已关闭草稿作业", ActivityStatus.CLOSED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homeworkRepository.save(homework);
+
+        assertThatThrownBy(() -> homeworkService.saveHomeworkDraft(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("草稿", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已关闭，不能保存草稿");
+    }
+
+    @Test
+    void saveDraftRejectsBeforeStartAt() {
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        Homework homework = createHomework(1L, 1L, "未开始草稿作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homework.setStartAt(OffsetDateTime.now().plusHours(1));
+        homeworkRepository.save(homework);
+
+        assertThatThrownBy(() -> homeworkService.saveHomeworkDraft(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("草稿", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业尚未开始");
+    }
+
+    @Test
+    void saveDraftRejectsAfterDueAt() {
+        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
+        Homework homework = createHomework(1L, 1L, "已截止草稿作业", ActivityStatus.PUBLISHED);
+        homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        homework.setDueAt(OffsetDateTime.now().minusHours(1));
+        homeworkRepository.save(homework);
+
+        assertThatThrownBy(() -> homeworkService.saveHomeworkDraft(
+                student,
+                homework.getId(),
+                new HomeworkRequests.SubmitHomeworkRequest("草稿", null, null)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("作业已截止，不能保存草稿");
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> castQuestions(Object questions) {
+        return (List<Map<String, Object>>) questions;
+    }
+
     private int countHomeworkSubmissions(Long homeworkId) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM homework_submission WHERE homework_id = ?", Integer.class, homeworkId);

@@ -228,4 +228,11 @@ public class HomeworkController {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(homeworkService.submitHomework(currentUser, id, request));
     }
+
+    @PutMapping("/student/homeworks/{id}/draft")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ApiResponse<?> saveHomeworkDraft(@PathVariable Long id, @Valid @RequestBody HomeworkRequests.SubmitHomeworkRequest request) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(homeworkService.saveHomeworkDraft(currentUser, id, request));
+    }
 }

@@ -544,9 +544,26 @@ public class LabService {
                 if (lockedSubmission == null) {
                     continue;
                 }
-                applyScoringResult(answer, labScoringSupport.score(step, answer));
+                ScoringResult result = labScoringSupport.score(step, answer);
+                boolean visible = scoreVisible(lab, lockedSubmission);
+                if (visible) {
+                    // 成绩已对学生可见：冻结分数与人工评语，只刷新自动分/建议分/判分明细，
+                    // 既不重算总分，也不写成绩记录，避免教师改可接受答案直接改写已发布成绩。
+                    applySuggestedScoringResult(answer, result);
+                } else if (lockedSubmission.getSubmitStatus() == SubmissionStatus.SAVED) {
+                    // 草稿态尚未提交：仍允许全量重判，草稿分数只在教师侧可见。
+                    applyScoringResult(answer, result);
+                } else if ("TEACHER".equals(answer.getScoreSource())) {
+                    // 已提交且教师已完成人工给分：保留原分数与评语，只刷新建议字段供教师参考。
+                    applySuggestedScoringResult(answer, result);
+                } else {
+                    applyScoringResult(answer, result);
+                }
                 labStepAnswerRepository.save(answer);
                 regradedCount++;
+                if (visible) {
+                    continue;
+                }
                 if (lockedSubmission.getSubmitStatus() == SubmissionStatus.SAVED) {
                     refreshSavedSubmissionAfterScoring(lockedSubmission);
                 } else {
@@ -1133,7 +1150,7 @@ public class LabService {
         if (LabAnswerImageSupport.allowsImages(step.getQuestionType())) {
             LabAnswerImageSupport.TextAnswerPayload payload = LabAnswerImageSupport.parseTextPayload(objectMapper, answerPayloadJson);
             payload = new LabAnswerImageSupport.TextAnswerPayload(answerText, payload.images());
-            LabAnswerImageSupport.validateImagesForSave(step.getQuestionType(), payload.images(), localFileStorageService, storageRoot);
+            LabAnswerImageSupport.validateImagesForSave(step.getQuestionType(), payload.images(), currentUser.id(), localFileStorageService, storageRoot);
             answerPayloadJson = LabAnswerImageSupport.canonicalizeTextPayload(objectMapper, answerText, payload);
         } else {
             LabAnswerImageSupport.TextAnswerPayload payload = LabAnswerImageSupport.parseTextPayload(objectMapper, answerPayloadJson);
@@ -1182,7 +1199,10 @@ public class LabService {
         long size = file == null ? 0L : file.getSize();
         String normalizedType = LabAnswerImageSupport.normalizeContentType(contentType);
         LabAnswerImageSupport.validateUpload(normalizedType, size);
-        String folder = "lab-answers/" + LocalDate.now(ZoneId.of("Asia/Shanghai"));
+        // 目录带上传者学生 id，保存与预览都据此校验图片归属。
+        String folder = LabAnswerImageSupport.LAB_ANSWER_ROOT
+                + "/" + LocalDate.now(ZoneId.of("Asia/Shanghai"))
+                + "/" + currentUser.id();
         String storedPath = localFileStorageService.store(folder, file);
         String originalFilename = file.getOriginalFilename();
         String displayName = originalFilename == null || originalFilename.isBlank()
@@ -1219,11 +1239,13 @@ public class LabService {
     @Transactional(readOnly = true)
     public PreviewAnswerImageResult previewAnswerImage(CurrentUser currentUser, String path) {
         String normalizedPath = LabAnswerImageSupport.normalizeRelativePath(path);
-        if (!normalizedPath.matches("^lab-answers/\\d{4}-\\d{2}-\\d{2}/.+")) {
+        if (!LabAnswerImageSupport.matchesAnswerPath(normalizedPath)) {
             throw new BusinessException(40000, "图片路径不合法");
         }
+        // 落盘边界收敛到 lab-answers 根：任何逃逸出该目录的路径都拒绝。
+        Path labAnswerRoot = storageRoot.resolve(LabAnswerImageSupport.LAB_ANSWER_ROOT).normalize();
         Path targetPath = storageRoot.resolve(normalizedPath).normalize();
-        if (!targetPath.startsWith(storageRoot)) {
+        if (!targetPath.startsWith(labAnswerRoot)) {
             throw new BusinessException(40000, "图片路径不合法");
         }
         LabStepAnswer answer = findAnswerOwningImagePath(normalizedPath);
@@ -1231,6 +1253,8 @@ public class LabService {
                 .orElseThrow(() -> new BusinessException(40400, "实验提交不存在"));
         Lab lab = labRepository.findById(submission.getLabId()).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
         requireAnswerImageAccess(currentUser, submission, lab);
+        // 学生只能读取自己答案中的图片；教师与历史无学生段的旧路径跳过比对。
+        LabAnswerImageSupport.assertStudentSegmentMatches(normalizedPath, currentUser, submission.getStudentId());
         byte[] bytes = localFileStorageService.read(normalizedPath);
         String contentType = resolveImageContentType(answer.getAnswerJson(), normalizedPath);
         return new PreviewAnswerImageResult(contentType, bytes);
@@ -1318,6 +1342,14 @@ public class LabService {
                 .orElseThrow(() -> new BusinessException(40400, "实验报告不存在"));
         // 批改门禁：仅学生已提交（SUBMITTED）或已批改（GRADED）的报告允许写分。
         assertReportSubmitted(submission);
+        // 同一题项重复提交会重复累加总分，直接拒绝而不是静默去重。
+        long distinctAnswerIds = request.items().stream()
+                .map(LabRequests.GradeItem::answerId)
+                .distinct()
+                .count();
+        if (distinctAnswerIds != request.items().size()) {
+            throw new BusinessException(40000, "评分项重复");
+        }
         List<LabStepAnswer> submissionAnswers = labStepAnswerRepository.findByLabSubmissionId(submission.getId());
         List<Long> answeredAnswerIds = submissionAnswers.stream()
                 .map(LabStepAnswer::getId)
@@ -1334,6 +1366,16 @@ public class LabService {
             LabStepAnswer answer = labStepAnswerRepository.findById(item.answerId()).orElseThrow(() -> new BusinessException(40400, "实验答案不存在"));
             if (!answer.getLabSubmissionId().equals(submission.getId())) {
                 throw new BusinessException(40000, "评分项不属于当前实验报告");
+            }
+            // 分数上限以题项配置为准，Service 层兜底，不依赖 Controller 的 Bean Validation。
+            LabStep step = labStepRepository.findByIdAndLabId(answer.getLabStepId(), lab.getId())
+                    .orElseThrow(() -> new BusinessException(40400, "实验题项不存在"));
+            Integer stepScore = step.getStepScore();
+            if (stepScore == null) {
+                throw new BusinessException(40000, "实验题项分值未配置");
+            }
+            if (item.score() == null || item.score() < 0 || item.score() > stepScore) {
+                throw new BusinessException(40000, "分数必须在 0 到该题分值之间");
             }
             answer.setScore(item.score());
             answer.setScoreSource("TEACHER");
@@ -2043,6 +2085,19 @@ public class LabService {
         } else {
             answer.setScore(null);
         }
+    }
+
+    /**
+     * 只刷新自动分、建议分与判分明细，不动最终分、评分来源与教师评语。
+     *
+     * <p>用于两类冻结场景：成绩已对学生可见，或教师已完成人工给分。
+     * 这两类情况下重新计算可接受答案只能影响教师侧的参考信息，
+     * 不允许回写 {@code score / scoreSource / teacherComment}。</p>
+     */
+    private void applySuggestedScoringResult(LabStepAnswer answer, ScoringResult result) {
+        answer.setAutoScore(result.autoScore());
+        answer.setSuggestedScore(result.recommendedScore());
+        answer.setAutoJudgeDetail(result.judgeDetail());
     }
 
     private void upsertScoreRecord(Lab lab, LabSubmission submission, Double totalScore) {

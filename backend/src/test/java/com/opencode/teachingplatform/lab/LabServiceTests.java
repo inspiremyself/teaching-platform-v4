@@ -164,6 +164,9 @@ class LabServiceTests {
     @Autowired
     private ScoreRecordRepository scoreRecordRepository;
 
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add("app.file-storage-root", () -> storageRoot.toString());
@@ -185,7 +188,7 @@ class LabServiceTests {
 
         Map<String, Object> result = labService.uploadAnswerImage(studentUser(), labId, stepId, file);
 
-        assertThat(result.get("path")).asString().matches("lab-answers/\\d{4}-\\d{2}-\\d{2}/.+");
+        assertThat(result.get("path")).asString().matches("lab-answers/\\d{4}-\\d{2}-\\d{2}/\\d+/.+");
         assertThat(result.get("name")).isEqualTo("shot1.png");
         assertThat(result.get("contentType")).isEqualTo("image/png");
         assertThat(result.get("size")).isEqualTo(4L);
@@ -2377,14 +2380,18 @@ class LabServiceTests {
             assertThat(item.getAcceptedAnswer()).isEqualTo("cloud,boot");
             assertThat(item.getNormalizedAnswer()).isEqualTo("cloud,boot");
         });
-        assertThat(targetAnswerAfter.getScore()).isEqualTo(10D);
+        // AFTER_TEACHER_CONFIRM + GRADED：成绩已对学生可见，重判只刷新建议字段，冻结最终分与总分。
+        assertThat(targetAnswerAfter.getScore()).isEqualTo(6D);
         assertThat(targetAnswerAfter.getAutoScore()).isEqualTo(10D);
-        assertThat(targetAnswerAfter.getScoreSource()).isEqualTo("AUTO");
+        // TD18：冻结分支只刷新建议字段，填空题建议分为空时保持原值。
+        assertThat(targetAnswerAfter.getSuggestedScore()).isEqualTo(targetAnswerBefore.getSuggestedScore());
+        // TD18：冻结分支不写 scoreSource，保持原值。
+        assertThat(targetAnswerAfter.getScoreSource()).isEqualTo(targetAnswerBefore.getScoreSource());
         assertThat(otherAnswerAfter.getScore()).isEqualTo(10D);
         assertThat(savedAnswerAfter.getScore()).isEqualTo(10D);
         assertThat(savedAnswerAfter.getAutoScore()).isEqualTo(10D);
         assertThat(externalAnswerAfter.getScore()).isEqualTo(6D);
-        assertThat(submissionAfter.getTotalScore()).isEqualTo(20D);
+        assertThat(submissionAfter.getTotalScore()).isEqualTo(16D);
         assertThat(submissionAfter.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
         assertThat(savedSubmissionAfter.getSubmitStatus()).isEqualTo(SubmissionStatus.SAVED);
         assertThat(savedSubmissionAfter.getTotalScore()).isEqualTo(10D);
@@ -2394,7 +2401,7 @@ class LabServiceTests {
                 .isPresent()
                 .get()
                 .extracting(com.opencode.teachingplatform.analysis.entity.ScoreRecord::getScore)
-                .isEqualTo(20D);
+                .isEqualTo(16D);
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.common.enums.BusinessType.LAB, labId, savedStudent.id()))
                 .isNotPresent();
         assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.common.enums.BusinessType.LAB, otherLabId, otherStudent.id()))
@@ -2620,6 +2627,243 @@ class LabServiceTests {
                 studentId
         );
         return count == null ? 0 : count;
+    }
+
+    @Test
+    void gradeReportRejectsDuplicateAnswerItems() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "SINGLE_CHOICE", "{}", "{\"correctAnswer\":\"A\"}", 30);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("A", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("重复项小结")).get("submissionId")).longValue();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+        LabSubmission before = labSubmissionRepository.findById(submissionId).orElseThrow();
+
+        assertThatThrownBy(() -> labService.gradeReport(
+                teacherUser(),
+                submissionId,
+                new LabRequests.GradeLabReportRequest(
+                        "重复评分",
+                        List.of(
+                                new LabRequests.GradeItem(answer.getId(), 10D, "第一次"),
+                                new LabRequests.GradeItem(answer.getId(), 12D, "第二次")
+                        )
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("评分项重复");
+
+        LabSubmission after = labSubmissionRepository.findById(submissionId).orElseThrow();
+        LabStepAnswer unchanged = labStepAnswerRepository.findById(answer.getId()).orElseThrow();
+        // 客观题自动评分已把提交推到 GRADED，重复项校验失败后不得改变任何状态。
+        assertThat(after.getSubmitStatus()).isEqualTo(before.getSubmitStatus());
+        assertThat(after.getTotalScore()).isEqualTo(before.getTotalScore());
+        assertThat(unchanged.getScore()).isEqualTo(30D);
+        assertThat(unchanged.getScoreSource()).isEqualTo("AUTO");
+    }
+
+    @Test
+    void gradeReportRejectsScoresOutsideStepRange() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "SINGLE_CHOICE", "{}", "{\"correctAnswer\":\"A\"}", 30);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("A", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("越界小结")).get("submissionId")).longValue();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+        int scoreRecordCountBefore = countLabScoreRecords(labId, studentUser().id());
+
+        assertThatThrownBy(() -> labService.gradeReport(
+                teacherUser(),
+                submissionId,
+                new LabRequests.GradeLabReportRequest("负分", List.of(new LabRequests.GradeItem(answer.getId(), -1D, "负分")))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+
+        assertThatThrownBy(() -> labService.gradeReport(
+                teacherUser(),
+                submissionId,
+                new LabRequests.GradeLabReportRequest("超分", List.of(new LabRequests.GradeItem(answer.getId(), 31D, "超分")))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+
+        LabStepAnswer unchanged = labStepAnswerRepository.findById(answer.getId()).orElseThrow();
+        assertThat(unchanged.getScore()).isEqualTo(30D);
+        assertThat(countLabScoreRecords(labId, studentUser().id())).isEqualTo(scoreRecordCountBefore);
+    }
+
+    @Test
+    void saveBlankAcceptedAnswersFreezesTeacherScoreButRefreshesAutoAnswerWhenScoreNotVisible() {
+        Long classId = seedClass(teacherUser().id());
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
+        // MANUAL_RELEASE 且未发布：即使提交已 GRADED，成绩对学生仍不可见，重判不应冻结自动分。
+        jdbcTemplate.update("UPDATE t_experiment SET score_visibility_mode = 'MANUAL_RELEASE' WHERE experiment_id = ?", labId);
+        // 直改数据库后必须清一级缓存，否则后续读取仍拿到旧的可见性模式。
+        entityManager.clear();
+        Long manualItemId = seedFillBlankQuestionBankStep(labId, 1);
+        Long autoItemId = seedFillBlankQuestionBankStep(labId, 2);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, manualItemId, new LabRequests.SaveStepAnswerRequest("spring,boot", null));
+        labService.saveAnswer(studentUser(), labId, autoItemId, new LabRequests.SaveStepAnswerRequest("cloud,boot", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("冻结语义小结")).get("submissionId")).longValue();
+        LabStepAnswer manualAnswer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, manualItemId).orElseThrow();
+        assertThat(manualAnswer.getScoreSource()).isEqualTo("AUTO");
+        assertThat(labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, autoItemId).orElseThrow().getScore())
+                .isEqualTo(6D);
+
+        // 教师对第一题人工给分，形成 scoreSource=TEACHER 的答案。
+        labService.confirmStepScore(
+                teacherUser(),
+                submissionId,
+                new LabRequests.ConfirmStepScoreRequest(manualAnswer.getId(), 5D, "人工调整", false)
+        );
+        // 第二题用错答案提交得到 6 分，随后教师把该答案追加为可接受答案，验证 AUTO 答案会被重判改写。
+        labService.saveBlankAcceptedAnswers(
+                teacherUser(),
+                labId,
+                new LabRequests.SaveBlankAcceptedAnswersRequest(autoItemId, List.of("cloud,boot"))
+        );
+        LabStepAnswer autoAfterAccepted = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, autoItemId).orElseThrow();
+        assertThat(autoAfterAccepted.getAutoScore()).isEqualTo(10D);
+        assertThat(autoAfterAccepted.getScore()).isEqualTo(10D);
+
+        Map<String, Object> result = labService.saveBlankAcceptedAnswers(
+                teacherUser(),
+                labId,
+                new LabRequests.SaveBlankAcceptedAnswersRequest(manualItemId, List.of("spring,boot"))
+        );
+
+        LabStepAnswer manualAfter = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, manualItemId).orElseThrow();
+        LabSubmission submissionAfter = labSubmissionRepository.findById(submissionId).orElseThrow();
+
+        assertThat(result.get("regradedCount")).isEqualTo(1);
+        // 人工分与评语冻结，仅自动分刷新；填空题建议分为空。
+        assertThat(manualAfter.getScore()).isEqualTo(5D);
+        assertThat(manualAfter.getScoreSource()).isEqualTo("TEACHER");
+        assertThat(manualAfter.getTeacherComment()).isEqualTo("人工调整");
+        assertThat(manualAfter.getAutoScore()).isEqualTo(10D);
+        assertThat(manualAfter.getSuggestedScore()).isNull();
+        assertThat(submissionAfter.getTotalScore()).isEqualTo(15D);
+        assertThat(submissionAfter.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
+        assertThat(countLabScoreRecords(labId, studentUser().id())).isEqualTo(1);
+    }
+
+    @Test
+    void saveAnswerRejectsParentDirectorySegmentInImagePath() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        assertThatThrownBy(() -> labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "说明",
+                        "{\"kind\":\"text\",\"text\":\"说明\",\"images\":[{\"path\":\"lab-answers/2026-09-04/../../etc/passwd\",\"name\":\"passwd\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("图片路径不合法");
+    }
+
+    @Test
+    void saveAnswerRejectsImagePathOwnedByAnotherStudent() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+        CurrentUser otherStudent = new CurrentUser(203L, "student-203", "隔壁学生", UserRole.STUDENT);
+        seedStudentAccount(otherStudent);
+        seedMembership(classId, otherStudent.id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "other.png", "image/png", new byte[] {1, 2, 3});
+        String otherPath = String.valueOf(labService.uploadAnswerImage(otherStudent, labId, stepId, file).get("path"));
+
+        assertThatThrownBy(() -> labService.saveAnswer(
+                studentUser(),
+                labId,
+                stepId,
+                new LabRequests.SaveStepAnswerRequest(
+                        "盗用路径",
+                        "{\"kind\":\"text\",\"text\":\"盗用路径\",\"images\":[{\"path\":\"" + otherPath + "\",\"name\":\"other.png\",\"contentType\":\"image/png\",\"size\":3}]}"
+                )
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("图片路径不合法");
+    }
+
+    @Test
+    void previewAnswerImageRejectsParentDirectorySegmentInPath() {
+        assertThatThrownBy(() -> labService.previewAnswerImage(studentUser(), "lab-answers/2026-09-04/../../etc/passwd"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("图片路径不合法");
+    }
+
+    @Test
+    void previewAnswerImageRejectsOtherStudentSegmentForStudent() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+        CurrentUser otherStudent = new CurrentUser(204L, "student-204", "隔壁学生", UserRole.STUDENT);
+        seedStudentAccount(otherStudent);
+        seedMembership(classId, otherStudent.id());
+
+        MockMultipartFile file = new MockMultipartFile("file", "other.png", "image/png", new byte[] {1, 2, 3});
+        String otherPath = String.valueOf(labService.uploadAnswerImage(studentUser(), labId, stepId, file).get("path"));
+
+        // 学生 B 的答案被直接写入学生 A 的图片路径，绕过保存校验，用于覆盖预览归属校验。
+        labService.saveAnswer(otherStudent, labId, stepId, new LabRequests.SaveStepAnswerRequest("占位", null));
+        Long otherSubmissionId = labSubmissionRepository.findByLabIdAndStudentId(labId, otherStudent.id()).orElseThrow().getId();
+        jdbcTemplate.update(
+                "UPDATE experiment_answer SET answer_json = ? WHERE experiment_submission_id = ? AND experiment_item_id = ?",
+                "{\"kind\":\"text\",\"text\":\"占位\",\"images\":[{\"path\":\"" + otherPath + "\",\"name\":\"other.png\",\"contentType\":\"image/png\",\"size\":3}]}",
+                otherSubmissionId,
+                stepId
+        );
+        // 绕过 JPA 直改后清空一级缓存，保证后续查询读到新 JSON。
+        entityManager.clear();
+
+        assertThatThrownBy(() -> labService.previewAnswerImage(otherStudent, otherPath))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("无权限访问该图片");
+    }
+
+    @Test
+    void previewAnswerImageAllowsLegacyPathWithoutStudentSegment() throws Exception {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
+        seedMembership(classId, studentUser().id());
+
+        String legacyPath = "lab-answers/2026-09-15/legacy.png";
+        Path legacyFile = storageRoot.resolve(legacyPath).normalize();
+        java.nio.file.Files.createDirectories(legacyFile.getParent());
+        java.nio.file.Files.write(legacyFile, new byte[] {7, 8, 9});
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("历史", null));
+        Long submissionId = labSubmissionRepository.findByLabIdAndStudentId(labId, studentUser().id()).orElseThrow().getId();
+        jdbcTemplate.update(
+                "UPDATE experiment_answer SET answer_json = ? WHERE experiment_submission_id = ? AND experiment_item_id = ?",
+                "{\"kind\":\"text\",\"text\":\"历史\",\"images\":[{\"path\":\"" + legacyPath + "\",\"name\":\"legacy.png\",\"contentType\":\"image/png\",\"size\":3}]}",
+                submissionId,
+                stepId
+        );
+        // 绕过 JPA 直改后清空一级缓存，保证后续查询读到新 JSON。
+        entityManager.clear();
+
+        LabService.PreviewAnswerImageResult result =
+                labService.previewAnswerImage(studentUser(), legacyPath);
+        assertThat(result.bytes()).containsExactly(7, 8, 9);
     }
 
     @Test

@@ -14,6 +14,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -262,6 +263,12 @@ public class GradingAdapter {
                 yield parseAnswerList(payload.answerJson());
             }
             case FILL_BLANK -> {
+                // 前端多空填空提交的是 {kind:"fill",blanks:[{index,answer}]} 对象形态，
+                // 必须先按空位下标解析，否则对象会被 parseAnswerList 丢弃后退化成整串文本。
+                List<String> fillAnswers = parseFillBlankAnswers(payload.answerJson());
+                if (!fillAnswers.isEmpty()) {
+                    yield fillAnswers;
+                }
                 List<String> answers = parseAnswerList(payload.answerJson());
                 if (!answers.isEmpty()) {
                     yield answers;
@@ -320,6 +327,48 @@ public class GradingAdapter {
             return parsed.getFirst();
         }
         return readStringField(answerJson, "answerText");
+    }
+
+    /**
+     * 解析多空填空的对象形态学生答案：{@code {"kind":"fill","blanks":[{"index":1,"answer":"..."}]}}。
+     *
+     * <p>解析规则：</p>
+     * <ul>
+     *   <li>仅当根节点是 Map、{@code kind} 忽略大小写等于 {@code fill}、且 {@code blanks} 是数组时生效；否则返回空列表；</li>
+     *   <li>{@code index <= 0} 的元素忽略，{@code answer} 为 null 时按空串占位；</li>
+     *   <li>按 {@code index} 升序稳定排序，<b>不按 index 数值补空洞</b>，与前端“排序后按位置对应”的口径一致；</li>
+     *   <li><b>保留空串</b>，避免空白答案被过滤后后续空位左移导致错位判分。</li>
+     * </ul>
+     */
+    private List<String> parseFillBlankAnswers(String answerJson) {
+        Object parsed = readJsonObject(answerJson);
+        if (!(parsed instanceof Map<?, ?> root)) {
+            return List.of();
+        }
+        Object kind = root.get("kind");
+        if (kind == null || !"fill".equalsIgnoreCase(String.valueOf(kind).trim())) {
+            return List.of();
+        }
+        if (!(root.get("blanks") instanceof List<?> blanks)) {
+            return List.of();
+        }
+        List<Map.Entry<Integer, String>> pairs = new ArrayList<>();
+        for (Object item : blanks) {
+            if (!(item instanceof Map<?, ?> blank)) {
+                continue;
+            }
+            int index = asInt(blank.get("index"));
+            if (index <= 0) {
+                continue;
+            }
+            Object value = blank.get("answer");
+            pairs.add(Map.entry(index, value == null ? "" : String.valueOf(value)));
+        }
+        if (pairs.isEmpty()) {
+            return List.of();
+        }
+        pairs.sort(Map.Entry.comparingByKey());
+        return pairs.stream().map(Map.Entry::getValue).toList();
     }
 
     private List<String> parseAnswerList(String answerJson) {

@@ -269,6 +269,17 @@ public class ExamService {
             }
         }
 
+        // 学生未到开始时间时只下发基础信息：不下发题干/选项，也不回填任何提交与判分字段，避免提前泄题
+        boolean notStarted = currentUser.role() == UserRole.STUDENT
+                && exam.getStartAt() != null
+                && OffsetDateTime.now().isBefore(exam.getStartAt());
+        if (notStarted) {
+            Map<String, Object> result = buildExamBaseView(exam);
+            result.put("questions", List.of());
+            result.put("notStarted", true);
+            return result;
+        }
+
         List<ExamQuestion> examQuestions = examQuestionRepository.findByExamIdOrderBySortOrder(id);
 
         List<Map<String, Object>> questionList = new ArrayList<>();
@@ -292,18 +303,7 @@ public class ExamService {
             questionList.add(qMap);
         }
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("id", exam.getId());
-        result.put("title", exam.getTitle());
-        result.put("description", exam.getDescription());
-        result.put("classId", exam.getClassId());
-        result.put("className", classRoomRepository.findById(exam.getClassId()).map(cr -> cr.getName()).orElse(""));
-        result.put("startAt", exam.getStartAt());
-        result.put("endAt", exam.getEndAt());
-        result.put("durationMinutes", exam.getDurationMinutes());
-        result.put("status", exam.getStatus().name());
-        result.put("scoreVisibilityMode", exam.getScoreVisibilityMode().name());
-        result.put("shuffleQuestions", exam.isShuffleQuestions());
+        Map<String, Object> result = buildExamBaseView(exam);
         result.put("questions", questionList);
         // 教师结果页需要知道当前考试是否已发布成绩，用于「发布 / 重新发布」入口。
         if (currentUser.role() == UserRole.TEACHER) {
@@ -388,6 +388,48 @@ public class ExamService {
         }
 
         return result;
+    }
+
+    /**
+     * 构建考试详情的基础字段视图。
+     *
+     * <p>「未开始」短路返回与正常详情共用同一份基础字段，避免两处字段漂移。</p>
+     */
+    private Map<String, Object> buildExamBaseView(Exam exam) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", exam.getId());
+        result.put("title", exam.getTitle());
+        result.put("description", exam.getDescription());
+        result.put("classId", exam.getClassId());
+        result.put("className", classRoomRepository.findById(exam.getClassId()).map(cr -> cr.getName()).orElse(""));
+        result.put("startAt", exam.getStartAt());
+        result.put("endAt", exam.getEndAt());
+        result.put("durationMinutes", exam.getDurationMinutes());
+        result.put("status", exam.getStatus().name());
+        result.put("scoreVisibilityMode", exam.getScoreVisibilityMode().name());
+        result.put("shuffleQuestions", exam.isShuffleQuestions());
+        return result;
+    }
+
+    /**
+     * 校验成绩是否处于可改分状态。
+     *
+     * <p>冻结条件（任一命中即拒绝）：</p>
+     * <ul>
+     *   <li>成绩已发布（{@code scoreReleased == true}）；</li>
+     *   <li>可见模式为 {@code AFTER_DEADLINE} 且考试结束时间已过。</li>
+     * </ul>
+     */
+    private void assertScoreEditable(Exam exam) {
+        ScoreVisibilityMode mode = exam.getScoreVisibilityMode() == null
+                ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM
+                : exam.getScoreVisibilityMode();
+        boolean deadlineReached = mode == ScoreVisibilityMode.AFTER_DEADLINE
+                && exam.getEndAt() != null
+                && !OffsetDateTime.now().isBefore(exam.getEndAt());
+        if (exam.isScoreReleased() || deadlineReached) {
+            throw new BusinessException(40000, "成绩已发布或已到期，禁止直接改分");
+        }
     }
 
     @Transactional
@@ -1029,6 +1071,8 @@ public class ExamService {
                 && submission.getStatus() != ExamSubmissionStatus.GRADED) {
             throw new BusinessException(40000, "当前状态不允许批改");
         }
+        // 成绩已发布或已到期后不允许直接改分，避免教师单题改分绕过发布状态
+        assertScoreEditable(exam);
         ExamAnswer answer = examAnswerRepository.findByExamSubmissionIdAndQuestionId(submissionId, request.questionId())
                 .orElseThrow(() -> new BusinessException(40400, "答题记录不存在: questionId=" + request.questionId()));
         // 客观题由系统自动评分，禁止教师改分；快照缺失（历史题或题项已删除）按主观题处理
@@ -1089,6 +1133,7 @@ public class ExamService {
     }
 
     private Map<String, Object> recomputeSubmissionAfterTeacherConfirmation(Exam exam, ExamSubmission submission) {
+        ExamSubmissionStatus previousStatus = submission.getStatus();
         List<ExamAnswer> allAnswers = examAnswerRepository.findByExamSubmissionId(submission.getId());
         double autoScore = 0.0;
         double manualScore = 0.0;
@@ -1117,6 +1162,9 @@ public class ExamService {
         examSubmissionRepository.save(submission);
         if (allConfirmed) {
             upsertScoreRecord(exam, submission, totalScore);
+        } else if (previousStatus == ExamSubmissionStatus.GRADED) {
+            // 从 GRADED 降回 SUBMITTED 时删除残留成绩记录，避免成绩列表继续展示已撤销的结果
+            scoreRecordWriter.remove(BusinessType.EXAM, exam.getId(), submission.getStudentId());
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("submissionId", submission.getId());

@@ -61,6 +61,8 @@ export interface ExamDetail {
   shuffleQuestions?: boolean
   questions: ExamQuestionView[]
   // Student-specific fields
+  // 学生端专用：当前时间早于考试开始时间，后端会短路详情并置为 true
+  notStarted?: boolean
   submissionId?: number
   submissionStatus?: string
   deadlineAt?: string

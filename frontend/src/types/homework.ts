@@ -122,6 +122,13 @@ export interface SubmitHomeworkAnswerItem extends Omit<UnifiedQuestionAnswerPayl
   homeworkQuestionId: number;
 }
 
+/** 学生保存草稿后的最小回执：用于状态条与“重置为已保存内容”。 */
+export interface SaveHomeworkDraftResult {
+  submissionId: number;
+  status: 'SAVED';
+  savedAt: string;
+}
+
 export interface ChangeHomeworkStatusRequest {
   status: HomeworkStatus;
 }

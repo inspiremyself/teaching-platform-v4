@@ -136,7 +136,7 @@ public class HomeworkService {
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
         Homework homework = new Homework();
         homework.setCreatedBy(currentUser.id());
-        applyHomework(homework, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
+        applyHomework(homework, true, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
 
@@ -144,8 +144,13 @@ public class HomeworkService {
     public Map<String, Object> updateHomework(CurrentUser currentUser, Long homeworkId, HomeworkRequests.UpdateHomeworkRequest request) {
         requireTeacher(currentUser);
         Homework homework = ownedHomework(currentUser, homeworkId);
+        // 有学生提交后换班会让既有提交落在错误班级，必须先于班级权限校验拒绝。
+        boolean hasSubmissions = !homeworkSubmissionRepository.findByHomeworkId(homeworkId).isEmpty();
+        if (hasSubmissions && !Objects.equals(request.classId(), homework.getClassId())) {
+            throw new BusinessException(40000, "已有学生提交，不能变更所属班级");
+        }
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
-        applyHomework(homework, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
+        applyHomework(homework, false, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
 
@@ -153,7 +158,10 @@ public class HomeworkService {
     public Map<String, Object> changeHomeworkStatus(CurrentUser currentUser, Long homeworkId, HomeworkRequests.ChangeHomeworkStatusRequest request) {
         requireTeacher(currentUser);
         Homework homework = ownedHomework(currentUser, homeworkId);
-        homework.setStatus(parseStatus(request.status()));
+        ActivityStatus target = parseStatus(request.status());
+        // 状态接口与编辑接口共用同一迁移矩阵，避免两条入口口径漂移。
+        assertStatusTransition(homework, target, !homeworkSubmissionRepository.findByHomeworkId(homeworkId).isEmpty());
+        homework.setStatus(target);
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
 
@@ -473,6 +481,101 @@ public class HomeworkService {
                 "status", saved.getSubmitStatus().name(),
                 "plagiarismRate", saved.getPlagiarismRate()
         );
+    }
+
+    /**
+     * 学生保存作业草稿。
+     *
+     * <p>草稿只落学生作答，不触发评分、不写成绩记录、不触发查重：
+     * 因此本方法不调用 {@code applyQuestionAnswers} / {@code applyScoring} /
+     * {@code refreshSubmissionGradeState}。校验顺序固定为：身份 → 可访问的已发布作业 →
+     * 已关闭 → 未开始 → 已截止，全部命中都在任何写操作之前返回。</p>
+     */
+    @Transactional
+    public Map<String, Object> saveHomeworkDraft(CurrentUser currentUser, Long homeworkId, HomeworkRequests.SubmitHomeworkRequest request) {
+        requireStudent(currentUser);
+        Homework homework = accessiblePublishedHomework(currentUser, homeworkId);
+        if (homework.getStatus() == ActivityStatus.CLOSED) {
+            throw new BusinessException(40000, "作业已关闭，不能保存草稿");
+        }
+        if (homework.getStartAt() != null && OffsetDateTime.now().isBefore(homework.getStartAt())) {
+            throw new BusinessException(40000, "作业尚未开始");
+        }
+        if (homework.getDueAt() != null && OffsetDateTime.now().isAfter(homework.getDueAt())) {
+            throw new BusinessException(40000, "作业已截止，不能保存草稿");
+        }
+        // 快路径：普通读一次判断是否已有提交行；慢路径仅首存走独立事务领取。
+        SubmissionStatus claimStatus = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentId(homeworkId, currentUser.id())
+                .map(HomeworkSubmission::getSubmitStatus)
+                .orElse(null);
+        if (claimStatus == null) {
+            try {
+                homeworkSubmissionClaimService.claim(homeworkId, currentUser.id());
+            } catch (DataIntegrityViolationException ex) {
+                // 并发首存：另一事务已插入，下面锁内重读
+            }
+        }
+        HomeworkSubmission submission = homeworkSubmissionRepository
+                .findByHomeworkIdAndStudentIdForUpdate(homeworkId, currentUser.id())
+                .orElseThrow(() -> new BusinessException(50000, "作业提交创建失败，请重试"));
+        if (submission.getSubmitStatus() == SubmissionStatus.SUBMITTED
+                || submission.getSubmitStatus() == SubmissionStatus.GRADED) {
+            throw new BusinessException(40000, "已提交作业不可修改草稿");
+        }
+        submission.setHomeworkId(homeworkId);
+        submission.setStudentId(currentUser.id());
+        submission.setSubmitStatus(SubmissionStatus.SAVED);
+        submission.setAnswerText(defaultString(request.answerText()));
+        submission.setAnswerFilePath(blankToNull(request.resolvedAttachmentPath()));
+        // 草稿阶段的提交级评分字段一律清空；plagiarismRate 保留原值（草稿不触发查重）。
+        submission.setTotalScore(null);
+        submission.setTeacherComment(null);
+        submission.setGradedAt(null);
+        if (request.questionBased()) {
+            applyDraftAnswers(submission, request.answers());
+        }
+        HomeworkSubmission saved = homeworkSubmissionRepository.saveAndFlush(submission);
+        OffsetDateTime savedAt = Objects.requireNonNullElse(saved.getUpdatedAt(), OffsetDateTime.now());
+        return Map.of(
+                "submissionId", saved.getId(),
+                "status", SubmissionStatus.SAVED.name(),
+                "savedAt", savedAt.toString()
+        );
+    }
+
+    /**
+     * 草稿态写入逐题答案：只保留作答内容，评分字段全部清空。
+     *
+     * <p>{@code score_source} 列 {@code NOT NULL DEFAULT 'TEACHER'}，因此写 {@code "TEACHER"}
+     * 而不是 {@code null}；其余评分字段允许为空。</p>
+     */
+    private void applyDraftAnswers(HomeworkSubmission submission, List<HomeworkRequests.SubmitHomeworkAnswerItem> items) {
+        List<HomeworkQuestion> questions = homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(submission.getHomeworkId());
+        Map<Long, HomeworkQuestion> questionMap = questions.stream()
+                .collect(Collectors.toMap(HomeworkQuestion::getId, item -> item));
+        for (HomeworkRequests.SubmitHomeworkAnswerItem item : items) {
+            HomeworkQuestion homeworkQuestion = questionMap.get(item.homeworkQuestionId());
+            if (homeworkQuestion == null) {
+                throw new BusinessException(40000, "提交题目不存在");
+            }
+            HomeworkAnswer answer = homeworkAnswerRepository
+                    .findByHomeworkSubmissionIdAndHomeworkQuestionId(submission.getId(), homeworkQuestion.getId())
+                    .orElseGet(HomeworkAnswer::new);
+            answer.setHomeworkSubmissionId(submission.getId());
+            answer.setHomeworkQuestionId(homeworkQuestion.getId());
+            answer.setQuestionId(homeworkQuestion.getQuestionId());
+            answer.setAnswerText(blankToNull(item.answerText()));
+            answer.setAnswerJson(resolveAnswerJson(item));
+            answer.setScore(null);
+            answer.setAutoScore(null);
+            answer.setSuggestedScore(null);
+            answer.setJudgeDetail(null);
+            answer.setTeacherComment(null);
+            answer.setAcceptedAutoScore(false);
+            answer.setScoreSource("TEACHER");
+            homeworkAnswerRepository.save(answer);
+        }
     }
 
     @Transactional
@@ -1051,7 +1154,17 @@ public class HomeworkService {
                 .orElse("homework#" + homeworkId);
     }
 
+    /**
+     * 写入作业配置字段。
+     *
+     * <p>空值语义按“创建 / 更新”分流：更新时未传 {@code scoreVisibilityMode} 或 {@code status}
+     * 保留原值，避免教师只改标题就把可见性或状态重置；创建时未传可见性按
+     * {@link ScoreVisibilityMode#AFTER_TEACHER_CONFIRM}，未传状态按 {@link ActivityStatus#DRAFT}。</p>
+     *
+     * @param isCreate 是否为创建流程，决定空值回退方向
+     */
     private void applyHomework(Homework homework,
+                               boolean isCreate,
                                Long classId,
                                String title,
                                String description,
@@ -1063,11 +1176,49 @@ public class HomeworkService {
         homework.setTitle(title);
         homework.setDescription(defaultString(description));
         homework.setClassId(classId);
-        homework.setStatus(parseStatus(status));
-        homework.setScoreVisibilityMode(scoreVisibilityMode == null ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM : scoreVisibilityMode);
+        if (scoreVisibilityMode != null) {
+            homework.setScoreVisibilityMode(scoreVisibilityMode);
+        } else if (isCreate) {
+            homework.setScoreVisibilityMode(ScoreVisibilityMode.AFTER_TEACHER_CONFIRM);
+        }
+        if (status != null && !status.isBlank()) {
+            ActivityStatus target = parseStatus(status);
+            boolean hasSubmissions = !isCreate && !homeworkSubmissionRepository.findByHomeworkId(homework.getId()).isEmpty();
+            assertStatusTransition(homework, target, hasSubmissions);
+            homework.setStatus(target);
+        } else if (isCreate) {
+            homework.setStatus(ActivityStatus.DRAFT);
+        }
         homework.setAttachmentPath(blankToNull(attachmentPath));
         homework.setStartAt(startAt);
         homework.setDueAt(dueAt);
+    }
+
+    /**
+     * 校验作业状态迁移是否合法。
+     *
+     * <p>允许：{@code DRAFT → PUBLISHED}、{@code PUBLISHED → CLOSED}、
+     * 无提交时 {@code PUBLISHED → DRAFT}；{@code CLOSED} 不可再变更；
+     * 同状态视为无变更放行。</p>
+     *
+     * @param homework       当前作业，{@code status} 为 {@code null} 时按 {@code DRAFT} 处理
+     * @param target         目标状态
+     * @param hasSubmissions 是否已有学生提交（任何状态，含 {@code SAVED}）
+     */
+    private void assertStatusTransition(Homework homework, ActivityStatus target, boolean hasSubmissions) {
+        ActivityStatus current = homework.getStatus() == null ? ActivityStatus.DRAFT : homework.getStatus();
+        if (current == target) {
+            return;
+        }
+        boolean allowed = switch (current) {
+            case DRAFT -> target == ActivityStatus.PUBLISHED;
+            case PUBLISHED -> target == ActivityStatus.CLOSED
+                    || (target == ActivityStatus.DRAFT && !hasSubmissions);
+            case CLOSED -> false;
+        };
+        if (!allowed) {
+            throw new BusinessException(40000, "作业状态不允许从 " + current.name() + " 变更为 " + target.name());
+        }
     }
 
     private ActivityStatus parseStatus(String value) {

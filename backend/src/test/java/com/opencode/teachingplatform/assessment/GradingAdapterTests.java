@@ -124,6 +124,78 @@ class GradingAdapterTests {
     }
 
     @Test
+    void shouldScoreMultiBlankFillFromObjectAnswerJson() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "FILL", "填空题", 1, 10D, null,
+                "[{\"index\":1,\"answers\":[\"x\"]},{\"index\":2,\"answers\":[\"y\"]},{\"index\":3,\"answers\":[\"z\"]}]",
+                null, true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "FILL", null,
+                "{\"kind\":\"fill\",\"blanks\":[{\"index\":1,\"answer\":\"x\"},{\"index\":2,\"answer\":\"y\"},{\"index\":3,\"answer\":\"z\"}]}",
+                null, null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertEquals(10D, result.autoScore());
+        assertTrue(result.judgeDetail().contains("blank 1: matched"));
+        assertTrue(result.judgeDetail().contains("blank 3: matched"));
+    }
+
+    @Test
+    void shouldKeepBlankPlaceholderForEmptyObjectAnswer() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "FILL", "填空题", 1, 10D, null,
+                "[{\"index\":1,\"answers\":[\"x\"]},{\"index\":2,\"answers\":[\"y\"]},{\"index\":3,\"answers\":[\"z\"]}]",
+                null, true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "FILL", null,
+                "{\"kind\":\"fill\",\"blanks\":[{\"index\":1,\"answer\":\"\"},{\"index\":2,\"answer\":\"y\"},{\"index\":3,\"answer\":\"z\"}]}",
+                null, null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        // 空答案必须保留占位：第 2、3 空按位置匹配，不得因过滤空串而左移
+        assertEquals(6.67D, result.autoScore());
+        assertTrue(result.judgeDetail().contains("blank 1: mismatch"));
+        assertTrue(result.judgeDetail().contains("blank 2: matched"));
+        assertTrue(result.judgeDetail().contains("blank 3: matched"));
+    }
+
+    @Test
+    void shouldSortObjectAnswersByIndexAndIgnoreInvalidIndex() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "FILL", "填空题", 1, 10D, null,
+                "[{\"index\":1,\"answers\":[\"x\"]},{\"index\":2,\"answers\":[\"y\"]}]",
+                null, true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "FILL", null,
+                "{\"kind\":\" Fill \",\"blanks\":[{\"index\":2,\"answer\":\"y\"},{\"index\":0,\"answer\":\"ignored\"},{\"index\":1,\"answer\":\"x\"}]}",
+                null, null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertEquals(10D, result.autoScore());
+        assertTrue(result.judgeDetail().contains("blank 1: matched"));
+        assertTrue(result.judgeDetail().contains("blank 2: matched"));
+    }
+
+    @Test
+    void shouldFallbackToAnswerTextWhenObjectKindIsNotFill() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "FILL", "填空题", 1, 5D, null,
+                "[{\"index\":1,\"answers\":[\"x\"]}]", null, true);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                1L, "FILL", "x",
+                "{\"kind\":\"text\",\"blanks\":[{\"index\":1,\"answer\":\"x\"}]}",
+                null, null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertEquals(5D, result.autoScore());
+        assertTrue(result.correct());
+    }
+
+    @Test
     void shouldReturnZeroWhenExpectedAnswerIsBlank() {
         QuestionSnapshot snapshot = new QuestionSnapshot(
                 null, "BANK", "SINGLE", "空答案题", 1, 5D,
