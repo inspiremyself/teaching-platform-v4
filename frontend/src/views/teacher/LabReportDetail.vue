@@ -198,6 +198,7 @@
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -223,7 +224,7 @@ const reportId = computed(() => Number(route.params.id));
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
 
 /** SAVED 表示学生仅保存未提交，整页降级为只读预览。 */
-const isSavedPreview = computed(() => detail.value?.submitStatus === 'SAVED');
+const isSavedPreview = computed(() => detail.value?.submitStatus === SUBMISSION_STATUS.SAVED);
 
 /** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
 const stepList = computed<StepBrief[]>(() =>
@@ -275,9 +276,9 @@ const maxScoreOf = (item: LabReportAnswerItem) => item.maxScore ?? item.stepScor
 const resolvedInitialScore = (item: LabReportAnswerItem) => item.score ?? item.autoScore ?? item.suggestedScore ?? 0;
 
 const statusLabel = (status?: LabReportStatus) => {
-  if (status === 'SAVED') return '已保存';
-  if (status === 'SUBMITTED') return '已提交';
-  if (status === 'GRADED') return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
   return status || '未知';
 };
 

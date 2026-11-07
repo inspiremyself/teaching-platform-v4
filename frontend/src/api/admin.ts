@@ -85,5 +85,7 @@ export const changeAdminStudentStatus = (id: number, status: StudentStatus) =>
 export const resetAdminStudentPassword = (id: number, data: ResetStudentPasswordPayload) =>
   request.post<{ reset: boolean }>(`/admin/students/${id}/password`, data);
 
-export const listAuditLogs = (params: ListAuditLogsParams = {}) =>
-  request.get<PagedResult<AuditLogListItem>>('/admin/audit-logs', { params });
+export const listAuditLogs = async (params: ListAuditLogsParams = {}) => {
+  const result = await request.get<PagedResult<AuditLogListItem>>('/admin/audit-logs', { params });
+  return { list: result.items, total: result.total };
+};

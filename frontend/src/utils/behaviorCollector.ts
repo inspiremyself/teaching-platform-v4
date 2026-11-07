@@ -13,7 +13,7 @@
  */
 import { reportLabBehaviorEvents } from '@/api/labs';
 import type { LabBehaviorEventItem, LabBehaviorEventType } from '@/types/lab';
-import { useAuthStore } from '@/stores/auth';
+import { reportBehaviorEventsKeepalive } from '@/api/endpoints';
 
 /** 批量发送间隔（毫秒） */
 const FLUSH_INTERVAL_MS = 5000;
@@ -143,18 +143,7 @@ const flushKeepalive = () => {
   if (state.queue.length === 0) {
     return;
   }
-  const token = useAuthStore().token;
-  fetch(`/api/v1/student/labs/${state.labId}/behavior-events`, {
-    method: 'POST',
-    keepalive: true,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ events: state.queue.slice(0, MAX_BATCH_SIZE) }),
-  }).catch(() => {
-    // 卸载中无法重试，静默吞掉
-  });
+  reportBehaviorEventsKeepalive(state.labId, state.queue.slice(0, MAX_BATCH_SIZE));
   state.queue = [];
 };
 

@@ -1,20 +1,19 @@
-export type LabStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | string;
+import type {
+  ActivityStatus,
+  BackendQuestionType,
+  ScoreVisibilityMode,
+  SubmissionStatus,
+} from './enums';
 
-export type LabQuestionType =
-  | 'TEXT'
-  | 'SINGLE_CHOICE'
-  | 'MULTIPLE_CHOICE'
-  | 'TRUE_FALSE'
-  | 'FILL_BLANK'
-  | 'SHORT_ANSWER'
-  | 'CODE'
-  | string;
+export type { ScoreVisibilityMode };
 
-export type LabQuestionGradingMode = 'exact' | string;
+export type LabStatus = ActivityStatus;
 
-export type LabScoreSource = 'AUTO' | 'SUGGESTED' | 'TEACHER' | string;
+export type LabQuestionType = BackendQuestionType | 'TEXT' | 'SHORT_ANSWER' | 'CODE';
 
-export type ScoreVisibilityMode = 'IMMEDIATE' | 'AFTER_TEACHER_CONFIRM' | 'AFTER_DEADLINE' | 'MANUAL_RELEASE' | string;
+export type LabQuestionGradingMode = string;
+
+export type LabScoreSource = 'AUTO' | 'SUGGESTED' | 'TEACHER';
 
 export interface LabStepAutoRuleOption {
   key: string;
@@ -57,7 +56,7 @@ export interface CodeQuestionRuleConfig {
 
 export type LabAdvancedRuleConfig = FillBlankRuleConfig | CodeQuestionRuleConfig | Record<string, unknown>;
 
-export type LabReportStatus = 'SAVED' | 'SUBMITTED' | 'GRADED' | string;
+export type LabReportStatus = SubmissionStatus;
 
 export interface LabAnswerImageMeta {
   path: string;

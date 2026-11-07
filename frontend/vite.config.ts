@@ -23,4 +23,13 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['vue', 'vue-router', 'pinia', 'element-plus'],
+        },
+      },
+    },
+  },
 })

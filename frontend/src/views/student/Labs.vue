@@ -24,8 +24,8 @@
             <el-option label="全部任务" value="" />
             <el-option label="待开始" value="TODO" />
             <el-option label="进行中" value="ACTIVE" />
-            <el-option label="已提交" value="SUBMITTED" />
-            <el-option label="已批改" value="GRADED" />
+            <el-option label="已提交" :value="SUBMISSION_STATUS.SUBMITTED" />
+            <el-option label="已批改" :value="SUBMISSION_STATUS.GRADED" />
           </el-select>
         </div>
       </div>
@@ -99,12 +99,14 @@
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
+import type { SubmissionStatus } from '@/types/enums';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listStudentLabs } from '@/api/labs';
 import type { StudentLabListItem } from '@/types/lab';
 
-type TaskFilter = '' | 'TODO' | 'ACTIVE' | 'SUBMITTED' | 'GRADED';
+type TaskFilter = '' | 'TODO' | 'ACTIVE' | SubmissionStatus;
 
 const router = useRouter();
 const loading = ref(false);
@@ -145,18 +147,18 @@ const goDetail = (id: number) => {
 };
 
 const taskFilterOf = (row: StudentLabListItem): TaskFilter => {
-  if (row.submissionStatus === 'GRADED') return 'GRADED';
-  if (row.submissionStatus === 'SUBMITTED') return 'SUBMITTED';
-  if (row.submissionStatus === 'SAVED') return 'ACTIVE';
-  if (typeof row.totalScore === 'number' || !!row.teacherComment) return 'GRADED';
+  if (row.submissionStatus === SUBMISSION_STATUS.GRADED) return SUBMISSION_STATUS.GRADED;
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return SUBMISSION_STATUS.SUBMITTED;
+  if (row.submissionStatus === SUBMISSION_STATUS.SAVED) return 'ACTIVE';
+  if (typeof row.totalScore === 'number' || !!row.teacherComment) return SUBMISSION_STATUS.GRADED;
   return 'TODO';
 };
 
 const statusFilterLabel = (value: TaskFilter) => {
   if (value === 'TODO') return '待开始';
   if (value === 'ACTIVE') return '进行中';
-  if (value === 'SUBMITTED') return '已提交';
-  if (value === 'GRADED') return '已批改';
+  if (value === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (value === SUBMISSION_STATUS.GRADED) return '已批改';
   return '全部任务';
 };
 
@@ -164,33 +166,33 @@ const taskStatusLabel = (row: StudentLabListItem) => statusFilterLabel(taskFilte
 
 const submissionTagType = (row: StudentLabListItem) => {
   const status = taskFilterOf(row);
-  if (status === 'GRADED') return 'success';
-  if (status === 'SUBMITTED') return 'warning';
+  if (status === SUBMISSION_STATUS.GRADED) return 'success';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
   if (status === 'ACTIVE') return 'primary';
   return 'info';
 };
 
 const progressPercent = (row: StudentLabListItem) => {
   const status = taskFilterOf(row);
-  if (status === 'GRADED') return 100;
-  if (status === 'SUBMITTED') return 88;
+  if (status === SUBMISSION_STATUS.GRADED) return 100;
+  if (status === SUBMISSION_STATUS.SUBMITTED) return 88;
   if (status === 'ACTIVE') return 54;
   return 12;
 };
 
 const progressText = (row: StudentLabListItem) => {
-  if (row.submissionStatus === 'GRADED') return '已批改，可查看题项反馈与实验小结';
-  if (row.submissionStatus === 'SUBMITTED') return '已提交，等待教师评分';
-  if (row.submissionStatus === 'SAVED') return '题项草稿已保存，可继续完善';
+  if (row.submissionStatus === SUBMISSION_STATUS.GRADED) return '已批改，可查看题项反馈与实验小结';
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return '已提交，等待教师评分';
+  if (row.submissionStatus === SUBMISSION_STATUS.SAVED) return '题项草稿已保存，可继续完善';
   return '尚未开始作答';
 };
 
 const itemCountLabel = (row: StudentLabListItem) => `${row.stepCount ?? 0} 个题项`;
 
 const actionLabel = (row: StudentLabListItem) => {
-  if (row.submissionStatus === 'GRADED') return '查看结果';
-  if (row.submissionStatus === 'SUBMITTED') return '查看详情';
-  if (row.submissionStatus === 'SAVED') return '继续实验';
+  if (row.submissionStatus === SUBMISSION_STATUS.GRADED) return '查看结果';
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return '查看详情';
+  if (row.submissionStatus === SUBMISSION_STATUS.SAVED) return '继续实验';
   return '开始实验';
 };
 

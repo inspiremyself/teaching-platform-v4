@@ -98,6 +98,7 @@
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -136,20 +137,20 @@ const showLabFeedback = computed(() => !!detail.value?.teacherComment || showLab
 const progressPercent = computed(() => {
   const total = labItems.value.length;
   if (!total) return 0;
-  if (detail.value?.submissionStatus === 'GRADED') return 100;
-  if (detail.value?.submissionStatus === 'SUBMITTED') return 90;
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) return 100;
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return 90;
   return Math.round((answeredCount.value / total) * 100);
 });
   const progressText = computed(() => {
-    if (detail.value?.submissionStatus === 'GRADED') return '实验已批改，可回看题项反馈与实验小结。';
-    if (detail.value?.submissionStatus === 'SUBMITTED') return '实验已提交，当前等待教师评分。';
+    if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) return '实验已批改，可回看题项反馈与实验小结。';
+    if (detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return '实验已提交，当前等待教师评分。';
     if (answeredCount.value > 0) return `已保存 ${answeredCount.value} 道题，可继续作答。`;
     return '尚未保存题项答案。';
   });
 const primaryActionLabel = computed(() => {
-  if (detail.value?.submissionStatus === 'GRADED') return '查看作答与反馈';
-  if (detail.value?.submissionStatus === 'SUBMITTED') return '查看已提交内容';
-  if (detail.value?.submissionStatus === 'SAVED') return '继续作答';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) return '查看作答与反馈';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return '查看已提交内容';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.SAVED) return '继续作答';
   return '开始作答';
 });
 const summaryPreviewText = computed(() => {
@@ -178,21 +179,21 @@ const goSteps = (itemId?: number) => {
 const experimentTypeLabel = (value?: number | null) => LAB_EXPERIMENT_TYPE_LABELS[value || 1] || `类型 ${value}`;
 
 const downloadGuidance = async () => {
-  if (!detail.value?.materialDownloadUrl || !detail.value?.materialFileName) {
+  if (!detail.value?.materialId || !detail.value?.materialFileName) {
     return;
   }
 
   try {
-    await downloadMaterial(detail.value.materialDownloadUrl, detail.value.materialFileName);
+    await downloadMaterial(detail.value.materialId, detail.value.materialFileName);
   } catch {
     ElMessage.error('实验指导下载失败，请稍后重试');
   }
 };
 
 const submissionLabel = (status?: LabReportStatus | null) => {
-  if (status === 'SAVED') return '已保存草稿';
-  if (status === 'SUBMITTED') return '已提交';
-  if (status === 'GRADED') return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存草稿';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
   return '待开始';
 };
 

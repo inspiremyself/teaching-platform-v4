@@ -2,6 +2,7 @@ package com.opencode.teachingplatform.common.security;
 
 import com.opencode.teachingplatform.auth.controller.AuthController;
 import com.opencode.teachingplatform.exam.controller.ExamController;
+import com.opencode.teachingplatform.lab.controller.LabController;
 import com.opencode.teachingplatform.material.controller.MaterialController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -53,6 +54,8 @@ class ControllerAuthorizationTests {
                 .isEqualTo("hasAnyRole('TEACHER','STUDENT','SCHOOL_ADMIN')");
         assertThat(valueOf(MaterialController.class, "download"))
                 .isEqualTo("hasAnyRole('TEACHER','STUDENT','SCHOOL_ADMIN')");
+        assertThat(valueOf(LabController.class, "previewAnswerImage"))
+                .isEqualTo("hasAnyRole('TEACHER','STUDENT')");
     }
 
     private List<Class<?>> controllers() throws ClassNotFoundException {

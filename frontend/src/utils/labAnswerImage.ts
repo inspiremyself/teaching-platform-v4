@@ -1,12 +1,10 @@
-import { useAuthStore } from '@/stores/auth';
-
-const buildAnswerImageUrl = (path: string) =>
-  `/api/v1/labs/answer-images?path=${encodeURIComponent(path)}`;
+import { getToken } from '@/utils/authToken';
+import { buildLabAnswerImageUrl } from '@/api/endpoints';
 
 export const fetchLabAnswerImageBlobUrl = async (path: string) => {
-  const authStore = useAuthStore();
-  const response = await fetch(buildAnswerImageUrl(path), {
-    headers: authStore.token ? { Authorization: `Bearer ${authStore.token}` } : undefined,
+  const token = getToken();
+  const response = await fetch(buildLabAnswerImageUrl(path), {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 
   if (!response.ok) {

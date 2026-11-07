@@ -102,7 +102,7 @@ const parseObjectiveOptions = (value: unknown, questionType: LabQuestionType) =>
       return JUDGE_OPTIONS;
     }
     if (questionType === 'SINGLE_CHOICE' || questionType === 'MULTIPLE_CHOICE') {
-      return DEFAULT_OBJECTIVE_OPTIONS[questionType];
+      return DEFAULT_OBJECTIVE_OPTIONS[questionType as keyof typeof DEFAULT_OBJECTIVE_OPTIONS];
     }
     return [] as LabStepAutoRuleOption[];
   }

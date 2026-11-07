@@ -1,11 +1,18 @@
 import type { UnifiedQuestionAnswerPayload } from './question-answer';
 import type { QuestionItem } from './question';
 
-export type HomeworkStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | string;
+import type { ActivityStatus, ScoreVisibilityMode, SubmissionStatus } from './enums';
 
-export type HomeworkSubmissionStatus = 'SAVED' | 'SUBMITTED' | 'GRADED' | string;
+export type { ScoreVisibilityMode };
 
-export type ScoreVisibilityMode = 'IMMEDIATE' | 'AFTER_TEACHER_CONFIRM' | 'AFTER_DEADLINE' | 'MANUAL_RELEASE';
+export type HomeworkStatus = ActivityStatus;
+
+export type HomeworkSubmissionStatus = SubmissionStatus;
+
+type QuestionOption = { key: string; label: string };
+
+/** 后端可能返回选项数组或 JSON 字符串 */
+export type QuestionOptions = string | QuestionOption[];
 
 export interface HomeworkQuestionAnswer {
   id: number;
@@ -28,7 +35,7 @@ export interface HomeworkQuestionItem {
   sortOrder: number;
   type: string;
   stem: string;
-  options?: Array<{ key: string; label: string }> | string | null;
+  options?: QuestionOptions | null;
   score: number;
   answer?: HomeworkQuestionAnswer | null;
 }

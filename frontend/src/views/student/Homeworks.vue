@@ -28,16 +28,16 @@
         <div class="student-toolbar-filters">
           <el-select v-model="statusFilter" placeholder="全部作业状态" clearable>
             <el-option label="全部作业状态" value="" />
-            <el-option label="进行中" value="PUBLISHED" />
-            <el-option label="已关闭" value="CLOSED" />
-            <el-option label="草稿" value="DRAFT" />
+            <el-option label="进行中" :value="ACTIVITY_STATUS.PUBLISHED" />
+            <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
+            <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
           </el-select>
           <el-select v-model="submissionFilter" placeholder="全部提交状态" clearable>
             <el-option label="全部提交状态" value="" />
             <el-option label="未开始" value="NONE" />
-            <el-option label="已保存" value="SAVED" />
-            <el-option label="已提交" value="SUBMITTED" />
-            <el-option label="已批改" value="GRADED" />
+            <el-option label="已保存" :value="SUBMISSION_STATUS.SAVED" />
+            <el-option label="已提交" :value="SUBMISSION_STATUS.SUBMITTED" />
+            <el-option label="已批改" :value="SUBMISSION_STATUS.GRADED" />
           </el-select>
         </div>
       </div>
@@ -100,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+import { ACTIVITY_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listStudentHomeworks } from '@/api/homeworks';
@@ -131,8 +132,8 @@ const filteredRows = computed(() => {
   });
 });
 
-const activeCount = computed(() => filteredRows.value.filter(row => row.status === 'PUBLISHED').length);
-const completedCount = computed(() => filteredRows.value.filter(row => row.submissionStatus === 'SUBMITTED' || row.submissionStatus === 'GRADED').length);
+const activeCount = computed(() => filteredRows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length);
+const completedCount = computed(() => filteredRows.value.filter(row => row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === SUBMISSION_STATUS.GRADED).length);
 const upcomingCount = computed(() => {
   const now = Date.now();
   const nextDay = now + 24 * 60 * 60 * 1000;
@@ -163,30 +164,30 @@ const resetFilters = () => {
 };
 
 const statusLabel = (status: HomeworkStatus) => {
-  if (status === 'PUBLISHED') return '进行中';
-  if (status === 'CLOSED') return '已关闭';
-  if (status === 'DRAFT') return '草稿';
+  if (status === ACTIVITY_STATUS.PUBLISHED) return '进行中';
+  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭';
+  if (status === ACTIVITY_STATUS.DRAFT) return '草稿';
   return status || '未知';
 };
 
 const taskStageLabel = (row: HomeworkListItem) => {
-  if (row.submissionStatus === 'GRADED') return '已批改';
-  if (row.submissionStatus === 'SUBMITTED') return '已提交';
-  if (row.submissionStatus === 'SAVED') return '进行中';
+  if (row.submissionStatus === SUBMISSION_STATUS.GRADED) return '已批改';
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (row.submissionStatus === SUBMISSION_STATUS.SAVED) return '进行中';
   return statusLabel(row.status);
 };
 
 const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => {
-  if (status === 'SAVED') return '已保存';
-  if (status === 'SUBMITTED') return '已提交';
-  if (status === 'GRADED') return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
   return '未开始';
 };
 
 const statusTagType = (status?: HomeworkSubmissionStatus | null) => {
-  if (status === 'GRADED') return 'success';
-  if (status === 'SUBMITTED') return 'warning';
-  if (status === 'SAVED') return 'info';
+  if (status === SUBMISSION_STATUS.GRADED) return 'success';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
+  if (status === SUBMISSION_STATUS.SAVED) return 'info';
   return 'primary';
 };
 

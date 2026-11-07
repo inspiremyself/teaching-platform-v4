@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
-import { useAuthStore } from '@/stores/auth';
 import type { AxiosRequestConfig } from 'axios';
+import { clearToken, getToken } from '@/utils/authToken';
 import type { ApiResponse } from '@/types/common';
 
 declare module 'axios' {
@@ -10,6 +10,8 @@ declare module 'axios' {
     silent?: boolean;
   }
 }
+
+export const API_BASE_URL = '/api/v1';
 
 const KICKED_OUT_NOTICE_KEY = 'kicked_out_notice';
 
@@ -27,8 +29,7 @@ function handleKickedOut(message?: string) {
   }
   kickedOutHandled = true;
   sessionStorage.setItem(KICKED_OUT_NOTICE_KEY, message || '账号已在其他设备登录，请重新登录');
-  const authStore = useAuthStore();
-  authStore.logout();
+  clearToken();
   window.location.href = '/login';
 }
 
@@ -43,15 +44,15 @@ export class ApiError extends Error {
 }
 
 const instance = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   timeout: 10000
 });
 
 instance.interceptors.request.use(
   config => {
-    const authStore = useAuthStore();
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`;
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -69,8 +70,7 @@ instance.interceptors.response.use(
       if (res.code === 40102) {
         handleKickedOut(res.message);
       } else if (AUTH_FAILURE_CODES.has(res.code)) {
-        const authStore = useAuthStore();
-        authStore.logout();
+        clearToken();
         window.location.href = '/login';
       }
       return Promise.reject(new ApiError(res.code, res.message || '请求失败'));
@@ -87,8 +87,7 @@ instance.interceptors.response.use(
       if (responseData.code === 40102) {
         handleKickedOut(responseData.message);
       } else if (AUTH_FAILURE_CODES.has(responseData.code)) {
-        const authStore = useAuthStore();
-        authStore.logout();
+        clearToken();
         window.location.href = '/login';
       }
       return Promise.reject(new ApiError(responseData.code, responseData.message || '请求失败'));

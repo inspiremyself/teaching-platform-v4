@@ -331,6 +331,7 @@
 </template>
 
 <script setup lang="ts">
+import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -410,7 +411,7 @@ const resultMode = computed<'result' | 'grading' | 'pending'>(() => {
 const totalScoreText = computed(() => {
   if (canShowResult.value) return displayScore(detail.value?.totalScore)
   const status = detail.value?.submissionStatus
-  if (status === 'SUBMITTED' || status === 'AUTO_SUBMITTED' || status === 'GRADED') {
+  if (status === SUBMISSION_STATUS.SUBMITTED || status === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED || status === SUBMISSION_STATUS.GRADED) {
     return '成绩待教师发布'
   }
   return '-'
@@ -419,7 +420,7 @@ const resultStatusDescription = computed(() => {
   if (!canShowResult.value) {
     return '答卷已记录，但成绩和评语尚未开放，请等待教师确认。'
   }
-  if (detail.value?.submissionStatus === 'GRADED') {
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) {
     return '教师已完成批改，本页展示自动评分与人工评分的完整结果。'
   }
   return '系统已记录你的答卷，主观题部分可能仍在等待教师评分。'
@@ -595,7 +596,7 @@ function flushDraft(): Promise<boolean> {
     window.clearTimeout(draftTimer)
     draftTimer = undefined
   }
-  if (state.value !== 'B' || detail.value?.submissionStatus !== 'IN_PROGRESS') {
+  if (state.value !== 'B' || detail.value?.submissionStatus !== EXAM_SUBMISSION_STATUS.IN_PROGRESS) {
     return Promise.resolve(true)
   }
   const task = () => saveExamDraft(examId, buildSubmitPayload())
@@ -616,7 +617,7 @@ function flushDraft(): Promise<boolean> {
 }
 
 function scheduleDraftSave() {
-  if (state.value !== 'B' || detail.value?.submissionStatus !== 'IN_PROGRESS') return
+  if (state.value !== 'B' || detail.value?.submissionStatus !== EXAM_SUBMISSION_STATUS.IN_PROGRESS) return
   if (draftTimer) window.clearTimeout(draftTimer)
   draftTimer = window.setTimeout(() => {
     draftTimer = undefined
@@ -973,7 +974,7 @@ async function loadExam() {
   }
   resultAnswerMap.value = map
 
-  if (data.submissionStatus === 'IN_PROGRESS') {
+  if (data.submissionStatus === EXAM_SUBMISSION_STATUS.IN_PROGRESS) {
     loadSavedAnswers()
     // 详情缺省 deadlineAt 时保留已知值，避免已获得的截止时间被覆盖后重新可编辑
     deadlineAt.value = data.deadlineAt ?? deadlineAt.value

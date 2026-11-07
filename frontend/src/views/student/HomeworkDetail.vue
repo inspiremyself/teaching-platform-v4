@@ -13,7 +13,7 @@
             <div class="detail-hero__actions">
               <el-button
                 round
-                :disabled="readonly || (detail?.submissionStatus !== 'SAVED' && !lastSavedDraft)"
+                :disabled="readonly || (detail?.submissionStatus !== SUBMISSION_STATUS.SAVED && !lastSavedDraft)"
                 @click="restoreSavedDraft"
               >
                 重置为已保存内容
@@ -319,7 +319,7 @@
                 <span class="material-symbols-outlined">check_circle</span>
                 已确认附件信息
               </li>
-              <li :class="{ 'check-list__item--done': detail.submissionStatus === 'SUBMITTED' || detail.submissionStatus === 'GRADED' }">
+              <li :class="{ 'check-list__item--done': detail.submissionStatus === SUBMISSION_STATUS.SUBMITTED || detail.submissionStatus === SUBMISSION_STATUS.GRADED }">
                 <span class="material-symbols-outlined">check_circle</span>
                 已进入正式提交状态
               </li>
@@ -354,6 +354,7 @@
 </template>
 
 <script setup lang="ts">
+import { ACTIVITY_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -405,8 +406,8 @@ const isNotStarted = computed(() => {
   const startTime = new Date(startAt).getTime();
   return !Number.isNaN(startTime) && nowMs.value < startTime;
 });
-const readonly = computed(() => detail.value?.submissionStatus === 'SUBMITTED'
-  || detail.value?.submissionStatus === 'GRADED'
+const readonly = computed(() => detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED
+  || detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED
   || isNotStarted.value
   || isOverdue.value);
 const hasQuestionItems = computed(() => !!detail.value?.questions?.length);
@@ -555,7 +556,7 @@ const saveDraft = async () => {
     }
     autoSaveStatus.value = 'saved';
     if (detail.value) {
-      detail.value.submissionStatus = 'SAVED';
+      detail.value.submissionStatus = SUBMISSION_STATUS.SAVED;
     }
     lastSavedDraft.value = structuredClone(payload);
     draftFailureNotified = false;
@@ -584,7 +585,7 @@ const isDraftResponseStale = () => submitting.value || suppressAutoSave.value;
  */
 const scheduleAutoSave = () => {
   if (readonly.value || loading.value || submitting.value || suppressAutoSave.value) return;
-  if (detail.value?.status === 'CLOSED') return;
+  if (detail.value?.status === ACTIVITY_STATUS.CLOSED) return;
   clearAutoSaveTimer();
   autoSaveTimer = setTimeout(() => {
     autoSaveTimer = undefined;
@@ -599,7 +600,7 @@ const scheduleAutoSave = () => {
 const flushDraft = async () => {
   clearAutoSaveTimer();
   if (readonly.value || submitting.value || loading.value) return;
-  if (!detail.value || detail.value.status === 'CLOSED') return;
+  if (!detail.value || detail.value.status === ACTIVITY_STATUS.CLOSED) return;
   await saveDraft();
 };
 
@@ -627,9 +628,9 @@ const restoreSavedDraft = () => {
 };
 
 const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => {
-  if (status === 'SAVED') return '已保存';
-  if (status === 'SUBMITTED') return '已提交';
-  if (status === 'GRADED') return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
   return '未开始';
 };
 

@@ -36,6 +36,7 @@ import type {
 } from '@/types/lab';
 import type { PagedResult } from '@/types/common';
 import type { CopyQuestionToBankRequest, CopyQuestionToBankResult } from '@/types/homework';
+import { behaviorEventsPath } from '@/api/endpoints';
 
 export const listTeacherLabs = () => request.get<LabItem[]>('/teacher/labs');
 
@@ -75,8 +76,10 @@ export const copyLabStepToBank = (stepId: number | string, data: CopyQuestionToB
   request.post<CopyQuestionToBankResult>(`/teacher/lab-steps/${stepId}/copy-to-bank`, data);
 
 /** 教师端实验报告队列（分页 + 筛选），供队列页使用 */
-export const listTeacherLabReports = (params?: LabReportQuery) =>
-  request.get<PagedResult<LabReportItem>>('/teacher/lab-reports', { params });
+export const listTeacherLabReports = async (params?: LabReportQuery) => {
+  const result = await request.get<PagedResult<LabReportItem>>('/teacher/lab-reports', { params });
+  return { list: result.items, total: result.total };
+};
 
 /** 教师端实验报告导航队列（全量、无分页），供详情页 / 批量批改页构建上一份下一份队列 */
 export const listTeacherLabReportQueue = () => request.get<LabReportItem[]>('/teacher/lab-reports/queue');
@@ -136,4 +139,4 @@ export const submitStudentLab = (labId: number | string, data: SubmitLabPayload)
 
 /** 学生批量上报作答行为事件（behaviorCollector 唯一出口；eventUuid 幂等，重试复用） */
 export const reportLabBehaviorEvents = (labId: number | string, events: LabBehaviorEventItem[]) =>
-  request.post<LabBehaviorIngestResult>(`/student/labs/${labId}/behavior-events`, { events });
+  request.post<LabBehaviorIngestResult>(behaviorEventsPath(labId), { events });

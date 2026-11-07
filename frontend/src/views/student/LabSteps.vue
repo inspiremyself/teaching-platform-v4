@@ -250,6 +250,7 @@
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -323,12 +324,12 @@ const currentItemCodeLanguage = computed(() => {
     ? draft.language || currentCodeEditorLanguage.value || currentItem.value.editorLanguage || 'CODE'
     : currentCodeEditorLanguage.value || currentItem.value.editorLanguage || 'CODE';
 });
-const readonly = computed(() => ['SUBMITTED', 'GRADED'].includes(detail.value?.submissionStatus || '')
+const readonly = computed(() => ([SUBMISSION_STATUS.SUBMITTED, SUBMISSION_STATUS.GRADED] as string[]).includes(detail.value?.submissionStatus || '')
   || isNotStarted.value
   || isOverdue.value);
 // 提交按钮只允许“已保存且存在题项”的草稿推进，与后端“仅 SAVED 可提交”状态机保持一致
 const canSubmit = computed(
-  () => detail.value?.submissionStatus === 'SAVED'
+  () => detail.value?.submissionStatus === SUBMISSION_STATUS.SAVED
     && labItems.value.length > 0
     && !isNotStarted.value
     && !isOverdue.value
@@ -338,8 +339,8 @@ const submitHint = computed(() => {
   if (isOverdue.value) return '实验已截止，不能保存或提交';
   const status = detail.value?.submissionStatus;
   if (!status) return '请先保存实验答案后再提交';
-  if (status === 'SUBMITTED') return '已提交，如需修改请联系教师打回';
-  if (status === 'GRADED') return '已批改，如需修改请联系教师打回';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交，如需修改请联系教师打回';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改，如需修改请联系教师打回';
   if (labItems.value.length === 0) return '暂无可提交的实验题项';
   return '';
 });
@@ -348,20 +349,20 @@ const dirtyItemCount = computed(() => labItems.value.filter((item) => isItemDirt
 const progressPercent = computed(() => {
   const total = labItems.value.length;
   if (!total) return 0;
-  if (detail.value?.submissionStatus === 'GRADED') return 100;
-  if (detail.value?.submissionStatus === 'SUBMITTED') return 92;
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) return 100;
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return 92;
   return Math.round((answeredCount.value / total) * 100);
 });
 const progressText = computed(() => {
-  if (detail.value?.submissionStatus === 'GRADED') return '实验已完成批改，可逐题查看教师反馈。';
-  if (detail.value?.submissionStatus === 'SUBMITTED') return '实验已提交，当前内容仅支持查看。';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) return '实验已完成批改，可逐题查看教师反馈。';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return '实验已提交，当前内容仅支持查看。';
   if (dirtyItemCount.value > 0) return `还有 ${dirtyItemCount.value} 道题未保存。`;
   return `已保存 ${answeredCount.value}/${labItems.value.length} 个题项。`;
 });
 const submissionTagType = computed(() => {
-  if (detail.value?.submissionStatus === 'GRADED') return 'success';
-  if (detail.value?.submissionStatus === 'SUBMITTED') return 'warning';
-  if (detail.value?.submissionStatus === 'SAVED') return 'primary';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) return 'success';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return 'warning';
+  if (detail.value?.submissionStatus === SUBMISSION_STATUS.SAVED) return 'primary';
   return 'info';
 });
 const currentSaveStateLabel = computed(() => {
@@ -702,9 +703,9 @@ const submitAll = async () => {
 };
 
 const submissionLabel = (status?: LabReportStatus | null) => {
-  if (status === 'SAVED') return '已保存草稿';
-  if (status === 'SUBMITTED') return '已提交';
-  if (status === 'GRADED') return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存草稿';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
   return '待开始';
 };
 

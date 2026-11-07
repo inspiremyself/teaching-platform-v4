@@ -39,9 +39,9 @@
             <div class="toolbar-filter">
               <label>状态</label>
               <el-select v-model="statusFilter" clearable placeholder="全部状态">
-                <el-option label="草稿" value="DRAFT" />
-                <el-option label="已发布" value="PUBLISHED" />
-                <el-option label="已关闭" value="CLOSED" />
+                <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+                <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+                <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
               </el-select>
             </div>
             <div class="toolbar-filter">
@@ -143,13 +143,13 @@
           <el-table-column label="操作" width="260" fixed="right" align="right">
             <template #default="{ row }">
               <div class="action-cell">
-                <button v-if="row.status === 'DRAFT'" class="action-button action-button--ghost" type="button" @click="openEditDialog(row)">
+                <button v-if="row.status === ACTIVITY_STATUS.DRAFT" class="action-button action-button--ghost" type="button" @click="openEditDialog(row)">
                   编辑
                 </button>
-                <button v-if="row.status === 'DRAFT'" class="action-button action-button--success" type="button" @click="publishExam(row)">
+                <button v-if="row.status === ACTIVITY_STATUS.DRAFT" class="action-button action-button--success" type="button" @click="publishExam(row)">
                   发布
                 </button>
-                <button v-if="row.status === 'PUBLISHED'" class="action-button action-button--warning" type="button" @click="closeExam(row)">
+                <button v-if="row.status === ACTIVITY_STATUS.PUBLISHED" class="action-button action-button--warning" type="button" @click="closeExam(row)">
                   关闭
                 </button>
                 <button class="action-button action-button--primary" type="button" @click="goResults(row.id)">
@@ -233,8 +233,8 @@
               </el-form-item>
               <el-form-item label="成绩可见性">
                 <el-select v-model="form.scoreVisibilityMode" style="width: 100%">
-                  <el-option label="交卷后立即可见" value="IMMEDIATE" />
-                  <el-option label="教师确认后可见" value="AFTER_TEACHER_CONFIRM" />
+                  <el-option label="交卷后立即可见" :value="SCORE_VISIBILITY_MODE.IMMEDIATE" />
+                  <el-option label="教师确认后可见" :value="SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM" />
                   <el-option
                     v-if="isLegacyScoreMode"
                     :label="legacyScoreModeLabel"
@@ -242,7 +242,7 @@
                     disabled
                   />
                 </el-select>
-                <p v-if="form.scoreVisibilityMode === 'AFTER_TEACHER_CONFIRM'" class="exam-dialog__hint">
+                <p v-if="form.scoreVisibilityMode === SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM" class="exam-dialog__hint">
                   学生交卷后不会立即看到成绩。
                 </p>
                 <p v-if="isLegacyScoreMode" class="exam-dialog__hint exam-dialog__hint--danger">
@@ -350,6 +350,7 @@
 </template>
 
 <script setup lang="ts">
+import { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE } from '@/types/enums';
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -366,8 +367,8 @@ import type { TeachingClass } from '@/types/class'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
 import type { CreateExamPayload, ExamListItem, ExamQuestionView, ScoreVisibilityMode, UpdateExamPayload } from '@/types/exam'
 import type { QuestionItem } from '@/types/question'
-import { buildQuestionPayloadFromDraft } from '../components/typed-editor/adapters/questionAdapter'
-import { parseQuestionAnswerArray } from '../components/typed-editor/hydrators/fromQuestion'
+import { buildQuestionPayloadFromDraft } from '@/components/typed-editor/adapters/questionAdapter'
+import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion'
 
 /** 编辑态下允许历史内联题（questionId 为 null）进入只读分流 */
 type EditableExamQuestion = ExamQuestionView & { questionId: number | null }
@@ -415,7 +416,7 @@ const form = ref<ExamFormState>({
   startAt: null as string | null,
   endAt: null as string | null,
   durationMinutes: 60,
-  scoreVisibilityMode: 'IMMEDIATE',
+  scoreVisibilityMode: SCORE_VISIBILITY_MODE.IMMEDIATE,
   shuffleQuestions: false,
 })
 
@@ -429,8 +430,8 @@ const filteredRows = computed(() => {
   })
 })
 
-const draftCount = computed(() => rows.value.filter(row => row.status === 'DRAFT').length)
-const publishedCount = computed(() => rows.value.filter(row => row.status === 'PUBLISHED').length)
+const draftCount = computed(() => rows.value.filter(row => row.status === ACTIVITY_STATUS.DRAFT).length)
+const publishedCount = computed(() => rows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length)
 const totalSubmissionCount = computed(() => rows.value.reduce((sum, row) => sum + (row.submissionCount ?? 0), 0))
 const highlightedExam = computed(() => filteredRows.value[0] ?? rows.value[0] ?? null)
 const highlightedExamTitle = computed(() => highlightedExam.value?.title ?? '暂无考试记录')
@@ -493,8 +494,8 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
 /** 是否停留在旧版成绩可见性值上，需强制改选后才能保存 */
 const isLegacyScoreMode = computed(
   () =>
-    form.value.scoreVisibilityMode === 'AFTER_DEADLINE' ||
-    form.value.scoreVisibilityMode === 'MANUAL_RELEASE',
+    form.value.scoreVisibilityMode === SCORE_VISIBILITY_MODE.AFTER_DEADLINE ||
+    form.value.scoreVisibilityMode === SCORE_VISIBILITY_MODE.MANUAL_RELEASE,
 )
 
 const legacyScoreModeLabel = computed(
@@ -517,7 +518,7 @@ const fetchExams = async () => {
 
 const fetchClasses = async () => {
   const res = await listClasses()
-  classOptions.value = res.items
+  classOptions.value = res
 }
 
 const fetchQuestions = async () => {
@@ -549,7 +550,7 @@ const resetForm = () => {
     startAt: null,
     endAt: null,
     durationMinutes: 60,
-    scoreVisibilityMode: 'IMMEDIATE',
+    scoreVisibilityMode: SCORE_VISIBILITY_MODE.IMMEDIATE,
     shuffleQuestions: false,
   }
   configuredQuestions.value = []
@@ -572,7 +573,7 @@ const openEditDialog = async (row: ExamListItem) => {
     startAt: detail.startAt,
     endAt: detail.endAt,
     durationMinutes: detail.durationMinutes,
-    scoreVisibilityMode: detail.scoreVisibilityMode ?? 'IMMEDIATE',
+    scoreVisibilityMode: detail.scoreVisibilityMode ?? SCORE_VISIBILITY_MODE.IMMEDIATE,
     shuffleQuestions: detail.shuffleQuestions === true,
   }
 
@@ -744,7 +745,7 @@ const submitForm = async () => {
     ElMessage.error('请先将成绩可见性改为「交卷后立即可见」或「教师确认后可见」')
     return
   }
-  if (form.value.scoreVisibilityMode === 'IMMEDIATE' && hasSubjectiveQuestion.value) {
+  if (form.value.scoreVisibilityMode === SCORE_VISIBILITY_MODE.IMMEDIATE && hasSubjectiveQuestion.value) {
     await ElMessageBox.alert('主观题需人工批改，交卷后不会立即出成绩', '提示', {
       confirmButtonText: '继续保存',
       type: 'warning',
@@ -785,7 +786,7 @@ const submitForm = async () => {
         ...basePayload,
         startAt: form.value.startAt || undefined,
         endAt: form.value.endAt || undefined,
-        status: 'DRAFT',
+        status: ACTIVITY_STATUS.DRAFT,
       }
       await createExam(payload)
       ElMessage.success(`考试创建成功，并写入了 ${questions.length} 道题目`)
@@ -805,13 +806,13 @@ const publishExam = async (row: ExamListItem) => {
     ElMessage.error('请先将题目保存到题库后再组卷')
     return
   }
-  await changeExamStatus(row.id, 'PUBLISHED')
+  await changeExamStatus(row.id, ACTIVITY_STATUS.PUBLISHED)
   ElMessage.success('考试已发布')
   await fetchExams()
 }
 
 const closeExam = async (row: ExamListItem) => {
-  await changeExamStatus(row.id, 'CLOSED')
+  await changeExamStatus(row.id, ACTIVITY_STATUS.CLOSED)
   ElMessage.success('考试已关闭')
   await fetchExams()
 }
@@ -821,9 +822,9 @@ const goResults = (id: number) => {
 }
 
 const statusLabel = (status: string) => {
-  if (status === 'DRAFT') return '草稿'
-  if (status === 'PUBLISHED') return '已发布'
-  if (status === 'CLOSED') return '已关闭'
+  if (status === ACTIVITY_STATUS.DRAFT) return '草稿'
+  if (status === ACTIVITY_STATUS.PUBLISHED) return '已发布'
+  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭'
   return status || '未知'
 }
 
@@ -844,10 +845,10 @@ const formatWindow = (startAt?: string | null, endAt?: string | null) => {
 }
 
 const examDescription = (row: ExamListItem) => {
-  if (row.status === 'DRAFT') {
+  if (row.status === ACTIVITY_STATUS.DRAFT) {
     return '草稿阶段，可继续补充题目、时间与考试说明。'
   }
-  if (row.status === 'PUBLISHED') {
+  if (row.status === ACTIVITY_STATUS.PUBLISHED) {
     return '考试已对学生开放，建议关注提交进度与异常关闭操作。'
   }
   return '考试流程已收口，可进入结果页进行总览与主观题评分。'
@@ -855,10 +856,10 @@ const examDescription = (row: ExamListItem) => {
 
 const submissionHint = (row: ExamListItem) => {
   const count = row.submissionCount ?? 0
-  if (row.status === 'DRAFT') {
+  if (row.status === ACTIVITY_STATUS.DRAFT) {
     return '尚未进入学生作答阶段'
   }
-  if (row.status === 'PUBLISHED') {
+  if (row.status === ACTIVITY_STATUS.PUBLISHED) {
     return count > 0 ? `已有 ${count} 份提交，批改入口已开放` : '考试已发布，等待学生提交'
   }
   return count > 0 ? `共收到 ${count} 份提交，可汇总批改` : '考试已关闭，暂无提交记录'

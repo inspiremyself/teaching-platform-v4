@@ -108,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -131,7 +132,7 @@ const gradeFormMap = reactive<Record<string, { answerId: number; score: number; 
 const reportId = computed(() => Number(route.params.id));
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
 /** SAVED 表示学生仅保存未提交，整页降级为只读预览。 */
-const isSavedPreview = computed(() => detail.value?.submitStatus === 'SAVED');
+const isSavedPreview = computed(() => detail.value?.submitStatus === SUBMISSION_STATUS.SAVED);
 
 /** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
 const stepList = computed<StepBrief[]>(() =>

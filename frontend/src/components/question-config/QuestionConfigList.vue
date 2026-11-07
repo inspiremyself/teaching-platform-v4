@@ -92,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { TYPED_EDITOR_LABELS } from '@/views/teacher/components/typed-editor/constants'
+import { TYPED_EDITOR_LABELS } from '@/components/typed-editor/constants'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
 
 const props = withDefaults(

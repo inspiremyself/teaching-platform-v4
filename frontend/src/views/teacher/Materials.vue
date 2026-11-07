@@ -94,7 +94,7 @@
             </div>
 
             <div class="material-row__actions">
-              <el-button type="primary" plain @click="download(row.downloadUrl, row.fileName)">下载</el-button>
+              <el-button type="primary" plain @click="download(row.id, row.fileName)">下载</el-button>
               <el-button @click="openEditDialog(row)">编辑资料信息</el-button>
               <el-button type="danger" plain @click="remove(row.id)">删除</el-button>
             </div>
@@ -374,8 +374,12 @@ const remove = async (id: number) => {
   await fetchData();
 };
 
-const download = async (url: string, fileName: string) => {
-  await downloadMaterial(url, fileName);
+const download = async (id: number, fileName: string) => {
+  try {
+    await downloadMaterial(id, fileName);
+  } catch {
+    ElMessage.error('资料下载失败，请稍后重试');
+  }
 };
 
 const visibilityLabel = (visibility: MaterialVisibility) => (visibility === 'ALL' ? '全体可见' : '仅教师');

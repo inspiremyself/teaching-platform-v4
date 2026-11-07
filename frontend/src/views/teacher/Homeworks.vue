@@ -31,9 +31,9 @@
         <div class="toolbar-filters">
           <el-select v-model="statusFilter" placeholder="全部状态" clearable>
             <el-option label="全部状态" value="" />
-            <el-option label="草稿" value="DRAFT" />
-            <el-option label="已发布" value="PUBLISHED" />
-            <el-option label="已关闭" value="CLOSED" />
+            <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+            <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+            <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
           </el-select>
           <el-select v-model="classFilter" placeholder="全部班级" clearable>
             <el-option label="全部班级" value="0" />
@@ -110,7 +110,7 @@
             <el-button @click="openEditDialog(row)">编辑</el-button>
             <el-button plain @click="releaseScores(row)">发布成绩</el-button>
             <el-button
-              v-if="row.status === 'DRAFT'"
+              v-if="row.status === ACTIVITY_STATUS.DRAFT"
               type="success"
               plain
               @click="toggleStatus(row)"
@@ -118,7 +118,7 @@
               发布作业
             </el-button>
             <el-button
-              v-else-if="row.status === 'PUBLISHED'"
+              v-else-if="row.status === ACTIVITY_STATUS.PUBLISHED"
               type="warning"
               plain
               @click="toggleStatus(row)"
@@ -202,22 +202,22 @@
                 />
               </el-form-item>
               <el-form-item label="发布状态">
-                <el-select v-model="form.status" placeholder="请选择状态" :disabled="originalStatus === 'CLOSED'">
+                <el-select v-model="form.status" placeholder="请选择状态" :disabled="originalStatus === ACTIVITY_STATUS.CLOSED">
                   <el-option
                     label="草稿"
-                    value="DRAFT"
-                    :disabled="originalStatus === 'PUBLISHED' && editingSubmissionCount > 0"
+                    :value="ACTIVITY_STATUS.DRAFT"
+                    :disabled="originalStatus === ACTIVITY_STATUS.PUBLISHED && editingSubmissionCount > 0"
                   />
-                  <el-option label="已发布" value="PUBLISHED" />
-                  <el-option label="已关闭" value="CLOSED" :disabled="originalStatus === 'DRAFT'" />
+                  <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+                  <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" :disabled="originalStatus === ACTIVITY_STATUS.DRAFT" />
                 </el-select>
               </el-form-item>
               <el-form-item label="成绩可见性">
                 <el-select v-model="form.scoreVisibilityMode" placeholder="请选择可见性">
-                  <el-option label="立即可见" value="IMMEDIATE" />
-                  <el-option label="教师确认后可见" value="AFTER_TEACHER_CONFIRM" />
-                  <el-option label="截止后可见" value="AFTER_DEADLINE" />
-                  <el-option label="教师手动发布" value="MANUAL_RELEASE" />
+                  <el-option label="立即可见" :value="SCORE_VISIBILITY_MODE.IMMEDIATE" />
+                  <el-option label="教师确认后可见" :value="SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM" />
+                  <el-option label="截止后可见" :value="SCORE_VISIBILITY_MODE.AFTER_DEADLINE" />
+                  <el-option label="教师手动发布" :value="SCORE_VISIBILITY_MODE.MANUAL_RELEASE" />
                 </el-select>
               </el-form-item>
             </div>
@@ -280,6 +280,7 @@
 </template>
 
 <script setup lang="ts">
+import { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -314,8 +315,8 @@ import type {
   SaveHomeworkQuestionRequest,
 } from '@/types/homework';
 import { ApiError } from '@/utils/request';
-import { buildQuestionPayloadFromDraft, normalizeQuestionType } from './components/typed-editor/adapters/questionAdapter';
-import { parseQuestionAnswerArray } from './components/typed-editor/hydrators/fromQuestion';
+import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
+import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion';
 
 const router = useRouter();
 const loading = ref(false);
@@ -326,7 +327,7 @@ const dialogVisible = ref(false);
 const pickerVisible = ref(false);
 const questionDialogVisible = ref(false);
 const editingId = ref<number | null>(null);
-const originalStatus = ref<HomeworkStatus>('DRAFT');
+const originalStatus = ref<HomeworkStatus>(ACTIVITY_STATUS.DRAFT);
 const rows = ref<HomeworkListItem[]>([]);
 const classOptions = ref<TeachingClass[]>([]);
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([]);
@@ -345,8 +346,8 @@ const form = reactive<CreateHomeworkRequest>({
   title: '',
   description: '',
   classId: 0,
-  status: 'DRAFT',
-  scoreVisibilityMode: 'AFTER_TEACHER_CONFIRM',
+  status: ACTIVITY_STATUS.DRAFT,
+  scoreVisibilityMode: SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM,
   attachmentPath: '',
   startAt: null,
   dueAt: null,
@@ -380,8 +381,8 @@ const filteredRows = computed(() => {
   });
 });
 
-const publishedCount = computed(() => filteredRows.value.filter(row => row.status === 'PUBLISHED').length);
-const draftCount = computed(() => filteredRows.value.filter(row => row.status === 'DRAFT').length);
+const publishedCount = computed(() => filteredRows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length);
+const draftCount = computed(() => filteredRows.value.filter(row => row.status === ACTIVITY_STATUS.DRAFT).length);
 const totalSubmissionCount = computed(() => filteredRows.value.reduce((sum, row) => sum + (row.submissionCount ?? 0), 0));
 
 const activeStatusLabel = computed(() => {
@@ -399,14 +400,14 @@ const currentConfiguredQuestion = computed(
 );
 
 /** 已发布/已关闭：禁止新增、编辑、删除与改分 */
-const questionContentLocked = computed(() => form.status === 'PUBLISHED' || form.status === 'CLOSED');
+const questionContentLocked = computed(() => form.status === ACTIVITY_STATUS.PUBLISHED || form.status === ACTIVITY_STATUS.CLOSED);
 
 /** 已关闭：连排序也禁止 */
-const questionReorderLocked = computed(() => form.status === 'CLOSED');
+const questionReorderLocked = computed(() => form.status === ACTIVITY_STATUS.CLOSED);
 
 const questionLockHint = computed(() => {
-  if (form.status === 'PUBLISHED') return '已发布作业仅支持调整排序；新增、编辑、删除与改分均已禁用。';
-  if (form.status === 'CLOSED') return '已关闭作业不可再调整题目。';
+  if (form.status === ACTIVITY_STATUS.PUBLISHED) return '已发布作业仅支持调整排序；新增、编辑、删除与改分均已禁用。';
+  if (form.status === ACTIVITY_STATUS.CLOSED) return '已关闭作业不可再调整题目。';
   return '';
 });
 
@@ -439,21 +440,21 @@ const fetchHomeworks = async () => {
 
 const fetchClasses = async () => {
   const response = await listClasses();
-  classOptions.value = response.items;
+  classOptions.value = response;
 };
 
 const resetForm = () => {
   form.title = '';
   form.description = '';
   form.classId = classOptions.value[0]?.id ?? 0;
-  form.status = 'DRAFT';
+  form.status = ACTIVITY_STATUS.DRAFT;
   form.attachmentPath = '';
   form.startAt = null;
   form.dueAt = null;
-  form.scoreVisibilityMode = 'AFTER_TEACHER_CONFIRM';
+  form.scoreVisibilityMode = SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
   editingSubmissionCount.value = 0;
   editingId.value = null;
-  originalStatus.value = 'DRAFT';
+  originalStatus.value = ACTIVITY_STATUS.DRAFT;
   configuredQuestions.value = [];
   originalQuestionIds.value = [];
   saveToQuestionBank.value = false;
@@ -498,7 +499,7 @@ const openEditDialog = async (row: HomeworkListItem) => {
     form.attachmentPath = detail.attachmentPath || '';
     form.startAt = detail.startAt || null;
     form.dueAt = detail.dueAt || null;
-    form.scoreVisibilityMode = detail.scoreVisibilityMode || 'AFTER_TEACHER_CONFIRM';
+    form.scoreVisibilityMode = detail.scoreVisibilityMode || SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
     configuredQuestions.value = detail.questions.map(question => ({
       localId: `hwq-${question.id}`,
       homeworkQuestionId: question.id,
@@ -836,7 +837,7 @@ const submitForm = async () => {
     if (editingId.value) {
       // 先落题目再落作业状态，允许同一次保存完成 DRAFT → PUBLISHED 与题目修改
       // 已关闭作业的题目不可变更，跳过题目写入避免命中锁定规则
-      if (originalStatus.value !== 'CLOSED') {
+      if (originalStatus.value !== ACTIVITY_STATUS.CLOSED) {
         await persistConfiguredQuestions(editingId.value);
       }
       await updateHomework(editingId.value, payload);
@@ -844,12 +845,12 @@ const submitForm = async () => {
       ElMessage.success(`作业已保存，题目共 ${configuredQuestions.value.length} 道`);
     } else {
       // 新建时先以草稿落库，题目写入后再更新为目标状态
-      const created = await createHomework({ ...payload, status: 'DRAFT' });
+      const created = await createHomework({ ...payload, status: ACTIVITY_STATUS.DRAFT });
       if (!created.id) {
         throw new Error('作业创建失败：未返回作业 ID');
       }
       await persistConfiguredQuestions(created.id);
-      if (payload.status !== 'DRAFT') {
+      if (payload.status !== ACTIVITY_STATUS.DRAFT) {
         await updateHomework(created.id, payload);
       }
       await copyInlineQuestionsAfterSave();
@@ -871,10 +872,10 @@ const submitForm = async () => {
 
 const toggleStatus = async (row: HomeworkListItem) => {
   // 目标态固定为 DRAFT → PUBLISHED、PUBLISHED → CLOSED，CLOSED 不再提供状态操作。
-  if (row.status !== 'DRAFT' && row.status !== 'PUBLISHED') return;
-  const nextStatus: HomeworkStatus = row.status === 'DRAFT' ? 'PUBLISHED' : 'CLOSED';
+  if (row.status !== ACTIVITY_STATUS.DRAFT && row.status !== ACTIVITY_STATUS.PUBLISHED) return;
+  const nextStatus: HomeworkStatus = row.status === ACTIVITY_STATUS.DRAFT ? ACTIVITY_STATUS.PUBLISHED : ACTIVITY_STATUS.CLOSED;
   await changeHomeworkStatus(row.id, { status: nextStatus });
-  ElMessage.success(nextStatus === 'PUBLISHED' ? '作业已发布' : '作业已关闭');
+  ElMessage.success(nextStatus === ACTIVITY_STATUS.PUBLISHED ? '作业已发布' : '作业已关闭');
   await fetchHomeworks();
 };
 
@@ -889,15 +890,15 @@ const goSubmissions = (homeworkId: number) => {
 };
 
 const statusLabel = (status: HomeworkStatus) => {
-  if (status === 'DRAFT') return '草稿';
-  if (status === 'PUBLISHED') return '已发布';
-  if (status === 'CLOSED') return '已关闭';
+  if (status === ACTIVITY_STATUS.DRAFT) return '草稿';
+  if (status === ACTIVITY_STATUS.PUBLISHED) return '已发布';
+  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭';
   return status || '未知';
 };
 
 const statusTagType = (status: HomeworkStatus) => {
-  if (status === 'PUBLISHED') return 'success';
-  if (status === 'CLOSED') return 'info';
+  if (status === ACTIVITY_STATUS.PUBLISHED) return 'success';
+  if (status === ACTIVITY_STATUS.CLOSED) return 'info';
   return 'warning';
 };
 

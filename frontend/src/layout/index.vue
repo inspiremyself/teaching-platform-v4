@@ -60,85 +60,26 @@
         </div>
 
         <nav class="sidebar-nav" :aria-label="sidebarNavLabel">
-          <template v-if="isSchoolAdmin">
-            <router-link to="/admin/dashboard" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">dashboard</span><span>总览</span>
-            </router-link>
-            <router-link to="/admin/teachers" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">badge</span><span>教师管理</span>
-            </router-link>
-            <router-link to="/admin/subjects" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">menu_book</span><span>学科管理</span>
-            </router-link>
-            <router-link to="/admin/classes" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">groups</span><span>班级管理</span>
-            </router-link>
-            <router-link to="/admin/students" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">person</span><span>学生管理</span>
-            </router-link>
-            <router-link to="/admin/audit-logs" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">history</span><span>操作日志</span>
-            </router-link>
-            <router-link to="/admin/school" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">domain</span><span>学校信息</span>
-            </router-link>
-          </template>
-
-          <template v-else-if="isTeacher">
-            <router-link to="/teacher/dashboard" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">dashboard</span><span>总览</span>
-            </router-link>
-            <router-link to="/teacher/materials" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">folder</span><span>教学资料</span>
-            </router-link>
-            <router-link to="/teacher/questions" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">database</span><span>题库</span>
-            </router-link>
-            <router-link to="/teacher/labs" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">science</span><span>实验</span>
-            </router-link>
-            <router-link to="/teacher/lab-reports" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">history_edu</span><span>实验报告</span>
-            </router-link>
-            <router-link to="/teacher/homeworks" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">assignment</span><span>作业</span>
-            </router-link>
-            <router-link to="/teacher/exams" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">quiz</span><span>考试</span>
-            </router-link>
-            <router-link to="/teacher/analysis" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">analytics</span><span>分析报表</span>
-            </router-link>
-            <router-link to="/teacher/plagiarism" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">search</span><span>查重治理</span>
-            </router-link>
-          </template>
-
-          <template v-else>
-            <router-link to="/student/dashboard" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">dashboard</span><span>总览</span>
-            </router-link>
-            <router-link to="/student/materials" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">menu_book</span><span>课程资料</span>
-            </router-link>
-            <router-link to="/student/labs" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">science</span><span>实验任务</span>
-            </router-link>
-            <router-link to="/student/homeworks" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">assignment_turned_in</span><span>作业任务</span>
-            </router-link>
-            <router-link to="/student/exams" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">quiz</span><span>考试任务</span>
-            </router-link>
-            <router-link to="/student/scores" class="nav-item" active-class="nav-active">
-              <span class="material-symbols-outlined">grade</span><span>成绩反馈</span>
-            </router-link>
-          </template>
+          <router-link
+            v-for="item in SIDEBAR_NAV[currentRole]"
+            :key="item.to"
+            :to="item.to"
+            class="nav-item"
+            active-class="nav-active"
+          >
+            <span class="material-symbols-outlined">{{ item.icon }}</span><span>{{ item.label }}</span>
+          </router-link>
         </nav>
 
         <div class="sidebar-footer">
-          <router-link to="/profile" class="nav-item" active-class="nav-active" aria-label="进入个人设置页面">
-            <span class="material-symbols-outlined">settings</span><span>个人设置</span>
+          <router-link
+            :to="PROFILE_NAV_ITEM.to"
+            class="nav-item"
+            active-class="nav-active"
+            aria-label="进入个人设置页面"
+          >
+            <span class="material-symbols-outlined">{{ PROFILE_NAV_ITEM.icon }}</span>
+            <span>{{ PROFILE_NAV_ITEM.label }}</span>
           </router-link>
         </div>
       </aside>
@@ -172,19 +113,19 @@ import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { logoutRequest } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
-
-type NavItem = {
-  to: string;
-  label: string;
-  icon: string;
-};
+import { MOBILE_NAV, PROFILE_NAV_ITEM, SIDEBAR_NAV, type AppRole } from '@/layout/navigation';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const { user } = storeToRefs(authStore);
 
-const isTeacher = computed(() => user.value?.role === 'TEACHER');
-const isSchoolAdmin = computed(() => user.value?.role === 'SCHOOL_ADMIN');
+const currentRole = computed<AppRole>(() => {
+  const role = user.value?.role;
+  return role === 'TEACHER' || role === 'SCHOOL_ADMIN' ? role : 'STUDENT';
+});
+
+const isTeacher = computed(() => currentRole.value === 'TEACHER');
+const isSchoolAdmin = computed(() => currentRole.value === 'SCHOOL_ADMIN');
 const brandText = computed(() => {
   if (isSchoolAdmin.value) return '学校管理台';
   if (isTeacher.value) return '教学工作台';
@@ -205,36 +146,7 @@ const themeClass = computed(() => {
   if (isTeacher.value) return 'theme-teacher';
   return 'theme-student';
 });
-const mobileNavItems = computed<NavItem[]>(() => {
-  if (isSchoolAdmin.value) {
-    return [
-      { to: '/admin/dashboard', label: '总览', icon: 'dashboard' },
-      { to: '/admin/teachers', label: '教师', icon: 'badge' },
-      { to: '/admin/subjects', label: '学科', icon: 'menu_book' },
-      { to: '/admin/classes', label: '班级', icon: 'groups' },
-      { to: '/admin/students', label: '学生', icon: 'person' },
-      { to: '/admin/audit-logs', label: '日志', icon: 'history' },
-      { to: '/profile', label: '我的', icon: 'settings' },
-    ];
-  }
-  if (isTeacher.value) {
-    return [
-      { to: '/teacher/dashboard', label: '总览', icon: 'dashboard' },
-      { to: '/teacher/labs', label: '实验', icon: 'science' },
-      { to: '/teacher/homeworks', label: '作业', icon: 'assignment' },
-      { to: '/teacher/exams', label: '考试', icon: 'quiz' },
-      { to: '/profile', label: '我的', icon: 'person' },
-    ];
-  }
-
-  return [
-    { to: '/student/dashboard', label: '总览', icon: 'dashboard' },
-    { to: '/student/materials', label: '资料', icon: 'menu_book' },
-    { to: '/student/labs', label: '实验', icon: 'science' },
-    { to: '/student/homeworks', label: '作业', icon: 'assignment_turned_in' },
-    { to: '/profile', label: '我的', icon: 'person' },
-  ];
-});
+const mobileNavItems = computed(() => MOBILE_NAV[currentRole.value]);
 
 const goProfile = () => {
   router.push('/profile');

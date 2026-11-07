@@ -245,6 +245,26 @@ class HomeworkTeacherControllerTests {
     }
 
     @Test
+    void addQuestionFromBankRejectsMissingQuestionIdWithValidationError() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homeworks/{id}/questions/bank", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "sortOrder": 1,
+                                      "questionScore": 10
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").isNotEmpty());
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCanAttachInlineQuestion() throws Exception {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", 12);

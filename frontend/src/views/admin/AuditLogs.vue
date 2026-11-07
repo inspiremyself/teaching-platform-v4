@@ -134,7 +134,7 @@ async function loadLogs() {
     if (dateRange.value?.[0]) params.from = dateRange.value[0];
     if (dateRange.value?.[1]) params.to = dateRange.value[1];
     const data = await listAuditLogs(params);
-    rows.value = data.items;
+    rows.value = data.list;
     total.value = data.total;
   } finally {
     loading.value = false;

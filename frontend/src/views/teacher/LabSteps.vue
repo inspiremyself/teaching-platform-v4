@@ -419,13 +419,13 @@ import { listQuestions } from '@/api/questions';
 import type { LabItem, LabQuestionType, LabStepItem } from '@/types/lab';
 import type { ConfiguredQuestionItem } from '@/types/question-config';
 import QuestionPickerDialog from '@/components/question-config/QuestionPickerDialog.vue';
-import FillBlankEditor from './components/typed-editor/FillBlankEditor.vue';
-import ObjectiveEditor from './components/typed-editor/ObjectiveEditor.vue';
-import SubjectiveEditor from './components/typed-editor/SubjectiveEditor.vue';
-import TypedEditorShell from './components/typed-editor/TypedEditorShell.vue';
-import { buildLabStepPayloadFromDraft, validateLabStepDraft } from './components/typed-editor/adapters/labStepAdapter';
-import { useTypedEditor } from './components/typed-editor/useTypedEditor';
-import { hydrateTypedEditorFromQuestion } from './components/typed-editor/hydrators/fromQuestion';
+import FillBlankEditor from '@/components/typed-editor/FillBlankEditor.vue';
+import ObjectiveEditor from '@/components/typed-editor/ObjectiveEditor.vue';
+import SubjectiveEditor from '@/components/typed-editor/SubjectiveEditor.vue';
+import TypedEditorShell from '@/components/typed-editor/TypedEditorShell.vue';
+import { buildLabStepPayloadFromDraft, validateLabStepDraft } from '@/components/typed-editor/adapters/labStepAdapter';
+import { useTypedEditor } from '@/components/typed-editor/useTypedEditor';
+import { hydrateTypedEditorFromQuestion } from '@/components/typed-editor/hydrators/fromQuestion';
 import {
   createEmptyLabStepEditorState,
   getLabQuestionTypeLabel,
@@ -433,7 +433,7 @@ import {
   mapTypedKindToLabQuestionType,
   normalizeLabQuestionType,
   type HydratedLabStepEditorState,
-} from './components/typed-editor/hydrators/fromLabStep';
+} from '@/components/typed-editor/hydrators/fromLabStep';
 
 interface FillBlankEditorExpose {
   insertTokenAtCursor: () => void;

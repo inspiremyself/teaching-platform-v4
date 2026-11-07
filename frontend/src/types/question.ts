@@ -8,9 +8,9 @@ export const isQuestionType = (value: string): value is QuestionType =>
 export interface QuestionItem {
   id: number;
   code: string;
-  type: QuestionType | string;
+  type: QuestionType | (string & {});
   stem: string;
-  difficulty: QuestionDifficulty | string;
+  difficulty: QuestionDifficulty | (string & {});
   defaultScore: number;
   optionsJson: string | null;
   answerJson: string;

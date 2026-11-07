@@ -14,9 +14,9 @@ export const updateProfile = (data: UpdateProfilePayload) => {
 };
 
 export const changePassword = (data: { oldPassword: string; newPassword: string }) => {
-  return request.post('/auth/change-password', data);
+  return request.post<void>('/auth/change-password', data);
 };
 
 export const logoutRequest = () => {
-  return request.post('/auth/logout');
+  return request.post<void>('/auth/logout');
 };

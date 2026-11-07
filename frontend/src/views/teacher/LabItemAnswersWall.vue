@@ -50,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getTeacherLabItemAnswers } from '@/api/labs';
@@ -74,16 +75,16 @@ const fetchWall = async () => {
 };
 
 const statusLabel = (status?: LabReportStatus | null) => {
-  if (status === 'SUBMITTED') return '已提交';
-  if (status === 'GRADED') return '已批改';
-  if (status === 'SAVED') return '已保存';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
   return status || '未知';
 };
 
 const statusTagType = (status?: LabReportStatus | null) => {
-  if (status === 'SUBMITTED') return 'warning';
-  if (status === 'GRADED') return 'success';
-  if (status === 'SAVED') return 'info';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
+  if (status === SUBMISSION_STATUS.GRADED) return 'success';
+  if (status === SUBMISSION_STATUS.SAVED) return 'info';
   return 'info';
 };
 

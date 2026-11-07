@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { getUserInfo, login as loginApi, updateProfile as updateProfileApi } from '@/api/auth';
+import { getToken, setToken as persistToken } from '@/utils/authToken';
 import type { LoginDto, UpdateProfilePayload, User } from '@/types/user';
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('token') || '');
+  const token = ref(getToken());
   const user = ref<User | null>(null);
   const permissions = ref<string[]>([]);
 
@@ -23,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setToken = (newToken: string) => {
     token.value = newToken;
-    localStorage.setItem('token', newToken);
+    persistToken(newToken);
   };
 
   const login = async (data: LoginDto) => {

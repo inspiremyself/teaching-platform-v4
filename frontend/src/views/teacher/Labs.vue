@@ -86,9 +86,9 @@
         <div class="toolbar-filters">
           <el-select v-model="statusFilter" placeholder="全部状态" clearable>
             <el-option label="全部状态" value="" />
-            <el-option label="草稿" value="DRAFT" />
-            <el-option label="已发布" value="PUBLISHED" />
-            <el-option label="已关闭" value="CLOSED" />
+            <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+            <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+            <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
           </el-select>
           <el-select v-model="classFilter" placeholder="全部班级" clearable>
             <el-option label="全部班级" value="" />
@@ -153,8 +153,8 @@
                 <el-button type="primary" plain @click="goSteps(row.id)">步骤配置</el-button>
                 <el-button plain @click="goBlankRegrade(row.id)">批量重判</el-button>
                 <el-button @click="openEditDialog(row)">编辑</el-button>
-                <el-button class="lab-row__toggle-action" :type="row.status === 'PUBLISHED' ? 'warning' : 'success'" plain @click="toggleStatus(row)">
-                  {{ row.status === 'PUBLISHED' ? '关闭实验' : '发布实验' }}
+                <el-button class="lab-row__toggle-action" :type="row.status === ACTIVITY_STATUS.PUBLISHED ? 'warning' : 'success'" plain @click="toggleStatus(row)">
+                  {{ row.status === ACTIVITY_STATUS.PUBLISHED ? '关闭实验' : '发布实验' }}
                 </el-button>
               </div>
             </div>
@@ -199,9 +199,9 @@
           </el-form-item>
           <el-form-item label="发布状态">
             <el-select v-model="createForm.status" style="width: 100%">
-              <el-option label="草稿" value="DRAFT" />
-              <el-option label="已发布" value="PUBLISHED" :disabled="(sourceLab?.stepCount ?? 0) === 0" />
-              <el-option label="已关闭" value="CLOSED" />
+              <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+              <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" :disabled="(sourceLab?.stepCount ?? 0) === 0" />
+              <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
             </el-select>
           </el-form-item>
           <el-form-item v-if="sourceLab" label="复制预览">
@@ -260,9 +260,9 @@
         </el-form-item>
         <el-form-item label="发布状态">
           <el-select v-model="createForm.status" style="width: 100%">
-            <el-option label="草稿" value="DRAFT" />
-            <el-option label="已发布" value="PUBLISHED" />
-            <el-option label="已关闭" value="CLOSED" />
+            <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+            <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+            <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
           </el-select>
         </el-form-item>
         <el-form-item label="实验小结">
@@ -295,10 +295,10 @@
         </el-form-item>
         <el-form-item label="成绩可见">
           <el-select v-model="createForm.scoreVisibilityMode" style="width: 100%">
-            <el-option label="即时出分" value="IMMEDIATE" />
-            <el-option label="教师确认后可见" value="AFTER_TEACHER_CONFIRM" />
-            <el-option label="截止后可见" value="AFTER_DEADLINE" />
-            <el-option label="教师手动发布" value="MANUAL_RELEASE" />
+            <el-option label="即时出分" :value="SCORE_VISIBILITY_MODE.IMMEDIATE" />
+            <el-option label="教师确认后可见" :value="SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM" />
+            <el-option label="截止后可见" :value="SCORE_VISIBILITY_MODE.AFTER_DEADLINE" />
+            <el-option label="教师手动发布" :value="SCORE_VISIBILITY_MODE.MANUAL_RELEASE" />
           </el-select>
         </el-form-item>
         </template>
@@ -312,6 +312,7 @@
 </template>
 
 <script setup lang="ts">
+import { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -350,7 +351,7 @@ const createForm = reactive<Omit<CreateLabPayload, 'classId'> & { classId?: numb
   experimentContent: '',
   experimentType: 1,
   classId: undefined,
-  status: 'DRAFT',
+  status: ACTIVITY_STATUS.DRAFT,
   materialId: null,
   summaryRequired: false,
   materialTitle: '',
@@ -358,11 +359,11 @@ const createForm = reactive<Omit<CreateLabPayload, 'classId'> & { classId?: numb
   materialDownloadUrl: '',
   startAt: undefined,
   dueAt: undefined,
-  scoreVisibilityMode: 'AFTER_TEACHER_CONFIRM',
+  scoreVisibilityMode: SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM,
 });
 
-const publishedCount = computed(() => rows.value.filter(row => row.status === 'PUBLISHED').length);
-const draftCount = computed(() => rows.value.filter(row => row.status !== 'PUBLISHED').length);
+const publishedCount = computed(() => rows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length);
+const draftCount = computed(() => rows.value.filter(row => row.status !== ACTIVITY_STATUS.PUBLISHED).length);
 const summaryRequiredCount = computed(() => rows.value.filter(row => row.summaryRequired).length);
 
 // 复制模式：源实验从当前台账行直接取（stepCount/materialId/summaryRequired 等预览字段均在行内），不额外请求
@@ -388,7 +389,7 @@ const handleSourceLabChange = (id: number) => {
   // 目标班级优先沿用源班级（当前仍任教时），否则落到第一个任教班级
   const sourceClassAvailable = classOptions.value.some(item => item.id === source.classId);
   createForm.classId = sourceClassAvailable ? source.classId : classOptions.value[0]?.id;
-  createForm.status = 'DRAFT';
+  createForm.status = ACTIVITY_STATUS.DRAFT;
 };
 
 const filteredRows = computed(() => {
@@ -430,7 +431,7 @@ const resetCreateForm = () => {
   createForm.experimentContent = '';
   createForm.experimentType = 1;
   createForm.classId = classOptions.value[0]?.id;
-  createForm.status = 'DRAFT';
+  createForm.status = ACTIVITY_STATUS.DRAFT;
   createForm.materialId = null;
   createForm.materialTitle = '';
   createForm.materialFileName = '';
@@ -438,7 +439,7 @@ const resetCreateForm = () => {
   createForm.summaryRequired = false;
   createForm.startAt = undefined;
   createForm.dueAt = undefined;
-  createForm.scoreVisibilityMode = 'AFTER_TEACHER_CONFIRM';
+  createForm.scoreVisibilityMode = SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
   editingId.value = null;
 };
 
@@ -450,7 +451,7 @@ const resetFilters = () => {
 
 const fetchClasses = async () => {
   const result = await listClasses();
-  classOptions.value = result.items;
+  classOptions.value = result;
 };
 
 const openCreateDialog = () => {
@@ -478,7 +479,7 @@ const openEditDialog = (row: LabItem) => {
   createForm.summaryRequired = Boolean(row.summaryRequired);
   createForm.startAt = row.startAt || undefined;
   createForm.dueAt = row.dueAt || undefined;
-  createForm.scoreVisibilityMode = row.scoreVisibilityMode || 'AFTER_TEACHER_CONFIRM';
+  createForm.scoreVisibilityMode = row.scoreVisibilityMode || SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
   createDialogVisible.value = true;
 };
 
@@ -532,7 +533,7 @@ const submitCreate = async () => {
       ElMessage.warning('请输入新实验名称');
       return;
     }
-    if (createForm.status === 'PUBLISHED' && (sourceLab.value?.stepCount ?? 0) === 0) {
+    if (createForm.status === ACTIVITY_STATUS.PUBLISHED && (sourceLab.value?.stepCount ?? 0) === 0) {
       ElMessage.warning('源实验没有题项，不能直接发布');
       return;
     }
@@ -565,7 +566,7 @@ const submitCreate = async () => {
     ElMessage.warning('开始时间必须早于结束时间');
     return;
   }
-  if (createForm.scoreVisibilityMode === 'AFTER_DEADLINE' && !createForm.dueAt) {
+  if (createForm.scoreVisibilityMode === SCORE_VISIBILITY_MODE.AFTER_DEADLINE && !createForm.dueAt) {
     ElMessage.warning('请先设置实验结束时间');
     return;
   }
@@ -621,40 +622,40 @@ const goBlankRegrade = (labId: number) => {
 };
 
 const toggleStatus = async (row: LabItem) => {
-  const nextStatus: LabStatus = row.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
-  if (nextStatus === 'PUBLISHED' && (row.stepCount ?? 0) === 0) {
+  const nextStatus: LabStatus = row.status === ACTIVITY_STATUS.PUBLISHED ? ACTIVITY_STATUS.CLOSED : ACTIVITY_STATUS.PUBLISHED;
+  if (nextStatus === ACTIVITY_STATUS.PUBLISHED && (row.stepCount ?? 0) === 0) {
     ElMessage.warning('请先配置至少 1 个题项');
     return;
   }
   await changeTeacherLabStatus(row.id, { status: nextStatus });
-  ElMessage.success(nextStatus === 'PUBLISHED' ? '实验已发布' : '实验已关闭');
+  ElMessage.success(nextStatus === ACTIVITY_STATUS.PUBLISHED ? '实验已发布' : '实验已关闭');
   await fetchData();
 };
 
 const statusLabel = (status: LabStatus) => {
-  if (status === 'DRAFT') return '草稿';
-  if (status === 'PUBLISHED') return '已发布';
-  if (status === 'CLOSED') return '已关闭';
+  if (status === ACTIVITY_STATUS.DRAFT) return '草稿';
+  if (status === ACTIVITY_STATUS.PUBLISHED) return '已发布';
+  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭';
   return status || '未知';
 };
 
 const statusTagType = (status: LabStatus) => {
-  if (status === 'PUBLISHED') return 'success';
-  if (status === 'CLOSED') return 'info';
+  if (status === ACTIVITY_STATUS.PUBLISHED) return 'success';
+  if (status === ACTIVITY_STATUS.CLOSED) return 'info';
   return 'warning';
 };
 
 const statusTone = (status: LabStatus) => {
-  if (status === 'PUBLISHED') return 'success';
-  if (status === 'CLOSED') return 'muted';
+  if (status === ACTIVITY_STATUS.PUBLISHED) return 'success';
+  if (status === ACTIVITY_STATUS.CLOSED) return 'muted';
   return 'warning';
 };
 
 const scoreVisibilityLabel = (mode?: string | null) => {
-  if (mode === 'IMMEDIATE') return '即时出分';
-  if (mode === 'AFTER_TEACHER_CONFIRM') return '教师确认后可见';
-  if (mode === 'AFTER_DEADLINE') return '截止后可见';
-  if (mode === 'MANUAL_RELEASE') return '教师手动发布';
+  if (mode === SCORE_VISIBILITY_MODE.IMMEDIATE) return '即时出分';
+  if (mode === SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM) return '教师确认后可见';
+  if (mode === SCORE_VISIBILITY_MODE.AFTER_DEADLINE) return '截止后可见';
+  if (mode === SCORE_VISIBILITY_MODE.MANUAL_RELEASE) return '教师手动发布';
   return '成绩策略未标注';
 };
 

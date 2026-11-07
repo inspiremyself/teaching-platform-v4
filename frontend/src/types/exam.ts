@@ -1,6 +1,7 @@
 import type { UnifiedQuestionAnswerPayload } from './question-answer'
+import type { ActivityStatus, ExamSubmissionStatus, ScoreVisibilityMode, SubmissionStatus } from './enums'
 
-export type ScoreVisibilityMode = 'IMMEDIATE' | 'AFTER_TEACHER_CONFIRM' | 'AFTER_DEADLINE' | 'MANUAL_RELEASE'
+export type { ScoreVisibilityMode } from './enums'
 
 export interface ExamListItem {
   id: number
@@ -8,13 +9,13 @@ export interface ExamListItem {
   description?: string
   classId: number
   className?: string
-  status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'
+  status: ActivityStatus
   startAt: string | null
   endAt: string | null
   durationMinutes: number
   submissionCount?: number
   questionCount?: number
-  submissionStatus?: string | null
+  submissionStatus?: ExamSubmissionStatus | null
   totalScore?: number | null
   canStart?: boolean
   canResume?: boolean
@@ -25,12 +26,12 @@ export interface ExamListItem {
 export interface ExamQuestionView {
   questionId: number
   questionType?: string
-  type?: string // backend returns 'type' not 'questionType'
+  type?: string
   stem: string
   options?: Array<{ key: string; label: string }>
-  optionsJson?: string | null // backend returns optionsJson as string
+  optionsJson?: string | null
   score?: number
-  questionScore?: number // backend returns 'questionScore'
+  questionScore?: number
   answer?: string | null
   studentAnswer?: string | null
   standardAnswer?: string | null
@@ -47,37 +48,43 @@ export interface ExamQuestionView {
   analysisText?: string | null
 }
 
-export interface ExamDetail {
+interface ExamDetailBase {
   id: number
   title: string
   description: string
   classId: number
   className?: string
-  status: string
+  status: ActivityStatus
   startAt: string | null
   endAt: string | null
   durationMinutes: number
   scoreVisibilityMode?: ScoreVisibilityMode | null
   shuffleQuestions?: boolean
   questions: ExamQuestionView[]
-  // Student-specific fields
-  // 学生端专用：当前时间早于考试开始时间，后端会短路详情并置为 true
+}
+
+/** 学生端考试详情：作答状态、时间窗与成绩可见性 */
+export interface ExamDetailForStudent extends ExamDetailBase {
   notStarted?: boolean
   submissionId?: number
-  submissionStatus?: string
+  submissionStatus?: ExamSubmissionStatus
   deadlineAt?: string
   remainingSeconds?: number
-  // 成绩可见性由 resultAvailable 控制；未发布时后端将以下分数遮蔽为 null
   autoScore?: number | null
   manualScore?: number | null
   totalScore?: number | null
   resultAvailable?: boolean
-  // 主观题未批完时为 true，前端显示「阅卷中」而非分数
   gradingInProgress?: boolean
-  // 教师端专用：成绩是否已发布，用于「发布 / 重新发布成绩」入口
+}
+
+/** 教师端考试详情：成绩发布状态与总评 */
+export interface ExamDetailForTeacher extends ExamDetailBase {
   scoreReleased?: boolean
   teacherComment?: string | null
 }
+
+/** 同一详情端点按角色返回不同字段，页面按可选字段读取 */
+export type ExamDetail = ExamDetailForStudent & ExamDetailForTeacher
 
 export interface CreateExamPayload {
   title: string
@@ -86,7 +93,7 @@ export interface CreateExamPayload {
   startAt?: string
   endAt?: string
   durationMinutes?: number
-  status?: string
+  status?: ActivityStatus
   scoreVisibilityMode?: ScoreVisibilityMode
   shuffleQuestions?: boolean
   questions?: Array<{
@@ -128,7 +135,7 @@ export interface ExamSubmissionListItem {
   studentName: string
   studentUsername: string
   studentNo?: string
-  status: string
+  status: SubmissionStatus
   autoScore: number | null
   manualScore: number | null
   totalScore: number | null
@@ -165,7 +172,7 @@ export interface ExamSubmissionDetail {
   studentName: string
   studentUsername?: string
   studentNo?: string
-  status: string
+  status: SubmissionStatus
   autoScore: number | null
   manualScore: number | null
   totalScore: number | null

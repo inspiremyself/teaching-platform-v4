@@ -45,7 +45,7 @@ export const updateHomeworkQuestion = (id: number | string, questionId: number, 
 
 /** 删除作业题目（仅草稿且无学生作答） */
 export const deleteHomeworkQuestion = (id: number | string, questionId: number) =>
-  request.delete(`/teacher/homeworks/${id}/questions/${questionId}`);
+  request.delete<void>(`/teacher/homeworks/${id}/questions/${questionId}`);
 
 /** 把作业题复制到题库（幂等，重复复制返回已有题目） */
 export const copyHomeworkQuestionToBank = (homeworkQuestionId: number, data: CopyQuestionToBankRequest) =>
@@ -65,10 +65,10 @@ export const returnHomeworkSubmission = (submissionId: number | string) =>
   request.post<HomeworkSubmissionReturnResult>(`/teacher/homework-submissions/${submissionId}/return`);
 
 export const releaseHomeworkScores = (id: number | string) =>
-  request.post(`/teacher/homeworks/${id}/release-scores`);
+  request.post<void>(`/teacher/homeworks/${id}/release-scores`);
 
 export const gradeHomeworkAnswer = (answerId: number | string, data: GradeHomeworkAnswerRequest) =>
-  request.post(`/teacher/homework-answers/${answerId}/grade`, data);
+  request.post<void>(`/teacher/homework-answers/${answerId}/grade`, data);
 
 export const listStudentHomeworks = () => request.get<HomeworkListItem[]>('/student/homeworks');
 

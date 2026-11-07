@@ -51,7 +51,7 @@
             </div>
           </div>
 
-          <el-button class="update-card__button" type="primary" plain @click="download(row.downloadUrl, row.fileName)">
+          <el-button class="update-card__button" type="primary" plain @click="download(row.id, row.fileName)">
             <span class="material-symbols-outlined">download</span>
             下载资料
           </el-button>
@@ -119,7 +119,7 @@
               <strong>{{ fileExtensionLabel(row.fileName) }}</strong>
               <small>可直接下载到本地学习</small>
             </div>
-            <el-button type="primary" round @click="download(row.downloadUrl, row.fileName)">
+            <el-button type="primary" round @click="download(row.id, row.fileName)">
               <span class="material-symbols-outlined">download</span>
               下载资料
             </el-button>
@@ -134,6 +134,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { ElMessage } from 'element-plus';
 import { downloadMaterial, listMaterials } from '@/api/materials';
 import type { MaterialItem, MaterialVisibility } from '@/types/material';
 
@@ -205,8 +206,12 @@ const fileTone = (row: MaterialItem) => {
 
 const requirementLabel = (row: MaterialItem) => (row.description?.trim() ? '课程资料' : '待查看');
 
-const download = async (url: string, fileName: string) => {
-  await downloadMaterial(url, fileName);
+const download = async (id: number, fileName: string) => {
+  try {
+    await downloadMaterial(id, fileName);
+  } catch {
+    ElMessage.error('资料下载失败，请稍后重试');
+  }
 };
 
 const resetFilters = () => {

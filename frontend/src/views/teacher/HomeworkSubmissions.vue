@@ -32,9 +32,9 @@
         <div class="toolbar-filters">
           <el-select v-model="statusFilter" placeholder="全部状态" clearable>
             <el-option label="全部状态" value="" />
-            <el-option label="已保存" value="SAVED" />
-            <el-option label="待批改" value="SUBMITTED" />
-            <el-option label="已批改" value="GRADED" />
+            <el-option label="已保存" :value="SUBMISSION_STATUS.SAVED" />
+            <el-option label="待批改" :value="SUBMISSION_STATUS.SUBMITTED" />
+            <el-option label="已批改" :value="SUBMISSION_STATUS.GRADED" />
           </el-select>
           <el-select v-model="plagiarismFilter" placeholder="全部查重范围" clearable>
             <el-option label="全部查重范围" value="" />
@@ -112,7 +112,7 @@
               <p>学号：{{ activeSubmission.studentUsername }}</p>
             </div>
             <el-button type="primary" plain @click="openGradeDialog(activeSubmission)">
-              {{ activeSubmission.submitStatus === 'SAVED' ? '查看' : activeSubmission.submitStatus === 'GRADED' ? '查看/调整' : '批改' }}
+              {{ activeSubmission.submitStatus === SUBMISSION_STATUS.SAVED ? '查看' : activeSubmission.submitStatus === SUBMISSION_STATUS.GRADED ? '查看/调整' : '批改' }}
             </el-button>
           </div>
 
@@ -211,26 +211,26 @@
                         v-model="answerGradeMap[question.answer?.id || 0].score"
                         :min="0"
                         :max="question.score"
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || !canGradeAnswer"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || !canGradeAnswer"
                       />
                       <el-input
                         v-model="answerGradeMap[question.answer?.id || 0].teacherComment"
                         type="textarea"
                         :rows="2"
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || !canGradeAnswer"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || !canGradeAnswer"
                         placeholder="输入本题评语"
                       />
                       <el-button
                         type="primary"
                         plain
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || !canGradeAnswer"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || !canGradeAnswer"
                         @click="submitAnswerGrade(question.answer?.id || 0, false)"
                       >
                         保存本题
                       </el-button>
                       <el-button
                         plain
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === 'GRADED' || question.answer?.suggestedScore == null || !canGradeAnswer"
+                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || question.answer?.suggestedScore == null || !canGradeAnswer"
                         @click="submitAnswerGrade(question.answer?.id || 0, true)"
                       >
                         采纳推荐分
@@ -249,7 +249,7 @@
                 v-if="!canGradeAnswer"
                 type="info"
                 :closable="false"
-                :title="selectedSubmission.submitStatus === 'SAVED'
+                :title="selectedSubmission.submitStatus === SUBMISSION_STATUS.SAVED
                   ? '学生尚未提交，当前不可评分'
                   : '该提交已完成批改，当前以结果查看为主；如需继续评分，请切换到待批改记录。'"
                 class="grade-readonly-alert"
@@ -284,13 +284,14 @@
           :loading="returning"
           @click="confirmReturnSubmission"
         >打回</el-button>
-          <el-button type="primary" :loading="submitting" :disabled="!canGradeAnswer" @click="submitGrade">{{ selectedSubmission?.submitStatus === 'SAVED' ? '学生尚未提交' : selectedSubmission?.submitStatus === 'GRADED' ? '已完成批改' : '保存评分' }}</el-button>
+          <el-button type="primary" :loading="submitting" :disabled="!canGradeAnswer" @click="submitGrade">{{ selectedSubmission?.submitStatus === SUBMISSION_STATUS.SAVED ? '学生尚未提交' : selectedSubmission?.submitStatus === SUBMISSION_STATUS.GRADED ? '已完成批改' : '保存评分' }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -326,7 +327,7 @@ const homeworkId = computed(() => route.params.id as string);
 const homeworkTitle = computed(() => rows.value[0]?.homeworkTitle || '');
 
 const canGradeAnswer = computed(() =>
-  ['SUBMITTED', 'GRADED'].includes(selectedSubmission.value?.submitStatus || ''),
+  ([SUBMISSION_STATUS.SUBMITTED, SUBMISSION_STATUS.GRADED] as string[]).includes(selectedSubmission.value?.submitStatus || ''),
 );
 
 const filteredRows = computed(() => {
@@ -355,8 +356,8 @@ const filteredRows = computed(() => {
 });
 
 const activeSubmission = computed(() => filteredRows.value.find(item => item.id === activeSubmissionId.value) || filteredRows.value[0] || null);
-const pendingCount = computed(() => filteredRows.value.filter(row => row.submitStatus === 'SUBMITTED').length);
-const gradedCount = computed(() => filteredRows.value.filter(row => row.submitStatus === 'GRADED').length);
+const pendingCount = computed(() => filteredRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.SUBMITTED).length);
+const gradedCount = computed(() => filteredRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.GRADED).length);
 const riskCount = computed(() => filteredRows.value.filter(row => (row.plagiarismRate ?? -1) >= 40).length);
 
 const averageScoreText = computed(() => {
@@ -459,7 +460,7 @@ const submitGrade = async () => {
 /** 仅已提交或已批改的提交支持打回；打回后学生可重新编辑并再次提交。 */
 const canReturnSubmission = computed(() => {
   const status = selectedSubmission.value?.submitStatus;
-  return status === 'SUBMITTED' || status === 'GRADED';
+  return status === SUBMISSION_STATUS.SUBMITTED || status === SUBMISSION_STATUS.GRADED;
 });
 
 const doReturnSubmission = async () => {
@@ -496,15 +497,15 @@ const resetFilters = () => {
 };
 
 const submissionStatusLabel = (status: HomeworkSubmissionStatus) => {
-  if (status === 'SAVED') return '已保存';
-  if (status === 'SUBMITTED') return '待批改';
-  if (status === 'GRADED') return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '待批改';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
   return status || '未知';
 };
 
 const submissionStatusTagType = (status: HomeworkSubmissionStatus) => {
-  if (status === 'GRADED') return 'success';
-  if (status === 'SUBMITTED') return 'warning';
+  if (status === SUBMISSION_STATUS.GRADED) return 'success';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
   return 'info';
 };
 

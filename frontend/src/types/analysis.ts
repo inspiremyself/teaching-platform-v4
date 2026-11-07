@@ -1,7 +1,9 @@
+export type AnalysisSummaryValue = string | number;
+
 export interface AnalysisSummaryCard {
   key: string;
   title: string;
-  value: number | string;
+  value: AnalysisSummaryValue;
   description: string;
 }
 
@@ -48,6 +50,32 @@ export interface TeacherAnalysisOverview {
   sectionComparison: TeacherComparisonItem[];
   businessBreakdown: TeacherBusinessBreakdownItem[];
   insights: AnalysisInsight[];
+}
+
+export interface TeacherDashboardData {
+  summaryCards: AnalysisSummaryCard[];
+  trend: TeacherTrendItem[];
+  recentTasks: Array<{
+    label: string;
+    title: string;
+    actor: string;
+    eventTime: string | null;
+    route: string;
+  }>;
+  quickLinks: Array<{ label: string; route: string; badge: number }>;
+}
+
+export interface StudentDashboardData {
+  summaryCards: AnalysisSummaryCard[];
+  upcomingTasks: Array<{ type: string; title: string; dueAt: string | null; route: string }>;
+  recentFeedback: Array<{
+    businessType: string;
+    businessName: string;
+    score: number;
+    gradedAt: string | null;
+  }>;
+  recentMaterials: Array<{ title: string; category: string; fileName: string }>;
+  quickLinks: Array<{ label: string; route: string; badge: number }>;
 }
 
 export interface StudentScoreRecord {

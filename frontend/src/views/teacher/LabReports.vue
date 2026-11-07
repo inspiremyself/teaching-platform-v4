@@ -84,9 +84,9 @@
            </el-select>
            <el-select v-model="query.status" placeholder="全部状态" clearable>
              <el-option label="全部状态" value="" />
-             <el-option label="已保存" value="SAVED" />
-             <el-option label="已提交" value="SUBMITTED" />
-            <el-option label="已批改" value="GRADED" />
+             <el-option label="已保存" :value="SUBMISSION_STATUS.SAVED" />
+             <el-option label="已提交" :value="SUBMISSION_STATUS.SUBMITTED" />
+            <el-option label="已批改" :value="SUBMISSION_STATUS.GRADED" />
           </el-select>
           <el-select v-model="query.riskLevel" placeholder="全部风险等级" clearable>
             <el-option label="全部风险等级" value="" />
@@ -149,8 +149,8 @@
 
             <div class="report-row__actions">
               <el-button plain @click="openReportView(row)">实验报告</el-button>
-              <el-button v-if="row.submitStatus !== 'SAVED'" type="primary" plain @click="goBatchGrade(row.id)">
-                {{ row.submitStatus === 'GRADED' ? '查看批量评分' : '进入批量批改' }}
+              <el-button v-if="row.submitStatus !== SUBMISSION_STATUS.SAVED" type="primary" plain @click="goBatchGrade(row.id)">
+                {{ row.submitStatus === SUBMISSION_STATUS.GRADED ? '查看批量评分' : '进入批量批改' }}
               </el-button>
               <el-button
                 type="primary"
@@ -169,7 +169,7 @@
                   <el-dropdown-menu>
                     <el-dropdown-item command="regrade" :disabled="!row.labId">批量重判（填空）</el-dropdown-item>
                     <el-dropdown-item
-                      v-if="row.submitStatus === 'SUBMITTED' || row.submitStatus === 'GRADED'"
+                      v-if="row.submitStatus === SUBMISSION_STATUS.SUBMITTED || row.submitStatus === SUBMISSION_STATUS.GRADED"
                       command="return"
                       :disabled="returningId !== null"
                       :loading="returningId === row.id"
@@ -236,6 +236,7 @@
 </template>
 
 <script setup lang="ts">
+import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -282,7 +283,7 @@ const query = reactive({
 
 const activeStatusLabel = computed(() => statusLabel(query.status || undefined));
 const keywordLabel = computed(() => query.keyword.trim() ? `关键词“${query.keyword.trim()}”` : '未使用关键词');
-const priorityDescription = computed(() => query.status === 'SUBMITTED' ? '待批改报告' : query.labId ? '单实验报告队列' : '实验报告全队列');
+const priorityDescription = computed(() => query.status === SUBMISSION_STATUS.SUBMITTED ? '待批改报告' : query.labId ? '单实验报告队列' : '实验报告全队列');
 const labOptions = computed(() =>
   [...teacherLabs.value].sort((left, right) => left.title.localeCompare(right.title, 'zh-CN')),
 );
@@ -318,16 +319,16 @@ const fetchData = async (options: { resetPage?: boolean } = {}) => {
     if (sequence !== fetchSequence) {
       return;
     }
-    rows.value = result.items;
+    rows.value = result.list;
     total.value = result.total;
     // 越界回退：末页记录被筛选或打回挤掉时，回退到最后一个有效页再取一次
-    if (!result.items.length && page.value > 1 && result.total > 0) {
+    if (!result.list.length && page.value > 1 && result.total > 0) {
       page.value = Math.max(1, Math.ceil(result.total / pageSize.value));
       const fallback = await listTeacherLabReports(buildQuery());
       if (sequence !== fetchSequence) {
         return;
       }
-      rows.value = fallback.items;
+      rows.value = fallback.list;
       total.value = fallback.total;
     }
   } finally {
@@ -368,7 +369,7 @@ const goBatchGrade = (reportId: number) => {
 };
 
 const returnConfirmMessage = (status?: LabReportStatus) =>
-  status === 'GRADED'
+  status === SUBMISSION_STATUS.GRADED
     ? '该报告已批改，打回后成绩将清除，学生可重新编辑提交，是否继续？'
     : '打回后学生可修改作答并重新提交，是否继续？';
 
@@ -432,27 +433,27 @@ const openReportView = (row: LabReportItem) => {
 };
 
 const statusLabel = (status?: LabReportStatus) => {
-  if (status === 'SAVED') return '已保存';
-  if (status === 'SUBMITTED') return '已提交';
-  if (status === 'GRADED') return '已批改';
+  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
+  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
   return status || '全部状态';
 };
 
 const statusTagType = (status?: LabReportStatus) => {
-  if (status === 'GRADED') return 'success';
-  if (status === 'SUBMITTED') return 'warning';
+  if (status === SUBMISSION_STATUS.GRADED) return 'success';
+  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
   return 'info';
 };
 
 const priorityTone = (row: LabReportItem) => {
-  if (row.submitStatus === 'SUBMITTED') return 'warning';
-  if (row.submitStatus === 'GRADED') return 'success';
+  if (row.submitStatus === SUBMISSION_STATUS.SUBMITTED) return 'warning';
+  if (row.submitStatus === SUBMISSION_STATUS.GRADED) return 'success';
   return 'muted';
 };
 
 const priorityLabel = (row: LabReportItem) => {
-  if (row.submitStatus === 'SUBMITTED') return '优先批改';
-  if (row.submitStatus === 'GRADED') return '已完成';
+  if (row.submitStatus === SUBMISSION_STATUS.SUBMITTED) return '优先批改';
+  if (row.submitStatus === SUBMISSION_STATUS.GRADED) return '已完成';
   return '草稿跟进';
 };
 

@@ -85,6 +85,7 @@
 </template>
 
 <script setup lang="ts">
+import { ACTIVITY_STATUS, EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listExams } from '@/api/exams'
@@ -142,9 +143,9 @@ const stageLabel = (row: ExamListItem) => {
 }
 
 const statusLabel = (status: string) => {
-  if (status === 'DRAFT') return '草稿'
-  if (status === 'PUBLISHED') return '已发布'
-  if (status === 'CLOSED') return '已关闭'
+  if (status === ACTIVITY_STATUS.DRAFT) return '草稿'
+  if (status === ACTIVITY_STATUS.PUBLISHED) return '已发布'
+  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭'
   return status
 }
 
@@ -174,17 +175,17 @@ const formatWindow = (startAt?: string | null, endAt?: string | null) => {
 const availabilityHint = (row: ExamListItem) => {
   if (row.canResume) return '你已进入答题状态，可从上次进度继续。'
   if (row.canStart) return '当前处于允许参加的考试窗口，建议尽快开始。'
-  if (row.submissionStatus === 'SUBMITTED' || row.submissionStatus === 'AUTO_SUBMITTED') {
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) {
     return '你已完成交卷，主观题仍可能在等待教师批改。'
   }
   if (row.canViewResult) return '考试已结束，可查看作答结果与教师反馈。'
-  return row.status === 'DRAFT' ? '教师仍在准备试卷，学生端尚不可见。' : '当前不在可参加或可查看结果的状态。'
+  return row.status === ACTIVITY_STATUS.DRAFT ? '教师仍在准备试卷，学生端尚不可见。' : '当前不在可参加或可查看结果的状态。'
 }
 
 const actionHint = (row: ExamListItem) => {
   if (row.canResume) return '进入后直接回到当前答题界面。'
   if (row.canStart) return '进入详情页后可先查看说明，再开始考试。'
-  if (row.submissionStatus === 'SUBMITTED' || row.submissionStatus === 'AUTO_SUBMITTED') return '进入详情页后可查看自动评分与当前批改进度。'
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return '进入详情页后可查看自动评分与当前批改进度。'
   if (row.canViewResult) return '进入详情页后查看总分、题目反馈和状态。'
   return '当前仅展示考试信息。'
 }
@@ -192,7 +193,7 @@ const actionHint = (row: ExamListItem) => {
 const actionText = (row: ExamListItem) => {
   if (row.canResume) return '继续考试'
   if (row.canStart) return '查看并开始'
-  if (row.submissionStatus === 'SUBMITTED' || row.submissionStatus === 'AUTO_SUBMITTED') return '查看进度'
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return '查看进度'
   if (row.canViewResult) return '查看结果'
   return '查看详情'
 }

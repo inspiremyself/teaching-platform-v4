@@ -98,8 +98,8 @@ import { ElMessage } from 'element-plus'
 import { listQuestions } from '@/api/questions'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
 import type { QuestionDifficulty, QuestionItem, QuestionType } from '@/types/question'
-import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/views/teacher/components/typed-editor/constants'
-import { parseQuestionAnswerArray } from '@/views/teacher/components/typed-editor/hydrators/fromQuestion'
+import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/components/typed-editor/constants'
+import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion'
 import QuestionConfigList from './QuestionConfigList.vue'
 
 const props = withDefaults(defineProps<{ visible: boolean; validateJudgeFormat?: boolean }>(), {

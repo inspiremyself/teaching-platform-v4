@@ -48,10 +48,10 @@
 
         <div class="queue-filter-row">
           <el-select v-model="statusFilter" clearable placeholder="全部状态">
-            <el-option label="进行中" value="IN_PROGRESS" />
-            <el-option label="待评分" value="SUBMITTED" />
-            <el-option label="已评分" value="GRADED" />
-            <el-option label="超时提交" value="AUTO_SUBMITTED" />
+            <el-option label="进行中" :value="EXAM_SUBMISSION_STATUS.IN_PROGRESS" />
+            <el-option label="待评分" :value="SUBMISSION_STATUS.SUBMITTED" />
+            <el-option label="已评分" :value="SUBMISSION_STATUS.GRADED" />
+            <el-option label="超时提交" :value="EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED" />
           </el-select>
         </div>
 
@@ -204,13 +204,13 @@
 
         <section class="action-panel">
           <el-alert
-            v-if="detail?.status === 'GRADED'"
+            v-if="detail?.status === SUBMISSION_STATUS.GRADED"
             type="info"
             :closable="false"
             title="当前答卷已评分完成，如需验证保存链路请切换到待评分答卷。"
             class="grading-readonly-alert"
           />
-          <button class="action-panel__primary" type="button" :disabled="!detail || detail.status === 'GRADED' || submitting" @click="submitGrade">
+          <button class="action-panel__primary" type="button" :disabled="!detail || detail.status === SUBMISSION_STATUS.GRADED || submitting" @click="submitGrade">
             <span class="material-symbols-outlined">save</span>
             保存评分
           </button>
@@ -230,6 +230,7 @@
 </template>
 
 <script setup lang="ts">
+import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -266,8 +267,8 @@ const filteredRows = computed(() => {
   })
 })
 
-const pendingCount = computed(() => rows.value.filter(row => row.status === 'SUBMITTED' || row.status === 'AUTO_SUBMITTED').length)
-const gradedCount = computed(() => rows.value.filter(row => row.status === 'GRADED').length)
+const pendingCount = computed(() => rows.value.filter(row => row.status === SUBMISSION_STATUS.SUBMITTED || row.status === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED).length)
+const gradedCount = computed(() => rows.value.filter(row => row.status === SUBMISSION_STATUS.GRADED).length)
 const activeRow = computed(() => rows.value.find(row => row.submissionId === activeSubmissionId.value) ?? null)
 const activeStudentLabel = computed(() => activeRow.value?.studentName ?? '尚未选择')
 const examSummary = computed(() => `共 ${rows.value.length} 份提交记录，其中 ${pendingCount.value} 份待处理、${gradedCount.value} 份已评分。`)
@@ -394,17 +395,17 @@ const releaseScores = async () => {
 const isManualQuestion = (answer: ExamAnswerDetail) => answer.isCorrect === null
 
 const submissionStatusLabel = (status: string) => {
-  if (status === 'IN_PROGRESS') return '进行中'
-  if (status === 'SUBMITTED') return '待评分'
-  if (status === 'GRADED') return '已评分'
-  if (status === 'AUTO_SUBMITTED') return '超时提交'
+  if (status === EXAM_SUBMISSION_STATUS.IN_PROGRESS) return '进行中'
+  if (status === SUBMISSION_STATUS.SUBMITTED) return '待评分'
+  if (status === SUBMISSION_STATUS.GRADED) return '已评分'
+  if (status === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return '超时提交'
   return status || '未知'
 }
 
 const submissionStatusTone = (status: string) => {
-  if (status === 'GRADED') return 'success'
-  if (status === 'SUBMITTED') return 'warning'
-  if (status === 'AUTO_SUBMITTED') return 'danger'
+  if (status === SUBMISSION_STATUS.GRADED) return 'success'
+  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning'
+  if (status === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return 'danger'
   return 'info'
 }
 

@@ -238,9 +238,9 @@ import { createQuestion, deleteQuestion, listQuestions, updateQuestion } from '@
 import QuestionConfigList from '@/components/question-config/QuestionConfigList.vue';
 import { isQuestionType, type QuestionDifficulty, type QuestionItem, type QuestionType } from '@/types/question';
 import type { ConfiguredQuestionItem } from '@/types/question-config';
-import { buildQuestionPayloadFromDraft, normalizeQuestionType } from './components/typed-editor/adapters/questionAdapter';
-import { parseQuestionAnswerArray } from './components/typed-editor/hydrators/fromQuestion';
-import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from './components/typed-editor/constants';
+import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
+import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion';
+import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/components/typed-editor/constants';
 import QuestionEditorDialog, {
   type QuestionEditorDialogSubmitPayload,
   type QuestionEditorDialogValue,
