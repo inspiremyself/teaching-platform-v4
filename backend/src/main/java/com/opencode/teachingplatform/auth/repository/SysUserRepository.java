@@ -11,7 +11,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SysUserRepository extends JpaRepository<SysUser, Long> {
+    /**
+     * 兼容单校场景的旧查询；跨校同名账号由 {@link #findAllByUsernameAndRole} 返回全部候选。
+     */
     Optional<SysUser> findByUsernameAndRole(String username, UserRole role);
+    List<SysUser> findAllByUsernameAndRole(String username, UserRole role);
     Optional<SysUser> findByUsername(String username);
     boolean existsByUsername(String username);
     boolean existsBySchoolIdAndUsername(Long schoolId, String username);

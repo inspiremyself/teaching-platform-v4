@@ -1,5 +1,6 @@
 package com.opencode.teachingplatform.lab.repository;
 
+import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.lab.entity.LabSubmission;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -55,6 +56,15 @@ public interface LabSubmissionRepository extends JpaRepository<LabSubmission, Lo
     List<LabSubmission> findByStudentId(Long studentId);
 
     List<LabSubmission> findByLabId(Long labId);
+
+    /**
+     * 查重候选查询：只取同一实验下指定状态的提交，避免跨实验互相比较。
+     *
+     * @param labId    实验 id
+     * @param statuses 提交状态集合
+     * @return 候选提交列表
+     */
+    List<LabSubmission> findByLabIdAndSubmitStatusIn(Long labId, Collection<SubmissionStatus> statuses);
 
     List<LabSubmission> findByLabIdIn(List<Long> labIds);
 

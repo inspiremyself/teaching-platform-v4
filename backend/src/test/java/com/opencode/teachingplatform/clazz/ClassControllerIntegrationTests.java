@@ -50,6 +50,7 @@ class ClassControllerIntegrationTests {
                         .content("{}"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value(50000))
-                .andExpect(jsonPath("$.message").value("Request method 'POST' is not supported"));
+                // 全局兜底已脱敏：不再回显框架异常信息
+                .andExpect(jsonPath("$.message").value("系统繁忙，请稍后重试"));
     }
 }

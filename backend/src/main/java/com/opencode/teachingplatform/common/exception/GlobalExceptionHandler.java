@@ -61,7 +61,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleOther(Exception ex) {
+        // 全局兜底脱敏：响应不携带异常信息，完整堆栈只写日志，避免泄露 SQL / 表名 / 类名
+        log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.of(50000, ex.getMessage(), null));
+                .body(ApiResponse.of(50000, "系统繁忙，请稍后重试", null));
     }
 }

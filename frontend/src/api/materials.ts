@@ -13,6 +13,7 @@ export const uploadMaterial = (data: UploadMaterialPayload) => {
   formData.append('file', data.file);
   return request.post<MaterialItem>('/materials', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
   });
 };
 

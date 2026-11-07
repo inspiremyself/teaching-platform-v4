@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
@@ -106,7 +107,9 @@ public final class AdminRequests {
 
     public record ResetStudentPasswordRequest(
             @NotBlank(message = "新密码不能为空")
-            @Size(min = 6, max = 32, message = "密码长度必须在6到32个字符之间")
+            // 长度与字符组成合并为单条规则，避免 @Size 与 @Pattern 同时命中时文案重复拼接
+            @Pattern(regexp = "^(?:(?=.*[A-Za-z])(?=.*\\d).{8,64})?$",
+                     message = "新密码需 8-64 位，且同时包含字母和数字")
             String password
     ) {
     }

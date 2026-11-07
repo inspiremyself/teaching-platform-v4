@@ -396,6 +396,35 @@ class AnalysisServiceTests {
 
     @Test
     @SuppressWarnings("unchecked")
+    void closedActivitiesStillCountInCompletionDenominator() {
+        seedVisibilityFixture("IMMEDIATE", false, futureDeadline(), "GRADED", 80.0);
+        Map<String, Object> before = analysisService.getMyScoreOverview(student());
+
+        // 三类活动全部关闭后，分母口径不变（PUBLISHED + CLOSED）
+        updateBusinessStatuses("CLOSED");
+
+        Map<String, Object> after = analysisService.getMyScoreOverview(student());
+
+        assertEquals(totalItems(before), totalItems(after));
+        assertEquals(completionRate(before), completionRate(after), 0.001);
+        assertTrue(completionRate(after) <= 100.0);
+    }
+
+    private static int totalItems(Map<String, Object> overview) {
+        return ((Number) overview.get("totalItems")).intValue();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static double completionRate(Map<String, Object> overview) {
+        return ((List<Map<String, Object>>) overview.get("summaryCards")).stream()
+                .filter(card -> "completionRate".equals(card.get("key")))
+                .map(card -> ((Number) card.get("value")).doubleValue())
+                .findFirst()
+                .orElseThrow();
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void emptyVisibleResultReturnsZeroedOverview() {
         CurrentUser emptyStudent = new CurrentUser(9999L, "no-score-student", "无成绩学生", UserRole.STUDENT, 1L, "test-session");
 

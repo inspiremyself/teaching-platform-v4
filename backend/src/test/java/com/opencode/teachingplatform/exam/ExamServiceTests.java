@@ -318,6 +318,44 @@ class ExamServiceTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void confirmAnswerRejectsObjectiveQuestionManualScoring() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = ((Number) ((Map<String, Object>) examService.startExam(student, examId))
+                .get("submissionId")).longValue();
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(2L, List.of("true"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(3L, null, "统一错误处理与前端解析", null, null)
+        )));
+
+        // 客观题：手工给分与采纳推荐分都必须被拒绝
+        assertThatThrownBy(() -> examService.confirmAnswer(
+                teacher,
+                submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(1L, "尝试手工改分", 0D, false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("客观题由系统自动评分，不支持手工改分");
+        assertThatThrownBy(() -> examService.confirmAnswer(
+                teacher,
+                submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(1L, "尝试采纳推荐分", null, true)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("客观题不接受推荐分");
+
+        // 拒绝后客观题分数仍是系统自动评分结果，未被教师请求影响
+        Double objectiveScore = jdbcTemplate.queryForObject(
+                "SELECT score FROM exam_answer WHERE exam_submission_id = ? AND question_id = ?",
+                Double.class,
+                submissionId,
+                1L
+        );
+        assertThat(objectiveScore).isEqualTo(5.0D);
+    }
+
+    @Test
     void multipleChoiceScoringRequiresExactMatch() {
         ExamScoringService scoringService = new ExamScoringService();
 

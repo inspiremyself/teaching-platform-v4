@@ -107,8 +107,21 @@ router.beforeEach(async to => {
   const authStore = useAuthStore();
 
   if (to.meta.public) {
-    if (authStore.token && to.path === '/login') {
-      return authStore.homePath;
+    if (authStore.token) {
+      if (!authStore.user) {
+        try {
+          await authStore.fetchUserInfo();
+        } catch (err) {
+          if (err instanceof ApiError && [401, 40100, 40102].includes(err.code)) {
+            authStore.logout();
+          }
+          // 网络/超时/5xx：保留 token 与 user，停留在当前页
+          return true;
+        }
+      }
+      if (to.path === '/login' || to.path === '/') {
+        return authStore.homePath;
+      }
     }
     return true;
   }

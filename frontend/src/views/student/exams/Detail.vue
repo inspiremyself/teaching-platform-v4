@@ -359,7 +359,9 @@ const submitting = ref(false)
 const resultAnswerMap = ref<Record<number, ExamAnswerDetail>>({})
 
 let timer: number | undefined
-// 考试截止时间：来自 startExam 或详情接口，用于截止只读判定与失败后恢复计时
+let baselineSeconds = 0
+let baselineAt = 0
+// 考试截止时间：来自 startExam 或详情接口，用于截止只读判定
 const deadlineAt = ref<string | null>(null)
 const deadlineReached = computed(() => deadlineAt.value != null && remainingSeconds.value <= 0)
 
@@ -670,10 +672,14 @@ function formatTime(seconds: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(leftSeconds).padStart(2, '0')}`
 }
 
-function startTimer(deadlineAt: string) {
+/** 以服务端返回的剩余秒数为基线本地递减，避免本机时间偏移影响倒计时。 */
+function startTimer(remaining: number) {
   stopTimer()
+  baselineSeconds = Math.max(0, Math.floor(remaining))
+  baselineAt = Date.now()
   const update = () => {
-    remainingSeconds.value = Math.max(0, Math.floor((new Date(deadlineAt).getTime() - Date.now()) / 1000))
+    const elapsed = Math.floor((Date.now() - baselineAt) / 1000)
+    remainingSeconds.value = Math.max(0, baselineSeconds - elapsed)
     if (remainingSeconds.value <= 0) {
       stopTimer()
       autoSubmit()
@@ -681,6 +687,12 @@ function startTimer(deadlineAt: string) {
   }
   update()
   timer = window.setInterval(update, 1000)
+}
+
+/** 响应缺少 remainingSeconds 时，用 deadlineAt 计算一次基线。 */
+function secondsUntil(deadline?: string | null): number {
+  if (!deadline) return 0
+  return Math.max(0, Math.floor((new Date(deadline).getTime() - Date.now()) / 1000))
 }
 
 function stopTimer() {
@@ -793,13 +805,13 @@ function analysisTextOf(questionId: number, question: ExamQuestionView): string 
 async function doStart() {
   starting.value = true
   try {
-    const response = await startExam(examId) as { deadlineAt?: string }
+    const response = await startExam(examId) as { deadlineAt?: string; remainingSeconds?: number }
     if (response?.deadlineAt) {
       deadlineAt.value = response.deadlineAt
       detail.value = await getExamDetail(examId)
       questions.value = detail.value ? orderedQuestions(detail.value) : []
       loadSavedAnswers()
-      startTimer(response.deadlineAt)
+      startTimer(response.remainingSeconds ?? secondsUntil(response.deadlineAt))
       state.value = 'B'
     } else {
       await loadExam()
@@ -876,7 +888,7 @@ async function doSubmit(options: { manual?: boolean } = {}) {
       deadlineSubmitFailed.value = true
       ElMessage.error('交卷结果未同步，请重试')
       // 未到截止点仍需继续倒计时，避免计时停摆
-      if (!deadlineReached.value && deadlineAt.value) startTimer(deadlineAt.value)
+      if (!deadlineReached.value && deadlineAt.value) startTimer(remainingSeconds.value)
       return
     }
     if (deadlineReached.value) {
@@ -893,7 +905,7 @@ async function doSubmit(options: { manual?: boolean } = {}) {
     submitting.value = false
     // 未到截止点且未处于失败态时恢复倒计时，避免一次失败导致计时永久停摆
     if (!deadlineSubmitFailed.value && state.value === 'B' && !deadlineReached.value && deadlineAt.value) {
-      startTimer(deadlineAt.value)
+      startTimer(remainingSeconds.value)
     }
   }
 }
@@ -954,8 +966,9 @@ async function loadExam() {
     loadSavedAnswers()
     // 详情缺省 deadlineAt 时保留已知值，避免已获得的截止时间被覆盖后重新可编辑
     deadlineAt.value = data.deadlineAt ?? deadlineAt.value
-    if (deadlineAt.value) {
-      startTimer(deadlineAt.value)
+    const baseline = data.remainingSeconds ?? (deadlineAt.value ? secondsUntil(deadlineAt.value) : null)
+    if (baseline != null) {
+      startTimer(baseline)
     }
     state.value = 'B'
   } else if (data.submissionStatus) {
@@ -967,10 +980,14 @@ async function loadExam() {
   }
 }
 
-/** 页面隐藏（切后台 / 锁屏）时立即落盘；关闭标签页浏览器不保证异步请求，故不注册 beforeunload 保存。 */
+/** 页面隐藏（切后台 / 锁屏）时立即落盘；重新可见时重拉详情，用服务端剩余时间校正倒计时。 */
 function onVisibilityChange() {
   if (document.visibilityState === 'hidden') {
     void flushDraft()
+    return
+  }
+  if (document.visibilityState === 'visible' && state.value === 'B') {
+    void loadExam()
   }
 }
 

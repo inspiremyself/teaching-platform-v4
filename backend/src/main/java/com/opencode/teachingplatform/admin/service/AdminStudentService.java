@@ -14,6 +14,7 @@ import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
 import com.opencode.teachingplatform.common.audit.AuditResourceType;
+import com.opencode.teachingplatform.common.enums.EnumValueParser;
 import com.opencode.teachingplatform.common.enums.LoginSessionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
@@ -22,6 +23,7 @@ import com.opencode.teachingplatform.student.dto.StudentRequests.ImportStudentRo
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,19 +43,22 @@ public class AdminStudentService {
     private final ClassMemberRepository classMemberRepository;
     private final AuditLogService auditLogService;
     private final UserLoginSessionRepository userLoginSessionRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AdminStudentService(
             SysUserRepository sysUserRepository,
             ClassRoomRepository classRoomRepository,
             ClassMemberRepository classMemberRepository,
             AuditLogService auditLogService,
-            UserLoginSessionRepository userLoginSessionRepository
+            UserLoginSessionRepository userLoginSessionRepository,
+            PasswordEncoder passwordEncoder
     ) {
         this.sysUserRepository = sysUserRepository;
         this.classRoomRepository = classRoomRepository;
         this.classMemberRepository = classMemberRepository;
         this.auditLogService = auditLogService;
         this.userLoginSessionRepository = userLoginSessionRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -179,11 +184,8 @@ public class AdminStudentService {
     public Map<String, Object> resetPassword(CurrentUser currentUser, Long studentId,
                                              ResetStudentPasswordRequest request) {
         SysUser student = requireStudent(currentUser, studentId);
-        String newPassword = request.password().trim();
-        if (newPassword.length() < 6 || newPassword.length() > 32) {
-            throw new BusinessException(40000, "密码长度必须在6到32个字符之间");
-        }
-        student.setPasswordHash("{noop}" + newPassword);
+        // 强度规则由 ResetStudentPasswordRequest 的校验注解保证，这里不再重复手写判断
+        student.setPasswordHash(passwordEncoder.encode(request.password()));
         student.setMustChangePassword(false);
         sysUserRepository.save(student);
 
@@ -213,18 +215,14 @@ public class AdminStudentService {
     }
 
     private UserStatus parseStatus(String status) {
-        try {
-            return UserStatus.valueOf(status.trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException(40000, "学生状态不合法");
-        }
+        return EnumValueParser.parse(UserStatus.class, status, "学生状态");
     }
 
     private SysUser buildStudent(Long schoolId, String username, String displayName, String password) {
         SysUser user = new SysUser();
         user.setSchoolId(schoolId);
         user.setUsername(username.trim());
-        user.setPasswordHash("{noop}" + password);
+        user.setPasswordHash(passwordEncoder.encode(password));
         user.setRole(UserRole.STUDENT);
         user.setDisplayName(displayName.trim());
         user.setStatus(UserStatus.ACTIVE);

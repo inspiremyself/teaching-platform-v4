@@ -10,10 +10,12 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 @Service
@@ -165,18 +167,24 @@ public class AnalysisService {
                 records.stream().mapToDouble(VisibleScore::score).average().orElse(0.0));
         double highestScore = records.isEmpty() ? 0.0 : roundOne(
                 records.stream().mapToDouble(VisibleScore::score).max().orElse(0.0));
-        int completedItems = records.size();
+        // 完成率口径：分母 = 三类活动 PUBLISHED / CLOSED；分子按 (businessType, businessId) 去重后命中分母
+        Set<String> activeKeys = loadActiveBusinessKeys(student.id());
+        int completedItems = (int) records.stream()
+                .map(record -> record.businessType().name() + "#" + record.businessId())
+                .distinct()
+                .filter(activeKeys::contains)
+                .count();
         int totalItems = count(
                 "SELECT COUNT(*) FROM t_experiment e JOIN class_member cm ON cm.class_id = e.class_id " +
-                        "WHERE cm.student_user_id = ? AND e.status = 'PUBLISHED'",
+                        "WHERE cm.student_user_id = ? AND e.status IN ('PUBLISHED','CLOSED')",
                 student.id()
         ) + count(
                 "SELECT COUNT(*) FROM homework h JOIN class_member cm ON cm.class_id = h.class_id " +
-                        "WHERE cm.student_user_id = ? AND h.status = 'PUBLISHED'",
+                        "WHERE cm.student_user_id = ? AND h.status IN ('PUBLISHED','CLOSED')",
                 student.id()
         ) + count(
                 "SELECT COUNT(*) FROM exam ex JOIN class_member cm ON cm.class_id = ex.class_id " +
-                        "WHERE cm.student_user_id = ? AND ex.status = 'PUBLISHED'",
+                        "WHERE cm.student_user_id = ? AND ex.status IN ('PUBLISHED','CLOSED')",
                 student.id()
         );
 
@@ -341,6 +349,35 @@ public class AnalysisService {
     private int count(String sql, Object... args) {
         Integer result = jdbcTemplate.queryForObject(sql, Integer.class, args);
         return result != null ? result : 0;
+    }
+
+    /**
+     * 构造当前学生可见分母的活跃业务键集合。
+     *
+     * <p>元素格式与成绩记录的业务键一致：{@code LAB#id} / {@code HOMEWORK#id} / {@code EXAM#id}。
+     * 只统计状态为 {@code PUBLISHED} / {@code CLOSED} 的活动，草稿不计入分母。</p>
+     *
+     * @param studentId 学生用户 id
+     * @return 活跃业务键集合
+     */
+    private Set<String> loadActiveBusinessKeys(Long studentId) {
+        Set<String> keys = new HashSet<>();
+        keys.addAll(jdbcTemplate.queryForList(
+                "SELECT CONCAT('LAB#', e.experiment_id) FROM t_experiment e " +
+                        "JOIN class_member cm ON cm.class_id = e.class_id " +
+                        "WHERE cm.student_user_id = ? AND e.status IN ('PUBLISHED','CLOSED')",
+                String.class, studentId));
+        keys.addAll(jdbcTemplate.queryForList(
+                "SELECT CONCAT('HOMEWORK#', h.id) FROM homework h " +
+                        "JOIN class_member cm ON cm.class_id = h.class_id " +
+                        "WHERE cm.student_user_id = ? AND h.status IN ('PUBLISHED','CLOSED')",
+                String.class, studentId));
+        keys.addAll(jdbcTemplate.queryForList(
+                "SELECT CONCAT('EXAM#', ex.id) FROM exam ex " +
+                        "JOIN class_member cm ON cm.class_id = ex.class_id " +
+                        "WHERE cm.student_user_id = ? AND ex.status IN ('PUBLISHED','CLOSED')",
+                String.class, studentId));
+        return keys;
     }
 
     private Map<String, Object> summaryCard(String key, String title, Object value, String description) {

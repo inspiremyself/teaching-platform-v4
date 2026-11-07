@@ -5,7 +5,7 @@ export type HomeworkStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED' | string;
 
 export type HomeworkSubmissionStatus = 'SAVED' | 'SUBMITTED' | 'GRADED' | string;
 
-export type ScoreVisibilityMode = 'IMMEDIATE' | 'AFTER_SUBMIT' | 'AFTER_TEACHER_CONFIRM' | 'HIDDEN' | string;
+export type ScoreVisibilityMode = 'IMMEDIATE' | 'AFTER_TEACHER_CONFIRM' | 'AFTER_DEADLINE' | 'MANUAL_RELEASE';
 
 export interface HomeworkQuestionAnswer {
   id: number;
@@ -192,7 +192,7 @@ export interface TeacherHomeworkDetail {
   classId: number;
   className: string;
   status: string;
-  scoreVisibilityMode: string;
+  scoreVisibilityMode: ScoreVisibilityMode;
   startAt: string | null;
   dueAt: string | null;
   attachmentPath: string | null;

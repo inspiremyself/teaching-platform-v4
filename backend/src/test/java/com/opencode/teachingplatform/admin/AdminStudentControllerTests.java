@@ -202,7 +202,7 @@ class AdminStudentControllerTests extends AdminIntegrationTestSupport {
 
         String passwordHash = jdbcTemplate.queryForObject(
                 "SELECT password_hash FROM sys_user WHERE id = ?", String.class, studentId);
-        assertThat(passwordHash).isEqualTo("{noop}newpass123");
+        assertThat(passwordHash).startsWith("{bcrypt}");
         Boolean mustChangePassword = jdbcTemplate.queryForObject(
                 "SELECT must_change_password FROM sys_user WHERE id = ?", Boolean.class, studentId);
         assertThat(mustChangePassword).isFalse();
@@ -313,9 +313,9 @@ class AdminStudentControllerTests extends AdminIntegrationTestSupport {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(40000))
-                .andExpect(jsonPath("$.message").value("密码长度必须在6到32个字符之间"));
+                .andExpect(jsonPath("$.message").value("新密码需 8-64 位，且同时包含字母和数字"));
 
-        String tooLong = "a".repeat(33);
+        String tooLong = "a".repeat(65);
         mockMvc.perform(post("/api/v1/admin/students/%d/password".formatted(studentId))
                         .header("Authorization", adminBearer())
                         .contentType(MediaType.APPLICATION_JSON)

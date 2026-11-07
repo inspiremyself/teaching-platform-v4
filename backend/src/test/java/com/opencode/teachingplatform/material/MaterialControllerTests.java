@@ -122,6 +122,7 @@ class MaterialControllerTests {
 
         CourseMaterial material = materials.getFirst();
         assertThat(material.getUploaderUserId()).isEqualTo(1L);
+        assertThat(material.getSchoolId()).isEqualTo(1L);
         assertThat(material.getFilePath()).isNotBlank();
         assertThat(Files.readString(storageRoot.resolve(material.getFilePath()))).isEqualTo("real material bytes");
     }
@@ -166,8 +167,8 @@ class MaterialControllerTests {
     void seededVisibleMaterialDownloadReturnsBytes() throws Exception {
         jdbcTemplate.update(
                 """
-                INSERT INTO course_material (id, title, category, description, file_path, file_name, uploader_user_id, visibility, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO course_material (id, title, category, description, file_path, file_name, uploader_user_id, visibility, school_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
                 200L,
                 "实验安全规范",
@@ -176,7 +177,8 @@ class MaterialControllerTests {
                 "materials/lab-safety.txt",
                 "lab-safety.txt",
                 1L,
-                "ALL"
+                "ALL",
+                1L
         );
         seedMaterialInitializer.run(new DefaultApplicationArguments(new String[0]));
         byte[] seededBytes = new ClassPathResource("seed-files/materials/lab-safety.txt").getInputStream().readAllBytes();
@@ -240,8 +242,8 @@ class MaterialControllerTests {
 
         jdbcTemplate.update(
                 """
-                INSERT INTO course_material (title, category, description, file_path, file_name, uploader_user_id, visibility, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO course_material (title, category, description, file_path, file_name, uploader_user_id, visibility, school_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 """,
                 title,
                 "COURSE",
@@ -249,7 +251,8 @@ class MaterialControllerTests {
                 relativePath.toString().replace('\\', '/'),
                 fileName,
                 uploaderUserId,
-                visibility
+                visibility,
+                1L
         );
         Long id = jdbcTemplate.queryForObject("SELECT MAX(id) FROM course_material", Long.class);
         assertThat(id).isNotNull();

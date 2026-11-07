@@ -12,6 +12,7 @@ import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.common.api.PagedResult;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.common.enums.EnumValueParser;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
@@ -37,12 +38,16 @@ import com.opencode.teachingplatform.lab.repository.LabStepRepository;
 import com.opencode.teachingplatform.lab.repository.LabSubmissionRepository;
 import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import com.opencode.teachingplatform.material.repository.CourseMaterialRepository;
+import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
+import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import jakarta.persistence.criteria.Predicate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -84,6 +89,8 @@ import java.util.stream.Collectors;
  */
 public class LabService {
 
+    private static final Logger log = LoggerFactory.getLogger(LabService.class);
+
     /** 教师报告队列默认每页条数。 */
     private static final int DEFAULT_REPORT_PAGE_SIZE = 10;
 
@@ -111,6 +118,8 @@ public class LabService {
     private final BehaviorEventRepository behaviorEventRepository;
     private final Path storageRoot;
     private final LabSubmissionClaimService labSubmissionClaimService;
+    private final LocalPlagiarismService localPlagiarismService;
+    private final PlagiarismTaskWriter plagiarismTaskWriter;
 
     public LabService(LabRepository labRepository,
                       LabStepRepository labStepRepository,
@@ -132,6 +141,8 @@ public class LabService {
                       LabSubmissionMetricsRepository labSubmissionMetricsRepository,
                       BehaviorEventRepository behaviorEventRepository,
                       LabSubmissionClaimService labSubmissionClaimService,
+                      LocalPlagiarismService localPlagiarismService,
+                      PlagiarismTaskWriter plagiarismTaskWriter,
                       @Value("${app.file-storage-root}") String storageRoot) {
         this.labRepository = labRepository;
         this.labStepRepository = labStepRepository;
@@ -153,6 +164,8 @@ public class LabService {
         this.labSubmissionMetricsRepository = labSubmissionMetricsRepository;
         this.behaviorEventRepository = behaviorEventRepository;
         this.labSubmissionClaimService = labSubmissionClaimService;
+        this.localPlagiarismService = localPlagiarismService;
+        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.storageRoot = Path.of(storageRoot).toAbsolutePath().normalize();
     }
 
@@ -175,6 +188,8 @@ public class LabService {
     public Map<String, Object> createLab(CurrentUser currentUser, LabRequests.CreateLabRequest request) {
         requireTeacher(currentUser);
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
+        // 引用资料必须属于本校，校验先于任何实体写入
+        assertMaterialAccessible(currentUser, request.materialId());
         if (parseStatus(request.status()) == ActivityStatus.PUBLISHED) {
             throw new BusinessException(40000, LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE);
         }
@@ -336,6 +351,8 @@ public class LabService {
         requireTeacher(currentUser);
         Lab lab = ownedLab(currentUser, labId);
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
+        // 引用资料必须属于本校，校验先于 applyLab 的任何赋值
+        assertMaterialAccessible(currentUser, request.materialId());
         boolean statusProvided = request.status() != null && !request.status().isBlank();
         // 不传 status 表示保持当前状态，只有显式传值才可能触发状态回退。
         ActivityStatus targetStatus = statusProvided ? parseStatus(request.status()) : lab.getStatus();
@@ -640,15 +657,11 @@ public class LabService {
             scopeLabIds = List.of(query.labId());
         }
 
-        // 4. 状态筛选：非法状态按"等值匹配不到"处理，即空结果而不是报错（与改造前一致）
+        // 4. 状态筛选：非法状态统一抛 40000，不再静默返回空页（FR-10）
         SubmissionStatus statusFilter = null;
         String rawStatus = query == null ? null : query.status();
         if (!isBlank(rawStatus)) {
-            try {
-                statusFilter = SubmissionStatus.valueOf(rawStatus.trim().toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException ex) {
-                return new PagedResult<>(List.of(), page, pageSize, 0);
-            }
+            statusFilter = EnumValueParser.parse(SubmissionStatus.class, rawStatus, "报告状态");
         }
 
         // 5. 行为风险等级筛选：内存命中集模式（D10）。命中集基于已落库 metrics，
@@ -823,7 +836,11 @@ public class LabService {
         detail.put("teacherComment", submission.getTeacherComment());
         detail.put("submittedAt", submission.getSubmittedAt());
         detail.put("gradedAt", submission.getGradedAt());
-        detail.put("items", steps.stream().map(step -> toTeacherReportItem(step, answers)).toList());
+        // 查重率统一读取提交行上的真实结果（草稿未提交为 0）
+        detail.put("plagiarismRate", submission.getPlagiarismRate());
+        detail.put("items", steps.stream()
+                .map(step -> toTeacherReportItem(step, answers, submission.getPlagiarismRate()))
+                .toList());
         return detail;
     }
 
@@ -1276,6 +1293,8 @@ public class LabService {
         // 提交瞬间前端缓冲中的尾部事件（LAB_LEAVE、末段心跳）可能尚未到达，
         // 本次以已到事件为准，迟到事件由教师首读的懒算兜底重算（时机②）
         labBehaviorMetricsService.computeForSubmission(submission);
+        // 查重作为提交链路最后一个外部副作用：失败只降级查重率，不阻断提交
+        refreshPlagiarism(lab, submission);
         return Map.of(
                 "submissionId", submission.getId(),
                 "status", submission.getSubmitStatus().name()
@@ -1688,7 +1707,9 @@ public class LabService {
     }
 
     private ActivityStatus parseStatus(String value) {
-        return value == null || value.isBlank() ? ActivityStatus.DRAFT : ActivityStatus.valueOf(value);
+        return value == null || value.isBlank()
+                ? ActivityStatus.DRAFT
+                : EnumValueParser.parse(ActivityStatus.class, value, "实验状态");
     }
 
     private void applyLab(Lab lab,
@@ -1783,6 +1804,26 @@ public class LabService {
         target.put("materialTitle", defaultString(material.getTitle()));
         target.put("materialFileName", defaultString(material.getFileName()));
         target.put("materialDownloadUrl", "/api/v1/materials/" + material.getId() + "/download");
+    }
+
+    /**
+     * 校验实验引用资料归属于当前教师所在学校。
+     *
+     * <p>资料为选填，{@code materialId} 为空时直接放行；资料不存在与非本校资料统一拒绝，
+     * 避免通过实验配置越权引用他校资料。</p>
+     *
+     * @param currentUser 当前登录教师
+     * @param materialId  资料 id，可为 null
+     */
+    private void assertMaterialAccessible(CurrentUser currentUser, Long materialId) {
+        if (materialId == null) {
+            return;
+        }
+        CourseMaterial material = courseMaterialRepository.findById(materialId)
+                .orElseThrow(() -> new BusinessException(40000, "资料不存在"));
+        if (!Objects.equals(material.getSchoolId(), currentUser.schoolId())) {
+            throw new BusinessException(40000, "无权限引用该资料");
+        }
     }
 
     private void applyStep(LabStep step, Long labId, Integer stepNo, String title, String questionType, String content, String answerConfigJson, Integer stepScore, boolean allowPaste) {
@@ -1901,6 +1942,82 @@ public class LabService {
             submission.setGradedAt(null);
         }
         labSubmissionRepository.save(submission);
+    }
+
+    /**
+     * 刷新实验提交的查重率与查重任务。
+     *
+     * <p>分析阶段与写入阶段分别 try/catch 降级：分析与任务写入任何失败都只把查重率置 0，
+     * 不阻断提交主流程；任务写入使用独立事务（{@link PlagiarismTaskWriter}），
+     * 其回滚不会污染外层提交事务。</p>
+     *
+     * @param lab        当前实验
+     * @param submission 当前提交
+     */
+    private void refreshPlagiarism(Lab lab, LabSubmission submission) {
+        LocalPlagiarismService.PlagiarismAnalysisResult result;
+        try {
+            String sourceText = labSubmissionText(submission.getId());
+            if (sourceText.isBlank()) {
+                submission.setPlagiarismRate(0D);
+                labSubmissionRepository.save(submission);
+                return;
+            }
+            List<LocalPlagiarismService.CandidateText> candidates =
+                    labSubmissionRepository.findByLabIdAndSubmitStatusIn(
+                                    lab.getId(), List.of(SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED))
+                            .stream()
+                            .filter(candidate -> !Objects.equals(candidate.getId(), submission.getId()))
+                            .map(candidate -> Map.entry(candidate, labSubmissionText(candidate.getId())))
+                            .filter(entry -> !entry.getValue().isBlank())
+                            .map(entry -> new LocalPlagiarismService.CandidateText(
+                                    resolveLabReference(lab, entry.getKey().getStudentId()), entry.getValue()))
+                            .toList();
+            result = localPlagiarismService.analyze(sourceText, candidates);
+        } catch (Exception ex) {
+            log.warn("实验查重分析失败，降级为 0: labId={}, submissionId={}", lab.getId(), submission.getId(), ex);
+            submission.setPlagiarismRate(0D);
+            labSubmissionRepository.save(submission);
+            return;
+        }
+
+        try {
+            submission.setPlagiarismRate(result.similarityRate());
+            labSubmissionRepository.save(submission);
+            plagiarismTaskWriter.write(BusinessType.LAB, submission.getId(), submission.getStudentId(),
+                    result.similarityRate(), result.topMatchSummary(), result.rawResultJson());
+        } catch (Exception ex) {
+            // writer 为 REQUIRES_NEW，其回滚不污染外层事务；此处只降级查重率
+            log.warn("实验查重任务写入失败，降级为 0: labId={}, submissionId={}", lab.getId(), submission.getId(), ex);
+            submission.setPlagiarismRate(0D);
+            labSubmissionRepository.save(submission);
+        }
+    }
+
+    /**
+     * 拼接整份实验提交的作答文本，供查重比对。
+     *
+     * <p>与作业查重同口径：{@code answerText} 为空时回退 {@code answerJson}，
+     * 避免选择题 / JSON 作答被当成空文本导致查重恒为 0。</p>
+     */
+    private String labSubmissionText(Long submissionId) {
+        return labStepAnswerRepository.findByLabSubmissionId(submissionId).stream()
+                .map(answer -> answer.getAnswerText() == null || answer.getAnswerText().isBlank()
+                        ? answer.getAnswerJson()
+                        : answer.getAnswerText())
+                .filter(Objects::nonNull)
+                .filter(text -> !text.isBlank())
+                .collect(Collectors.joining("\n"));
+    }
+
+    /**
+     * 生成实验查重候选的可读来源标识，便于教师定位相似报告。
+     */
+    private String resolveLabReference(Lab lab, Long studentId) {
+        String studentName = sysUserRepository.findById(studentId)
+                .map(SysUser::getDisplayName)
+                .orElse("学生#" + studentId);
+        return "实验《" + lab.getTitle() + "》-" + studentName;
     }
 
     private void refreshSavedSubmissionAfterScoring(LabSubmission submission) {
@@ -2091,7 +2208,7 @@ public class LabService {
                 .collect(Collectors.toMap(ClassRoom::getId, ClassRoom::getName));
     }
 
-    private Map<String, Object> toTeacherReportItem(LabStep step, List<LabStepAnswer> answers) {
+    private Map<String, Object> toTeacherReportItem(LabStep step, List<LabStepAnswer> answers, Double plagiarismRate) {
         LabStepAnswer answer = answers.stream().filter(item -> Objects.equals(item.getLabStepId(), step.getId())).findFirst().orElse(null);
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("stepId", step.getId());
@@ -2110,7 +2227,7 @@ public class LabService {
         item.put("suggestedScore", answer == null ? null : answer.getSuggestedScore());
         item.put("scoreSource", answer == null ? null : answer.getScoreSource());
         item.put("autoJudgeDetail", answer == null ? null : answer.getAutoJudgeDetail());
-        item.put("plagiarismRate", submissionRate(answer));
+        item.put("plagiarismRate", plagiarismRate);
         item.put("teacherComment", answer == null ? null : answer.getTeacherComment());
         return item;
     }
@@ -2139,10 +2256,6 @@ public class LabService {
 
     private String normalize(Object value) {
         return value == null ? "" : value.toString().trim().toLowerCase(Locale.ROOT);
-    }
-
-    private Double submissionRate(LabStepAnswer answer) {
-        return null;
     }
 
     private String defaultString(String value) {

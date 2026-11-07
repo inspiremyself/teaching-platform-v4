@@ -61,6 +61,9 @@ class AdminStudentServiceTests {
     @Mock
     private UserLoginSessionRepository userLoginSessionRepository;
 
+    @Mock
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private AdminStudentService adminStudentService;
 
@@ -117,6 +120,7 @@ class AdminStudentServiceTests {
                 .thenReturn(Optional.of(student));
         when(classMemberRepository.findFirstByStudentUserId(studentId))
                 .thenReturn(Optional.of(new ClassMember()));
+        when(passwordEncoder.encode(anyString())).thenReturn("{bcrypt}$2a$10$stub");
     }
 
     private CurrentUser schoolAdmin() {

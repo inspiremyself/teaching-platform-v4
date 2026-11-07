@@ -59,6 +59,20 @@
             </el-radio-group>
           </el-form-item>
 
+          <div class="school-code-entry">
+            <button type="button" class="text-link school-code-toggle" @click="schoolCodeVisible = true">跨校同名账号？填写学校编码</button>
+          </div>
+
+          <el-form-item v-if="schoolCodeVisible" label="学校编码">
+            <el-input
+              ref="schoolCodeInputRef"
+              v-model="form.schoolCode"
+              placeholder="请输入学校编码"
+              prefix-icon="School"
+              @keyup.enter="handleLogin"
+            />
+          </el-form-item>
+
           <div class="demo-accounts">
             <button type="button" class="demo-chip" @click="fillDemo('TEACHER')">教师演示账号</button>
             <button type="button" class="demo-chip" @click="fillDemo('STUDENT')">学生演示账号</button>
@@ -85,8 +99,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
-import type { FormInstance } from 'element-plus';
+import { nextTick, onMounted, reactive, ref } from 'vue';
+import type { FormInstance, InputInstance } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
@@ -97,19 +111,23 @@ const KICKED_OUT_NOTICE_KEY = 'kicked_out_notice';
 const LOGIN_ERROR_MAP: Record<number, string> = {
   40101: '用户名、密码或角色错误',
   40103: '账号已停用，如有疑问请联系学校管理员',
-  40901: '该账号已在其他设备登录，继续登录将使旧设备下线'
+  40901: '该账号已在其他设备登录，继续登录将使旧设备下线',
+  40903: '该用户名在多个学校存在，请填写学校编码'
 };
 
 const authStore = useAuthStore();
 const router = useRouter();
 const formRef = ref<FormInstance>();
+const schoolCodeInputRef = ref<InputInstance>();
+const schoolCodeVisible = ref(false);
 const loading = ref(false);
 const errorMessage = ref('');
 
 const form = reactive({
   username: '',
   password: '',
-  role: 'TEACHER' as 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN'
+  role: 'TEACHER' as 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN',
+  schoolCode: ''
 });
 
 const rules = {
@@ -123,7 +141,8 @@ const performLogin = async (forceLogin = false) => {
     username: form.username,
     password: form.password,
     role: form.role,
-    forceLogin
+    forceLogin,
+    schoolCode: form.schoolCode.trim() || undefined
   });
 };
 
@@ -154,6 +173,13 @@ const handleLogin = async () => {
       ElMessage.success('登录成功');
       router.push(authStore.homePath);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 40903) {
+        schoolCodeVisible.value = true;
+        errorMessage.value = LOGIN_ERROR_MAP[40903];
+        await nextTick();
+        schoolCodeInputRef.value?.focus();
+        return;
+      }
       if (error instanceof ApiError && error.code === 40901) {
         try {
           await ElMessageBox.confirm(error.message, '账号已在其他设备登录', {
@@ -394,6 +420,16 @@ onMounted(async () => {
 
 .role-group :deep(.el-radio-button__inner) {
   width: 100%;
+}
+
+.school-code-entry {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px 0 14px;
+}
+
+.school-code-toggle {
+  font-size: 12px;
 }
 
 .demo-accounts {

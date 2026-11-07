@@ -1,6 +1,6 @@
 import type { AxiosRequestConfig } from 'axios'
 import request from '@/utils/request'
-import type { ExamListItem, ExamDetail, CreateExamPayload, UpdateExamPayload, SubmitExamPayload, ExamSubmissionListItem, ExamSubmissionDetail, GradeExamPayload, ConfirmExamAnswerPayload } from '@/types/exam'
+import type { ExamListItem, ExamDetail, CreateExamPayload, UpdateExamPayload, SubmitExamPayload, ExamSubmissionListItem, ExamSubmissionDetail, GradeExamPayload } from '@/types/exam'
 
 export const listExams = () => request.get<ExamListItem[]>('/exams')
 export const getExamDetail = (id: string | number) => request.get<ExamDetail>(`/exams/${id}`)
@@ -14,4 +14,3 @@ export const getExamResults = (id: string | number) => request.get<ExamSubmissio
 export const getExamSubmissionDetail = (id: string | number) => request.get<ExamSubmissionDetail>(`/teacher/exam-submissions/${id}`)
 export const gradeExamSubmission = (id: string | number, data: GradeExamPayload) => request.post(`/teacher/exam-submissions/${id}/grade`, data)
 export const releaseExamScores = (id: string | number) => request.post(`/teacher/exams/${id}/release-scores`)
-export const confirmExamAnswer = (id: string | number, data: ConfirmExamAnswerPayload) => request.post(`/teacher/exam-submissions/${id}/confirm-answer`, data)

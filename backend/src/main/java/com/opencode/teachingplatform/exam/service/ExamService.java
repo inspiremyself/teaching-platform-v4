@@ -14,6 +14,7 @@ import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.enums.BusinessType;
+import com.opencode.teachingplatform.common.enums.EnumValueParser;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
@@ -39,6 +40,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -49,6 +51,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class ExamService {
+
+    /** 交卷宽限期（秒）：截止时间后仍允许手动交卷，超时自动交卷同样以此边界判定。 */
+    public static final long SUBMIT_GRACE_SECONDS = 120L;
 
     private final ExamRepository examRepository;
     private final ExamQuestionRepository examQuestionRepository;
@@ -143,7 +148,7 @@ public class ExamService {
                     boolean canResume = submissionOpt.isPresent()
                             && submissionOpt.get().getStatus() == ExamSubmissionStatus.IN_PROGRESS
                             && (submissionOpt.get().getDeadlineAt() == null
-                                || !now.isAfter(submissionOpt.get().getDeadlineAt().plusSeconds(120)));
+                                || !now.isAfter(submissionOpt.get().getDeadlineAt().plusSeconds(SUBMIT_GRACE_SECONDS)));
                     boolean canViewResult = submissionOpt.isPresent() && canStudentSeeScore(exam, submissionOpt.get());
 
                     Map<String, Object> map = new LinkedHashMap<>();
@@ -178,11 +183,7 @@ public class ExamService {
         exam.setStartAt(request.startAt());
         exam.setEndAt(request.endAt());
         exam.setDurationMinutes(request.durationMinutes());
-        try {
-            exam.setStatus(ActivityStatus.valueOf(request.status()));
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(40000, "无效的考试状态: " + request.status());
-        }
+        exam.setStatus(EnumValueParser.parse(ActivityStatus.class, request.status(), "考试状态"));
         exam.setScoreVisibilityMode(request.scoreVisibilityMode() == null ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM : request.scoreVisibilityMode());
         exam.setShuffleQuestions(Boolean.TRUE.equals(request.shuffleQuestions()));
         exam.setCreatedBy(currentUser.id());
@@ -397,7 +398,7 @@ public class ExamService {
             throw new BusinessException(40300, "无权限修改该考试");
         }
 
-        ActivityStatus newStatus = ActivityStatus.valueOf(request.status());
+        ActivityStatus newStatus = EnumValueParser.parse(ActivityStatus.class, request.status(), "考试状态");
         if (exam.getStatus() == ActivityStatus.DRAFT && newStatus == ActivityStatus.PUBLISHED) {
             boolean hasLegacyInlineQuestion = examQuestionRepository
                     .findByExamIdOrderBySortOrder(id).stream()
@@ -556,38 +557,60 @@ public class ExamService {
         // 2.2 Reject submissions beyond the grace period before any write happens.
         // Exam status is intentionally not checked: CLOSED must not override the deadline rule.
         OffsetDateTime now = OffsetDateTime.now();
-        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt().plusSeconds(120))) {
+        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt().plusSeconds(SUBMIT_GRACE_SECONDS))) {
             throw new BusinessException(40000, "考试已结束，无法提交");
         }
 
-        // 3. Determine status based on deadline
-        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt())) {
-            submission.setStatus(ExamSubmissionStatus.AUTO_SUBMITTED);
-        } else {
-            submission.setStatus(ExamSubmissionStatus.SUBMITTED);
-        }
-
-        // 4. 删除前先快照已持久化草稿：payload 缺失的题目回退草稿，避免刷新后自动交卷提交空白卷。
-        Map<Long, String> draftAnswers = new HashMap<>();
-        for (ExamAnswer existing : examAnswerRepository.findByExamSubmissionId(submission.getId())) {
-            draftAnswers.put(existing.getQuestionId(), existing.getAnswerJson());
-        }
-
-        // 5. Delete any stale exam_answer rows for this submission
-        examAnswerRepository.deleteByExamSubmissionId(submission.getId());
-
-        // 6. 仅构建 payload 条目；是否回退草稿在逐题循环内判定
+        // 3. 仅构建 payload 条目；是否回退草稿在结算方法内逐题判定
         Map<Long, ExamRequests.SubmitAnswerItem> submitItems = new HashMap<>();
         if (request.answers() != null) {
             for (ExamRequests.SubmitAnswerItem item : request.answers()) {
                 submitItems.put(item.questionId(), item);
             }
         }
+        return finalizeExamSubmission(submission, exam, submitItems);
+    }
 
-        // 7. For each exam_question: score and persist ExamAnswer
+    /**
+     * 考试结算：手动交卷与超时自动交卷共用。
+     *
+     * <p>调用方必须已持有提交行悲观写锁并开启事务（本方法为 {@code MANDATORY}）。
+     * 结算流程：状态判定 → 快照已持久化草稿 → 删除旧答案 → 逐题评分写答案 →
+     * 汇总分数与提交时间 → 全客观题结案 → 结案时写成绩记录 → 组装响应。</p>
+     *
+     * <p>自动交卷传入空 payload，所有题目回退 {@code exam_answer.answer_json} 草稿，
+     * 保证断线场景不会提交空白卷。</p>
+     *
+     * @param submission  已锁定的提交行
+     * @param exam        所属考试
+     * @param submitItems 请求体作答条目（按 questionId 索引），自动交卷传空 Map
+     * @return 与学生交卷接口一致的响应体
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Map<String, Object> finalizeExamSubmission(ExamSubmission submission,
+                                                      Exam exam,
+                                                      Map<Long, ExamRequests.SubmitAnswerItem> submitItems) {
+        OffsetDateTime now = OffsetDateTime.now();
+        // 1. 状态判定：deadline 之后 → AUTO_SUBMITTED，否则 SUBMITTED
+        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt())) {
+            submission.setStatus(ExamSubmissionStatus.AUTO_SUBMITTED);
+        } else {
+            submission.setStatus(ExamSubmissionStatus.SUBMITTED);
+        }
+
+        // 2. 删除前先快照已持久化草稿：payload 缺失的题目回退草稿，避免刷新后自动交卷提交空白卷。
+        Map<Long, String> draftAnswers = new HashMap<>();
+        for (ExamAnswer existing : examAnswerRepository.findByExamSubmissionId(submission.getId())) {
+            draftAnswers.put(existing.getQuestionId(), existing.getAnswerJson());
+        }
+
+        // 3. Delete any stale exam_answer rows for this submission
+        examAnswerRepository.deleteByExamSubmissionId(submission.getId());
+
+        // 4. For each exam_question: score and persist ExamAnswer
         //    按 questionId 去重：存量试卷可能含重复题目，只让 sortOrder 最小的首行生效，
         //    否则会触发 uk_exam_answer_submission_question。
-        List<ExamQuestion> examQuestions = examQuestionRepository.findByExamIdOrderBySortOrder(examId);
+        List<ExamQuestion> examQuestions = examQuestionRepository.findByExamIdOrderBySortOrder(exam.getId());
         Set<Long> processedQuestionIds = new HashSet<>();
         double autoScore = 0.0;
         boolean hasManualGrading = false;
@@ -639,7 +662,7 @@ public class ExamService {
             examAnswerRepository.save(answer);
         }
 
-        // 7-9. Set scores and timestamps; objective-only submissions are finalized on submit
+        // 5. Set scores and timestamps; objective-only submissions are finalized on submit
         submission.setAutoScore(autoScore);
         submission.setManualScore(0.0);
         submission.setTotalScore(autoScore);
@@ -649,13 +672,13 @@ public class ExamService {
         }
         examSubmissionRepository.save(submission);
 
-        // 成绩记录在成绩结案（GRADED）时写入，不再依赖可见性；可见性只在读取端收敛。
+        // 6. 成绩记录在成绩结案（GRADED）时写入，不再依赖可见性；可见性只在读取端收敛。
         if (submission.getStatus() == ExamSubmissionStatus.GRADED) {
             Double finalScore = submission.getTotalScore();
             upsertScoreRecord(exam, submission, finalScore == null ? 0D : finalScore);
         }
 
-        // 10. Return result：成绩不可见时不下发任何分数，前端以 resultAvailable 判定。
+        // 7. Return result：成绩不可见时不下发任何分数，前端以 resultAvailable 判定。
         boolean scoreVisible = canStudentSeeScore(exam, submission);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("submissionId", submission.getId());
@@ -698,7 +721,7 @@ public class ExamService {
             throw new BusinessException(40000, "考试已提交，无法保存草稿");
         }
         OffsetDateTime now = OffsetDateTime.now();
-        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt().plusSeconds(120))) {
+        if (submission.getDeadlineAt() != null && now.isAfter(submission.getDeadlineAt().plusSeconds(SUBMIT_GRACE_SECONDS))) {
             throw new BusinessException(40000, "考试已结束，无法保存草稿");
         }
 
@@ -1008,6 +1031,18 @@ public class ExamService {
         }
         ExamAnswer answer = examAnswerRepository.findByExamSubmissionIdAndQuestionId(submissionId, request.questionId())
                 .orElseThrow(() -> new BusinessException(40400, "答题记录不存在: questionId=" + request.questionId()));
+        // 客观题由系统自动评分，禁止教师改分；快照缺失（历史题或题项已删除）按主观题处理
+        QuestionSnapshot snapshot = examQuestionRepository.findByExamIdOrderBySortOrder(exam.getId()).stream()
+                .filter(item -> Objects.equals(item.getQuestionId(), request.questionId()))
+                .findFirst()
+                .map(this::resolveQuestionSnapshot)
+                .orElse(null);
+        if (snapshot != null && examScoringService.isObjective(snapshot.questionType())) {
+            if (request.acceptSuggested()) {
+                throw new BusinessException(40000, "客观题不接受推荐分");
+            }
+            throw new BusinessException(40000, "客观题由系统自动评分，不支持手工改分");
+        }
         if (request.acceptSuggested()) {
             if (answer.getSuggestedScore() == null) {
                 throw new BusinessException(40000, "当前题目没有可采纳的推荐分");

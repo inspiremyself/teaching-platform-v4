@@ -12,8 +12,10 @@ import com.opencode.teachingplatform.material.repository.CourseMaterialRepositor
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class MaterialService {
@@ -28,9 +30,14 @@ public class MaterialService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listMaterials(CurrentUser currentUser) {
-        List<CourseMaterial> materials = currentUser.role() == UserRole.TEACHER
-                ? courseMaterialRepository.findByUploaderUserIdOrderByIdDesc(currentUser.id())
-                : courseMaterialRepository.findByVisibilityOrderByIdDesc(MaterialVisibility.ALL);
+        Long schoolId = currentUser.schoolId();
+        List<CourseMaterial> materials = switch (currentUser.role()) {
+            case TEACHER -> courseMaterialRepository
+                    .findBySchoolIdAndUploaderUserIdOrderByIdDesc(schoolId, currentUser.id());
+            case SCHOOL_ADMIN -> courseMaterialRepository.findBySchoolIdOrderByIdDesc(schoolId);
+            case STUDENT -> courseMaterialRepository
+                    .findBySchoolIdAndVisibilityOrderByIdDesc(schoolId, MaterialVisibility.ALL);
+        };
         return materials.stream().map(this::toView).toList();
     }
 
@@ -38,6 +45,9 @@ public class MaterialService {
     public Map<String, Object> uploadMaterial(CurrentUser currentUser, UploadMaterialRequest request) {
         if (currentUser.role() != UserRole.TEACHER) {
             throw new BusinessException(40300, "无权限上传资料");
+        }
+        if (currentUser.schoolId() == null) {
+            throw new BusinessException(40000, "账号未绑定学校，无法上传资料");
         }
         String storedPath = localFileStorageService.store("materials", request.getFile());
         String originalFilename = request.getFile().getOriginalFilename();
@@ -49,6 +59,7 @@ public class MaterialService {
         material.setFilePath(storedPath);
         material.setFileName(originalFilename == null || originalFilename.isBlank() ? "material.bin" : originalFilename);
         material.setUploaderUserId(currentUser.id());
+        material.setSchoolId(currentUser.schoolId());
         material.setVisibility(request.getVisibility() == null ? MaterialVisibility.ALL : request.getVisibility());
         CourseMaterial saved = courseMaterialRepository.save(material);
         return toView(saved);
@@ -83,6 +94,10 @@ public class MaterialService {
     public DownloadedMaterial downloadMaterial(CurrentUser currentUser, Long id) {
         CourseMaterial material = courseMaterialRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(40400, "资料不存在"));
+        // 学校维度先于角色校验：跨校资料一律不可见，避免通过 ID 猜测探测
+        if (!Objects.equals(material.getSchoolId(), currentUser.schoolId())) {
+            throw new BusinessException(40300, "无权限访问该资料");
+        }
         if (currentUser.role() == UserRole.TEACHER) {
             if (!material.getUploaderUserId().equals(currentUser.id())) {
                 throw new BusinessException(40300, "无权限访问该资料");
@@ -102,16 +117,17 @@ public class MaterialService {
     }
 
     private Map<String, Object> toView(CourseMaterial material) {
-        return Map.of(
-                "id", material.getId(),
-                "title", material.getTitle(),
-                "category", material.getCategory(),
-                "description", material.getDescription(),
-                "fileName", material.getFileName(),
-                "visibility", material.getVisibility().name(),
-                "uploaderUserId", material.getUploaderUserId(),
-                "downloadUrl", "/api/v1/materials/" + material.getId() + "/download"
-        );
+        // 使用 LinkedHashMap 组装：字段值允许为空（如未填描述），Map.of 会因 null 值抛 NPE
+        Map<String, Object> view = new LinkedHashMap<>();
+        view.put("id", material.getId());
+        view.put("title", material.getTitle());
+        view.put("category", material.getCategory());
+        view.put("description", material.getDescription());
+        view.put("fileName", material.getFileName());
+        view.put("visibility", material.getVisibility().name());
+        view.put("uploaderUserId", material.getUploaderUserId());
+        view.put("downloadUrl", "/api/v1/materials/" + material.getId() + "/download");
+        return view;
     }
 
     private String defaultIfBlank(String value, String fallback) {

@@ -112,8 +112,8 @@
             id="admin-student-reset-password"
             v-model="resetPasswordForm.password"
             show-password
-            maxlength="32"
-            placeholder="6~32 位字符"
+            maxlength="64"
+            placeholder="8~64 位，需包含字母和数字"
           />
         </el-form-item>
         <el-form-item label="确认新密码" for="admin-student-reset-password-confirm" required>
@@ -121,7 +121,7 @@
             id="admin-student-reset-password-confirm"
             v-model="resetPasswordForm.confirmPassword"
             show-password
-            maxlength="32"
+            maxlength="64"
             placeholder="再次输入新密码"
           />
         </el-form-item>
@@ -423,8 +423,8 @@ const submitReset = async () => {
     return;
   }
   const password = resetPasswordForm.password.trim();
-  if (password.length < 6 || password.length > 32) {
-    ElMessage.warning('密码长度必须在6到32个字符之间');
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,64}$/.test(password)) {
+    ElMessage.warning('新密码需 8-64 位，且同时包含字母和数字');
     return;
   }
   if (password !== resetPasswordForm.confirmPassword.trim()) {

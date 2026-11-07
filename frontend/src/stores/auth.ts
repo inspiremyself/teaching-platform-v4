@@ -18,7 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (user.value?.role === 'SCHOOL_ADMIN') {
       return '/admin/dashboard';
     }
-    return '/profile';
+    return '/login';
   });
 
   const setToken = (newToken: string) => {

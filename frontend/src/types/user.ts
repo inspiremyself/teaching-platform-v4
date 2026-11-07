@@ -18,6 +18,7 @@ export interface LoginDto {
   password: string;
   role: 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN';
   forceLogin?: boolean;
+  schoolCode?: string;
 }
 
 export interface UpdateProfilePayload {

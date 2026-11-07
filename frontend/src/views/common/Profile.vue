@@ -200,7 +200,18 @@ import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
 const router = useRouter();
-const roleLabel = computed(() => (user.value?.role === 'TEACHER' ? '教师用户' : '学生用户'));
+const roleLabel = computed(() => {
+  switch (user.value?.role) {
+    case 'TEACHER':
+      return '教师用户';
+    case 'STUDENT':
+      return '学生用户';
+    case 'SCHOOL_ADMIN':
+      return '学校管理员';
+    default:
+      return '用户';
+  }
+});
 const changing = ref(false);
 const savingProfile = ref(false);
 const profileFeedback = ref<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -288,6 +299,11 @@ const changePassword = async () => {
   if (pwdForm.newPassword !== pwdForm.confirmPassword) {
     passwordFeedback.value = { type: 'warning', message: '两次输入的新密码不一致' };
     ElMessage.warning('两次输入的新密码不一致');
+    return;
+  }
+  if (!/^(?=.*[A-Za-z])(?=.*\d).{8,64}$/.test(pwdForm.newPassword)) {
+    passwordFeedback.value = { type: 'warning', message: '新密码需 8-64 位，且同时包含字母和数字' };
+    ElMessage.warning('新密码需 8-64 位，且同时包含字母和数字');
     return;
   }
   changing.value = true;

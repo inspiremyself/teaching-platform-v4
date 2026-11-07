@@ -20,6 +20,12 @@ spring:
 app:
   # 单元测试专用默认密钥，仅 test profile 生效
   jwt-secret: ${JWT_SECRET:test-profile-jwt-secret-32bytes-0002}
+  # 测试文件目录与仓库 data/ 隔离，落在系统临时目录，测试结束由系统回收
+  file-storage-root: ${java.io.tmpdir}/teaching-platform-test-files
+  # 单测关闭考试超时自动交卷调度，避免后台任务污染夹具
+  exam:
+    auto-submit:
+      enabled: false
 
 logging:
   level:

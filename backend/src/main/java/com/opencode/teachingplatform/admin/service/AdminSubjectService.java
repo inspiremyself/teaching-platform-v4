@@ -8,6 +8,7 @@ import com.opencode.teachingplatform.clazz.repository.ClassTeacherRepository;
 import com.opencode.teachingplatform.common.audit.AuditAction;
 import com.opencode.teachingplatform.common.audit.AuditLogService;
 import com.opencode.teachingplatform.common.audit.AuditResourceType;
+import com.opencode.teachingplatform.common.enums.EnumValueParser;
 import com.opencode.teachingplatform.common.enums.SubjectStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.school.entity.SchoolSubject;
@@ -109,11 +110,7 @@ public class AdminSubjectService {
     }
 
     private SubjectStatus parseStatus(String status) {
-        try {
-            return SubjectStatus.valueOf(status.trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException(40000, "学科状态不合法");
-        }
+        return EnumValueParser.parse(SubjectStatus.class, status, "学科状态");
     }
 
     private String normalizeCode(String code) {

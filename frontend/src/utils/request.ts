@@ -11,6 +11,20 @@ declare module 'axios' {
 }
 
 const KICKED_OUT_NOTICE_KEY = 'kicked_out_notice';
+const SILENT_CODES = new Set([40901, 40101, 40103, 40903, 40102]);
+
+let kickedOutHandled = false;
+
+function handleKickedOut(message?: string) {
+  if (kickedOutHandled) {
+    return;
+  }
+  kickedOutHandled = true;
+  sessionStorage.setItem(KICKED_OUT_NOTICE_KEY, message || '账号已在其他设备登录，请重新登录');
+  const authStore = useAuthStore();
+  authStore.logout();
+  window.location.href = '/login';
+}
 
 export class ApiError extends Error {
   code: number;
@@ -43,11 +57,11 @@ instance.interceptors.response.use(
     const res = response.data;
     const silent = response.config.silent === true;
     if (res.code !== 0) {
-      if (!silent && res.code !== 40901 && res.code !== 40101 && res.code !== 40103) {
+      if (!silent && !SILENT_CODES.has(res.code)) {
         ElMessage.error(res.message || '请求失败');
       }
       if (res.code === 40102) {
-        sessionStorage.setItem(KICKED_OUT_NOTICE_KEY, res.message || '账号已在其他设备登录，请重新登录');
+        handleKickedOut(res.message);
       }
       if (res.code === 401 || res.code === 40100) {
         const authStore = useAuthStore();
@@ -62,13 +76,13 @@ instance.interceptors.response.use(
     const responseData = error.response?.data;
     const silent = error.config?.silent === true;
     if (responseData && typeof responseData.code === 'number') {
-      if (!silent && responseData.code !== 40901 && responseData.code !== 40101 && responseData.code !== 40103) {
+      if (!silent && !SILENT_CODES.has(responseData.code)) {
         ElMessage.error(responseData.message || '请求失败');
       }
       if (responseData.code === 40102) {
-        sessionStorage.setItem(KICKED_OUT_NOTICE_KEY, responseData.message || '账号已在其他设备登录，请重新登录');
+        handleKickedOut(responseData.message);
       }
-      if ([401, 40100, 40102].includes(responseData.code)) {
+      if (responseData.code === 401 || responseData.code === 40100) {
         const authStore = useAuthStore();
         authStore.logout();
         window.location.href = '/login';

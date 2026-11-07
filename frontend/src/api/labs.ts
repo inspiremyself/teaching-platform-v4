@@ -127,6 +127,7 @@ export const uploadStudentLabAnswerImage = (labId: number | string, stepId: numb
   formData.append('file', file);
   return request.post<LabAnswerImageMeta>(`/student/labs/${labId}/answers/${stepId}/images`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
   });
 };
 

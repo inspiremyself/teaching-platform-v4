@@ -34,6 +34,9 @@ public class CourseMaterial extends BaseEntity {
     @Column(nullable = false, length = 16)
     private MaterialVisibility visibility;
 
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getCategory() { return category; }
@@ -48,4 +51,6 @@ public class CourseMaterial extends BaseEntity {
     public void setUploaderUserId(Long uploaderUserId) { this.uploaderUserId = uploaderUserId; }
     public MaterialVisibility getVisibility() { return visibility; }
     public void setVisibility(MaterialVisibility visibility) { this.visibility = visibility; }
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
 }

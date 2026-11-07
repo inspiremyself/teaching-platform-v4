@@ -12,8 +12,10 @@ import com.opencode.teachingplatform.common.audit.AuditLogService;
 import com.opencode.teachingplatform.common.audit.AuditResourceType;
 import com.opencode.teachingplatform.common.enums.UserRole;
 import com.opencode.teachingplatform.common.enums.UserStatus;
+import com.opencode.teachingplatform.common.enums.EnumValueParser;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,15 +29,18 @@ public class AdminTeacherService {
     private final SysUserRepository sysUserRepository;
     private final ClassTeacherRepository classTeacherRepository;
     private final AuditLogService auditLogService;
+    private final PasswordEncoder passwordEncoder;
 
     public AdminTeacherService(
             SysUserRepository sysUserRepository,
             ClassTeacherRepository classTeacherRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            PasswordEncoder passwordEncoder
     ) {
         this.sysUserRepository = sysUserRepository;
         this.classTeacherRepository = classTeacherRepository;
         this.auditLogService = auditLogService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -57,7 +62,7 @@ public class AdminTeacherService {
         teacher.setSchoolId(schoolId);
         teacher.setUsername(request.username().trim());
         teacher.setDisplayName(request.displayName().trim());
-        teacher.setPasswordHash("{noop}" + request.password());
+        teacher.setPasswordHash(passwordEncoder.encode(request.password()));
         teacher.setRole(UserRole.TEACHER);
         teacher.setStatus(UserStatus.ACTIVE);
         teacher.setMustChangePassword(false);
@@ -94,11 +99,7 @@ public class AdminTeacherService {
     }
 
     private UserStatus parseStatus(String status) {
-        try {
-            return UserStatus.valueOf(status.trim().toUpperCase());
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException(40000, "教师状态不合法");
-        }
+        return EnumValueParser.parse(UserStatus.class, status, "教师状态");
     }
 
     private Map<String, Object> toView(SysUser teacher) {

@@ -165,14 +165,6 @@
                   <span class="material-symbols-outlined">smart_toy</span>
                   <span>建议分 {{ formatScore(answer.suggestedScore) }}，当前 {{ formatScore(answer.score) }}</span>
                   <span>{{ answer.judgeDetail || '当前无自动判题说明。' }}</span>
-                  <div class="manual-grade-box__row">
-                    <button class="action-panel__secondary" type="button" :disabled="!detail" @click="confirmAnswer(answer.questionId, true)">
-                      采纳推荐分
-                    </button>
-                    <button class="action-panel__secondary" type="button" :disabled="!detail" @click="confirmAnswer(answer.questionId, false)">
-                      按当前分确认
-                    </button>
-                  </div>
                 </div>
               </div>
             </article>
@@ -241,8 +233,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { confirmExamAnswer, getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
-import type { ConfirmExamAnswerPayload, ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
+import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
+import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
 
 interface GradeItem {
   score: number
@@ -397,22 +389,6 @@ const releaseScores = async () => {
   } finally {
     releasing.value = false
   }
-}
-
-const confirmAnswer = async (questionId: number, acceptSuggested: boolean) => {
-  if (!detail.value) return
-  const answer = detail.value.answers.find(item => item.questionId === questionId)
-  if (!answer) return
-  const payload: ConfirmExamAnswerPayload = {
-    questionId,
-    teacherComment: answer.teacherComment || gradeMap[questionId]?.teacherComment || undefined,
-    score: acceptSuggested ? undefined : answer.score ?? answer.autoScore ?? answer.suggestedScore ?? 0,
-    acceptSuggested,
-  }
-  await confirmExamAnswer(detail.value.submissionId, payload)
-  ElMessage.success(acceptSuggested ? '已采纳推荐分' : '该题已确认')
-  detail.value = await getExamSubmissionDetail(detail.value.submissionId)
-  initGradeMap()
 }
 
 const isManualQuestion = (answer: ExamAnswerDetail) => answer.isCorrect === null

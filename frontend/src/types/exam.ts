@@ -175,10 +175,3 @@ export interface GradeExamPayload {
   answers?: Array<{ questionId: number; score: number; teacherComment?: string }>
   manualScore?: number
 }
-
-export interface ConfirmExamAnswerPayload {
-  questionId: number
-  teacherComment?: string
-  score?: number
-  acceptSuggested?: boolean
-}

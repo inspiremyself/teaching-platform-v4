@@ -78,6 +78,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         // 类级 NOT_SUPPORTED：claim 的真实 REQUIRES_NEW 可读到已提交种子，直接使用真实 Bean
         com.opencode.teachingplatform.lab.service.LabSubmissionClaimService.class,
+        com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService.class,
+        com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter.class,
         LabBehaviorMetricsService.class, BehaviorConfig.class,
         LabBehaviorMetricsServiceTests.TestBeans.class})
 @ActiveProfiles("test")
@@ -427,6 +429,16 @@ class LabBehaviorMetricsServiceTests {
         var invalidResult = labService.listTeacherReports(TEACHER,
                 new LabRequests.TeacherLabReportQuery(null, null, null, "BOGUS", 1, 10));
         assertThat(invalidResult.items()).isEmpty();
+    }
+
+    // ===== 用例 17b：报告队列非法提交状态 → 40000，不再静默返回空页（FR-10）=====
+    @Test
+    void listTeacherReportsRejectsIllegalSubmissionStatus() {
+        assertThatThrownBy(() -> labService.listTeacherReports(TEACHER,
+                new LabRequests.TeacherLabReportQuery(null, "BOGUS", null, null, 1, 10)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("报告状态")
+                .hasMessageContaining("BOGUS");
     }
 
     // ===== 用例 18：behavior 详情 ownedLab 校验 + timeline 500 截断 =====

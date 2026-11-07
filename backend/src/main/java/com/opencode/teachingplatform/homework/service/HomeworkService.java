@@ -21,7 +21,7 @@ import com.opencode.teachingplatform.clazz.entity.ClassRoom;
 import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
-import com.opencode.teachingplatform.common.enums.PlagiarismStatus;
+import com.opencode.teachingplatform.common.enums.EnumValueParser;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
 import com.opencode.teachingplatform.common.enums.UserRole;
@@ -38,6 +38,7 @@ import com.opencode.teachingplatform.homework.repository.HomeworkSubmissionRepos
 import com.opencode.teachingplatform.plagiarism.entity.PlagiarismTask;
 import com.opencode.teachingplatform.plagiarism.repository.PlagiarismTaskRepository;
 import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
+import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
@@ -70,6 +71,7 @@ public class HomeworkService {
     private final SysUserRepository sysUserRepository;
     private final PlagiarismTaskRepository plagiarismTaskRepository;
     private final LocalPlagiarismService localPlagiarismService;
+    private final PlagiarismTaskWriter plagiarismTaskWriter;
     private final ScoreRecordRepository scoreRecordRepository;
     private final ScoreRecordWriter scoreRecordWriter;
     private final AuditLogService auditLogService;
@@ -89,6 +91,7 @@ public class HomeworkService {
                            SysUserRepository sysUserRepository,
                            PlagiarismTaskRepository plagiarismTaskRepository,
                            LocalPlagiarismService localPlagiarismService,
+                           PlagiarismTaskWriter plagiarismTaskWriter,
                            ScoreRecordRepository scoreRecordRepository,
                            ScoreRecordWriter scoreRecordWriter,
                            AuditLogService auditLogService,
@@ -108,6 +111,7 @@ public class HomeworkService {
         this.sysUserRepository = sysUserRepository;
         this.plagiarismTaskRepository = plagiarismTaskRepository;
         this.localPlagiarismService = localPlagiarismService;
+        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.scoreRecordRepository = scoreRecordRepository;
         this.scoreRecordWriter = scoreRecordWriter;
         this.auditLogService = auditLogService;
@@ -453,13 +457,16 @@ public class HomeworkService {
         if (request.questionBased()) {
             applyQuestionAnswers(saved, request.answers());
         }
+        // 全客观题作业在提交阶段即完成结案：含主观题或存在未评分答案时保持/置回 SUBMITTED
+        refreshSubmissionGradeState(saved);
         LocalPlagiarismService.PlagiarismAnalysisResult plagiarismResult = localPlagiarismService.analyze(
                 plagiarismSourceText(saved, request),
-                buildHomeworkCandidates(saved.getId())
+                buildHomeworkCandidates(saved.getHomeworkId(), saved.getId())
         );
         saved.setPlagiarismRate(plagiarismResult.similarityRate());
         homeworkSubmissionRepository.save(saved);
-        savePlagiarismTask(saved, plagiarismResult);
+        plagiarismTaskWriter.write(BusinessType.HOMEWORK, saved.getId(), saved.getStudentId(),
+                plagiarismResult.similarityRate(), plagiarismResult.topMatchSummary(), plagiarismResult.rawResultJson());
 
         return Map.of(
                 "submissionId", saved.getId(),
@@ -918,10 +925,18 @@ public class HomeworkService {
         }
     }
 
-    private List<LocalPlagiarismService.CandidateText> buildHomeworkCandidates(Long currentSubmissionId) {
-        return homeworkSubmissionRepository.findAll().stream()
-                .filter(candidate -> candidate.getId() != null && !candidate.getId().equals(currentSubmissionId))
-                .filter(candidate -> candidate.getSubmitStatus() == SubmissionStatus.SUBMITTED || candidate.getSubmitStatus() == SubmissionStatus.GRADED)
+    /**
+     * 构造作业查重候选集：只与同一作业下的已提交/已批改提交比对，避免跨作业误判。
+     *
+     * @param homeworkId          作业 id
+     * @param currentSubmissionId 当前提交 id（从候选集中排除）
+     * @return 候选文本集合
+     */
+    private List<LocalPlagiarismService.CandidateText> buildHomeworkCandidates(Long homeworkId, Long currentSubmissionId) {
+        return homeworkSubmissionRepository
+                .findByHomeworkIdAndSubmitStatusIn(homeworkId, List.of(SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED))
+                .stream()
+                .filter(candidate -> !Objects.equals(candidate.getId(), currentSubmissionId))
                 .map(candidate -> Map.entry(candidate, submissionCandidateText(candidate)))
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
                 .map(entry -> new LocalPlagiarismService.CandidateText(resolveHomeworkReference(entry.getKey().getHomeworkId()), entry.getValue()))
@@ -1036,19 +1051,6 @@ public class HomeworkService {
                 .orElse("homework#" + homeworkId);
     }
 
-    private void savePlagiarismTask(HomeworkSubmission submission, LocalPlagiarismService.PlagiarismAnalysisResult plagiarismResult) {
-        PlagiarismTask task = plagiarismTaskRepository.findByBusinessTypeAndBusinessId(BusinessType.HOMEWORK, submission.getId())
-                .orElseGet(PlagiarismTask::new);
-        task.setBusinessType(BusinessType.HOMEWORK);
-        task.setBusinessId(submission.getId());
-        task.setStudentId(submission.getStudentId());
-        task.setStatus(PlagiarismStatus.COMPLETED);
-        task.setSimilarityRate(plagiarismResult.similarityRate());
-        task.setTopMatchSummary(plagiarismResult.topMatchSummary());
-        task.setRawResultJson(plagiarismResult.rawResultJson());
-        plagiarismTaskRepository.save(task);
-    }
-
     private void applyHomework(Homework homework,
                                Long classId,
                                String title,
@@ -1069,7 +1071,9 @@ public class HomeworkService {
     }
 
     private ActivityStatus parseStatus(String value) {
-        return value == null || value.isBlank() ? ActivityStatus.DRAFT : ActivityStatus.valueOf(value);
+        return value == null || value.isBlank()
+                ? ActivityStatus.DRAFT
+                : EnumValueParser.parse(ActivityStatus.class, value, "作业状态");
     }
 
     private Map<String, Object> toTeacherHomeworkView(Homework homework) {
