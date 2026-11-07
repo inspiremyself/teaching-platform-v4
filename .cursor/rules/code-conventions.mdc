@@ -1,0 +1,48 @@
+---
+description: 代码规范总纲与索引：规范细则只落 .cursor/rules，AGENTS 与其它 IDE 一律引用；按改动路径路由到对应规则
+alwaysApply: true
+---
+
+# 代码规范总纲（单一事实来源 + 引用）
+
+## 1. 单一事实来源
+
+1. **规范细则只写在 `.cursor/rules/*.mdc`**（唯一正文，进 git）。根 `AGENTS.md` 与 8 份子级 `AGENTS.md` 只保留「事实、目录导航、引用」；不得把规则条款复制成第二份，也不得在子级 AGENTS 里另立互斥口径。
+2. **两个 IDE 目录只做软链接引用，不存第二份正文**：
+   - `.trae/rules` 是**目录级**软链接 → `../.cursor/rules`（`.trae/skills` → `../.cursor/skills`）；新增 `.mdc` 会被 Trae 自动读到，不需要也不允许在 `.trae/rules/` 里逐个复制文件或建链。
+   - `.codebuddy/rules/<name>/RULE.mdc` 是**文件级**软链接 → `../../../.cursor/rules/<name>.mdc`；CodeBuddy 按「一规则一目录」加载，新增 rule 必须同时建同名目录与链接。
+   - Cursor / Trae / CodeBuddy 三处读到的都是同一份 `.cursor/rules/*.mdc`。
+3. 规则正文只用仓库相对路径**引用**其它 rule，不复述其内容；发现两处表述不同，修引用方而不是再加一层解释。
+4. **口径冲突优先级**：代码与现网行为 > `db/migration/` > `package.json` / `pom.xml` / `*.config.*` > 已定稿技术方案 > `docs/` > `AGENTS.md` > `README.md`。发现事实漂移时更新引用方，禁止靠改实现去迁就旧文档。
+5. 数值型事实（迁移编号、测试数量、脚本清单）以仓库实测为准，文档只写可核对的引用，不写易过时的绝对结论。
+6. `.trae/` 与 `.codebuddy/` 在 `.gitignore` 中，软链接只在本地生效；clone / 换机器后执行 `./scripts/common/link-ide-rules.sh` 幂等重建全部链接。该脚本只新增缺失链接，**不删除、不覆盖**任何已有文件、目录或链接；新增 rule 后也应跑一次补齐 `.codebuddy` 的文件级链接。
+
+## 2. 按改动路径读哪条规则
+
+| 改动范围 | 必读 rule |
+|---|---|
+| `backend/src/main/java/**` | `backend-code-style.mdc`、`backend-package-layout.mdc` |
+| `backend/src/main/resources/**`、`entity/`、`config/` | `backend-db-and-config.mdc` |
+| `frontend/src/**/*.vue`、SFC / composable | `frontend-code-style.mdc` |
+| `frontend/src/api/**`、`types/**`、`utils/request.ts` | `frontend-api-contract.mdc` |
+| `frontend/package.json`、`*.config.*`、`.github/workflows/**`、`backend/src/test/**` | `toolchain-and-test-conventions.mdc` |
+| 写 / 改技术方案 | `tech-spec-decisive.mdc` + `feature-dev-workflow.mdc` |
+| 启动 / 联调 / 端口 / 数据目录 | `local-dev-startup.mdc` |
+| 迁移 / 清库 / 覆盖库 / 碰 `data/` | `path-b-data-backup-gate.mdc`、`path-b-no-direct-delete.mdc`、`protect-data-directory.mdc` |
+| `scripts/**`、`docs/运维文档/**` | `ops-docs-and-scripts.mdc` |
+
+## 3. 硬约束（只引用，不复制）
+
+- 新功能 / 行为变更按 `feature-dev-workflow.mdc`：方案定稿 → 自查收敛 → 编码 → 自查收敛 → 验证。本总纲不替代该流程，也不豁免 `self-review-and-fix` 自查。
+- 真实系统约束（真实前后端、真实 DB、真实权限、真实测试；禁 mock 页面、假 API、静态假数据）、三角色边界与三套壳层，以根 `AGENTS.md` 的 CONVENTIONS / ANTI-PATTERNS 为准，本总纲不复制。
+- 角色、演示账号、业务域职责等事实以对应子级 `AGENTS.md` 为准；规则与事实冲突按 §1.4 处理。
+- 一条规则只解决一类问题；新增规范先判断能否并入 §2 表里的现有细则，不能才新建文件，并同步更新本表与 §1.2 的软链接。
+
+## 4. 反例
+
+- ❌ 把 `backend-code-style.mdc` 的条款整段抄进 `backend/AGENTS.md`，日后两处各自演化
+- ❌ 在 `.codebuddy/rules/` 里另写一份内容不同的 `RULE.mdc`
+- ❌ 把 `.trae/rules` 改成实体目录或在里面逐个复制 `.mdc`（它已是目录级软链接，会自动同步）
+- ❌ 新增 rule 只写 `.cursor/rules/`、不跑 `./scripts/common/link-ide-rules.sh` 补齐 `.codebuddy` 文件级链接
+- ❌ 子级 AGENTS 写「必须使用 `*ServiceImpl`」之类的自造规范，与 `backend-code-style.mdc` 打架
+- ❌ 发现 `AGENTS.md` 旧口径，为实现方便去改代码绕过规则

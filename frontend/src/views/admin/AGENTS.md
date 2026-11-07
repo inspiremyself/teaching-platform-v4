@@ -16,10 +16,14 @@
 | 学生管理 | `Students.vue` | 学生账号、导入、重置密码 |
 | 审计日志 | `AuditLogs.vue` | 操作日志查询 |
 
+## 规范引用
+
+SFC 风格与数据流见 `.cursor/rules/frontend-code-style.mdc`；请求 / 分页 / 类型契约见 `.cursor/rules/frontend-api-contract.mdc`；工具链与门禁见 `.cursor/rules/toolchain-and-test-conventions.mdc`；总纲见 `.cursor/rules/code-conventions.mdc`。下列 CONVENTIONS 只保留校管端信息架构，不复制规范条款。
+
 ## CONVENTIONS
 
 - 所有请求走 `frontend/src/api/admin.ts`，经 `utils/request.ts` 统一解包；页面不拼接 `/api/v1` 路径。
-- 分页契约统一 `PagedResult<T>`；错误码与提示沿用 `request.ts` 的静默清单。
+- 后端 `PagedResult<T>` 在 `api/admin.ts` 映射为 `{ list, total }`（见 `frontend-api-contract.mdc` §4）；错误码提示与登出判定分别沿用 `request.ts` 的 `SILENT_CODES` / `AUTH_FAILURE_CODES`，两组不得合并。
 - 学校维度隔离由后端 `SCHOOL_ADMIN` 权限与 `schoolId` 保证，前端不自行拼接跨校查询参数。
 - 组织变更属于破坏性操作场景，涉及导入/清库时按 `.cursor/rules/path-b-data-backup-gate.mdc` 先备份。
 

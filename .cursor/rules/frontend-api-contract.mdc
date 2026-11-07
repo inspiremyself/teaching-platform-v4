@@ -1,0 +1,54 @@
+---
+description: 前端 API 契约规范：request.ts 解包、URL 单一来源、显式返回泛型、api 层分页映射、types/enums 单一来源
+globs: frontend/src/api/**/*,frontend/src/types/**/*,frontend/src/utils/request.ts,frontend/src/utils/authToken.ts
+alwaysApply: false
+---
+
+# 前端 API 契约规范
+
+> 页面调用纪律见 `frontend-code-style.mdc` §3；后端响应与错误码段位见 `backend-code-style.mdc` §5；本规则只管 `api/` / `types/` / `utils/request.ts`。
+
+## 1. api 模块形态
+
+1. **一业务域一份文件**：`admin.ts`、`auth.ts`、`classes.ts`、`exams.ts`、`homeworks.ts`、`labs.ts`、`materials.ts`、`questions.ts`、`student.ts`、`teacher.ts`；`endpoints.ts` 只放路径构造器与 §3 的两个 `fetch` 例外，`__tests__/` 放 api 层单测。已有独立文件的域不再往 `teacher.ts` / `student.ts` 聚合入口里堆函数（见 `frontend/src/api/AGENTS.md`，此处只引用）。
+2. 统一 `export const camelCase = (...) => request.<verb><T>(path, ...)`：`import type` 引类型，每个调用**显式返回泛型**，不返回隐式 `any`。
+3. 请求配置扩展 `AxiosRequestConfig.silent`（`request.ts` 的 `declare module`），调用方自行呈现错误时传 `{ silent: true }`。
+
+## 2. URL 与解包
+
+1. `/api/v1` 字面量**只出现在** `utils/request.ts` 的 `export const API_BASE_URL = '/api/v1'`；完整 URL 由 `api/endpoints.ts` 的路径构造器生成（`buildMaterialDownloadUrl` / `buildLabAnswerImageUrl` / `behaviorEventsPath` / `buildBehaviorEventsUrl`）。`src/**` 不得出现第二套 URL 拼接。
+2. 响应拦截器成功时**返回 `response.data.data`（裸 data）**；api 函数拿到的就是业务数据本身，页面不得再判断 `res.code` 或解 `res.data.data`。`code !== 0` 统一抛 `ApiError`，全局 toast 由拦截器负责。
+3. axios 通道传相对 baseURL 路径（如 `behaviorEventsPath(labId)`）；`fetch` 通道传完整 URL（`buildBehaviorEventsUrl(labId)`），两条通道共用同一路径构造器，不得各写一份。
+
+## 3. fetch 例外（白名单，不得扩散）
+
+`api/endpoints.ts` 中仅两处 `fetch` 薄封装：`downloadMaterialBlob(id)`（blob 下载）与 `reportBehaviorEventsKeepalive(labId, events)`（卸载 / 切后台 `keepalive` 埋点）。两者的 `Authorization` 头一律由 `utils/authToken.ts#getToken()` 取得；正常批量埋点仍走 `api/labs.ts` 的 axios 通道。
+
+## 4. 分页与错误码
+
+1. 后端 `PagedResult<T>`（`record(items, page, pageSize, total)`）**在 api 层映射**为数组或 `{ list: T[]; total: number }`，不透传给页面；页面只读 `result.list` / `result.total`（已定稿技术方案 TD16）。
+2. `SILENT_CODES`（toast 静默判定）与 `AUTH_FAILURE_CODES`（登出判定）是**语义不同的两组常量**，不得合并；`request.ts` 与 `router/index.ts` 共用 `AUTH_FAILURE_CODES`。
+3. 错误码值与后端 `BusinessException` 段位对齐（40000 / 40001 / 40300 / 40400 / 40900 / 50000 系列）；后端新增码必须同步评估这两组常量，见 `backend-code-style.mdc` §5。
+
+## 5. 类型单一来源
+
+| 文件 | 职责 |
+|---|---|
+| `types/common.ts` | `ApiResponse<T>`、`PagedResult<T>`（interface，与后端字段名一致） |
+| `types/<域>.ts` | 按业务域的契约类型；不写 `| string` 枚举退化 |
+| `types/enums.ts` | 后端枚举全集：`LiteralUnion` + `as const` 常量；`views/` 状态字面量一律引用此处 |
+
+- `types/question.ts#QuestionType`（前端简码 `SINGLE`/`MULTI`/...）与 `BackendQuestionType`（后端题型全称）是两套独立定义，不得混用。
+- 契约变更顺序：后端 DTO / 枚举 → `types/` → `api/` → 页面；禁止先在页面里加局部类型兜底。
+
+## 6. 口径修正（旧文档已废止）
+
+`frontend/src/api/AGENTS.md` 曾写「分页列表统一沿用 `PagedResult<T>`」；现网按 TD16 在 api 层映射为 `{ list, total }`，以 §4.1 与本规则为准。
+
+## 7. 反例
+
+- ❌ 在 api 模块里 `export interface` 业务实体类型（类型放 `types/`）
+- ❌ `request.get(...)` 不写返回泛型，或把 `PagedResult` 直接 `return` 给页面取 `.items`
+- ❌ 页面 / composable 里出现 `/api/v1` 字面量或 `fetch` 直连
+- ❌ 把 `SILENT_CODES` 与 `AUTH_FAILURE_CODES` 合并成一个集合
+- ❌ 在 `types/` 新增 `status: string` 之类退化类型，或在页面硬编码状态字符串

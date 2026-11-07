@@ -127,7 +127,16 @@ public class GradingAdapter {
      */
     private Map<String, Object> resolveScoringConfig(QuestionSnapshot snapshot, QuestionType questionType) {
         Map<String, Object> derived = deriveAnswerConfig(snapshot.answerJson(), questionType, snapshot.score());
-        Map<String, Object> configured = readJsonMap(snapshot.scoringConfigJson());
+        Map<String, Object> configured = new LinkedHashMap<>(readJsonMap(snapshot.scoringConfigJson()));
+        String answerKey = switch (questionType) {
+            case SINGLE_CHOICE, TRUE_FALSE -> "correctAnswer";
+            case MULTIPLE_CHOICE -> "correctAnswers";
+            case FILL_BLANK -> "blanks";
+            case SUBJECTIVE -> null;
+        };
+        if (answerKey != null) {
+            configured.remove(answerKey);
+        }
         Map<String, Object> merged = new LinkedHashMap<>(derived);
         merged.putAll(configured);
         return merged;

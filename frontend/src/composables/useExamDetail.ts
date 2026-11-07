@@ -36,6 +36,7 @@ const resultAnswerMap = ref<Record<number, ExamAnswerDetail>>({})
 let timer: number | undefined
 let baselineSeconds = 0
 let baselineAt = 0
+let autoSubmitTriggered = false
 // 考试截止时间：来自 startExam 或详情接口，用于截止只读判定
 const deadlineAt = ref<string | null>(null)
 const deadlineReached = computed(() => deadlineAt.value != null && remainingSeconds.value <= 0)
@@ -359,11 +360,23 @@ function startTimer(remaining: number) {
     remainingSeconds.value = Math.max(0, baselineSeconds - elapsed)
     if (remainingSeconds.value <= 0) {
       stopTimer()
-      autoSubmit()
+      if (!autoSubmitTriggered) {
+        autoSubmitTriggered = true
+        autoSubmit()
+      }
     }
   }
-  update()
+  if (baselineSeconds <= 0) {
+    remainingSeconds.value = 0
+    if (!autoSubmitTriggered) {
+      autoSubmitTriggered = true
+      autoSubmit()
+    }
+    return
+  }
+  autoSubmitTriggered = false
   timer = window.setInterval(update, 1000)
+  update()
 }
 
 /** 响应缺少 remainingSeconds 时，用 deadlineAt 计算一次基线。 */

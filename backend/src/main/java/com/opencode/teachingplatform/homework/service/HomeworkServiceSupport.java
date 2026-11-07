@@ -196,6 +196,7 @@ public class HomeworkServiceSupport {
 
 
     public void refreshSubmissionGradeState(HomeworkSubmission submission) {
+        SubmissionStatus previousStatus = submission.getSubmitStatus();
         Homework homework = homeworkRepository.findById(submission.getHomeworkId())
                 .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
         List<HomeworkAnswer> answers = homeworkAnswerRepository.findByHomeworkSubmissionId(submission.getId());
@@ -218,6 +219,9 @@ public class HomeworkServiceSupport {
         } else {
             submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
             submission.setGradedAt(null);
+            if (previousStatus == SubmissionStatus.GRADED) {
+                scoreRecordWriter.remove(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId());
+            }
         }
         homeworkSubmissionRepository.save(submission);
     }

@@ -1,0 +1,52 @@
+---
+description: 前端 Vue/TS 代码风格与组件分包：PascalCase SFC、script setup、scoped 样式、composable 薄壳、禁止页面直连 axios
+globs: frontend/src/**/*.vue,frontend/src/**/*.ts
+alwaysApply: false
+---
+
+# 前端代码风格与组件分包
+
+> 请求 / 类型契约见 `frontend-api-contract.mdc`；lint / 格式化 / 构建门禁见 `toolchain-and-test-conventions.mdc`；三角色页面信息架构见 `views/<role>/AGENTS.md`（引用，不复制）。
+
+## 1. SFC 与命名
+
+1. 组件文件名 **PascalCase**（`LabReportDetail.vue`、`QuestionEditorDialog.vue`）；例外仅 `App.vue`、`layout/index.vue`。小写目录 + PascalCase 文件（`exams/List.vue`）保持现状。
+2. 一律 `<script setup lang="ts">`（现网除个别文件外均如此）；复用组件用类型化 `withDefaults(defineProps<{...}>(), {...})` 与 `defineEmits<{...}>()`，不写运行时 props 对象。
+3. 样式用 `<style scoped>`；纯 CSS + 全局 `assets/global.css`（`main.ts` 引入），**不引入 Tailwind**。类名沿用 BEM 形态（如 `question-config-list__card`）。
+4. 无 i18n：中文文案直接写在模板 / ts 中，不为此新建语言包；`ElMessage` / `ElMessageBox` 按需在组件内 import，Element Plus 本体在 `main.ts` 全局注册。
+
+## 2. 组件与页面拆分
+
+```text
+frontend/src/
+├─ api/                     # 一业务域一份契约，见 frontend-api-contract.mdc
+├─ types/                    # 契约类型 + enums.ts 单一来源
+├─ utils/                    # request.ts / authToken.ts / 领域工具
+├─ composables/              # use<页面名>.ts：状态、计算属性、异步请求
+├─ components/               # 跨角色复用：question-config/ typed-editor/ lab/
+├─ layout/                   # 壳层 + navigation.ts（三套导航的单一来源）
+├─ router/index.ts           # /teacher /student /admin 三棵树 + meta.role
+├─ stores/auth.ts            # 唯一 Pinia store
+└─ views/<role>/             # 页面；角色内复用放 views/<role>/components/
+```
+
+- 大页面按已定稿技术方案 TD19 的唯一形态拆：主文件只挂 `<XxxPanel />`、调用 `use<页面名>()`、用 `InjectionKey` `provide`；Panel 承载整块 `<template>` 与全部 `<style scoped>`（避免 scoped 作用域 id 失配），composable 承载全部逻辑。
+- `<style scoped>` 的作用域 id 按 SFC 文件生成，禁止把模板片段单独抽到子组件却保留父级前缀选择器。
+- `.page-header` / `.filter-toolbar` / `.status-chip` 等页面骨架选择器收敛在 `assets/global.css`，不在各页重复定义。
+
+## 3. 数据流与依赖方向
+
+1. 页面**不得**出现 `import axios from 'axios'`、`axios.get(...)`、`axios.create(...)`；一律走 `@/api/` 下的领域 API（见 `frontend-api-contract.mdc`）。
+2. URL 字面量唯一来源：`utils/request.ts#API_BASE_URL` 与 `api/endpoints.ts` 的路径构造器；页面 / api 模块不拼 `/api/v1` 前缀。
+3. token 只在 `utils/authToken.ts` 读写（`getToken` / `setToken` / `clearToken`）；`request.ts` 不得 import `stores/auth.ts`，避免 `request.ts → stores → api → request.ts` 成环（TD18）。
+4. 登录态与角色主页只从 `stores/auth.ts` 取；路由守卫依据 `meta.role`，三套壳层不得合并（见根 `AGENTS.md`）。
+5. 登录 / 资料下载等 blob、卸载兜底埋点这两个 `fetch` 例外只在 `api/endpoints.ts`，且必须经 `getToken()` 注入 `Authorization`（见 `frontend-api-contract.mdc` §3）。
+
+## 4. 反例
+
+- ❌ 在 `.vue` 里手写 `axios.get('/api/v1/...')` 或复制响应解包判断
+- ❌ 新建 `useAuthStore` 之外的第二个登录态 store，或在 `request.ts` 里反向依赖 store
+- ❌ 把 `<template>` 片段抽到子组件却保留父组件 scoped 选择器前缀
+- ❌ 引入 Tailwind / i18n / 新 UI 库来「统一风格」
+- ❌ 用运行时 `defineProps({...})` 对象或散落 `any` props
+- ❌ 在 `views/` 里硬编码后端状态字符串；取值来自 `types/enums.ts`

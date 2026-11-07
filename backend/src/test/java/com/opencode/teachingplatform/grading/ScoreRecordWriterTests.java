@@ -103,4 +103,14 @@ class ScoreRecordWriterTests {
                     assertThat(ex.getMessage()).isEqualTo("成绩记录并发冲突，请重试");
                 });
     }
+
+    @Test
+    void removeIsIdempotentWhenRecordAbsent() {
+        scoreRecordWriter.remove(BusinessType.HOMEWORK, 999L, 2L);
+        scoreRecordWriter.remove(BusinessType.HOMEWORK, 999L, 2L);
+
+        assertThat(scoreRecordRepository
+                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.HOMEWORK, 999L, 2L))
+                .isEmpty();
+    }
 }

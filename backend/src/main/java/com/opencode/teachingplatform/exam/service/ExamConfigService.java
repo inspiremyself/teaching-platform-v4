@@ -267,6 +267,9 @@ public class ExamConfigService {
         if (currentUser.role() == UserRole.TEACHER && !exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限查看该考试");
         }
+        if (currentUser.role() == UserRole.TEACHER) {
+            classAccessService.assertTeacherAssignedToClass(currentUser, exam.getClassId());
+        }
 
         if (currentUser.role() == UserRole.STUDENT) {
             if (exam.getStatus() != ActivityStatus.PUBLISHED && exam.getStatus() != ActivityStatus.CLOSED) {
@@ -408,6 +411,7 @@ public class ExamConfigService {
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限修改该考试");
         }
+        classAccessService.assertTeacherAssignedToClass(currentUser, exam.getClassId());
 
         ActivityStatus newStatus = EnumValueParser.parse(ActivityStatus.class, request.status(), "考试状态");
         if (exam.getStatus() == ActivityStatus.DRAFT && newStatus == ActivityStatus.PUBLISHED) {
@@ -440,6 +444,7 @@ public class ExamConfigService {
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限发布该考试成绩");
         }
+        classAccessService.assertTeacherAssignedToClass(currentUser, exam.getClassId());
         exam.setScoreReleased(true);
         examRepository.save(exam);
         // 幂等补写：对已结案（GRADED）但历史缺失成绩记录的提交补建 score_record。

@@ -89,6 +89,9 @@ class HomeworkServiceTests {
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
+    private com.opencode.teachingplatform.homework.service.HomeworkServiceSupport homeworkServiceSupport;
+
+    @Autowired
     private HomeworkService homeworkService;
 
     @Autowired
@@ -1204,6 +1207,20 @@ class HomeworkServiceTests {
                 "SELECT detail_json FROM audit_log WHERE action = 'HOMEWORK_SUBMISSION_RETURN' AND resource_id = ?",
                 String.class, submission.getId());
         assertThat(detailJson).contains("\"fromStatus\":\"GRADED\"");
+    }
+
+    @Test
+    void gradedHomeworkDowngradeRemovesScoreRecord() {
+        Homework homework = createHomework(1L, 1L, "回退残留成绩作业", ActivityStatus.PUBLISHED);
+        HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.GRADED);
+        insertHomeworkScoreRecord(homework.getId(), 2L, 10D);
+
+        homeworkServiceSupport.refreshSubmissionGradeState(submission);
+        homeworkSubmissionRepository.flush();
+
+        HomeworkSubmission reloaded = homeworkSubmissionRepository.findById(submission.getId()).orElseThrow();
+        assertThat(reloaded.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(countHomeworkScoreRecords(homework.getId(), 2L)).isZero();
     }
 
     @Test

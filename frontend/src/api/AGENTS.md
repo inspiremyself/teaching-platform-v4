@@ -15,13 +15,18 @@
 | 班级/学生 | `classes.ts` `admin.ts` | 班级列表与校管组织 API |
 | 领域接口 | `materials.ts` `questions.ts` `labs.ts` `homeworks.ts` `exams.ts` | 模块化契约 |
 
+## 规范引用
+
+本目录的**契约细则**见 `.cursor/rules/frontend-api-contract.mdc`（URL 单一来源、解包、显式泛型、分页映射、类型与枚举单一来源、错误码两组常量）；页面调用纪律见 `.cursor/rules/frontend-code-style.mdc`；总纲见 `.cursor/rules/code-conventions.mdc`。本文件只保留目录导航与事实，不复制条款。
+
 ## CONVENTIONS
 
-- 所有请求默认走 `request.ts`，共享 baseURL、token 注入、响应解包。
-- 后端标准响应是 `ApiResponse<T>`；前端拿到的是 `res.data` 解包后的真实数据。
-- 分页列表统一沿用 `PagedResult<T>`（与后端 `common/api/PagedResult.java` 同名）。
-- 新增或重构接口时，优先补类型文件，减少 `any` 扩散。
+- 所有请求默认走 `request.ts`，共享 baseURL、token 注入、响应解包；拦截器成功时返回裸 `data`，页面不再判断 `res.code`。
+- 后端标准响应是 `ApiResponse<T>`（字段 `code` / `message` / `data` / `timestamp`）；`code !== 0` 统一抛 `ApiError`。
+- 后端 `PagedResult<T>` **在 `api/` 层映射**为数组或 `{ list, total }`，不直接透传给页面（旧口径「分页列表统一沿用 `PagedResult<T>`」已废止，见 `frontend-api-contract.mdc` §4）。
+- 新增或重构接口时，优先补 `types/` 下的类型文件，减少 `any` 扩散；枚举取值来自 `types/enums.ts`。
 - 如果某模块已有独立 API 文件，不要继续往 `teacher.ts` 里无差别堆聚合函数。
+- `/api/v1` 字面量只出现在 `utils/request.ts`；完整 URL 由 `api/endpoints.ts` 的构造器生成。
 
 ## ANTI-PATTERNS
 

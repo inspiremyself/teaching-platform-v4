@@ -1,0 +1,53 @@
+---
+description: 后端数据库与配置规范：snake_case 表列、BaseEntity 审计、Flyway 只增不改、双方言占位符由 Java 注入、profile 矩阵
+globs: backend/src/main/resources/**/*,backend/src/main/java/**/entity/*.java,backend/src/main/java/**/config/*.java
+alwaysApply: false
+---
+
+# 后端数据库与配置规范
+
+> 破坏性操作门禁**引用** `path-b-data-backup-gate.mdc`；清 H2 引用 `path-b-no-direct-delete.mdc`；`data/` 保护引用 `protect-data-directory.mdc`；启动与端口引用 `local-dev-startup.mdc`。本规则只写 schema / 配置层可检查项，不复制门禁条款。
+
+## 1. 表与实体
+
+1. 表名 / 列名 **snake_case**，`@Table(name = "...")` 与 `@Column(name = "...")` 显式写出；枚举字段用 `@Enumerated(EnumType.STRING)`。
+2. 实体继承 `common/model/BaseEntity`（`@MappedSuperclass` + `AuditingEntityListener` + `IDENTITY` 主键 + `created_at` / `updated_at`）；时间由 `common/config/JpaConfig` 的 `offsetDateTimeProvider` 提供。
+3. **无软删除**：不加 `deleted` 列、不用 `@SQLDelete` / `@Where`。`deleted` 在响应里只是 `Map.of("deleted", true)` 的键。
+4. 状态值以 Java 枚举为准（见 `backend-code-style.mdc` §5），表结构与变更说明见 `db/migration/SCHEMA.md`。
+
+## 2. Flyway
+
+1. 脚本命名 `V<n>__<snake_case>.sql`；当前 `V1`–`V24`（**以 `db/migration/` 实测为准**）。已应用脚本**只读**，一律新增下一号，不改已应用脚本或依赖 `flyway repair` 抹掉 checksum 差异。
+2. 新增脚本允许**结构性数据回填**（`V24__course_material_school_scope.sql` 即 `DELETE` + `UPDATE` 的归属修正），但不得写演示 seed，也不得写覆盖 / 清除本地业务数据的 DML。
+3. 只用四个双方言占位符：`alterModifyColumn`、`fkChecksDisable`、`fkChecksEnable`、`mysqlOnly`（`V15` / `V16` / `V18` / `V24` 已使用）。
+4. **四个值只由 `common/config/FlywayPlaceholdersConfig.java` 按 `DataSource` 产品名注入**（MySQL→`MODIFY COLUMN` / `""`，H2→`ALTER COLUMN` / `--`）；四个 `application*.yml` **不再声明** `spring.flyway.placeholders`。产品名非 H2 / MySQL 时抛 `IllegalStateException` 让启动失败，不回退默认方言。
+5. `FlywayConfig.repairBeforeMigrateStrategy` 已删除，Spring Boot 默认 `validateOnMigrate=true` 拦截 checksum 不一致。
+6. 禁止手工补表、禁止直接改运行中 schema；迁移 / 清库 / 覆盖库前先过 `path-b-data-backup-gate.mdc` 的备份门禁。
+
+## 3. profile 与 `ddl-auto` 矩阵
+
+| 配置文件 | profile / 用途 | 数据源 | `ddl-auto` |
+|---|---|---|---|
+| `src/main/resources/application.yml` | 主配置，默认 `local` | MySQL | `validate` |
+| `application-local.yml` | 本地运行 | MySQL | 继承；只覆盖 jwt-secret 与 logging |
+| `application-prod.yml` | 生产 | MySQL（全环境变量，无本地默认值） | `validate` |
+| `application-test.yml`（main） | 路径 B 运行，H2 **文件库** `data/h2/` | H2 `MODE=MySQL;DATABASE_TO_LOWER=TRUE` | `none`，由 Flyway 建表 |
+| `src/test/resources/application-test.yml` | UT / 集成测试 | H2 **mem** | `none`，由 Flyway 建表 |
+
+- `flyway.enabled=true`、`open-in-view=false`；运行时不依赖自动建表。
+- 主配置用 `${DB_HOST:localhost}` / `${DB_PASS:12345678}` / `${SERVER_PORT:8080}` / `${JWT_SECRET:}` 等环境变量默认值；`prod` 不给本地默认值。
+- `src/test/resources` 必须保持 mem；路径 B 的 H2 文件库与 UT 的 mem **有意不同**，不得互相改写。
+- 换端口、代理目标、探活命令见 `local-dev-startup.mdc`。
+
+## 4. 口径修正（旧文档已废止）
+
+- 「`V1`–`V20`」与「`application.yml` / `application-test.yml` 分别提供 MySQL / H2 占位符值」是旧口径：迁移编号以 `db/migration/` 实测为准，占位符只在 SQL 中出现、值由 Java 注入。
+- `common/audit/` / `common/accesslog/` 已归位 `common/infra/`（见 `backend-package-layout.mdc` §2）。
+
+## 5. 反例
+
+- ❌ 在任何 `application*.yml` 里重新声明四个 Flyway 占位符
+- ❌ 修改已应用的 `V*.sql`、手工补表、把 `ddl-auto` 改成 `update` 绕过迁移
+- ❌ 新增 `deleted` 列当软删除，或在新迁移里塞演示账号 / 清掉本地业务数据
+- ❌ 把 UT 的 `src/test/resources/application-test.yml` 改成文件库
+- ❌ 文档里写死迁移数量 / 测试数量，却不指向 `db/migration/` 与测试目录实测（见 `code-conventions.mdc` §1.5）

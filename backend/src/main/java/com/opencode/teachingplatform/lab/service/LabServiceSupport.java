@@ -261,6 +261,7 @@ public class LabServiceSupport {
 
 
     public void refreshSubmissionAfterScoring(Lab lab, LabSubmission submission) {
+        SubmissionStatus previousStatus = submission.getSubmitStatus();
         List<LabStep> steps = labStepRepository.findByLabIdOrderByStepNoAsc(lab.getId());
         List<LabStepAnswer> answers = labStepAnswerRepository.findByLabSubmissionId(submission.getId());
         double totalScore = answers.stream()
@@ -279,6 +280,9 @@ public class LabServiceSupport {
         } else {
             submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
             submission.setGradedAt(null);
+            if (previousStatus == SubmissionStatus.GRADED) {
+                scoreRecordWriter.remove(BusinessType.LAB, lab.getId(), submission.getStudentId());
+            }
         }
         labSubmissionRepository.save(submission);
     }

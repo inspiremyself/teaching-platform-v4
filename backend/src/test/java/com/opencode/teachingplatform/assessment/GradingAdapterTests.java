@@ -242,4 +242,67 @@ class GradingAdapterTests {
         assertNull(result.correct());
         assertNull(result.normalizedAnswerJson());
     }
+
+    @Test
+    void shouldIgnoreCorrectAnswerFromScoringConfig() {
+        QuestionSnapshot single = new QuestionSnapshot(
+                null, "BANK", "SINGLE", "单选题", 1, 5D,
+                "[{\"key\":\"A\",\"content\":\"正确\"},{\"key\":\"B\",\"content\":\"错误\"}]",
+                "[\"A\"]", "{\"correctAnswer\":\"B\"}", true);
+        GradingResultView singleResult = gradingAdapter.grade(single,
+                new QuestionAnswerPayload(1L, "SINGLE", null, null, List.of("A"), null));
+        assertEquals(5D, singleResult.autoScore());
+        assertTrue(singleResult.correct());
+
+        QuestionSnapshot judge = new QuestionSnapshot(
+                null, "BANK", "TRUE_FALSE", "判断题", 1, 5D, null,
+                "[\"true\"]", "{\"correctAnswer\":\"false\"}", true);
+        GradingResultView judgeResult = gradingAdapter.grade(judge,
+                new QuestionAnswerPayload(2L, "TRUE_FALSE", null, null, List.of("true"), null));
+        assertEquals(5D, judgeResult.autoScore());
+    }
+
+    @Test
+    void shouldIgnoreCorrectAnswersFromScoringConfig() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "MULTI", "多选题", 1, 10D, null,
+                "[\"A\",\"B\"]", "{\"correctAnswers\":[\"C\"],\"mode\":\"FULL_MATCH\"}", true);
+        GradingResultView result = gradingAdapter.grade(snapshot,
+                new QuestionAnswerPayload(1L, "MULTI", null, null, List.of("A", "B"), null));
+        assertEquals(10D, result.autoScore());
+        assertTrue(result.correct());
+    }
+
+    @Test
+    void shouldIgnoreBlanksFromScoringConfig() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "BANK", "FILL", "填空题", 1, 10D, null,
+                "[{\"index\":1,\"answers\":[\"x\"]}]",
+                "{\"blanks\":[{\"index\":1,\"answers\":[\"wrong\"],\"score\":10}]}", true);
+        GradingResultView result = gradingAdapter.grade(snapshot,
+                new QuestionAnswerPayload(1L, "FILL", null, "[\"x\"]", null, null));
+        assertEquals(10D, result.autoScore());
+        assertTrue(result.judgeDetail().contains("blank 1: matched"));
+
+        GradingResultView wrongResult = gradingAdapter.grade(snapshot,
+                new QuestionAnswerPayload(2L, "FILL", null, "[\"wrong\"]", null, null));
+        assertEquals(0D, wrongResult.autoScore());
+    }
+
+    @Test
+    void shouldKeepKeywordsAndMinLengthForSubjective() {
+        QuestionSnapshot snapshot = new QuestionSnapshot(
+                null, "INLINE", "SUBJECTIVE", "Explain strategy pattern.", 2, 10.0,
+                null, null,
+                "{\"keywords\":[{\"term\":\"strategy\",\"weight\":6},{\"term\":\"reuse\",\"weight\":4}],\"minLength\":6,\"correctAnswer\":\"ignored\"}",
+                false);
+        QuestionAnswerPayload payload = new QuestionAnswerPayload(
+                22L, "SUBJECTIVE", "strategy improves reuse across implementations", null, List.of(), null);
+
+        GradingResultView result = gradingAdapter.grade(snapshot, payload);
+
+        assertNull(result.autoScore());
+        assertEquals(10.0, result.suggestedScore());
+        assertEquals("RECOMMENDED", result.scoreSource());
+    }
 }

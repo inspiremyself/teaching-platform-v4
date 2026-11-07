@@ -144,6 +144,9 @@ class LabServiceTests {
     private LabRepository labRepository;
 
     @Autowired
+    private com.opencode.teachingplatform.lab.service.LabServiceSupport labServiceSupport;
+
+    @Autowired
     private LabStepRepository labStepRepository;
 
     @Autowired
@@ -1917,6 +1920,36 @@ class LabServiceTests {
                 .containsEntry("EDITOR_LANGUAGE", "TEXT")
                 .containsEntry("STATE", 1);
         assertThat(seedExperimentItem.get("QUESTION_SNAPSHOT_JSON")).asString().contains("SINGLE_CHOICE");
+    }
+
+    @Test
+    void gradedLabDowngradeRemovesScoreRecord() {
+        Lab lab = labRepository.findById(1001L).orElseThrow();
+        LabSubmission submission = new LabSubmission();
+        submission.setLabId(lab.getId());
+        submission.setStudentId(studentUser().id());
+        submission.setSubmitStatus(SubmissionStatus.GRADED);
+        submission.setTotalScore(12D);
+        submission.setGradedAt(OffsetDateTime.now());
+        submission = labSubmissionRepository.saveAndFlush(submission);
+        Long submissionId = submission.getId();
+
+        jdbcTemplate.update(
+                "INSERT INTO score_record (business_type, business_id, student_id, class_id, score, graded_at, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
+                "LAB", lab.getId(), studentUser().id(), 12D);
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, lab.getId(), studentUser().id()))
+                .isPresent();
+
+        labServiceSupport.refreshSubmissionAfterScoring(lab, submission);
+        labSubmissionRepository.flush();
+
+        assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus())
+                .isEqualTo(SubmissionStatus.SUBMITTED);
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, lab.getId(), studentUser().id()))
+                .isNotPresent();
     }
 
     @Test

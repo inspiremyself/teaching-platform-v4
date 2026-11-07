@@ -57,7 +57,7 @@ const emit = defineEmits<{
 
 const languageOptions = ['JAVA', 'PYTHON', 'C', 'CPP', 'JAVASCRIPT', 'TYPESCRIPT', 'GO', 'RUST', 'SQL', 'BASH'];
 
-const currentCode = props.modelValue?.kind === 'code' ? props.modelValue.code : '';
+const currentCode = computed(() => (props.modelValue?.kind === 'code' ? props.modelValue.code : ''));
 const selectedLanguage = computed(() => (props.modelValue?.kind === 'code'
   ? props.modelValue.language || props.language || 'CODE'
   : props.language || 'CODE'));
@@ -73,7 +73,7 @@ const updateCode = (value: string) => {
 const updateLanguage = (value: string) => {
   emit('update:modelValue', {
     kind: 'code',
-    code: currentCode,
+    code: currentCode.value,
     language: value,
   });
 };

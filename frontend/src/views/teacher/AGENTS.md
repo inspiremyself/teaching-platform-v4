@@ -25,6 +25,10 @@
 | 考试成绩 | `exams/Results.vue` | 成绩与批改 |
 | 查重 | `Plagiarism.vue` | 风险列表与复核动作 |
 
+## 规范引用
+
+SFC 风格、`composables/` 薄壳拆分、数据流与依赖方向见 `.cursor/rules/frontend-code-style.mdc`；请求 / 类型契约见 `.cursor/rules/frontend-api-contract.mdc`；lint 与构建门禁见 `.cursor/rules/toolchain-and-test-conventions.mdc`；总纲见 `.cursor/rules/code-conventions.mdc`。下列 CONVENTIONS 只保留教师端信息架构，不复制规范条款。
+
 ## CONVENTIONS
 
 - 页面骨架优先统一为：`page-header` / 摘要区 / 筛选工具条 / 数据区 / 详情或动作区。

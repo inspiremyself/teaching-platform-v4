@@ -1177,6 +1177,46 @@ class ExamServiceTests {
     }
 
     @Test
+    void unassignedTeacherRejectedThenRestoredAllowsAllSevenExamEndpoints() {
+        Long examId = createPublishedExamForStudent();
+        Long submissionId = 999L;
+        jdbcTemplate.update(
+                "INSERT INTO exam_submission (id, exam_id, student_id, status, created_at, updated_at) "
+                        + "VALUES (?, ?, 2, 'IN_PROGRESS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                submissionId, examId);
+
+        jdbcTemplate.update("DELETE FROM class_teacher WHERE teacher_user_id = 1");
+
+        List<Runnable> guarded = List.of(
+                () -> examService.getExamDetail(teacher, examId),
+                () -> examService.changeStatus(teacher, examId, new ExamRequests.ChangeExamStatusRequest("CLOSED")),
+                () -> examService.releaseScores(teacher, examId),
+                () -> examService.getExamResults(teacher, examId),
+                () -> examService.getSubmissionDetail(teacher, submissionId),
+                () -> examService.gradeSubmission(teacher, submissionId, new ExamRequests.GradeExamSubmissionRequest(List.of())),
+                () -> examService.confirmAnswer(teacher, submissionId,
+                        new ExamRequests.ConfirmExamAnswerRequest(1L, "评语", 8D, false))
+        );
+        for (Runnable call : guarded) {
+            assertThatThrownBy(call::run)
+                    .isInstanceOf(BusinessException.class)
+                    .hasFieldOrPropertyWithValue("code", 40300);
+        }
+
+        jdbcTemplate.update("INSERT INTO class_teacher (class_id, teacher_user_id, role, assigned_at) VALUES (1, 1, 'SUBJECT', CURRENT_TIMESTAMP)");
+
+        for (Runnable call : guarded) {
+            try {
+                call.run();
+            } catch (BusinessException ex) {
+                assertThat(ex.getCode()).isNotEqualTo(40300);
+            }
+        }
+        assertThat(examService.getExamDetail(teacher, examId)).isNotNull();
+        assertThat(examService.getExamResults(teacher, examId)).isNotNull();
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void teacherDetailIncludesAnswerJsonForOwner() {
         Long examId = createPublishedExamForStudent();

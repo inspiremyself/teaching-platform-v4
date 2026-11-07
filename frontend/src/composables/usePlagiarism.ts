@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { getPlagiarism, getPlagiarismDetail, reviewPlagiarism } from '@/api/teacher';
 import type { InjectionKey } from 'vue';
@@ -59,6 +59,8 @@ const searchQuery = ref('');
 const businessTypeFilter = ref('');
 const statusFilter = ref('');
 const riskFilter = ref<RiskLevel | ''>('');
+let detailRequestSeq = 0;
+let disposed = false;
 
 const businessTypeLabel = (type?: string) => {
   const map: Record<string, string> = {
@@ -336,16 +338,22 @@ const syncReviewComment = (task: PlagiarismTaskLike | null) => {
 };
 
 const loadDetail = async (id: number) => {
+  const requestId = ++detailRequestSeq;
   detailLoading.value = true;
   detailError.value = '';
   detail.value = null;
   try {
-    detail.value = await getPlagiarismDetail(id);
-    syncReviewComment(detail.value);
+    const data = await getPlagiarismDetail(id);
+    if (disposed || requestId !== detailRequestSeq) return;
+    detail.value = data;
+    syncReviewComment(data);
   } catch (error) {
+    if (disposed || requestId !== detailRequestSeq) return;
     detailError.value = error instanceof Error ? error.message : '无法获取查重详情，请稍后重试。';
   } finally {
-    detailLoading.value = false;
+    if (requestId === detailRequestSeq) {
+      detailLoading.value = false;
+    }
   }
 };
 
@@ -398,14 +406,13 @@ const appendQuickComment = (text: string) => {
 
 const submitReview = async () => {
   if (!activeTask.value) return;
+  const submittedTaskId = activeTask.value.id;
   reviewLoading.value = true;
   try {
-    await reviewPlagiarism(activeTask.value.id, { reviewComment: reviewComment.value });
+    await reviewPlagiarism(submittedTaskId, { reviewComment: reviewComment.value });
     ElMessage.success('复核完成');
     await fetchData();
-    if (activeTask.value) {
-      await loadDetail(activeTask.value.id);
-    }
+    await loadDetail(submittedTaskId);
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : '复核失败，请稍后重试。');
   } finally {
@@ -423,7 +430,7 @@ watch(
       return;
     }
 
-    if (detail.value?.id === current.id || detailLoading.value) {
+    if (detail.value?.id === current.id) {
       syncReviewComment(current);
       return;
     }
@@ -435,6 +442,11 @@ watch(
 );
 
 onMounted(fetchData);
+
+onUnmounted(() => {
+  disposed = true;
+  detailRequestSeq += 1;
+});
 
   return { computed, onMounted, ref, watch, ElMessage, getPlagiarism, getPlagiarismDetail, reviewPlagiarism, loading, listError, rows, selectedTaskId, detailLoading, detailError, detail, reviewComment, reviewLoading, searchQuery, businessTypeFilter, statusFilter, riskFilter, businessTypeLabel, statusLabel, statusTone, riskTone, riskLevelLabel, readNumber, formatRate, getAvatarText, getStudentName, getBusinessType, getBusinessName, getSimilarityRate, getTopSummary, topMatchReference, parseRawResult, normalizedStatus, getReviewComment, getReviewConclusion, normalizedRiskLevel, parsedAlgorithmResult, filteredRows, activeTask, nextTask, pendingCount, reviewedCount, highRiskCount, averageSimilarityText, highlightedTaskTitle, highlightedTaskMeta, toolbarMetaText, activeTaskSubline, activeTaskOrderLabel, reviewHintText, reviewContextBlocks, matchedSegments, syncReviewComment, loadDetail, fetchData, selectTask, focusPendingTask, focusNextTask, resetFilters, appendQuickComment, submitReview };
 }

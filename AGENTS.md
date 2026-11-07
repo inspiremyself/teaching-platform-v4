@@ -87,7 +87,7 @@ teaching-platform-v4/
 | 共享题目/评分层 | `backend/.../assessment/`、`backend/.../grading/` | 快照、适配器、评分策略 |
 | 统一响应/异常 | `backend/.../common/api/`、`common/exception/` | `ApiResponse`、`PagedResult`、错误码 |
 | 行为埋点 | `backend/.../lab/behavior/` | 实验作答事件采集与风险指标 |
-| 审计/访问日志 | `backend/.../common/audit/`、`common/accesslog/` | 操作日志与 HTTP 访问日志 |
+| 审计/访问日志 | `backend/.../common/infra/audit/`、`common/infra/accesslog/` | 操作日志与 HTTP 访问日志 |
 | 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V24`（24 个），schema + seed |
 | 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（65 个 `*Tests.java`） |
 | 设计资产状态 | `docs/PRD/`、`docs/技术方案/` | 当前阶段无原型资产，需求输入以 PRD 与技术方案为准 |
@@ -122,21 +122,36 @@ teaching-platform-v4/
 
 ## CONVENTIONS
 
+> **规范细则的唯一来源**是 `.cursor/rules/*.mdc`。本文件与 8 份子级 `AGENTS.md` 只保留跨层事实、目录导航与引用，不复制条款；`.trae/rules`（目录级软链接）与 `.codebuddy/rules/<name>/RULE.mdc`（文件级软链接）均引用同一份正文，clone 后执行 `./scripts/common/link-ide-rules.sh` 幂等重建。口径冲突按 `code-conventions.mdc` §1.4 以代码实测为准。
+
+### 规范引用路由
+
+| 改动范围 | 必读规则 |
+|---|---|
+| 总纲 / 全部规则索引 / 冲突优先级 | `.cursor/rules/code-conventions.mdc` |
+| 后端 Java 写法、注入、错误码 | `.cursor/rules/backend-code-style.mdc` |
+| 后端分包、例外矩阵、依赖方向 | `.cursor/rules/backend-package-layout.mdc` |
+| Flyway、profile、表结构 | `.cursor/rules/backend-db-and-config.mdc` |
+| Vue SFC、组件拆分、数据流 | `.cursor/rules/frontend-code-style.mdc` |
+| `api/` / `types/` / `request.ts` | `.cursor/rules/frontend-api-contract.mdc` |
+| 工具链、测试注解与命令 | `.cursor/rules/toolchain-and-test-conventions.mdc` |
+| 流程 / 方案 / 启动 / 数据门禁 | `feature-dev-workflow.mdc`、`tech-spec-decisive.mdc`、`local-dev-startup.mdc`、`path-b-data-backup-gate.mdc`、`protect-data-directory.mdc` |
+
 - 当前阶段优先级：**PRD / 原型交互目标 > 旧规范书细节 > 旧实现形态**。
 - 仍必须保持真实系统约束：真实前后端、真实数据库、真实权限、真实测试，不允许 mock 页面、假 API、假数据闭环。
 - 三角色边界固定：教师 `TEACHER`、学生 `STUDENT`、校管 `SCHOOL_ADMIN`；前端三套壳层、后端 `@PreAuthorize` 双重约束，不要把角色语义合并。
 - 调试与 E2E 联调**默认** `./scripts/path-b/backend.sh`（本机 MySQL，`local` profile）。无 MySQL 时用 `./scripts/path-b/backend-h2.sh`（H2 文件库 + `test` profile）。
-- `application.yml`：`ddl-auto=validate`、`flyway.enabled=true`；`application-test.yml`（H2 文件库）：`ddl-auto=none`，仍由 Flyway 建表。测试资源 `src/test/resources/application-test.yml` 使用 H2 mem，与路径 B 隔离。
-- 数据库结构变更一律新增 migration，不改已应用的历史脚本；当前 `V1`–`V20`。`V15`、`V16`、`V18` 使用双方言占位符（`alterModifyColumn` / `fkChecksDisable` / `fkChecksEnable` / `mysqlOnly`），`application.yml` 与 `application-test.yml` 必须分别提供 MySQL / H2 值。
+- `ddl-auto` / profile 矩阵见 `backend-db-and-config.mdc` §3：主配置为 `validate`，两个 test profile 为 `none`（UT 为 H2 mem，与路径 B 的 H2 文件库有意隔离），均由 Flyway 建表。
+- 数据库结构变更一律新增 migration，不改已应用的历史脚本；迁移编号以 `db/migration/` 实测为准（当前 `V1`–`V24`）。四个双方言占位符由 `common/config/FlywayPlaceholdersConfig.java` 按 DataSource 产品名注入，各 `application*.yml` 不再声明（旧口径已废止）。
 - **本地业务数据**不在 Flyway 种子内；清库即丢。破坏性操作前须 `./scripts/common/backup-local-data.sh`；H2 清库须 `./scripts/path-b/reset-h2.sh`（见 `path-b-data-backup-gate.mdc`）。
 - `data/` 整树禁止随意删除（见 `protect-data-directory.mdc`）：`data/h2/`（H2 持久化）、`data/files/`（上传）、`data/logs/`（一键启动日志）。
 - 若需要并行跑多套前后端实例，后端优先改 `SERVER_PORT`，前端通过 `VITE_API_TARGET` 定向代理到该后端，不要硬绑定唯一的 `8080/5173` 组合。
-- 接口统一前缀仍是 `/api/v1`；统一响应仍是 `code`、`message`、`data`、`timestamp`；分页统一 `PagedResult<T>`。
-- 前端统一通过 `frontend/src/utils/request.ts` 访问后端；不要在页面里直接手写 Axios 实例；类型放 `frontend/src/types/`。
+- 统一响应仍是 `code`、`message`、`data`、`timestamp`；后端分页 `PagedResult<T>`，前端在 `api/` 层映射为 `{ list, total }`。细则见 `backend-code-style.mdc` §3 / §5 与 `frontend-api-contract.mdc` §4。
+- 前端统一通过 `frontend/src/utils/request.ts` 访问后端，URL 唯一来源与解包见 `frontend-api-contract.mdc`；页面与组件纪律见 `frontend-code-style.mdc` §3。
 - 前端页面与原型对齐时，先保信息架构/任务路径，再追求像素复刻。
 - 教师端优先高密度管理台模式；学生端优先任务导向模式；校管端优先组织与治理视角。不要把三种信息节奏混成同一套模板。
-- 后端当前常见模式是 `CurrentUser + service`；角色控制主要由 `@PreAuthorize` 和安全上下文完成；controller 只做参数与转发。
-- 测试当前以业务包镜像分布为主（当前 65 个 `*Tests.java`），常见拆法是 `controller tests + service tests`；controller 测试多为 `@WebMvcTest` + `MockMvc` + `@AutoConfigureMockMvc(addFilters = false)`。
+- 后端 `CurrentUser + service` 与 `@PreAuthorize` 写法见 `backend-code-style.mdc` §3；共享层依赖方向见 `backend-package-layout.mdc` §4。
+- 测试按业务包镜像分布、命名 `*Tests.java`；`@WebMvcTest` / `@SpringBootTest` / `@DataJpaTest` 三类并存，矩阵见 `toolchain-and-test-conventions.mdc` §4；断言细则见 `backend/src/test/java/.../AGENTS.md`（引用，不复制）。
 - 新增功能先读 `docs/PRD/` 对应需求，再按 `.cursor/rules/feature-dev-workflow.mdc` 与 `tech-spec-decisive.mdc` 输出技术方案并完成自查；方案未定稿不进入编码。
 - 当前阶段无原型资产；需求输入以 `docs/PRD/` 与 `docs/技术方案/` 为准，不引用不存在的 `design/`、`design-prototypes/` 目录作为依据。
 

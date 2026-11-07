@@ -112,6 +112,7 @@ public class ExamReportService {
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限查看该考试结果");
         }
+        classAccessService.assertTeacherAssignedToClass(currentUser, exam.getClassId());
 
         List<ExamSubmission> submissions = examSubmissionRepository.findByExamId(examId);
         List<Map<String, Object>> resultList = new ArrayList<>();
@@ -152,6 +153,7 @@ public class ExamReportService {
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限查看该提交详情");
         }
+        classAccessService.assertTeacherAssignedToClass(currentUser, exam.getClassId());
 
         List<ExamQuestion> examQuestions = examQuestionRepository.findByExamIdOrderBySortOrder(submission.getExamId());
         List<ExamAnswer> answers = examAnswerRepository.findByExamSubmissionId(submissionId);
@@ -221,6 +223,7 @@ public class ExamReportService {
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限批改该考试");
         }
+        classAccessService.assertTeacherAssignedToClass(currentUser, exam.getClassId());
         // 先取业务键 (examId, studentId)，再在锁内重读并重跑状态校验，保证成绩写入串行化。
         ExamSubmission submission = examSubmissionRepository
                 .findByExamIdAndStudentIdForUpdate(exam.getId(), head.getStudentId())
@@ -286,6 +289,7 @@ public class ExamReportService {
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限批改该考试");
         }
+        classAccessService.assertTeacherAssignedToClass(currentUser, exam.getClassId());
         // 先取业务键 (examId, studentId)，再在锁内重读并重跑状态校验。
         ExamSubmission submission = examSubmissionRepository
                 .findByExamIdAndStudentIdForUpdate(exam.getId(), head.getStudentId())

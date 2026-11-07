@@ -1,0 +1,64 @@
+---
+description: 后端 Java 代码风格与编码惯例：Java 21 record 请求体、显式构造器注入、统一响应、鉴权与错误码段位
+globs: backend/src/main/java/**/*.java
+alwaysApply: false
+---
+
+# 后端 Java 代码风格
+
+> 落包决策见 `backend-package-layout.mdc`；表结构与 profile 见 `backend-db-and-config.mdc`；流程门禁见 `code-conventions.mdc`。本规则只管「类怎么写」。
+
+## 1. 语言与基础风格
+
+1. Java 21（`backend/pom.xml`）。4 空格缩进；import 显式列出，不用通配符。
+2. **不用 Lombok**：`pom.xml` 虽声明 optional 依赖，`main/java` 中 0 处使用。实体手写 getter/setter，日志用 `LoggerFactory.getLogger(...)`；禁止引入 `@Data` / `@Getter` / `@Builder` / `@Slf4j` / `@RequiredArgsConstructor`。
+3. **不用 `var`**：现网仅 4 处历史用法，新代码一律显式类型。
+4. `record` 是值对象与 DTO 的主流形态：`ApiResponse`、`PagedResult`、`CurrentUser`、请求体、列表项均为 record。
+5. JavaDoc 与注释用中文，类级 / 方法级说明用 `<p>`、`{@code}`、`{@link}`；注释写「为什么」，不复读「做什么」。
+
+## 2. 命名与类型形态
+
+| 类别 | 唯一形态 | 依据 |
+|---|---|---|
+| Controller | `XxxController` | `admin/controller/AdminSchoolController.java` |
+| Service | `XxxService` **单实现类**；过大按职责拆 `XxxSupport` / `XxxConfigService` / `XxxAnswerService` / `XxxReportService` / `XxxJob` | `lab/service/LabService.java`、`LabServiceSupport.java`、`exam/service/ExamAutoSubmitJob.java` |
+| Repository | `public interface XxxRepository extends JpaRepository<Entity, Long>` | `material/repository/CourseMaterialRepository.java` |
+| Entity | **无后缀**，`Exam` / `CourseMaterial` / `SysUser` | `material/entity/CourseMaterial.java` |
+| 请求体 | 域内 `dto/XxxRequests.java`：`public final class` + 私有构造 + 嵌套 `public record XxxRequest(...)` | `admin/dto/AdminRequests.java`、`exam/dto/ExamRequests.java` |
+| 响应 | 不写响应 DTO：`ApiResponse<?>` / `PagedResult<T>` / record 列表项 / `Map.of("deleted", true)` | `admin/dto/AuditLogListItem.java` |
+
+- **禁止** `*ServiceImpl`、`*DTO.java`、`*VO.java`、`*Enum.java`、`*Response.java` 后缀；现网无 `*ServiceImpl`，接口只用于 Repository 与 `grading/strategy/QuestionScoringStrategy`。
+- 唯一例外：`auth/dto/` 已有 3 个顶层 record 请求文件（`LoginRequest`、`UpdateProfileRequest`、`ChangePasswordRequest`），沿用即可，不再扩散该形态。
+- 删除类端点返回 `ApiResponse.ok(Map.of("deleted", true))`，不要自造空响应体。
+
+## 3. Controller / Service 边界
+
+1. `@RestController` + 类级 `@RequestMapping`。资源型写全路径（`/api/v1/materials`、`/api/v1/questions`、`/api/v1/admin/...`）；`ExamController` / `LabController` / `HomeworkController` 类级只写 `/api/v1`，由方法路径区分 `/teacher/...` 与 `/student/...`。
+2. `@PreAuthorize` 以**方法级**为主（6 个 admin controller 为类级）；角色字符串白名单：`hasRole('TEACHER')`、`hasRole('STUDENT')`、`hasRole('SCHOOL_ADMIN')`、`hasAnyRole(...)`。禁止跳过安全上下文手工传角色字符串做授权。
+3. `CurrentUser` **不作方法参数**，统一 `CurrentUser currentUser = SecurityUtils.currentUser();`（`auth/security/SecurityUtils.java`）。
+4. 请求体 `@Valid @RequestBody XxxRequests.XxxRequest`；类级 `@Validated` 仅用于 `@RequestParam` / `@PathVariable` 约束场景；校验注解带中文 `message`。
+5. Controller 只取参、取当前用户、转发 service，不写业务判断；业务逻辑落 service，共享逻辑见 `backend-package-layout.mdc` §4。
+6. 返回一律 `ApiResponse.ok(...)` / `ApiResponse.of(...)`；分页 `ApiResponse<PagedResult<?>>`，`PagedResult` 由 service 构造。唯二裸对象是二进制下载 `ResponseEntity<ByteArrayResource>`（`MaterialController`、`LabController` 的答题图预览）。
+
+## 4. 依赖注入
+
+- `private final` 字段 + **显式 public 构造器**，见 `AdminSchoolController`、`ExamController`、`LabController`。
+- 禁止字段注入 `@Autowired`、禁止 `@RequiredArgsConstructor` 等注解生成构造器；`main/java` 现有唯一 `@Autowired` 标在构造器上，属历史形态，不新增。
+- 字段注入只在测试基类里允许（`AdminIntegrationTestSupport`），生产代码不得借用。
+- 不得制造循环依赖：共享逻辑下沉 `common/util/`、`assessment/`、`grading/`，不要双向互注。
+
+## 5. 错误码与状态
+
+1. `new BusinessException(int code, "中文消息")`；全仓**无错误码枚举类**，码是 int 字面量，中文消息面向用户。
+2. 段位固定：`40000` / `40001` 参数与校验、`40300` 越权、`40400` 未找到、`40900` 冲突、`50000` 兜底。`common/exception/GlobalExceptionHandler.java` 将 403xx→403、404xx→404、409xx→409，其余→400；兜底响应脱敏为「系统繁忙，请稍后重试」，完整堆栈只写日志。
+3. 新增业务错误必须落在上述段位，否则 `GlobalExceptionHandler` 的 HTTP 映射与前端 `SILENT_CODES` / `AUTH_FAILURE_CODES` 判定会失效（见 `frontend-api-contract.mdc` §4）。
+4. 状态值用 Java 枚举（`common/enums/` 或域枚举），前端同步 `types/enums.ts`；禁止散落魔法字符串。
+
+## 6. 反例
+
+- ❌ 为 `XxxService` 再抽接口 + `XxxServiceImpl`
+- ❌ 用 Lombok 生成 getter / 构造器，或新代码用 `var`
+- ❌ 新建 `*DTO.java` / `*VO.java`，或把请求体拆成一堆顶层 `*Request.java`
+- ❌ Controller 里拼完整 `/api/v1/...` 路径、裸返回业务对象、写复杂业务判断
+- ❌ `@Autowired` 字段注入、`@RequiredArgsConstructor`、硬编码角色名做 `if` 授权
+- ❌ 自造 `6xxxx` 之类错误码，或把异常原文直接返回给前端

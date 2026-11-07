@@ -17,15 +17,19 @@
 | 资料/题库/班级/学生 | `material/` `question/` `clazz/` `student/` | 支撑型业务域 |
 | 统计/查重 | `analysis/` `plagiarism/` | 聚合与独立工作流 |
 
+## 规范引用
+
+Java 类写法、注入、响应与错误码段位见 `.cursor/rules/backend-code-style.mdc`；五层分包、例外矩阵与依赖方向见 `.cursor/rules/backend-package-layout.mdc`；表结构 / Flyway / profile 见 `.cursor/rules/backend-db-and-config.mdc`；总纲见 `.cursor/rules/code-conventions.mdc`。本文件只保留业务域目录导航，不复制条款。
+
 ## CONVENTIONS
 
-- 控制器统一走 `/api/v1`；角色访问一般通过 `@PreAuthorize` 明确声明。
-- 控制器大多只取 `CurrentUser` 并转发到 service；复杂业务不要堆在 controller。
-- 标准响应统一使用 `ApiResponse.ok(...)` / `ApiResponse.of(...)`。
-- 错误码到 HTTP 状态的映射集中在 `common/exception/GlobalExceptionHandler.java`。
-- 分页返回统一使用 `PagedResult<T>`。
-- `application.yml` 已固定 `flyway.enabled=true`、`ddl-auto=validate`；表结构改动优先走 migration，不要偷改运行时 schema。
-- 状态值优先放在 `common/enums/` 或领域枚举中，不要散落魔法字符串。
+- 控制器统一走 `/api/v1`；角色访问通过 `@PreAuthorize` 明确声明（角色字符串白名单见 `backend-code-style.mdc` §3）。
+- 控制器只取 `SecurityUtils.currentUser()` 并转发到 service；复杂业务不堆在 controller。
+- 标准响应统一 `ApiResponse.ok(...)` / `ApiResponse.of(...)`；分页返回 `ApiResponse<PagedResult<?>>`。
+- 错误码到 HTTP 状态的映射集中在 `common/exception/GlobalExceptionHandler.java`；段位与兜底见 `backend-code-style.mdc` §5。
+- 表结构改动优先走 migration，`ddl-auto` 矩阵见 `backend-db-and-config.mdc` §3，不要偷改运行时 schema。
+- 状态值优先放在 `common/enums/` 或领域枚举中，枚举落点按同域现状跟随（见 `backend-package-layout.mdc` §5），不散落魔法字符串。
+- 审计 / 访问日志已归位 `common/infra/audit/`、`common/infra/accesslog/`（旧路径 `common/audit/`、`common/accesslog/` 已废止）。
 
 ## ANTI-PATTERNS
 

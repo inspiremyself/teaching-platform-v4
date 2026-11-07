@@ -31,19 +31,31 @@ backend/
 | 业务代码 | `src/main/java/com/opencode/teachingplatform/` | 其下按业务域分包 |
 | 测试代码 | `src/test/java/com/opencode/teachingplatform/` | 其下按业务包镜像分布 |
 
+## 规范引用（细则不在本文件重复）
+
+| 任务 | 规则 |
+|---|---|
+| Java 写法、注入、错误码 | `.cursor/rules/backend-code-style.mdc` |
+| 分包、例外矩阵、依赖方向 | `.cursor/rules/backend-package-layout.mdc` |
+| 表结构、Flyway、profile 矩阵 | `.cursor/rules/backend-db-and-config.mdc` |
+| 测试注解与命令 | `.cursor/rules/toolchain-and-test-conventions.mdc` |
+| 总纲与冲突优先级 | `.cursor/rules/code-conventions.mdc` |
+
+下列 CONVENTIONS 只保留后端运行边界事实；与规则冲突时按 `code-conventions.mdc` §1.4 以代码实测为准。
+
 ## CONVENTIONS
 
 - 启动与验证默认优先用 wrapper，不假设全局 Maven 已安装。
 - 数据库结构变更一律通过 `db/migration/` 演进；`ddl-auto=validate` 说明运行时不应依赖自动建表。
-- **迁移脚本规范**：已应用的 `V1`–`V24` 只读，不得修改；新增脚本只使用 `alterModifyColumn` / `fkChecksDisable` / `fkChecksEnable` / `mysqlOnly` 四个双方言占位符，不写 seed / DML。四个值由 `common/config/FlywayPlaceholdersConfig.java` 按 `DataSource` 产品名注入，各 profile 不再声明；`FlywayConfig.repairBeforeMigrateStrategy` 已删除，Spring Boot 默认 `validateOnMigrate=true` 会拦截 checksum 不一致。
-- **`ddl-auto` 例外矩阵**：`local`（MySQL）与 `prod`（MySQL）为 `validate`；`main` 的 `test` profile（H2 文件库）与 `src/test/resources` 的 UT profile（H2 mem）为 `none`，由 Flyway 建表。
+- **迁移脚本规范**：已应用脚本只读，不得修改（编号以 `db/migration/` 实测为准）；新增脚本只使用 `alterModifyColumn` / `fkChecksDisable` / `fkChecksEnable` / `mysqlOnly` 四个双方言占位符，不写演示 seed 或覆盖本地业务数据的 DML——`V24` 的结构性数据回填是允许的例外。四个值由 `common/config/FlywayPlaceholdersConfig.java` 按 `DataSource` 产品名注入，各 profile 不再声明；`FlywayConfig.repairBeforeMigrateStrategy` 已删除，Spring Boot 默认 `validateOnMigrate=true` 会拦截 checksum 不一致。完整条款见 `backend-db-and-config.mdc` §2。
+- **`ddl-auto` 例外矩阵**：`local`（MySQL）与 `prod`（MySQL）为 `validate`；`main` 的 `test` profile（H2 文件库）与 `src/test/resources` 的 UT profile（H2 mem）为 `none`，由 Flyway 建表。见 `backend-db-and-config.mdc` §3。
 - `application.yml` 是主配置入口；profile 只做环境差异，不要把核心约束散落到多个 profile 难以追踪。
 - 路径 B（`main` 的 `test` profile）使用 H2 文件库持久化；单元测试资源保持 mem。二者有意不同；Flyway 占位符按方言由 `FlywayPlaceholdersConfig` 自动注入，两个 test profile 不再分别维护。
 - **调试、联调默认** `./scripts/path-b/backend.sh`（本机 MySQL，`local` profile）。无 MySQL 时用 `./scripts/path-b/backend-h2.sh`（H2 文件库，`test` profile）。
 - Windows MySQL：`cmd /c "set DB_PASS=12345678 && mvnw.cmd spring-boot:run"`。
 - Windows H2：`cmd /c "set SPRING_PROFILES_ACTIVE=test && mvnw.cmd spring-boot:run"`。
 - 开始前端或 Playwright 联调前，先直连探活一次 `POST /api/v1/auth/login`，确认 H2 后端真的已起来，再开始浏览器测试。
-- `src/main/java/...` 与 `src/test/java/...` 已各自有子级 AGENTS；涉及具体业务代码或测试写法时应继续向下读子规则。
+- `src/main/java/...` 与 `src/test/java/...` 已各自有子级 AGENTS；涉及具体业务代码或测试写法时继续向下读子规则，并按上表读对应 rule。
 
 ## ANTI-PATTERNS
 

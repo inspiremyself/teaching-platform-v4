@@ -82,7 +82,7 @@ alwaysApply: true
 1. **范围**：只改方案列出的文件与能力；不做方案外的「顺手优化」。
 2. **真实链路**：真实前后端 + 真实 DB/Flyway；禁止 mock 页面、假 API、静态假数据闭环。
 3. **入口**：方案写死的唯一业务入口与挂载点；按方案「非目标」守口。
-4. **惯例**：API 走 `request.ts`；不随意新建顶层目录；共享逻辑落方案指定路径；后端改动须有镜像测试。
+4. **惯例与代码规范**：API 走 `request.ts`；不随意新建顶层目录；共享逻辑落方案指定路径；后端改动须有镜像测试。**编码时按 `code-conventions.mdc` §2 的改动路径读对应细则**：后端 `backend-code-style.mdc` / `backend-package-layout.mdc` / `backend-db-and-config.mdc`，前端 `frontend-code-style.mdc` / `frontend-api-contract.mdc`，测试与工具链 `toolchain-and-test-conventions.mdc`；方案里只引用规则，不复制规范正文。
 5. 方案写「无改动」则不得偷偷加接口/迁移假设。
 
 ### 2.1 实现自查 N 轮（直至收敛）
@@ -105,6 +105,7 @@ alwaysApply: true
 | 资源生命周期 | blob/预览：先 `closePreview` 再 revoke；增量缓存勿全量闪烁 |
 | 边界 | 加载失败是否静默、空列表、并发重复 fetch、卸载中途回调 |
 | 范围外 | 未开通能力（如未传 `enable-images`）语义不变 |
+| 代码规范 / 分包 | 命名后缀与 record 请求体、构造器注入、落包与依赖方向、SFC 拆分、lint/format 门禁；违反 `code-conventions.mdc` 路由表里的细则计入本轮问题点 |
 | 测试 | 方案 §测试计划用例名/断言是否落地；错误文案是否与方案一致 |
 
 常见实现轮次会修的点：`teleported` 遗漏、computed 未 `unref`、预览重挂载与 `initial-index`、竞态打开旧题预览、失败标记 `''` 阻断重试、Controller/JavaDoc 仍写旧语义。

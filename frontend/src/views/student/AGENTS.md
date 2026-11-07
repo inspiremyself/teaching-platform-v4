@@ -19,6 +19,10 @@
 | 成绩总览 | `Scores.vue` | 反馈与结果汇总 |
 | 代码作答组件 | `CodeAnswerEditor.vue` | 页面内复用的编辑器组件 |
 
+## 规范引用
+
+SFC 风格、`composables/` 薄壳拆分、数据流与依赖方向见 `.cursor/rules/frontend-code-style.mdc`；请求 / 类型契约见 `.cursor/rules/frontend-api-contract.mdc`；lint 与构建门禁见 `.cursor/rules/toolchain-and-test-conventions.mdc`；总纲见 `.cursor/rules/code-conventions.mdc`。下列 CONVENTIONS 只保留学生端信息架构，不复制规范条款。
+
 ## CONVENTIONS
 
 - 学生页优先表达：当前任务、截止时间、进度、主操作入口、结果反馈。

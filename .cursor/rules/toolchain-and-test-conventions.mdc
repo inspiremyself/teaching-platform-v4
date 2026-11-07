@@ -1,0 +1,58 @@
+---
+description: 工具链与测试规范：npm scripts / CI 门禁、ESLint-Prettier 现状、Java 21 构建、*Tests.java 命名与三类测试注解矩阵
+globs: frontend/package.json,frontend/eslint.config.js,frontend/vite.config.ts,frontend/vitest.config.ts,frontend/.prettierrc.json,frontend/tsconfig.json,.github/workflows/**,backend/pom.xml,backend/src/test/**/*
+alwaysApply: false
+---
+
+# 工具链与测试规范
+
+> 代码写法见 `backend-code-style.mdc` / `frontend-code-style.mdc`；验证阶段与顺序见 `feature-dev-workflow.mdc` §3（本规则不复制工作流）；测试断言覆盖项见 `backend/src/test/java/.../AGENTS.md`（引用）。
+
+## 1. 命令与 CI 门禁
+
+| 层 | 命令 | 说明 |
+|---|---|---|
+| 前端 | `npm run dev` / `build` / `preview` / `test` / `lint` / `format` | `build` = `vue-tsc --noEmit && vite build`；`test` = `vitest run`；`lint` = `eslint "src/**/*.{ts,vue}"`；`format` = `prettier --write src` |
+| 后端 | `./mvnw test`、`./mvnw -Dtest=XxxTests test` | `backend/mvnw` 转调系统 Maven，需 JDK 21 |
+| CI | `.github/workflows/ci.yml` | Java 21 `./mvnw test`；Node 20 `npm ci → npm run lint → npm test → npm run build`，顺序不得调换或跳过 |
+
+- 前端有改动跑 `npm run build`，后端有改动跑 `./mvnw test`；提交前不得用 `--no-verify` / 跳过 lint 的方式绕过。
+- 联调启动与探活见 `local-dev-startup.mdc`（`scripts/path-b/`、`healthcheck-login.sh`）。
+
+## 2. 前端格式与静态检查（照现状，不擅自加工具）
+
+1. ESLint 9 **flat config**（`frontend/eslint.config.js`）：`typescript-eslint` + `eslint-plugin-vue` recommended + `vue-eslint-parser`；每个配置对象的 `files` **显式**写 `['**/*.ts', '**/*.vue']`，与 `lint` 脚本的 CLI glob 双保险，避免「0 error 但没检查任何 TS/Vue」的假通过。
+2. 现有关闭项（`no-explicit-any`、`no-unused-vars`、`vue/multi-word-component-names`、HTML 格式类规则等）是既定基线；不为「提升质量」单独重新打开导致大面积失败，如需收紧先出已定稿方案。
+3. Prettier（`.prettierrc.json`）：`singleQuote: true`、`semi: true`、`printWidth: 100`、`trailingComma: "all"`；HTML 缩进 / 换行由 `format` 负责，lint 不重复报。
+4. `tsconfig.json` 仅 `extends "@vue/tsconfig/tsconfig.dom.json"` + `paths @/* → src/*`，**仓库未显式声明 `strict`**；类型检查由 `vue-tsc --noEmit` 执行。
+5. `vitest.config.ts`：`environment: 'node'`、`include: ['src/**/*.spec.ts']`、alias `@`；新前端单测放 `src/**/*.spec.ts`。
+6. `vite.config.ts`：`/api` 代理目标取 `process.env.VITE_API_TARGET || 'http://localhost:8080'`，不调用 `loadEnv`；`src/` 不出现 `import.meta.env`。
+7. 当前**不存在** `.editorconfig`、`.gitattributes`、husky、lint-staged、checkstyle、spotless；不要顺手引入，也不要在文档里声称已有。
+
+## 3. 后端构建
+
+- `backend/pom.xml`：Spring Boot 3.3.13、`<java.version>21</java.version>`；唯一插件 `spring-boot-maven-plugin`；`lombok` 为 optional 且生产代码不使用（见 `backend-code-style.mdc` §1.2）。
+- 测试资源 `src/test/resources/application-test.yml` 保持 H2 **mem**；配置矩阵见 `backend-db-and-config.mdc` §3。
+
+## 4. 测试写法
+
+1. 目录**镜像业务包**：`backend/src/test/java/com/opencode/teachingplatform/<域>/`；命名一律 `*Tests.java`（现网 0 个 `*Test.java`，数量以目录实测为准）。
+2. 三类注解并存，按被测对象选，**不得一律照抄 `@WebMvcTest`**：
+
+| 场景 | 注解组合 | 例子 |
+|---|---|---|
+| Controller 切片 | `@WebMvcTest` + `@AutoConfigureMockMvc(addFilters = false)` + `@MockBean` | `clazz/ClassControllerTests.java` |
+| 需要完整上下文（admin 集成） | `@SpringBootTest` + `@AutoConfigureMockMvc` + `@ActiveProfiles("test")` | `admin/AdminSchoolControllerTests.java` |
+| Service / 持久化 | `@DataJpaTest` + `@Import`，或纯 Mockito `@Mock` | `exam/ExamServiceTests.java`、`material/MaterialServiceTests.java` |
+
+3. 公共 fixture：`admin/AdminIntegrationTestSupport`（`adminBearer()`、`teacherId("t9001")`）、`testsupport/IntegrationTestAuthSupport#bearerToken`；演示账号与班级见 `local-dev-startup.mdc`，不得改。
+4. 断言用 AssertJ `assertThat` / `assertThatThrownBy` 与 MockMvc `jsonPath("$.data.xxx")`；断言覆盖 `code` / `message` / `timestamp` / 关键 `data`，不只看 HTTP 状态（细则见测试子级 AGENTS）。
+5. 后端改动须有镜像测试（见 `feature-dev-workflow.mdc` §2）；新增迁移要确认 UT 的 H2 mem 上下文仍能启动。
+
+## 5. 反例
+
+- ❌ 把 `lint` 脚本改成 `eslint src`（ESLint 9 默认只扫 `.js`，TS/Vue 会被静默跳过）
+- ❌ 新增 `*.spec.ts` 放到 `src/` 之外，或新建 `*Test.java`
+- ❌ 为了过 lint 批量改 `eslint.config.js` 关闭更多规则，或引入 Prettier 之外的第二套格式化器
+- ❌ 把 `src/test/resources/application-test.yml` 改成文件库来「方便调试」
+- ❌ 在规则里写死「65 个测试」「24 个迁移」当作永久事实（见 `code-conventions.mdc` §1.5）

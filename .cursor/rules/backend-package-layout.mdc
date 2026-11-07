@@ -1,0 +1,81 @@
+---
+description: 后端业务域分包规范：controller/service/repository/entity/dto 五层、现网例外矩阵、新增类落包决策与依赖方向
+globs: backend/src/main/java/**/*.java
+alwaysApply: false
+---
+
+# 后端分包规范
+
+> 类的写法见 `backend-code-style.mdc`；表结构 / Flyway / profile 见 `backend-db-and-config.mdc`；总纲见 `code-conventions.mdc`。
+
+## 1. 标准业务域
+
+```text
+com/opencode/teachingplatform/<域>/
+├─ controller/      # HTTP 入口
+├─ service/         # 业务逻辑；过大时按职责拆 *Support / *ConfigService / *Job
+├─ repository/      # JpaRepository 接口
+├─ entity/          # JPA 实体，继承 common/model/BaseEntity
+├─ dto/             # XxxRequests 聚合容器 + 嵌套 record、列表项 record
+└─ enums/           # 可选；域专有枚举（部分域放在域根，见 §5）
+```
+
+完整具备五层的域：`exam`、`homework`、`lab`、`material`、`clazz`、`question`、`plagiarism`、`analysis`；`auth` 另有 `security/`（JWT、`CurrentUser`、`SecurityUtils`、`SecurityConfig`）。
+
+## 2. 现网例外矩阵（照抄现状，不「顺手统一」）
+
+| 域 | 实际子包 | 说明 |
+|---|---|---|
+| `admin` | `controller/ dto/ service/` | 无 entity / repository，复用 `school/`、`clazz/`、`auth/` 的实体与仓储 |
+| `school` | `entity/ repository/` + 域根枚举 | 无 controller / service |
+| `student` | `dto/ entity/ repository/` | 无 controller / service |
+| `assessment` | `model/ service/` | 共享题目能力层（快照、答案标准化、评分适配） |
+| `grading` | `enums/ model/ service/ strategy/` | 策略模式评分引擎 |
+| `common` | `api/ config/ enums/ exception/ file/ model/ trace/ util/` + `infra/accesslog/`、`infra/audit/` | 非业务分层，不建 `common/controller/` |
+| `lab/behavior/` | 二级域，自带 `service/ enums/ entity/ repository/ dto/` | 实验作答行为埋点 |
+| `material/SeedMaterialInitializer.java` | 资料初始化归业务域 `material/`，不放 `common/file/`（后者仅 `LocalFileStorageService`）；旧的 `common/accesslog/`、`common/audit/` 为空目录残留 | 已定稿方案 TD21 |
+
+## 3. 新增类落包决策表
+
+| 新增内容 | 落点 |
+|---|---|
+| 新 HTTP 端点 | 所属域 `controller/`；跨域复用的端点仍归业务域，不新建通用 controller 包 |
+| 业务逻辑 | 所属域 `service/`；协作 service 拆法（原 service 保留 public 签名只做委托）见 `docs/技术方案/2026-11-07-前后端结构与工程治理整改技术方案.md` TD20 |
+| 持久化查询 | 所属域 `repository/` |
+| 表映射 | 所属域 `entity/`，继承 `common/model/BaseEntity` |
+| 请求体 | 所属域 `dto/XxxRequests.java` 的嵌套 record |
+| 列表项 / 值对象 | 所属域 `dto/` 的 record；题目快照 / 评分上下文放 `assessment/model/`、`grading/model/` |
+| 共享枚举 | `common/enums/`（现为 `ActivityStatus`、`SubmissionStatus`、`ScoreVisibilityMode` + 工具类 `EnumValueParser`）；域专有枚举放域内 |
+| 审计 / 访问日志 | `common/infra/audit/`、`common/infra/accesslog/`（**不是** `common/audit/` / `common/accesslog/`） |
+| 通用工具 | `common/util/`（如 `ActivityStatusParser`） |
+| 评分策略 | `grading/strategy/`，入口 `grading/service/ScoringEngine` |
+
+## 4. 依赖方向（不得成环）
+
+```text
+lab / homework / exam  →  assessment/ + grading/  →  common/
+任一业务域             →  common/（单向）
+common/                ✗ 不得反向依赖任何业务域
+```
+
+- `assessment/`、`grading/` 是三条闭环的共享层，**不得 import** `lab/`、`exam/`、`homework/`；需要域内适配时放门面类（如 `lab/service/LabAssessmentAdapter`）。
+- `admin/` 复用 `school/`、`clazz/`、`auth/` 的实体与 Repository，不复制第二套 entity。
+- 新增能力优先落在既有业务域；新建顶层域须先有已定稿技术方案（见 `feature-dev-workflow.mdc`），不得在编码时自行拍板。
+- 三角色边界与权限归 `auth/security/` + 根 `AGENTS.md`，不在业务域里自建第二套鉴权。
+
+## 5. 枚举落点
+
+现网两种形态并存，**按同域现有落点跟随**，不为统一风格搬迁历史文件：
+
+- 域根裸名：`auth/UserRole`、`clazz/ClassStatus`、`material/MaterialVisibility`、`school/SchoolStatus`、`plagiarism/PlagiarismStatus`、`grading/BusinessType`
+- `enums/` 子包：`common/enums/`、`exam/enums/`、`grading/enums/`、`lab/behavior/enums/`
+
+跨域共享才放 `common/enums/`；前端取值单一来源见 `frontend-api-contract.mdc` §5。
+
+## 6. 反例
+
+- ❌ 把 `assessment/` 的类 import 进 `lab/` 后，又在 `assessment/` 里反向 import `lab/`
+- ❌ 在 `common/` 下新建 `controller/` / `service/` 承载业务逻辑
+- ❌ 把 admin 需要的 `School`、`ClassMember` 实体复制一份到 `admin/entity/`
+- ❌ 新建 `common/audit/`（正确为 `common/infra/audit/`）
+- ❌ 为「统一风格」批量搬迁域根枚举到 `enums/`，造成无业务收益的大范围 import 改动
