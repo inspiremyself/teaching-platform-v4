@@ -6,14 +6,17 @@ import type {
   AdminTeacher,
   AuditLogListItem,
   CreateAdminClassPayload,
+  CreateSchoolPayload,
   CreateStudentPayload,
   CreateSubjectPayload,
   CreateTeacherPayload,
   ImportStudentsPayload,
   ImportStudentsResult,
   ListAuditLogsParams,
+  PlatformSchoolItem,
   ResetStudentPasswordPayload,
   SchoolInfo,
+  SchoolStatus,
   StudentStatus,
   SubjectStatus,
   TeacherStatus,
@@ -28,6 +31,14 @@ import type { PagedResult } from '@/types/common';
 export const getSchool = () => request.get<SchoolInfo>('/admin/school');
 
 export const updateSchool = (data: UpdateSchoolPayload) => request.put<SchoolInfo>('/admin/school', data);
+
+export const listPlatformSchools = () => request.get<PlatformSchoolItem[]>('/admin/schools');
+
+export const createPlatformSchool = (data: CreateSchoolPayload) =>
+  request.post<PlatformSchoolItem>('/admin/schools', data);
+
+export const updatePlatformSchoolStatus = (id: number, status: SchoolStatus) =>
+  request.post<PlatformSchoolItem>(`/admin/schools/${id}/status`, { status });
 
 export const listTeachers = (status?: TeacherStatus) =>
   request.get<AdminTeacher[]>('/admin/teachers', { params: status ? { status } : undefined });

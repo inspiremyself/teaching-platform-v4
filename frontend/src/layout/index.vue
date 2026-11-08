@@ -42,6 +42,16 @@
           </div>
         </div>
 
+        <div class="sidebar-org" v-else-if="isPlatformAdmin">
+          <div class="org-icon">
+            <span class="material-symbols-outlined">account_balance</span>
+          </div>
+          <div>
+            <div class="org-name">{{ user?.schoolName || '教学一体化平台' }}</div>
+            <div class="org-term">{{ roleView.orgTerm }}</div>
+          </div>
+        </div>
+
         <div class="sidebar-org" v-else-if="isTeacher">
           <div class="org-icon">
             <span class="material-symbols-outlined">account_balance</span>
@@ -113,39 +123,22 @@ import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { logoutRequest } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
-import { MOBILE_NAV, PROFILE_NAV_ITEM, SIDEBAR_NAV, type AppRole } from '@/layout/navigation';
+import { MOBILE_NAV, PROFILE_NAV_ITEM, SIDEBAR_NAV } from '@/layout/navigation';
+import { resolveRoleView } from '@/layout/roleView';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const { user } = storeToRefs(authStore);
 
-const currentRole = computed<AppRole>(() => {
-  const role = user.value?.role;
-  return role === 'TEACHER' || role === 'SCHOOL_ADMIN' ? role : 'STUDENT';
-});
-
+const roleView = computed(() => resolveRoleView(user.value?.role));
+const currentRole = computed(() => roleView.value.currentRole);
 const isTeacher = computed(() => currentRole.value === 'TEACHER');
 const isSchoolAdmin = computed(() => currentRole.value === 'SCHOOL_ADMIN');
-const brandText = computed(() => {
-  if (isSchoolAdmin.value) return '学校管理台';
-  if (isTeacher.value) return '教学工作台';
-  return '学习工作台';
-});
-const spaceLabel = computed(() => {
-  if (isSchoolAdmin.value) return '校管空间';
-  if (isTeacher.value) return '教师空间';
-  return '学生空间';
-});
-const sidebarNavLabel = computed(() => {
-  if (isSchoolAdmin.value) return '校管端主导航';
-  if (isTeacher.value) return '教师端主导航';
-  return '学生端主导航';
-});
-const themeClass = computed(() => {
-  if (isSchoolAdmin.value) return 'theme-admin';
-  if (isTeacher.value) return 'theme-teacher';
-  return 'theme-student';
-});
+const isPlatformAdmin = computed(() => currentRole.value === 'PLATFORM_ADMIN');
+const brandText = computed(() => roleView.value.brandText);
+const spaceLabel = computed(() => roleView.value.spaceLabel);
+const sidebarNavLabel = computed(() => roleView.value.sidebarNavLabel);
+const themeClass = computed(() => roleView.value.themeClass);
 const mobileNavItems = computed(() => MOBILE_NAV[currentRole.value]);
 
 const goProfile = () => {

@@ -13,6 +13,22 @@ export type ClassTeacherRole = 'HEAD' | 'SUBJECT';
 export type SchoolStatus = 'ACTIVE' | 'DISABLED';
 export type SubjectStatus = 'ACTIVE' | 'DISABLED';
 
+export interface PlatformSchoolItem {
+  id: number;
+  name: string;
+  code: string;
+  status: SchoolStatus;
+  adminUsername: string;
+  createdAt: string;
+}
+
+export interface CreateSchoolPayload {
+  name: string;
+  code: string;
+  adminUsername: string;
+  adminPassword: string;
+}
+
 export interface AdminTeacher {
   id: number;
   username: string;

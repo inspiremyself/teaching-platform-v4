@@ -133,6 +133,16 @@ describe('request.ts 解包与登录态', () => {
     await expect(h.resErr[0](httpError)).rejects.toMatchObject({ code: 40001 });
   });
 
+  it.each([40904, 40905, 40028])('%i 抛 ApiError 并弹 toast', async code => {
+    await load();
+    await expect(h.resOk[0](envelope(code))).rejects.toMatchObject({
+      name: 'ApiError',
+      code,
+    });
+    expect(h.messageError).toHaveBeenCalledWith('boom');
+    expect(h.location.href).toBe('');
+  });
+
   it('请求拦截器注入 Authorization', async () => {
     await load();
     const config: any = { headers: {} };

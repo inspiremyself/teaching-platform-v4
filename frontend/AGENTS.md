@@ -4,6 +4,8 @@
 
 这里是前端运行边界与页面组织层：Vite 启动、Router 壳层、Pinia 登录态、构建命令、视图分叉都在这一层汇总，而更细的 API/teacher/student 规则继续下沉到子 AGENTS。
 
+角色与演示账号事实以根 `AGENTS.md` 为准：1A 后共 4 个角色；`AppRole` 单一来源仍是 `layout/navigation.ts`，平台超管复用 `/admin` 壳层、唯一业务入口 `/admin/schools`，三套业务壳层不合并。本层不复制规则条款。
+
 ## STRUCTURE
 
 ```text

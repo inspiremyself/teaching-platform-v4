@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { getUserInfo, login as loginApi, updateProfile as updateProfileApi } from '@/api/auth';
 import { getToken, setToken as persistToken } from '@/utils/authToken';
+import { resolveHomePath } from '@/router/guardRules';
 import type { LoginDto, UpdateProfilePayload, User } from '@/types/user';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -9,18 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
   const permissions = ref<string[]>([]);
 
-  const homePath = computed(() => {
-    if (user.value?.role === 'TEACHER') {
-      return '/teacher/dashboard';
-    }
-    if (user.value?.role === 'STUDENT') {
-      return '/student/dashboard';
-    }
-    if (user.value?.role === 'SCHOOL_ADMIN') {
-      return '/admin/dashboard';
-    }
-    return '/login';
-  });
+  const homePath = computed(() => resolveHomePath(user.value?.role));
 
   const setToken = (newToken: string) => {
     token.value = newToken;

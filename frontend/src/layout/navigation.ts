@@ -1,4 +1,4 @@
-export type AppRole = 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT';
+export type AppRole = 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PLATFORM_ADMIN';
 
 export interface NavItem {
   to: string;
@@ -37,6 +37,7 @@ export const SIDEBAR_NAV: Record<AppRole, NavItem[]> = {
     { to: '/student/exams', label: '考试任务', icon: 'quiz' },
     { to: '/student/scores', label: '成绩反馈', icon: 'grade' },
   ],
+  PLATFORM_ADMIN: [{ to: '/admin/schools', label: '学校管理', icon: 'domain' }],
 };
 
 export const MOBILE_NAV: Record<AppRole, NavItem[]> = {
@@ -63,4 +64,5 @@ export const MOBILE_NAV: Record<AppRole, NavItem[]> = {
     { to: '/student/homeworks', label: '作业', icon: 'assignment_turned_in' },
     { to: '/profile', label: '我的', icon: 'person' },
   ],
+  PLATFORM_ADMIN: [{ to: '/admin/schools', label: '学校管理', icon: 'domain' }],
 };

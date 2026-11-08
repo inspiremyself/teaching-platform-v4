@@ -19,7 +19,7 @@ import java.time.OffsetDateTime;
 )
 public class SysUser extends BaseEntity {
 
-    @Column(name = "school_id", nullable = false)
+    @Column(name = "school_id", nullable = true)
     private Long schoolId;
 
     @Column(nullable = false, length = 64)

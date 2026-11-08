@@ -2,6 +2,7 @@ package com.opencode.teachingplatform.admin.dto;
 
 import com.opencode.teachingplatform.clazz.ClassStatus;
 import com.opencode.teachingplatform.clazz.ClassTeacherRole;
+import com.opencode.teachingplatform.school.SchoolStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -20,6 +21,19 @@ public final class AdminRequests {
             @NotBlank(message = "学校名称不能为空")
             @Size(min = 1, max = 128, message = "学校名称长度必须在1到128个字符之间")
             String name
+    ) {
+    }
+
+    public record CreateSchoolRequest(
+            @NotBlank(message = "学校名称不能为空") @Size(max = 128, message = "学校名称长度不能超过128个字符") String name,
+            @NotBlank(message = "学校编码不能为空") @Size(max = 64, message = "学校编码长度不能超过64个字符") String code,
+            @NotBlank(message = "校管账号不能为空") @Size(max = 64, message = "校管账号长度不能超过64个字符") String adminUsername,
+            @NotBlank(message = "初始密码不能为空") String adminPassword
+    ) {
+    }
+
+    public record UpdateSchoolStatusRequest(
+            @NotNull(message = "学校状态不能为空") SchoolStatus status
     ) {
     }
 

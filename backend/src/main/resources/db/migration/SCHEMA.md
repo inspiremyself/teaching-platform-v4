@@ -24,6 +24,7 @@
 | `display_name` | `VARCHAR(128)` | 否 |  | 显示名称 |
 | `status` | `VARCHAR(16)` | 否 |  | 状态 |
 | `must_change_password` | `BOOLEAN` | 否 | `FALSE` | 是否强制修改密码 |
+| `school_id` | `BIGINT` | 是 |  | NULL 仅表示平台级账号（无学校归属），不代表任何学校；其余为所属学校 id |
 | `last_login_at` | `TIMESTAMP` | 是 |  | 最近登录时间 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
@@ -34,7 +35,7 @@
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
-- 唯一约束：`UNIQUE (username)`
+- 唯一约束：`UNIQUE (school_id, username)`
 
 #### `class_room`
 

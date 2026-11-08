@@ -124,6 +124,16 @@ class MaterialServiceTests {
         assertEquals(SCHOOL_ID, captor.getValue().getSchoolId());
     }
 
+    @Test
+    void platformAdminCannotListMaterials() {
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> materialService.listMaterials(
+                        new CurrentUser(6L, "platform9001", "演示平台超管", UserRole.PLATFORM_ADMIN, null, "session")));
+
+        assertEquals(40300, exception.getCode());
+        assertEquals("无权限访问资料", exception.getMessage());
+    }
+
     private CourseMaterial material(Long id, Long schoolId, MaterialVisibility visibility) {
         CourseMaterial material = new CourseMaterial() {
             @Override

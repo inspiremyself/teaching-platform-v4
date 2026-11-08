@@ -4,6 +4,8 @@
 
 这里是后端运行与配置边界，不只是 `src/main/java` 代码树；启动、环境切换、Flyway、测试 profile、容器化都从这一层进入。
 
+角色与演示账号事实以根 `AGENTS.md` 为准：1A 后共 4 个角色，新增 `PLATFORM_ADMIN`（平台级账号 `platform9001/123456`，`sys_user.school_id = NULL`）；`admin/` 下的平台级学校管理复用 `school/` / `auth/` 实体与仓储。本层不复制规则条款。
+
 ## STRUCTURE
 
 ```text

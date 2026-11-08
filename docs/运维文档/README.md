@@ -23,6 +23,8 @@
 # 路径 A
 ./scripts/path-a/up.sh
 ./scripts/common/healthcheck-login.sh
+# 平台级账号探活（无学校归属，仅可达平台级学校管理；zsh 下 USERNAME 只读，须用 env）
+env USERNAME=platform9001 ROLE=PLATFORM_ADMIN FORCE_LOGIN=true ./scripts/common/healthcheck-login.sh
 ./scripts/path-a/down.sh
 
 # 本地联调（两个终端，默认 MySQL）

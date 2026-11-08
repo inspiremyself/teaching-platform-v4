@@ -79,6 +79,13 @@ class AuthServiceTests {
         org.mockito.Mockito.lenient()
                 .when(passwordEncoder.encode(anyString()))
                 .thenReturn("{bcrypt}$2a$10$stub");
+
+        // 登录新增所属学校停用校验；三角色既有用例统一按 ACTIVE 学校放行，平台级账号不触发该查询。
+        School activeSchool = new School();
+        activeSchool.setStatus(com.opencode.teachingplatform.school.SchoolStatus.ACTIVE);
+        org.mockito.Mockito.lenient()
+                .when(schoolRepository.findById(anyLong()))
+                .thenReturn(Optional.of(activeSchool));
     }
 
     @Test
@@ -335,6 +342,86 @@ class AuthServiceTests {
         authService.login(new LoginRequest("t9001", "123456", UserRole.TEACHER));
 
         assertTrue(user.getPasswordHash().startsWith("{bcrypt}"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void platformAdminLoginSkipsSchoolLookupAndWritesNullSchoolAudit() {
+        SysUser user = platformAdmin();
+        when(sysUserRepository.findAllByUsernameAndRole("platform9001", UserRole.PLATFORM_ADMIN)).thenReturn(List.of(user));
+        when(passwordEncoder.matches("123456", "{noop}123456")).thenReturn(true);
+        stubSuccessfulSession(user);
+
+        Map<String, Object> result = authService.login(new LoginRequest("platform9001", "123456", UserRole.PLATFORM_ADMIN));
+
+        assertEquals("token", result.get("token"));
+        assertThat((List<String>) result.get("permissions"))
+                .containsExactly("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION");
+        verify(schoolRepository, never()).findById(anyLong());
+        verify(auditLogService).logSecurity(argThat(event ->
+                event.action() == AuditAction.LOGIN_SUCCESS && event.schoolId() == null));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void platformAdminProfileOmitsSchoolFields() {
+        SysUser user = platformAdmin();
+        when(sysUserRepository.findById(6L)).thenReturn(Optional.of(user));
+
+        Map<String, Object> profile = authService.getCurrentUserProfile(
+                new CurrentUser(6L, "platform9001", "演示平台超管", UserRole.PLATFORM_ADMIN, null, "session"));
+
+        assertThat(profile).doesNotContainKeys("schoolId", "schoolName");
+        assertThat((List<String>) profile.get("permissions"))
+                .containsExactly("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION");
+        verify(schoolRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void disabledSchoolAccountCannotLogin() {
+        SysUser user = teacher(1L, 1L);
+        when(sysUserRepository.findAllByUsernameAndRole("t9001", UserRole.TEACHER)).thenReturn(List.of(user));
+        School disabled = new School();
+        disabled.setStatus(com.opencode.teachingplatform.school.SchoolStatus.DISABLED);
+        when(schoolRepository.findById(1L)).thenReturn(Optional.of(disabled));
+
+        BusinessException exception = assertThrows(BusinessException.class,
+                () -> authService.login(new LoginRequest("t9001", "123456", UserRole.TEACHER)));
+
+        assertEquals(40103, exception.getCode());
+        assertEquals("该账号已被停用，请联系管理员", exception.getMessage());
+        verify(auditLogService).logSecurity(argThat(event ->
+                event.action() == AuditAction.LOGIN_FAILURE && event.schoolId() == 1L));
+    }
+
+    @Test
+    void platformAdminLoginFailureWritesNullSchoolAuditEvent() {
+        SysUser user = platformAdmin();
+        when(sysUserRepository.findAllByUsernameAndRole("platform9001", UserRole.PLATFORM_ADMIN)).thenReturn(List.of(user));
+        when(passwordEncoder.matches("wrong", "{noop}123456")).thenReturn(false);
+
+        assertThrows(BusinessException.class,
+                () -> authService.login(new LoginRequest("platform9001", "wrong", UserRole.PLATFORM_ADMIN)));
+
+        // login 带 @Transactional，失败时审计 INSERT 随事务回滚，故在事件层断言而非查 audit_log 表。
+        verify(auditLogService).logSecurity(argThat(event ->
+                event.action() == AuditAction.LOGIN_FAILURE && event.schoolId() == null));
+    }
+
+    private SysUser platformAdmin() {
+        SysUser user = new SysUser() {
+            @Override
+            public Long getId() {
+                return 6L;
+            }
+        };
+        user.setUsername("platform9001");
+        user.setPasswordHash("{noop}123456");
+        user.setDisplayName("演示平台超管");
+        user.setRole(UserRole.PLATFORM_ADMIN);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setSchoolId(null);
+        return user;
     }
 
     private void stubSuccessfulSession(SysUser user) {

@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { ApiError, AUTH_FAILURE_CODES } from '@/utils/request';
 import Layout from '@/layout/index.vue';
+import type { AppRole } from '@/layout/navigation';
+import { shouldRedirectToHome } from './guardRules';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,7 +23,7 @@ const router = createRouter({
     {
       path: '/teacher',
       component: Layout,
-      meta: { role: 'TEACHER' },
+      meta: { roles: ['TEACHER'] },
       redirect: '/teacher/dashboard',
       children: [
         { path: 'classes', redirect: '/teacher/dashboard' },
@@ -51,12 +53,12 @@ const router = createRouter({
       path: '/teacher/labs/:labId/report/:studentId',
       name: 'teacher-lab-report-view',
       component: () => import('@/views/teacher/LabReportViewPage.vue'),
-      meta: { role: 'TEACHER', title: '实验报告' }
+      meta: { roles: ['TEACHER'], title: '实验报告' }
     },
     {
       path: '/student',
       component: Layout,
-      meta: { role: 'STUDENT' },
+      meta: { roles: ['STUDENT'] },
       redirect: '/student/dashboard',
       children: [
         { path: 'dashboard', name: 'student-dashboard', component: () => import('@/views/student/Dashboard.vue'), meta: { title: '学生工作台' } },
@@ -74,16 +76,17 @@ const router = createRouter({
     {
       path: '/admin',
       component: Layout,
-      meta: { role: 'SCHOOL_ADMIN' },
-      redirect: '/admin/dashboard',
+      meta: { roles: ['SCHOOL_ADMIN', 'PLATFORM_ADMIN'] },
+      redirect: () => useAuthStore().homePath,
       children: [
-        { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue'), meta: { title: '校管总览' } },
-        { path: 'teachers', name: 'admin-teachers', component: () => import('@/views/admin/Teachers.vue'), meta: { title: '教师管理' } },
-        { path: 'subjects', name: 'admin-subjects', component: () => import('@/views/admin/Subjects.vue'), meta: { title: '学科管理' } },
-        { path: 'classes', name: 'admin-classes', component: () => import('@/views/admin/Classes.vue'), meta: { title: '班级管理' } },
-        { path: 'students', name: 'admin-students', component: () => import('@/views/admin/Students.vue'), meta: { title: '学生管理' } },
-        { path: 'audit-logs', name: 'admin-audit-logs', component: () => import('@/views/admin/AuditLogs.vue'), meta: { title: '操作日志' } },
-        { path: 'school', name: 'admin-school', component: () => import('@/views/admin/School.vue'), meta: { title: '学校信息' } },
+        { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue'), meta: { title: '校管总览', roles: ['SCHOOL_ADMIN'] } },
+        { path: 'teachers', name: 'admin-teachers', component: () => import('@/views/admin/Teachers.vue'), meta: { title: '教师管理', roles: ['SCHOOL_ADMIN'] } },
+        { path: 'subjects', name: 'admin-subjects', component: () => import('@/views/admin/Subjects.vue'), meta: { title: '学科管理', roles: ['SCHOOL_ADMIN'] } },
+        { path: 'classes', name: 'admin-classes', component: () => import('@/views/admin/Classes.vue'), meta: { title: '班级管理', roles: ['SCHOOL_ADMIN'] } },
+        { path: 'students', name: 'admin-students', component: () => import('@/views/admin/Students.vue'), meta: { title: '学生管理', roles: ['SCHOOL_ADMIN'] } },
+        { path: 'audit-logs', name: 'admin-audit-logs', component: () => import('@/views/admin/AuditLogs.vue'), meta: { title: '操作日志', roles: ['SCHOOL_ADMIN'] } },
+        { path: 'school', name: 'admin-school', component: () => import('@/views/admin/School.vue'), meta: { title: '学校信息', roles: ['SCHOOL_ADMIN'] } },
+        { path: 'schools', name: 'admin-schools', component: () => import('@/views/admin/Schools.vue'), meta: { title: '学校管理', roles: ['PLATFORM_ADMIN'] } },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' }
@@ -130,7 +133,8 @@ router.beforeEach(async to => {
     }
   }
 
-  if (to.meta.role && authStore.user?.role !== to.meta.role) {
+  const roles = to.meta.roles as AppRole[] | undefined;
+  if (shouldRedirectToHome(roles, authStore.user?.role)) {
     return authStore.homePath;
   }
 

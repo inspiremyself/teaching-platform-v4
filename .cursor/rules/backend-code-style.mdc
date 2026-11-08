@@ -34,7 +34,7 @@ alwaysApply: false
 ## 3. Controller / Service 边界
 
 1. `@RestController` + 类级 `@RequestMapping`。资源型写全路径（`/api/v1/materials`、`/api/v1/questions`、`/api/v1/admin/...`）；`ExamController` / `LabController` / `HomeworkController` 类级只写 `/api/v1`，由方法路径区分 `/teacher/...` 与 `/student/...`。
-2. `@PreAuthorize` 以**方法级**为主（6 个 admin controller 为类级）；角色字符串白名单：`hasRole('TEACHER')`、`hasRole('STUDENT')`、`hasRole('SCHOOL_ADMIN')`、`hasAnyRole(...)`。禁止跳过安全上下文手工传角色字符串做授权。
+2. `@PreAuthorize` 以**方法级**为主（6 个 admin controller 与平台级学校管理 controller 为类级）；角色字符串白名单：`hasRole('TEACHER')`、`hasRole('STUDENT')`、`hasRole('SCHOOL_ADMIN')`、`hasRole('PLATFORM_ADMIN')`、`hasAnyRole(...)`。禁止跳过安全上下文手工传角色字符串做授权。
 3. `CurrentUser` **不作方法参数**，统一 `CurrentUser currentUser = SecurityUtils.currentUser();`（`auth/security/SecurityUtils.java`）。
 4. 请求体 `@Valid @RequestBody XxxRequests.XxxRequest`；类级 `@Validated` 仅用于 `@RequestParam` / `@PathVariable` 约束场景；校验注解带中文 `message`。
 5. Controller 只取参、取当前用户、转发 service，不写业务判断；业务逻辑落 service，共享逻辑见 `backend-package-layout.mdc` §4。

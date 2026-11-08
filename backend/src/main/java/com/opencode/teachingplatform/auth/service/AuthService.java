@@ -17,6 +17,7 @@ import com.opencode.teachingplatform.auth.LoginSessionStatus;
 import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.auth.UserStatus;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.school.SchoolStatus;
 import com.opencode.teachingplatform.school.entity.School;
 import com.opencode.teachingplatform.school.repository.SchoolRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -92,6 +93,14 @@ public class AuthService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             logLoginFailure(user.getId(), user.getSchoolId(), request);
             throw new BusinessException(LOGIN_DISABLED_CODE, LOGIN_DISABLED_MESSAGE);
+        }
+        // 平台级账号无学校归属，跳过学校停用校验；其余账号的所属学校停用或缺失时统一拒绝登录。
+        if (user.getSchoolId() != null) {
+            School school = schoolRepository.findById(user.getSchoolId()).orElse(null);
+            if (school == null || school.getStatus() == SchoolStatus.DISABLED) {
+                logLoginFailure(user.getId(), user.getSchoolId(), request);
+                throw new BusinessException(LOGIN_DISABLED_CODE, LOGIN_DISABLED_MESSAGE);
+            }
         }
         if (!matchesPassword(request.password(), user.getPasswordHash())) {
             logLoginFailure(user.getId(), user.getSchoolId(), request);
@@ -255,6 +264,7 @@ public class AuthService {
             );
             case TEACHER -> List.of("CLASS_READ", "LAB_WRITE", "HOMEWORK_WRITE", "EXAM_WRITE", "ANALYSIS_READ");
             case STUDENT -> List.of("MATERIAL_READ", "LAB_READ", "HOMEWORK_READ", "EXAM_READ", "SCORE_READ");
+            case PLATFORM_ADMIN -> List.of("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION");
         };
     }
 
@@ -264,8 +274,11 @@ public class AuthService {
         profile.put("username", user.getUsername());
         profile.put("displayName", user.getDisplayName());
         profile.put("role", user.getRole().name());
-        profile.put("schoolId", user.getSchoolId());
-        schoolRepository.findById(user.getSchoolId()).ifPresent(school -> profile.put("schoolName", school.getName()));
+        // 平台级账号不写 schoolId / schoolName，也不得对 null 调用 findById。
+        if (user.getSchoolId() != null) {
+            profile.put("schoolId", user.getSchoolId());
+            schoolRepository.findById(user.getSchoolId()).ifPresent(school -> profile.put("schoolName", school.getName()));
+        }
         profile.put("email", user.getEmail());
         profile.put("phone", user.getPhone());
         profile.put("officeHours", user.getOfficeHours());

@@ -58,6 +58,16 @@ class ControllerAuthorizationTests {
                 .isEqualTo("hasAnyRole('TEACHER','STUDENT')");
     }
 
+    @Test
+    void platformSchoolControllerIsClassLevelPlatformAdminOnly() {
+        Class<?> controller = com.opencode.teachingplatform.admin.controller.PlatformSchoolController.class;
+        PreAuthorize annotation = controller.getAnnotation(PreAuthorize.class);
+        assertThat(annotation).isNotNull();
+        assertThat(annotation.value()).isEqualTo("hasRole('PLATFORM_ADMIN')");
+        assertThat(controller.getAnnotation(RequestMapping.class).value())
+                .containsExactly("/api/v1/admin/schools");
+    }
+
     private List<Class<?>> controllers() throws ClassNotFoundException {
         ClassPathScanningCandidateComponentProvider scanner =
                 new ClassPathScanningCandidateComponentProvider(false);

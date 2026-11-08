@@ -37,6 +37,7 @@ public class MaterialService {
             case SCHOOL_ADMIN -> courseMaterialRepository.findBySchoolIdOrderByIdDesc(schoolId);
             case STUDENT -> courseMaterialRepository
                     .findBySchoolIdAndVisibilityOrderByIdDesc(schoolId, MaterialVisibility.ALL);
+            case PLATFORM_ADMIN -> throw new BusinessException(40300, "无权限访问资料");
         };
         return materials.stream().map(this::toView).toList();
     }

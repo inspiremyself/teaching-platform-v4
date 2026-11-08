@@ -16,7 +16,7 @@ import static org.mockito.Mockito.verify;
 class DemoAccountProdGuardTests {
 
     @Test
-    void disablesExactlyFiveDemoAccountsScopedToDemoSchool() {
+    void disablesSixDemoAccountsIncludingPlatformAccount() {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         new DemoAccountProdGuard(jdbcTemplate).run(mock(ApplicationArguments.class));
 
@@ -25,12 +25,14 @@ class DemoAccountProdGuardTests {
         String statement = sql.getValue();
         assertTrue(statement.contains("UPDATE sys_user SET status = 'DISABLED'"));
         assertTrue(statement.contains("school_id = 1"));
+        assertTrue(statement.contains("school_id IS NULL"));
         assertTrue(statement.contains("status = 'ACTIVE'"));
         assertTrue(statement.contains("'t9001'"));
         assertTrue(statement.contains("'20260001'"));
         assertTrue(statement.contains("'20260002'"));
         assertTrue(statement.contains("'admin9001'"));
         assertTrue(statement.contains("'t9002'"));
+        assertTrue(statement.contains("'platform9001'"));
     }
 
     @Test

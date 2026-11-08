@@ -8,7 +8,7 @@
 
 高校教学一体化平台，覆盖 **实验、作业、考试** 三条核心教学闭环，并配套题库、课程资料、查重、成绩分析与学校组织管理。
 
-- 三角色：`SCHOOL_ADMIN`（学校管理员）/ `TEACHER`（教师）/ `STUDENT`（学生），前端三套壳层、后端 JWT + `@PreAuthorize`。
+- 四角色：`SCHOOL_ADMIN`（学校管理员）/ `TEACHER`（教师）/ `STUDENT`（学生）/ `PLATFORM_ADMIN`（平台超管，`sys_user.school_id = NULL`、无学校归属）；前端三套业务壳层不合并，平台超管复用 `/admin` 壳层但仅可达 `/admin/schools`；后端 JWT + `@PreAuthorize`。
 - 前后端分离：Vue 3 + TypeScript + Element Plus；Spring Boot 3.3 + Spring Security + JPA + Flyway。
 - 共享能力层：`assessment/`（题目快照、答案标准化、评分适配）+ `grading/`（策略模式评分引擎），被实验/作业/考试复用。
 - 真实系统约束：真实前后端、真实数据库、真实权限、真实测试；禁止 mock 页面、假接口、假数据闭环。
@@ -21,7 +21,7 @@ teaching-platform-v4/
 │  └─ src/
 │     ├─ api/                      # Typed API 模块（子级 AGENTS）
 │     ├─ components/               # lab/、question-config/ 共享组件
-│     ├─ layout/                   # 三角色共用壳层
+│     ├─ layout/                   # 三套业务壳层共用（平台超管复用 /admin 壳层）
 │     ├─ router/index.ts           # /teacher、/student、/admin 三套路由
 │     ├─ stores/auth.ts            # token、user、角色主页
 │     ├─ types/                    # 前端契约类型
@@ -88,8 +88,8 @@ teaching-platform-v4/
 | 统一响应/异常 | `backend/.../common/api/`、`common/exception/` | `ApiResponse`、`PagedResult`、错误码 |
 | 行为埋点 | `backend/.../lab/behavior/` | 实验作答事件采集与风险指标 |
 | 审计/访问日志 | `backend/.../common/infra/audit/`、`common/infra/accesslog/` | 操作日志与 HTTP 访问日志 |
-| 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V24`（24 个），schema + seed |
-| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（65 个 `*Tests.java`） |
+| 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V25`（25 个），schema + seed；编号以目录实测为准 |
+| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（69 个 `*Tests.java`，以目录实测为准） |
 | 设计资产状态 | `docs/PRD/`、`docs/技术方案/` | 当前阶段无原型资产，需求输入以 PRD 与技术方案为准 |
 | 本地启动（路径 A/B/C） | `docs/运维文档/`、`scripts/` | Compose / 本机 MySQL / H2 文件库 |
 | 本地启动规则 | `.cursor/rules/local-dev-startup.mdc` | 端口、代理、数据目录、探活 |
@@ -99,7 +99,7 @@ teaching-platform-v4/
 | 符号/文件 | 角色 |
 |---|---|
 | `frontend/src/main.ts` | 前端 bootstrap |
-| `frontend/src/router/index.ts` | 路由总表 + `beforeEach` 守卫（三角色） |
+| `frontend/src/router/index.ts` | 路由总表 + `beforeEach` 守卫（四角色 / 三套路由树，`meta.roles`） |
 | `frontend/src/stores/auth.ts` | 登录态/角色主页中心 |
 | `frontend/src/utils/request.ts` | Axios 实例、统一错误反馈 |
 | `frontend/src/api/exams.ts` | 教师/学生考试 API 契约 |
@@ -139,10 +139,10 @@ teaching-platform-v4/
 
 - 当前阶段优先级：**PRD / 原型交互目标 > 旧规范书细节 > 旧实现形态**。
 - 仍必须保持真实系统约束：真实前后端、真实数据库、真实权限、真实测试，不允许 mock 页面、假 API、假数据闭环。
-- 三角色边界固定：教师 `TEACHER`、学生 `STUDENT`、校管 `SCHOOL_ADMIN`；前端三套壳层、后端 `@PreAuthorize` 双重约束，不要把角色语义合并。
+- 四角色边界固定：教师 `TEACHER`、学生 `STUDENT`、校管 `SCHOOL_ADMIN`、平台超管 `PLATFORM_ADMIN`（`sys_user.school_id = NULL`、无学校归属）；前端三套业务壳层不合并（平台超管复用 `/admin` 壳层但仅可达 `/admin/schools`）、后端 `@PreAuthorize` 双重约束，不要把角色语义合并。
 - 调试与 E2E 联调**默认** `./scripts/path-b/backend.sh`（本机 MySQL，`local` profile）。无 MySQL 时用 `./scripts/path-b/backend-h2.sh`（H2 文件库 + `test` profile）。
 - `ddl-auto` / profile 矩阵见 `backend-db-and-config.mdc` §3：主配置为 `validate`，两个 test profile 为 `none`（UT 为 H2 mem，与路径 B 的 H2 文件库有意隔离），均由 Flyway 建表。
-- 数据库结构变更一律新增 migration，不改已应用的历史脚本；迁移编号以 `db/migration/` 实测为准（当前 `V1`–`V24`）。四个双方言占位符由 `common/config/FlywayPlaceholdersConfig.java` 按 DataSource 产品名注入，各 `application*.yml` 不再声明（旧口径已废止）。
+- 数据库结构变更一律新增 migration，不改已应用的历史脚本；迁移编号以 `db/migration/` 实测为准（当前 `V1`–`V25`）。四个双方言占位符由 `common/config/FlywayPlaceholdersConfig.java` 按 DataSource 产品名注入，各 `application*.yml` 不再声明（旧口径已废止）。
 - **本地业务数据**不在 Flyway 种子内；清库即丢。破坏性操作前须 `./scripts/common/backup-local-data.sh`；H2 清库须 `./scripts/path-b/reset-h2.sh`（见 `path-b-data-backup-gate.mdc`）。
 - `data/` 整树禁止随意删除（见 `protect-data-directory.mdc`）：`data/h2/`（H2 持久化）、`data/files/`（上传）、`data/logs/`（一键启动日志）。
 - 若需要并行跑多套前后端实例，后端优先改 `SERVER_PORT`，前端通过 `VITE_API_TARGET` 定向代理到该后端，不要硬绑定唯一的 `8080/5173` 组合。
@@ -167,7 +167,7 @@ teaching-platform-v4/
 - 不要删除 `data/` 或 `logs/`；清 H2 只能走 `reset-h2.sh`，MySQL 破坏性操作前先备份。`target/`、`dist/`、`node_modules/` 是构建产物，不要当作源码依据。
 - 不要让教师/学生/校管三套路由与权限混成单套壳层。
 - 不要绕过 `frontend/src/api/` 与 `request.ts` 自行发请求。
-- 不要修改默认演示账号：校管 `admin9001/123456`、教师 `t9001/123456`、学生 `20260001/123456`；演示班级 `SE2026-1`。
+- 不要修改默认演示账号：校管 `admin9001/123456`、教师 `t9001/123456`、学生 `20260001/123456`、平台超管 `platform9001/123456`（平台级账号、无学校归属、`school_id = NULL`）；演示班级 `SE2026-1`。
 - 不要把 `README.md` 中的功能数量、迁移数量当作当前事实；以代码、`db/migration/` 与 `package.json` / `pom.xml` 为准。
 
 ## UNIQUE STYLES
@@ -236,9 +236,9 @@ cd frontend && npm install && npm run dev && npm run build
 
 | 项 | 当前事实 |
 |---|---|
-| 后端测试数 | 65 个 `*Tests.java`（`backend/src/test/java/`） |
-| 迁移脚本 | `V1`–`V24` 共 24 个（`backend/src/main/resources/db/migration/`） |
-| 角色数 | 3 个：`TEACHER`、`STUDENT`、`SCHOOL_ADMIN` |
+| 后端测试数 | 69 个 `*Tests.java`（`backend/src/test/java/`，以目录实测为准） |
+| 迁移脚本 | `V1`–`V25` 共 25 个（`backend/src/main/resources/db/migration/`，以目录实测为准） |
+| 角色数 | 4 个：`TEACHER`、`STUDENT`、`SCHOOL_ADMIN`、`PLATFORM_ADMIN`（平台级账号无学校归属） |
 | 密码编码器 | `DelegatingPasswordEncoder` |
 | 分页类型 | `PagedResult<T>`（`backend/.../common/api/PagedResult.java`） |
 | 设计资产状态 | 当前阶段无原型资产；需求输入为 `docs/PRD/` 与 `docs/技术方案/` |

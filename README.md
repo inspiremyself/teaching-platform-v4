@@ -85,16 +85,21 @@ H2 联调（可选）：
 | 教师 | t9001 | 123456 |
 | 教师 | t9002 | 123456 |
 | 学生 | 20260001 | 123456 |
+| 平台超管 | platform9001 | 123456 |
 
 演示学校：`演示学校`  
 演示班级：`SE2026-1`  
 演示学科：`SE-ARCH`（软件体系结构）、`DB-PRINCIPLE`（数据库原理）  
-登录须选择对应身份（学校管理员 / 教师 / 学生）。
+登录须选择对应身份（学校管理员 / 教师 / 学生 / 平台超管）。
 
-可选校管探活：
+`platform9001` 是**平台级账号、无学校归属**（`sys_user.school_id = NULL`），登录后进入 `/admin/schools` 平台级学校管理，不参与任何按校数据隔离；prod 环境由 `DemoAccountProdGuard` 禁用。教师 / 学生 / 校管三套业务壳层不因此合并。
+
+可选探活：
 
 ```bash
-USERNAME=admin9001 ROLE=SCHOOL_ADMIN ./scripts/common/healthcheck-login.sh
+env USERNAME=admin9001 ROLE=SCHOOL_ADMIN ./scripts/common/healthcheck-login.sh
+# zsh 下 USERNAME 为只读 shell 变量，必须用 env 显式注入
+env USERNAME=platform9001 ROLE=PLATFORM_ADMIN FORCE_LOGIN=true ./scripts/common/healthcheck-login.sh
 ```
 
 ### 数据备份（MySQL 表结构 + 数据）
@@ -129,18 +134,18 @@ teaching-platform-v4/
 │       ├── student/                 # 学生管理
 │       ├── clazz/                   # 班级管理
 │       ├── school/                  # 学校/学科实体与仓储
-│       ├── admin/                   # 校管端 API
+│       ├── admin/                   # 校管端与平台级学校管理 API
 │       ├── material/                # 课程资料
 │       ├── plagiarism/              # 查重检测
 │       └── analysis/                # 成绩分析
 ├── frontend/                         # Vue 3 前端
 │   └── src/
 │       ├── api/                     # Typed API 模块
-│       ├── router/                  # 三壳路由（教师/学生/校管）
+│       ├── router/                  # 三套业务壳层路由（教师/学生/校管，平台超管复用 /admin 壳层）
 │       ├── stores/                  # Pinia 状态管理
-│       ├── views/teacher/           # 20+ 教师页面
-│       ├── views/student/           # 10+ 学生页面
-│       ├── views/admin/             # 7 个校管页面
+│       ├── views/teacher/           # 教师页面
+│       ├── views/student/           # 学生页面
+│       ├── views/admin/             # 校管页面 + 平台级 Schools.vue
 │       ├── components/              # 共享组件（题目配置等）
 │       └── types/                   # TypeScript 类型定义
 ├── docs/                             # PRD / 技术方案 / 运维文档
@@ -152,10 +157,10 @@ teaching-platform-v4/
 
 ## 架构设计要点
 
-- **三角色隔离**：教师/学生/校管完全独立的路由树、API 权限和数据访问，通过 JWT + `@PreAuthorize` 强制执行
+- **四角色隔离**：教师 / 学生 / 校管三套业务壳层完全独立；平台超管（`PLATFORM_ADMIN`）复用 `/admin` 壳层但仅可访问平台级学校管理，通过 JWT + `@PreAuthorize` 强制执行
 - **策略模式评分引擎**：`grading/` 模块通过 `QuestionScoringStrategy` 接口支持 5 种题型，可扩展
 - **共享题目能力层**：`assessment/` 模块通过 QuestionSnapshot + GradingAdapter 实现实验/作业/考试的评分复用
-- **数据库版本化**：Flyway 管理 24 个迁移脚本（`V1`–`V24`），`ddl-auto=validate` 确保启动时 schema 一致性
+- **数据库版本化**：Flyway 管理 `db/migration/` 下的迁移脚本（当前 `V1`–`V25`，编号以目录实测为准），`ddl-auto=validate` 确保启动时 schema 一致性
 - **评分与可见性解耦**：成绩生成独立于学生可见性，教师可控制成绩发布时机
 
 ## API 约定
@@ -163,4 +168,4 @@ teaching-platform-v4/
 - 基础路径：`/api/v1`
 - 统一响应格式：`{ code, message, data, timestamp }`
 - 认证：`Authorization: Bearer <JWT>`
-- 权限：`@PreAuthorize("hasRole('TEACHER')")` / `hasRole('STUDENT')` / `hasRole('SCHOOL_ADMIN')`
+- 权限：`@PreAuthorize("hasRole('TEACHER')")` / `hasRole('STUDENT')` / `hasRole('SCHOOL_ADMIN')` / `hasRole('PLATFORM_ADMIN')`

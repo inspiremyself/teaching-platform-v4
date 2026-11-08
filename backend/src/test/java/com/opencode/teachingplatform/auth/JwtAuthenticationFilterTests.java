@@ -218,6 +218,27 @@ class JwtAuthenticationFilterTests {
         assertTrue(response.getContentAsString().contains("40100"));
     }
 
+    @Test
+    void platformAdminSchoolIdComesFromDatabaseAsNull() throws Exception {
+        SysUser platformAdmin = user(6L, "platform9001", "演示平台超管", UserRole.PLATFORM_ADMIN, UserStatus.ACTIVE);
+        platformAdmin.setSchoolId(null);
+        when(userLoginSessionRepository.findBySessionKey("session-1"))
+                .thenReturn(Optional.of(activeSession(platformAdmin)));
+
+        MockHttpServletResponse response = invokeFilter(standardToken(6L, "session-1"));
+
+        assertEquals(200, response.getStatus());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        assertNotNull(authentication);
+        CurrentUser principal = (CurrentUser) authentication.getPrincipal();
+        assertNull(principal.schoolId());
+        assertEquals(UserRole.PLATFORM_ADMIN, principal.role());
+        List<String> authorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList();
+        assertEquals(List.of("ROLE_PLATFORM_ADMIN"), authorities);
+    }
+
     /**
      * 调用过滤器；成功路径应放行到后续 filter chain。
      */

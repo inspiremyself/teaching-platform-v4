@@ -56,6 +56,7 @@
               <el-radio-button value="TEACHER">教师</el-radio-button>
               <el-radio-button value="STUDENT">学生</el-radio-button>
               <el-radio-button value="SCHOOL_ADMIN">学校管理员</el-radio-button>
+              <el-radio-button value="PLATFORM_ADMIN">平台超管</el-radio-button>
             </el-radio-group>
           </el-form-item>
 
@@ -77,6 +78,7 @@
             <button type="button" class="demo-chip" @click="fillDemo('TEACHER')">教师演示账号</button>
             <button type="button" class="demo-chip" @click="fillDemo('STUDENT')">学生演示账号</button>
             <button type="button" class="demo-chip" @click="fillDemo('SCHOOL_ADMIN')">校管演示账号</button>
+            <button type="button" class="demo-chip" @click="fillDemo('PLATFORM_ADMIN')">平台超管演示账号</button>
           </div>
 
           <el-form-item>
@@ -126,7 +128,7 @@ const errorMessage = ref('');
 const form = reactive({
   username: '',
   password: '',
-  role: 'TEACHER' as 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN',
+  role: 'TEACHER' as 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN' | 'PLATFORM_ADMIN',
   schoolCode: ''
 });
 
@@ -209,14 +211,16 @@ const showPlaceholder = (message: string) => {
   ElMessage.info(message);
 };
 
-const fillDemo = (role: 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN') => {
+const fillDemo = (role: 'TEACHER' | 'STUDENT' | 'SCHOOL_ADMIN' | 'PLATFORM_ADMIN') => {
   form.role = role;
   if (role === 'TEACHER') {
     form.username = 't9001';
   } else if (role === 'STUDENT') {
     form.username = '20260001';
-  } else {
+  } else if (role === 'SCHOOL_ADMIN') {
     form.username = 'admin9001';
+  } else if (role === 'PLATFORM_ADMIN') {
+    form.username = 'platform9001';
   }
   form.password = '123456';
 };

@@ -208,6 +208,8 @@ const roleLabel = computed(() => {
       return '学生用户';
     case 'SCHOOL_ADMIN':
       return '学校管理员';
+    case 'PLATFORM_ADMIN':
+      return '平台超管';
     default:
       return '用户';
   }

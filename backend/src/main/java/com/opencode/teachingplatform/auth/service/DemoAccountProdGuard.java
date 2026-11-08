@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
 public class DemoAccountProdGuard implements ApplicationRunner {
 
     private static final String SQL = "UPDATE sys_user SET status = 'DISABLED' "
-            + "WHERE school_id = 1 AND status = 'ACTIVE' "
-            + "AND username IN ('t9001','20260001','20260002','admin9001','t9002')";
+            + "WHERE (school_id = 1 OR school_id IS NULL) AND status = 'ACTIVE' "
+            + "AND username IN ('t9001','20260001','20260002','admin9001','t9002','platform9001')";
 
     private final JdbcTemplate jdbcTemplate;
 
