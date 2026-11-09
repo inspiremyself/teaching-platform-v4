@@ -8,7 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface HomeworkRepository extends JpaRepository<Homework, Long> {
-    List<Homework> findByCreatedByOrderByIdDesc(Long createdBy);
-    List<Homework> findByClassIdInAndStatusOrderByIdDesc(Collection<Long> classIds, com.opencode.teachingplatform.common.enums.ActivityStatus status);
-    Optional<Homework> findByIdAndCreatedBy(Long id, Long createdBy);
+    List<Homework> findBySchoolIdAndCreatedByOrderByIdDesc(Long schoolId, Long createdBy);
+    List<Homework> findBySchoolIdAndClassIdInAndStatusOrderByIdDesc(Long schoolId, Collection<Long> classIds,
+            com.opencode.teachingplatform.common.enums.ActivityStatus status);
+    Optional<Homework> findByIdAndSchoolIdAndCreatedBy(Long id, Long schoolId, Long createdBy);
+    Optional<Homework> findByIdAndSchoolId(Long id, Long schoolId);
 }

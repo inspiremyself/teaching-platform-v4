@@ -121,6 +121,7 @@
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
 | `scoring_config_json` | `TEXT` | 是 |  | 判分配置 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -162,6 +163,7 @@
 | `score_released` | `BOOLEAN` | 否 | `FALSE` | 是否已发布成绩 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -246,6 +248,7 @@
 | `shuffle_questions` | `BOOLEAN` | 否 | `FALSE` | 是否按学生维度乱序展示题目 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -334,6 +337,7 @@
 | `summary_required` | `BOOLEAN` | 否 | `FALSE` | 是否要求实验总结 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (experiment_id)`
@@ -462,6 +466,7 @@
 | `raw_result_json` | `TEXT` | 是 |  | 原始结果 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -479,6 +484,7 @@
 | `graded_at` | `TIMESTAMP` | 否 |  | 评分时间 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -524,6 +530,15 @@
 - `experiment_answer (experiment_submission_id, experiment_item_id)`
 - `experiment_blank_answer_override (experiment_id, experiment_item_id, normalized_answer)`
 - `user_login_session.session_key`
+
+### 显式索引
+
+- `idx_t_experiment_school_class ON t_experiment (school_id, class_id)`
+- `idx_homework_school_class ON homework (school_id, class_id)`
+- `idx_exam_school_class ON exam (school_id, class_id)`
+- `idx_question_bank_school_created_by ON question_bank (school_id, created_by)`
+- `idx_score_record_school_student ON score_record (school_id, student_id)`
+- `idx_plagiarism_task_school_student ON plagiarism_task (school_id, student_id)`
 
 ---
 

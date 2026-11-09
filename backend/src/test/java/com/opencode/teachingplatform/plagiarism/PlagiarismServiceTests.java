@@ -52,9 +52,9 @@ class PlagiarismServiceTests {
 
     @Test
     void teacherCanSeeOwnTaskDetail() {
-        when(plagiarismTaskRepository.findById(TASK_ID)).thenReturn(Optional.of(homeworkTask()));
+        when(plagiarismTaskRepository.findByIdAndSchoolId(TASK_ID, 1L)).thenReturn(Optional.of(homeworkTask()));
         // 归属查询命中：businessId 10 + 教师 id 1 → 计数 1
-        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq(BUSINESS_ID), eq(1L))).thenReturn(1);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq(BUSINESS_ID), eq(1L), eq(1L))).thenReturn(1);
 
         Map<String, Object> detail = plagiarismService.getTaskDetail(teacher(1L), TASK_ID);
 
@@ -68,9 +68,9 @@ class PlagiarismServiceTests {
 
     @Test
     void teacherCannotSeeOtherTeachersTaskDetail() {
-        when(plagiarismTaskRepository.findById(TASK_ID)).thenReturn(Optional.of(homeworkTask()));
+        when(plagiarismTaskRepository.findByIdAndSchoolId(TASK_ID, 1L)).thenReturn(Optional.of(homeworkTask()));
         // 归属查询未命中：任务属于教师 1，当前教师 9 的计数为 0
-        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq(BUSINESS_ID), eq(9L))).thenReturn(0);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq(BUSINESS_ID), eq(9L), eq(1L))).thenReturn(0);
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -83,7 +83,7 @@ class PlagiarismServiceTests {
 
     @Test
     void schoolAdminCannotSeeTaskDetail() {
-        when(plagiarismTaskRepository.findById(TASK_ID)).thenReturn(Optional.of(homeworkTask()));
+        when(plagiarismTaskRepository.findByIdAndSchoolId(TASK_ID, 1L)).thenReturn(Optional.of(homeworkTask()));
 
         // 校管在角色分支直接拒绝；等价验证 teacherOwnsTask 对非教师不会放行——
         // 它只接受 TEACHER，且此路径下连归属查询都不会发起。
@@ -102,19 +102,19 @@ class PlagiarismServiceTests {
 
     @Test
     void studentCanSeeOwnTaskDetail() {
-        when(plagiarismTaskRepository.findById(TASK_ID)).thenReturn(Optional.of(homeworkTask()));
+        when(plagiarismTaskRepository.findByIdAndSchoolId(TASK_ID, 1L)).thenReturn(Optional.of(homeworkTask()));
 
         Map<String, Object> detail = plagiarismService.getTaskDetail(student(STUDENT_ID), TASK_ID);
 
         assertEquals(TASK_ID, detail.get("taskId"));
         assertEquals(STUDENT_ID, detail.get("studentId"));
         // 学生本人可见，且不会发起教师归属计数查询
-        verify(jdbcTemplate, never()).queryForObject(anyString(), eq(Integer.class), any(), any());
+        verify(jdbcTemplate, never()).queryForObject(anyString(), eq(Integer.class), any(), any(), any());
     }
 
     @Test
     void studentCannotSeeOtherStudentsTaskDetail() {
-        when(plagiarismTaskRepository.findById(TASK_ID)).thenReturn(Optional.of(homeworkTask()));
+        when(plagiarismTaskRepository.findByIdAndSchoolId(TASK_ID, 1L)).thenReturn(Optional.of(homeworkTask()));
 
         BusinessException exception = assertThrows(
                 BusinessException.class,
@@ -128,7 +128,7 @@ class PlagiarismServiceTests {
 
     @Test
     void missingTaskReturnsNotFound() {
-        when(plagiarismTaskRepository.findById(TASK_ID)).thenReturn(Optional.empty());
+        when(plagiarismTaskRepository.findByIdAndSchoolId(TASK_ID, 1L)).thenReturn(Optional.empty());
 
         BusinessException exception = assertThrows(
                 BusinessException.class,

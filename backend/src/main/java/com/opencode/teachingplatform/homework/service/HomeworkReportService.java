@@ -148,7 +148,7 @@ public class HomeworkReportService {
         submission.setGradedAt(OffsetDateTime.now());
         homeworkSubmissionRepository.save(submission);
         scoreRecordWriter.write(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId(),
-                homework.getClassId(), request.totalScore(), OffsetDateTime.now());
+                homework.getClassId(), request.totalScore(), OffsetDateTime.now(), homework.getSchoolId());
         return Map.of(
                 "graded", true,
                 "totalScore", submission.getTotalScore()
@@ -199,7 +199,7 @@ public class HomeworkReportService {
         }
         // 删除成绩记录，避免打回后统计仍保留旧分数。
         scoreRecordRepository
-                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId())
+                .findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId(), homework.getSchoolId())
                 .ifPresent(scoreRecordRepository::delete);
         auditLogService.log(currentUser, AuditAction.HOMEWORK_SUBMISSION_RETURN,
                 AuditResourceType.HOMEWORK_SUBMISSION, submission.getId(),
@@ -247,7 +247,7 @@ public class HomeworkReportService {
         }
         answer.setTeacherComment(support.defaultString(request.teacherComment()));
         HomeworkAnswer saved = homeworkAnswerRepository.save(answer);
-        support.refreshSubmissionGradeState(submission);
+        support.refreshSubmissionGradeState(submission, currentUser.schoolId());
         return Map.of(
                 "answerId", saved.getId(),
                 "score", saved.getScore(),

@@ -196,7 +196,7 @@ public class LabServiceSupport {
 
 
     public Lab accessiblePublishedLab(CurrentUser currentUser, Long labId) {
-        Lab lab = labRepository.findById(labId).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
+        Lab lab = labRepository.findByIdAndSchoolId(labId, currentUser.schoolId()).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
         if (lab.getStatus() == ActivityStatus.DRAFT) {
             throw new BusinessException(40300, "无权限访问该实验");
         }
@@ -210,7 +210,7 @@ public class LabServiceSupport {
 
 
     public Lab ownedLab(CurrentUser currentUser, Long labId) {
-        Lab lab = labRepository.findByIdAndCreatedBy(labId, currentUser.id())
+        Lab lab = labRepository.findByIdAndSchoolIdAndCreatedBy(labId, currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
         classAccessService.assertTeacherAssignedToClass(currentUser, lab.getClassId());
         return lab;
@@ -281,7 +281,7 @@ public class LabServiceSupport {
             submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
             submission.setGradedAt(null);
             if (previousStatus == SubmissionStatus.GRADED) {
-                scoreRecordWriter.remove(BusinessType.LAB, lab.getId(), submission.getStudentId());
+                scoreRecordWriter.remove(BusinessType.LAB, lab.getId(), submission.getStudentId(), lab.getSchoolId());
             }
         }
         labSubmissionRepository.save(submission);
@@ -320,7 +320,7 @@ public class LabServiceSupport {
 
     public void upsertScoreRecord(Lab lab, LabSubmission submission, Double totalScore) {
         scoreRecordWriter.write(BusinessType.LAB, lab.getId(), submission.getStudentId(),
-                lab.getClassId(), totalScore, OffsetDateTime.now());
+                lab.getClassId(), totalScore, OffsetDateTime.now(), lab.getSchoolId());
     }
 
 

@@ -64,12 +64,13 @@ public class StudentScoreVisibilityResolver {
      * 解析指定学生的可见成绩列表。
      *
      * @param studentId 学生用户 id
+     * @param schoolId  当前学生所属学校 id
      * @return 按 {@code score_record.id ASC} 排序的可见成绩；无可见记录时返回空列表
      */
-    public List<VisibleScore> resolve(Long studentId) {
+    public List<VisibleScore> resolve(Long studentId, Long schoolId) {
         List<ScoreRow> scoreRows = jdbcTemplate.query(
                 "SELECT id, business_type, business_id, score, graded_at " +
-                        "FROM score_record WHERE student_id = ? ORDER BY id ASC",
+                        "FROM score_record WHERE student_id = ? AND school_id = ? ORDER BY id ASC",
                 (rs, rowNum) -> new ScoreRow(
                         rs.getLong("id"),
                         BusinessType.valueOf(rs.getString("business_type")),
@@ -77,7 +78,7 @@ public class StudentScoreVisibilityResolver {
                         toDouble(rs.getObject("score")),
                         rs.getObject("graded_at", OffsetDateTime.class)
                 ),
-                studentId
+                studentId, schoolId
         );
         if (scoreRows.isEmpty()) {
             return List.of();
@@ -86,7 +87,7 @@ public class StudentScoreVisibilityResolver {
         Map<BusinessType, List<Long>> idsByType = collectBusinessIds(scoreRows);
         Map<BusinessType, Map<Long, BusinessRow>> rowsByType = new EnumMap<>(BusinessType.class);
         for (Map.Entry<BusinessType, List<Long>> entry : idsByType.entrySet()) {
-            rowsByType.put(entry.getKey(), loadBusinessRows(entry.getKey(), entry.getValue(), studentId));
+            rowsByType.put(entry.getKey(), loadBusinessRows(entry.getKey(), entry.getValue(), studentId, schoolId));
         }
 
         // 单次解析只取一次 now，保证同一批记录的时间判断口径一致
@@ -132,31 +133,33 @@ public class StudentScoreVisibilityResolver {
     /**
      * 按业务类型批量加载业务行与当前学生提交行（一条 LEFT JOIN SQL）。
      */
-    private Map<Long, BusinessRow> loadBusinessRows(BusinessType type, List<Long> businessIds, Long studentId) {
+    private Map<Long, BusinessRow> loadBusinessRows(BusinessType type, List<Long> businessIds,
+                                                    Long studentId, Long schoolId) {
         if (businessIds.isEmpty()) {
             return Collections.emptyMap();
         }
         String placeholders = String.join(", ", Collections.nCopies(businessIds.size(), "?"));
-        Object[] args = new Object[businessIds.size() + 1];
+        Object[] args = new Object[businessIds.size() + 2];
         args[0] = studentId;
         for (int i = 0; i < businessIds.size(); i++) {
             args[i + 1] = businessIds.get(i);
         }
+        args[args.length - 1] = schoolId;
         String sql = switch (type) {
             case EXAM -> "SELECT ex.id AS business_id, ex.title AS name, ex.status, ex.score_visibility_mode AS visibility_mode, " +
                     "ex.score_released, ex.end_at AS deadline, es.status AS submission_status, NULL AS lab_total_score " +
                     "FROM exam ex LEFT JOIN exam_submission es ON es.exam_id = ex.id AND es.student_id = ? " +
-                    "WHERE ex.id IN (" + placeholders + ")";
+                    "WHERE ex.id IN (" + placeholders + ") AND ex.school_id = ?";
             case HOMEWORK -> "SELECT h.id AS business_id, h.title AS name, h.status, h.score_visibility_mode AS visibility_mode, " +
                     "h.score_released, h.due_at AS deadline, hs.submit_status AS submission_status, NULL AS lab_total_score " +
                     "FROM homework h LEFT JOIN homework_submission hs ON hs.homework_id = h.id AND hs.student_id = ? " +
-                    "WHERE h.id IN (" + placeholders + ")";
+                    "WHERE h.id IN (" + placeholders + ") AND h.school_id = ?";
             case LAB -> "SELECT e.experiment_id AS business_id, e.experiment_name AS name, e.status, " +
                     "e.score_visibility_mode AS visibility_mode, e.score_released, e.end_at AS deadline, " +
                     "es.submit_status AS submission_status, es.total_score AS lab_total_score " +
                     "FROM t_experiment e LEFT JOIN experiment_submission es " +
                     "ON es.experiment_id = e.experiment_id AND es.student_id = ? " +
-                    "WHERE e.experiment_id IN (" + placeholders + ")";
+                    "WHERE e.experiment_id IN (" + placeholders + ") AND e.school_id = ?";
         };
         Map<Long, BusinessRow> rows = new LinkedHashMap<>();
         jdbcTemplate.query(sql, rs -> {

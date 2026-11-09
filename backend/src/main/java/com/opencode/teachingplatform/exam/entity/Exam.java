@@ -39,6 +39,9 @@ public class Exam extends BaseEntity {
     @Column(name = "shuffle_questions", nullable = false)
     private boolean shuffleQuestions;
 
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
     public Long getClassId() { return classId; }
     public void setClassId(Long classId) { this.classId = classId; }
     public String getTitle() { return title; }
@@ -61,4 +64,6 @@ public class Exam extends BaseEntity {
     public void setScoreReleased(boolean scoreReleased) { this.scoreReleased = scoreReleased; }
     public boolean isShuffleQuestions() { return shuffleQuestions; }
     public void setShuffleQuestions(boolean shuffleQuestions) { this.shuffleQuestions = shuffleQuestions; }
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
 }

@@ -35,6 +35,9 @@ public class PlagiarismTask extends BaseEntity {
     @Column(name = "raw_result_json", columnDefinition = "json")
     private String rawResultJson;
 
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
     public BusinessType getBusinessType() { return businessType; }
     public void setBusinessType(BusinessType businessType) { this.businessType = businessType; }
     public Long getBusinessId() { return businessId; }
@@ -49,4 +52,6 @@ public class PlagiarismTask extends BaseEntity {
     public void setTopMatchSummary(String topMatchSummary) { this.topMatchSummary = topMatchSummary; }
     public String getRawResultJson() { return rawResultJson; }
     public void setRawResultJson(String rawResultJson) { this.rawResultJson = rawResultJson; }
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
 }

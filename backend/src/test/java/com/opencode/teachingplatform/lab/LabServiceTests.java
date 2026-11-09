@@ -1200,6 +1200,7 @@ class LabServiceTests {
         Long classId = seedClass(teacherUser().id());
 
         Lab lab = new Lab();
+        lab.setSchoolId(1L);
         lab.setTitle("JS 安全整数实验");
         lab.setDescription("验证实验 id 范围");
         lab.setClassId(classId);
@@ -1935,11 +1936,11 @@ class LabServiceTests {
         Long submissionId = submission.getId();
 
         jdbcTemplate.update(
-                "INSERT INTO score_record (business_type, business_id, student_id, class_id, score, graded_at, created_at, updated_at) "
-                        + "VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
+                "INSERT INTO score_record (business_type, business_id, student_id, class_id, score, graded_at, created_at, updated_at, school_id) "
+                        + "VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)",
                 "LAB", lab.getId(), studentUser().id(), 12D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, lab.getId(), studentUser().id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, lab.getId(), studentUser().id(), 1L))
                 .isPresent();
 
         labServiceSupport.refreshSubmissionAfterScoring(lab, submission);
@@ -1947,8 +1948,8 @@ class LabServiceTests {
 
         assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus())
                 .isEqualTo(SubmissionStatus.SUBMITTED);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, lab.getId(), studentUser().id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, lab.getId(), studentUser().id(), 1L))
                 .isNotPresent();
     }
 
@@ -2232,8 +2233,8 @@ class LabServiceTests {
         assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
         assertThat(submission.getGradedAt()).isNull();
         assertThat(submission.getTotalScore()).isEqualTo(0D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         )).isNotPresent();
     }
 
@@ -2264,8 +2265,8 @@ class LabServiceTests {
         assertThat(answer.getScore()).isNull();
         assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
         assertThat(submission.getGradedAt()).isNull();
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         )).isNotPresent();
     }
 
@@ -2436,14 +2437,14 @@ class LabServiceTests {
         assertThat(savedSubmissionAfter.getTotalScore()).isEqualTo(10D);
         assertThat(savedSubmissionAfter.getGradedAt()).isNull();
         assertThat(externalSubmissionAfter.getTotalScore()).isEqualTo(6D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L))
                 .isPresent()
                 .get()
                 .extracting(com.opencode.teachingplatform.analysis.entity.ScoreRecord::getScore)
                 .isEqualTo(16D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.grading.BusinessType.LAB, labId, savedStudent.id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(com.opencode.teachingplatform.grading.BusinessType.LAB, labId, savedStudent.id(), 1L))
                 .isNotPresent();
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(com.opencode.teachingplatform.grading.BusinessType.LAB, otherLabId, otherStudent.id()))
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(com.opencode.teachingplatform.grading.BusinessType.LAB, otherLabId, otherStudent.id(), 1L))
                 .isPresent()
                 .get()
                 .extracting(com.opencode.teachingplatform.analysis.entity.ScoreRecord::getScore)
@@ -3245,8 +3246,8 @@ class LabServiceTests {
                 )
         );
         assertThat(labSubmissionRepository.findById(submissionId).orElseThrow().getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         )).isPresent();
 
         Map<String, Object> result = labService.returnReport(teacherUser(), submissionId);
@@ -3269,8 +3270,8 @@ class LabServiceTests {
         assertThat(afterAnswer.getAutoScore()).isNull();
         assertThat(afterAnswer.getSuggestedScore()).isNull();
         assertThat(afterAnswer.getScoreSource()).isEqualTo("TEACHER");
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         )).isNotPresent();
     }
 
@@ -3288,8 +3289,8 @@ class LabServiceTests {
 
         assertThat(beforeReturn.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
         assertThat(beforeReturn.getTotalScore()).isEqualTo(0D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         )).isPresent();
 
         labService.returnReport(teacherUser(), submissionId);
@@ -3307,8 +3308,8 @@ class LabServiceTests {
         assertThat(afterAnswer.getAutoScore()).isNull();
         assertThat(afterAnswer.getSuggestedScore()).isNull();
         assertThat(afterAnswer.getScoreSource()).isEqualTo("TEACHER");
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         )).isNotPresent();
     }
 
@@ -3325,8 +3326,8 @@ class LabServiceTests {
         LabSubmission gradedSubmission = labSubmissionRepository.findById(submissionId).orElseThrow();
         gradedSubmission.setSubmitStatus(SubmissionStatus.GRADED);
         labSubmissionRepository.saveAndFlush(gradedSubmission);
-        scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         ).ifPresent(scoreRecordRepository::delete);
 
         Map<String, Object> result = labService.returnReport(teacherUser(), submissionId);
@@ -3356,8 +3357,8 @@ class LabServiceTests {
         LabSubmission resubmitted = labSubmissionRepository.findById(submissionId).orElseThrow();
         assertThat(resubmitted.getSubmitStatus()).isEqualTo(SubmissionStatus.GRADED);
         assertThat(resubmitted.getTotalScore()).isEqualTo(10D);
-        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(
-                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id()
+        assertThat(scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                com.opencode.teachingplatform.grading.BusinessType.LAB, labId, studentUser().id(), 1L
         ))
                 .isPresent()
                 .get()
@@ -3877,8 +3878,8 @@ class LabServiceTests {
                  INSERT INTO t_experiment (experiment_id, experiment_no, experiment_name, experiment_type, instruction_type,
                                            experiment_requirement, experiment_content, state, status, material_id,
                                            class_id, created_by, score_visibility_mode, score_released, summary_required,
-                                           created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                           created_at, updated_at, school_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """,
                 id,
                 Math.toIntExact(id),
@@ -3903,8 +3904,8 @@ class LabServiceTests {
         long questionId = Math.abs(System.nanoTime());
         jdbcTemplate.update(
                 """
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, answer_json, scoring_config_json, created_by, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, answer_json, scoring_config_json, created_by, created_at, updated_at, school_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """,
                 questionId,
                 "QB-" + questionId,

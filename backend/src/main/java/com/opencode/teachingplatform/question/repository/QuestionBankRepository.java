@@ -8,17 +8,17 @@ import java.util.Optional;
 
 public interface QuestionBankRepository extends JpaRepository<QuestionBank, Long> {
 
-    List<QuestionBank> findByCreatedByOrderByIdDesc(Long createdBy);
+    List<QuestionBank> findBySchoolIdAndCreatedByOrderByIdDesc(Long schoolId, Long createdBy);
 
-    Optional<QuestionBank> findByIdAndCreatedBy(Long id, Long createdBy);
+    Optional<QuestionBank> findByIdAndSchoolIdAndCreatedBy(Long id, Long schoolId, Long createdBy);
+
+    Optional<QuestionBank> findByIdAndSchoolId(Long id, Long schoolId);
+
+    List<QuestionBank> findBySchoolIdAndCreatedBy(Long schoolId, Long createdBy);
 
     boolean existsByCode(String code);
 
     boolean existsByCodeAndIdNot(String code, Long id);
 
-    boolean existsByCodeAndIdNotAndCreatedBy(String code, Long id, Long createdBy);
-
-    Optional<QuestionBank> findBySourceRef(String sourceRef);
-
-    List<QuestionBank> findByCreatedBy(Long createdBy);
+    Optional<QuestionBank> findBySourceRefAndSchoolId(String sourceRef, Long schoolId);
 }

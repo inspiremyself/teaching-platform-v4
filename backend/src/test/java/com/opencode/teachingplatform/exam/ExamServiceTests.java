@@ -1568,9 +1568,9 @@ class ExamServiceTests {
     private void insertForeignQuestionBankItem() {
         jdbcTemplate.update("""
                 INSERT INTO question_bank (id, code, type, stem, difficulty, default_score,
-                                           options_json, answer_json, analysis_text, created_by, created_at, updated_at)
+                                           options_json, answer_json, analysis_text, created_by, created_at, updated_at, school_id)
                 VALUES (9001, 'Q-FOREIGN-9001', 'SINGLE', '他人题目', 'EASY', 5,
-                        '["A","B"]', '["A"]', '解析', 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        '["A","B"]', '["A"]', '解析', 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """);
     }
 
@@ -1583,15 +1583,15 @@ class ExamServiceTests {
     private void insertDraftQuestionBankFixtures() {
         jdbcTemplate.update("""
                 INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
-                                           answer_json, analysis_text, created_by, created_at, updated_at)
+                                           answer_json, analysis_text, created_by, created_at, updated_at, school_id)
                 VALUES (9001, 'Q-DRAFT-MULTI', 'MULTIPLE', '多选题草稿恢复', 'EASY', 5,
-                        '["A","B","C","D"]', '["A","C"]', '多选解析', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        '["A","B","C","D"]', '["A","C"]', '多选解析', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """);
         jdbcTemplate.update("""
                 INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
-                                           answer_json, analysis_text, created_by, created_at, updated_at)
+                                           answer_json, analysis_text, created_by, created_at, updated_at, school_id)
                 VALUES (9002, 'Q-DRAFT-FILL', 'FILL_BLANK', '填空题草稿恢复', 'EASY', 5,
-                        NULL, '[["甲","乙"]]', '填空解析', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        NULL, '[["甲","乙"]]', '填空解析', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """);
     }
 
@@ -1646,9 +1646,9 @@ class ExamServiceTests {
     private void insertLegacyInlineExam(Long examId, String status) {
         jdbcTemplate.update("""
                 INSERT INTO exam (id, title, description, class_id, duration_minutes, status, created_by,
-                                  score_visibility_mode, score_released, shuffle_questions, created_at, updated_at)
+                                  score_visibility_mode, score_released, shuffle_questions, created_at, updated_at, school_id)
                 VALUES (?, '历史内联题考试', '', 1, 60, ?, 1, 'IMMEDIATE', FALSE, FALSE,
-                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """, examId, status);
         jdbcTemplate.update("""
                 INSERT INTO exam_question (exam_id, question_id, sort_order, question_score, question_snapshot_json)

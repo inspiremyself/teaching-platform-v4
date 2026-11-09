@@ -258,7 +258,7 @@ public class LabStepService {
             experimentBlankAnswerOverrideRepository.saveAllAndFlush(overrides);
         }
 
-        Lab lab = labRepository.findById(labId).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
+        Lab lab = labRepository.findByIdAndSchoolId(labId, currentUser.schoolId()).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
         List<LabSubmission> submissions = labSubmissionRepository.findByLabId(labId);
         List<Long> submissionIds = submissions.stream().map(LabSubmission::getId).toList();
         int regradedCount = 0;

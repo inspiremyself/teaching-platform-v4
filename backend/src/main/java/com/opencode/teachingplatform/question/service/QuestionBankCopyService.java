@@ -94,7 +94,7 @@ public class QuestionBankCopyService {
         requireTeacher(currentUser);
         HomeworkQuestion question = homeworkQuestionRepository.findById(homeworkQuestionId)
                 .orElseThrow(() -> new BusinessException(40400, "作业题目不存在"));
-        Homework homework = homeworkRepository.findByIdAndCreatedBy(question.getHomeworkId(), currentUser.id())
+        Homework homework = homeworkRepository.findByIdAndSchoolIdAndCreatedBy(question.getHomeworkId(), currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该作业"));
         classAccessService.assertTeacherAssignedToClass(currentUser, homework.getClassId());
         if (question.getQuestionId() != null) {
@@ -102,7 +102,7 @@ public class QuestionBankCopyService {
         }
 
         String sourceRef = HOMEWORK_SOURCE_PREFIX + homeworkQuestionId;
-        Optional<QuestionBank> existing = questionBankRepository.findBySourceRef(sourceRef);
+        Optional<QuestionBank> existing = questionBankRepository.findBySourceRefAndSchoolId(sourceRef, currentUser.schoolId());
         if (existing.isPresent()) {
             return buildResponse(existing.get(), false, null);
         }
@@ -138,12 +138,12 @@ public class QuestionBankCopyService {
         requireTeacher(currentUser);
         LabStep step = labStepRepository.findById(stepId)
                 .orElseThrow(() -> new BusinessException(40400, "实验题项不存在"));
-        Lab lab = labRepository.findByIdAndCreatedBy(step.getLabId(), currentUser.id())
+        Lab lab = labRepository.findByIdAndSchoolIdAndCreatedBy(step.getLabId(), currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
         classAccessService.assertTeacherAssignedToClass(currentUser, lab.getClassId());
 
         String sourceRef = LAB_SOURCE_PREFIX + step.getLabId() + ":" + stepId;
-        Optional<QuestionBank> existing = questionBankRepository.findBySourceRef(sourceRef);
+        Optional<QuestionBank> existing = questionBankRepository.findBySourceRefAndSchoolId(sourceRef, currentUser.schoolId());
         if (existing.isPresent()) {
             return buildResponse(existing.get(), false, null);
         }
@@ -362,6 +362,10 @@ public class QuestionBankCopyService {
         question.setScoringConfigJson(scoringConfigJson);
         question.setAnalysisText(analysisText == null ? "" : analysisText);
         question.setCreatedBy(currentUser.id());
+        if (currentUser.schoolId() == null) {
+            throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
+        }
+        question.setSchoolId(currentUser.schoolId());
         question.setSourceType(sourceType);
         question.setSourceRef(sourceRef);
 
@@ -370,7 +374,7 @@ public class QuestionBankCopyService {
             saved = questionBankRepository.save(question);
         } catch (DataIntegrityViolationException ex) {
             // 并发重复复制由 uk_question_bank_source_ref 唯一索引兜底
-            Optional<QuestionBank> concurrent = questionBankRepository.findBySourceRef(sourceRef);
+            Optional<QuestionBank> concurrent = questionBankRepository.findBySourceRefAndSchoolId(sourceRef, currentUser.schoolId());
             if (concurrent.isPresent()) {
                 return buildResponse(concurrent.get(), false, null);
             }
@@ -378,7 +382,7 @@ public class QuestionBankCopyService {
         }
         auditLogService.log(currentUser, AuditAction.QUESTION_CREATE, AuditResourceType.QUESTION, saved.getId(),
                 Map.of("code", saved.getCode(), "sourceType", sourceType, "sourceRef", sourceRef));
-        Long duplicateQuestionId = findDuplicateQuestionId(currentUser.id(), saved);
+        Long duplicateQuestionId = findDuplicateQuestionId(currentUser.id(), saved, currentUser.schoolId());
         return buildResponse(saved, true, duplicateQuestionId);
     }
 
@@ -387,9 +391,9 @@ public class QuestionBankCopyService {
      *
      * <p>仅提示、不阻断、不合并。</p>
      */
-    private Long findDuplicateQuestionId(Long teacherId, QuestionBank saved) {
+    private Long findDuplicateQuestionId(Long teacherId, QuestionBank saved, Long schoolId) {
         String fingerprint = fingerprint(saved);
-        return questionBankRepository.findByCreatedBy(teacherId).stream()
+        return questionBankRepository.findBySchoolIdAndCreatedBy(schoolId, teacherId).stream()
                 .filter(candidate -> candidate.getId() != null && !candidate.getId().equals(saved.getId()))
                 .filter(candidate -> fingerprint.equals(fingerprint(candidate)))
                 .map(QuestionBank::getId)

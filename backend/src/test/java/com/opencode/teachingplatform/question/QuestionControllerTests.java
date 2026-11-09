@@ -79,6 +79,7 @@ class QuestionControllerTests {
     @Test
     void duplicateQuestionCodeIsRejected() throws Exception {
         QuestionBank existing = new QuestionBank();
+        existing.setSchoolId(1L);
         existing.setCode("Q-DUP-001");
         existing.setCreatedBy(1L);
         existing.setType("SINGLE");
@@ -109,6 +110,7 @@ class QuestionControllerTests {
     @Test
     void canListSeededShortQuestionWhenOptionsJsonIsNull() throws Exception {
         QuestionBank shortQuestion = new QuestionBank();
+        shortQuestion.setSchoolId(1L);
         shortQuestion.setCode("Q-FOUND-003");
         shortQuestion.setCreatedBy(1L);
         shortQuestion.setType("SHORT");
@@ -132,6 +134,7 @@ class QuestionControllerTests {
     @Test
     void teacherOnlySeesOwnQuestions() throws Exception {
         QuestionBank owned = new QuestionBank();
+        owned.setSchoolId(1L);
         owned.setCode("Q-OWN-001");
         owned.setCreatedBy(1L);
         owned.setType("SINGLE");
@@ -145,6 +148,7 @@ class QuestionControllerTests {
         questionBankRepository.save(owned);
 
         QuestionBank foreign = new QuestionBank();
+        foreign.setSchoolId(1L);
         foreign.setCode("Q-FOREIGN-001");
         foreign.setCreatedBy(9L);
         foreign.setType("SINGLE");
@@ -169,6 +173,7 @@ class QuestionControllerTests {
     @Test
     void teacherCannotDeleteForeignQuestion() throws Exception {
         QuestionBank foreign = new QuestionBank();
+        foreign.setSchoolId(1L);
         foreign.setCode("Q-FOREIGN-DELETE");
         foreign.setCreatedBy(9L);
         foreign.setType("SINGLE");

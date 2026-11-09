@@ -143,7 +143,7 @@ public class HomeworkServiceSupport {
 
 
     public Homework ownedHomework(CurrentUser currentUser, Long homeworkId) {
-        Homework homework = homeworkRepository.findByIdAndCreatedBy(homeworkId, currentUser.id())
+        Homework homework = homeworkRepository.findByIdAndSchoolIdAndCreatedBy(homeworkId, currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该作业"));
         classAccessService.assertTeacherAssignedToClass(currentUser, homework.getClassId());
         return homework;
@@ -152,7 +152,7 @@ public class HomeworkServiceSupport {
 
 
     public Homework accessiblePublishedHomework(CurrentUser currentUser, Long homeworkId) {
-        Homework homework = homeworkRepository.findById(homeworkId)
+        Homework homework = homeworkRepository.findByIdAndSchoolId(homeworkId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
         if (homework.getStatus() == ActivityStatus.DRAFT) {
             throw new BusinessException(40300, "无权限访问该作业");
@@ -195,9 +195,9 @@ public class HomeworkServiceSupport {
 
 
 
-    public void refreshSubmissionGradeState(HomeworkSubmission submission) {
+    public void refreshSubmissionGradeState(HomeworkSubmission submission, Long schoolId) {
         SubmissionStatus previousStatus = submission.getSubmitStatus();
-        Homework homework = homeworkRepository.findById(submission.getHomeworkId())
+        Homework homework = homeworkRepository.findByIdAndSchoolId(submission.getHomeworkId(), schoolId)
                 .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
         List<HomeworkAnswer> answers = homeworkAnswerRepository.findByHomeworkSubmissionId(submission.getId());
         double totalScore = answers.stream()
@@ -220,7 +220,7 @@ public class HomeworkServiceSupport {
             submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
             submission.setGradedAt(null);
             if (previousStatus == SubmissionStatus.GRADED) {
-                scoreRecordWriter.remove(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId());
+                scoreRecordWriter.remove(BusinessType.HOMEWORK, homework.getId(), submission.getStudentId(), homework.getSchoolId());
             }
         }
         homeworkSubmissionRepository.save(submission);
@@ -230,7 +230,7 @@ public class HomeworkServiceSupport {
 
     public void upsertScoreRecord(Homework homework, Long studentId, Double score, OffsetDateTime gradedAt) {
         scoreRecordWriter.write(BusinessType.HOMEWORK, homework.getId(), studentId,
-                homework.getClassId(), score, gradedAt);
+                homework.getClassId(), score, gradedAt, homework.getSchoolId());
     }
 
 

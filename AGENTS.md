@@ -88,8 +88,8 @@ teaching-platform-v4/
 | 统一响应/异常 | `backend/.../common/api/`、`common/exception/` | `ApiResponse`、`PagedResult`、错误码 |
 | 行为埋点 | `backend/.../lab/behavior/` | 实验作答事件采集与风险指标 |
 | 审计/访问日志 | `backend/.../common/infra/audit/`、`common/infra/accesslog/` | 操作日志与 HTTP 访问日志 |
-| 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V25`（25 个），schema + seed；编号以目录实测为准 |
-| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（69 个 `*Tests.java`，以目录实测为准） |
+| 数据库迁移 | `backend/src/main/resources/db/migration/` | 当前 `V1`–`V26`（schema + seed；编号与数量以目录实测为准） |
+| 测试根 | `backend/src/test/java/com/opencode/teachingplatform/` | controller/service 测试镜像（`*Tests.java` 数量以目录实测为准） |
 | 设计资产状态 | `docs/PRD/`、`docs/技术方案/` | 当前阶段无原型资产，需求输入以 PRD 与技术方案为准 |
 | 本地启动（路径 A/B/C） | `docs/运维文档/`、`scripts/` | Compose / 本机 MySQL / H2 文件库 |
 | 本地启动规则 | `.cursor/rules/local-dev-startup.mdc` | 端口、代理、数据目录、探活 |
@@ -142,7 +142,7 @@ teaching-platform-v4/
 - 四角色边界固定：教师 `TEACHER`、学生 `STUDENT`、校管 `SCHOOL_ADMIN`、平台超管 `PLATFORM_ADMIN`（`sys_user.school_id = NULL`、无学校归属）；前端三套业务壳层不合并（平台超管复用 `/admin` 壳层但仅可达 `/admin/schools`）、后端 `@PreAuthorize` 双重约束，不要把角色语义合并。
 - 调试与 E2E 联调**默认** `./scripts/path-b/backend.sh`（本机 MySQL，`local` profile）。无 MySQL 时用 `./scripts/path-b/backend-h2.sh`（H2 文件库 + `test` profile）。
 - `ddl-auto` / profile 矩阵见 `backend-db-and-config.mdc` §3：主配置为 `validate`，两个 test profile 为 `none`（UT 为 H2 mem，与路径 B 的 H2 文件库有意隔离），均由 Flyway 建表。
-- 数据库结构变更一律新增 migration，不改已应用的历史脚本；迁移编号以 `db/migration/` 实测为准（当前 `V1`–`V25`）。四个双方言占位符由 `common/config/FlywayPlaceholdersConfig.java` 按 DataSource 产品名注入，各 `application*.yml` 不再声明（旧口径已废止）。
+- 数据库结构变更一律新增 migration，不改已应用的历史脚本；迁移编号以 `db/migration/` 实测为准（当前 `V1`–`V26`）。四个双方言占位符由 `common/config/FlywayPlaceholdersConfig.java` 按 DataSource 产品名注入，各 `application*.yml` 不再声明（旧口径已废止）。
 - **本地业务数据**不在 Flyway 种子内；清库即丢。破坏性操作前须 `./scripts/common/backup-local-data.sh`；H2 清库须 `./scripts/path-b/reset-h2.sh`（见 `path-b-data-backup-gate.mdc`）。
 - `data/` 整树禁止随意删除（见 `protect-data-directory.mdc`）：`data/h2/`（H2 持久化）、`data/files/`（上传）、`data/logs/`（一键启动日志）。
 - 若需要并行跑多套前后端实例，后端优先改 `SERVER_PORT`，前端通过 `VITE_API_TARGET` 定向代理到该后端，不要硬绑定唯一的 `8080/5173` 组合。
@@ -236,8 +236,8 @@ cd frontend && npm install && npm run dev && npm run build
 
 | 项 | 当前事实 |
 |---|---|
-| 后端测试数 | 69 个 `*Tests.java`（`backend/src/test/java/`，以目录实测为准） |
-| 迁移脚本 | `V1`–`V25` 共 25 个（`backend/src/main/resources/db/migration/`，以目录实测为准） |
+| 后端测试数 | `*Tests.java` 数量以 `backend/src/test/java/` 目录实测为准（1B 新增 7 个跨校回归类） |
+| 迁移脚本 | `V1`–`V26`（`backend/src/main/resources/db/migration/`，数量以目录实测为准） |
 | 角色数 | 4 个：`TEACHER`、`STUDENT`、`SCHOOL_ADMIN`、`PLATFORM_ADMIN`（平台级账号无学校归属） |
 | 密码编码器 | `DelegatingPasswordEncoder` |
 | 分页类型 | `PagedResult<T>`（`backend/.../common/api/PagedResult.java`） |

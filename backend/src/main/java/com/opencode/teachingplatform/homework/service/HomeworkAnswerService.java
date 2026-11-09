@@ -189,15 +189,15 @@ public class HomeworkAnswerService {
             applyQuestionAnswers(saved, request.answers());
         }
         // 全客观题作业在提交阶段即完成结案：含主观题或存在未评分答案时保持/置回 SUBMITTED
-        support.refreshSubmissionGradeState(saved);
+        support.refreshSubmissionGradeState(saved, currentUser.schoolId());
         LocalPlagiarismService.PlagiarismAnalysisResult plagiarismResult = localPlagiarismService.analyze(
                 plagiarismSourceText(saved, request),
-                buildHomeworkCandidates(saved.getHomeworkId(), saved.getId())
+                buildHomeworkCandidates(saved.getHomeworkId(), saved.getId(), currentUser.schoolId())
         );
         saved.setPlagiarismRate(plagiarismResult.similarityRate());
         homeworkSubmissionRepository.save(saved);
         plagiarismTaskWriter.write(BusinessType.HOMEWORK, saved.getId(), saved.getStudentId(),
-                plagiarismResult.similarityRate(), plagiarismResult.topMatchSummary(), plagiarismResult.rawResultJson());
+                plagiarismResult.similarityRate(), plagiarismResult.topMatchSummary(), plagiarismResult.rawResultJson(), homework.getSchoolId());
 
         return Map.of(
                 "submissionId", saved.getId(),
@@ -407,14 +407,14 @@ public class HomeworkAnswerService {
      * @param currentSubmissionId 当前提交 id（从候选集中排除）
      * @return 候选文本集合
      */
-    private List<LocalPlagiarismService.CandidateText> buildHomeworkCandidates(Long homeworkId, Long currentSubmissionId) {
+    private List<LocalPlagiarismService.CandidateText> buildHomeworkCandidates(Long homeworkId, Long currentSubmissionId, Long schoolId) {
         return homeworkSubmissionRepository
                 .findByHomeworkIdAndSubmitStatusIn(homeworkId, List.of(SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED))
                 .stream()
                 .filter(candidate -> !Objects.equals(candidate.getId(), currentSubmissionId))
                 .map(candidate -> Map.entry(candidate, submissionCandidateText(candidate)))
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
-                .map(entry -> new LocalPlagiarismService.CandidateText(resolveHomeworkReference(entry.getKey().getHomeworkId()), entry.getValue()))
+                .map(entry -> new LocalPlagiarismService.CandidateText(resolveHomeworkReference(entry.getKey().getHomeworkId(), schoolId), entry.getValue()))
                 .toList();
     }
 
@@ -433,8 +433,8 @@ public class HomeworkAnswerService {
 
 
 
-    private String resolveHomeworkReference(Long homeworkId) {
-        return homeworkRepository.findById(homeworkId)
+    private String resolveHomeworkReference(Long homeworkId, Long schoolId) {
+        return homeworkRepository.findByIdAndSchoolId(homeworkId, schoolId)
                 .map(homework -> homework.getTitle() + "#" + homework.getId())
                 .orElse("homework#" + homeworkId);
     }

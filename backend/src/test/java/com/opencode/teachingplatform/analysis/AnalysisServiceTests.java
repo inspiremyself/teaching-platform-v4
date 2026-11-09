@@ -335,8 +335,8 @@ class AnalysisServiceTests {
     @Test
     void missingBusinessIsDroppedWithoutUnknownPlaceholder() {
         jdbcTemplate.update(
-                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at) " +
-                        "VALUES (?, 'EXAM', ?, ?, 1, 88, CURRENT_TIMESTAMP)",
+                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at, school_id) " +
+                        "VALUES (?, 'EXAM', ?, ?, 1, 88, CURRENT_TIMESTAMP, 1)",
                 ORPHAN_SCORE_ID,
                 -9999L,
                 STUDENT_ID
@@ -353,8 +353,8 @@ class AnalysisServiceTests {
     void visibleScoresAreIsolatedPerStudent() {
         seedVisibilityFixture("MANUAL_RELEASE", true, futureDeadline(), "GRADED", 10.0);
         jdbcTemplate.update(
-                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at) " +
-                        "VALUES (?, 'HOMEWORK', ?, ?, 1, 90, CURRENT_TIMESTAMP)",
+                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at, school_id) " +
+                        "VALUES (?, 'HOMEWORK', ?, ?, 1, 90, CURRENT_TIMESTAMP, 1)",
                 OTHER_STUDENT_SCORE_ID,
                 HOMEWORK_ID,
                 OTHER_STUDENT_ID
@@ -558,7 +558,7 @@ class AnalysisServiceTests {
 
     private void insertHomework(long id, String title, long classId, long createdBy) {
         jdbcTemplate.update(
-                "INSERT INTO homework (id, title, class_id, created_by, status) VALUES (?, ?, ?, ?, 'PUBLISHED')",
+                "INSERT INTO homework (id, title, class_id, created_by, status, school_id) VALUES (?, ?, ?, ?, 'PUBLISHED', 1)",
                 id, title, classId, createdBy
         );
     }
@@ -573,16 +573,16 @@ class AnalysisServiceTests {
 
     private void insertPlagiarismTask(long id, String businessType, long businessId, double similarityRate) {
         jdbcTemplate.update(
-                "INSERT INTO plagiarism_task (id, business_type, business_id, student_id, status, similarity_rate) " +
-                        "VALUES (?, ?, ?, ?, 'COMPLETED', ?)",
+                "INSERT INTO plagiarism_task (id, business_type, business_id, student_id, status, similarity_rate, school_id) " +
+                        "VALUES (?, ?, ?, ?, 'COMPLETED', ?, 1)",
                 id, businessType, businessId, STUDENT_ID, similarityRate
         );
     }
 
     private void insertTrendScoreRecord(long id, long classId, double score) {
         jdbcTemplate.update(
-                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at) " +
-                        "VALUES (?, 'HOMEWORK', ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at, school_id) " +
+                        "VALUES (?, 'HOMEWORK', ?, ?, ?, ?, CURRENT_TIMESTAMP, 1)",
                 id, id, STUDENT_ID, classId, score
         );
     }
@@ -626,17 +626,17 @@ class AnalysisServiceTests {
                                        String submissionStatus, Double labTotalScore) {
         jdbcTemplate.update(
                 "INSERT INTO exam (id, title, class_id, duration_minutes, status, created_by, " +
-                        "score_visibility_mode, score_released, end_at) VALUES (?, ?, 1, 60, 'PUBLISHED', ?, ?, ?, ?)",
+                        "score_visibility_mode, score_released, end_at, school_id) VALUES (?, ?, 1, 60, 'PUBLISHED', ?, ?, ?, ?, 1)",
                 EXAM_ID, "可见性矩阵考试", TEACHER_ID, mode, released, toTimestamp(deadline)
         );
         jdbcTemplate.update(
                 "INSERT INTO homework (id, title, class_id, created_by, status, score_visibility_mode, " +
-                        "score_released, due_at) VALUES (?, ?, 1, ?, 'PUBLISHED', ?, ?, ?)",
+                        "score_released, due_at, school_id) VALUES (?, ?, 1, ?, 'PUBLISHED', ?, ?, ?, 1)",
                 HOMEWORK_ID, "可见性矩阵作业", TEACHER_ID, mode, released, toTimestamp(deadline)
         );
         jdbcTemplate.update(
                 "INSERT INTO t_experiment (experiment_id, experiment_no, experiment_name, status, class_id, created_by, " +
-                        "score_visibility_mode, score_released, end_at) VALUES (?, ?, ?, 'PUBLISHED', 1, ?, ?, ?, ?)",
+                        "score_visibility_mode, score_released, end_at, school_id) VALUES (?, ?, ?, 'PUBLISHED', 1, ?, ?, ?, ?, 1)",
                 LAB_ID, (int) LAB_ID, "可见性矩阵实验", TEACHER_ID, mode, released, toTimestamp(deadline)
         );
         jdbcTemplate.update(
@@ -659,8 +659,8 @@ class AnalysisServiceTests {
 
     private void insertScoreRecord(long id, String businessType, long businessId, long studentId, double score) {
         jdbcTemplate.update(
-                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at) " +
-                        "VALUES (?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP)",
+                "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at, school_id) " +
+                        "VALUES (?, ?, ?, ?, 1, ?, CURRENT_TIMESTAMP, 1)",
                 id, businessType, businessId, studentId, score
         );
     }

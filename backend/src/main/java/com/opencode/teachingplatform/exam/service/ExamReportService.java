@@ -107,7 +107,7 @@ public class ExamReportService {
 
 
     public Object getExamResults(CurrentUser currentUser, Long examId) {
-        Exam exam = examRepository.findById(examId)
+        Exam exam = examRepository.findByIdAndSchoolId(examId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限查看该考试结果");
@@ -148,7 +148,7 @@ public class ExamReportService {
     public Object getSubmissionDetail(CurrentUser currentUser, Long submissionId) {
         ExamSubmission submission = examSubmissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BusinessException(40400, "提交记录不存在"));
-        Exam exam = examRepository.findById(submission.getExamId())
+        Exam exam = examRepository.findByIdAndSchoolId(submission.getExamId(), currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限查看该提交详情");
@@ -168,7 +168,7 @@ public class ExamReportService {
             aMap.put("questionId", eq.getQuestionId());
             aMap.put("questionScore", eq.getQuestionScore());
 
-            QuestionSnapshot snapshot = support.resolveQuestionSnapshot(eq);
+            QuestionSnapshot snapshot = support.resolveQuestionSnapshot(eq, currentUser.schoolId());
             aMap.put("questionType", snapshot.questionType());
             aMap.put("stem", snapshot.stem());
             aMap.put("optionsJson", snapshot.optionsJson());
@@ -218,7 +218,7 @@ public class ExamReportService {
     public Object gradeSubmission(CurrentUser currentUser, Long submissionId, ExamRequests.GradeExamSubmissionRequest request) {
         ExamSubmission head = examSubmissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BusinessException(40400, "提交记录不存在"));
-        Exam exam = examRepository.findById(head.getExamId())
+        Exam exam = examRepository.findByIdAndSchoolId(head.getExamId(), currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限批改该考试");
@@ -245,7 +245,7 @@ public class ExamReportService {
             QuestionSnapshot snapshot = examQuestionRepository.findByExamIdOrderBySortOrder(submission.getExamId()).stream()
                     .filter(eq -> Objects.equals(eq.getQuestionId(), item.questionId()))
                     .findFirst()
-                    .map(support::resolveQuestionSnapshot)
+                    .map(eq -> support.resolveQuestionSnapshot(eq, currentUser.schoolId()))
                     .orElse(null);
             if (snapshot != null && examScoringService.isObjective(snapshot.questionType())) {
                 continue; // Don't let teacher override objective auto-grades
@@ -263,7 +263,7 @@ public class ExamReportService {
             QuestionSnapshot snapshot = examQuestionRepository.findByExamIdOrderBySortOrder(submission.getExamId()).stream()
                     .filter(eq -> Objects.equals(eq.getQuestionId(), a.getQuestionId()))
                     .findFirst()
-                    .map(support::resolveQuestionSnapshot)
+                    .map(eq -> support.resolveQuestionSnapshot(eq, currentUser.schoolId()))
                     .orElse(null);
             if (snapshot != null && !examScoringService.isObjective(snapshot.questionType())) {
                 manualScore += (a.getScore() != null ? a.getScore() : 0.0);
@@ -284,7 +284,7 @@ public class ExamReportService {
     public Object confirmAnswer(CurrentUser currentUser, Long submissionId, ExamRequests.ConfirmExamAnswerRequest request) {
         ExamSubmission head = examSubmissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BusinessException(40400, "提交记录不存在"));
-        Exam exam = examRepository.findById(head.getExamId())
+        Exam exam = examRepository.findByIdAndSchoolId(head.getExamId(), currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限批改该考试");
@@ -307,7 +307,7 @@ public class ExamReportService {
         QuestionSnapshot snapshot = examQuestionRepository.findByExamIdOrderBySortOrder(exam.getId()).stream()
                 .filter(item -> Objects.equals(item.getQuestionId(), request.questionId()))
                 .findFirst()
-                .map(support::resolveQuestionSnapshot)
+                .map(eq -> support.resolveQuestionSnapshot(eq, exam.getSchoolId()))
                 .orElse(null);
         if (snapshot != null && examScoringService.isObjective(snapshot.questionType())) {
             if (request.acceptSuggested()) {
@@ -370,7 +370,7 @@ public class ExamReportService {
             boolean objective = examQuestionRepository.findByExamIdOrderBySortOrder(submission.getExamId()).stream()
                     .filter(eq -> Objects.equals(eq.getQuestionId(), answer.getQuestionId()))
                     .findFirst()
-                    .map(support::resolveQuestionSnapshot)
+                    .map(eq -> support.resolveQuestionSnapshot(eq, exam.getSchoolId()))
                     .map(QuestionSnapshot::questionType)
                     .map(examScoringService::isObjective)
                     .orElse(false);
@@ -392,7 +392,7 @@ public class ExamReportService {
             support.upsertScoreRecord(exam, submission, totalScore);
         } else if (previousStatus == ExamSubmissionStatus.GRADED) {
             // 从 GRADED 降回 SUBMITTED 时删除残留成绩记录，避免成绩列表继续展示已撤销的结果
-            scoreRecordWriter.remove(BusinessType.EXAM, exam.getId(), submission.getStudentId());
+            scoreRecordWriter.remove(BusinessType.EXAM, exam.getId(), submission.getStudentId(), exam.getSchoolId());
         }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("submissionId", submission.getId());

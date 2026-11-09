@@ -37,12 +37,12 @@ class PlagiarismTaskWriterTests {
 
     @Test
     void createsCompletedTaskWhenAbsent() {
-        when(repository.findByBusinessTypeAndBusinessId(BusinessType.LAB, BUSINESS_ID))
+        when(repository.findByBusinessTypeAndBusinessIdAndSchoolId(BusinessType.LAB, BUSINESS_ID, 1L))
                 .thenReturn(Optional.empty());
         when(repository.save(any(PlagiarismTask.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        writer.write(BusinessType.LAB, BUSINESS_ID, STUDENT_ID, 42.5D, "最高相似来源: 实验#1", "{\"algorithm\":\"jaccard\"}");
+        writer.write(BusinessType.LAB, BUSINESS_ID, STUDENT_ID, 42.5D, "最高相似来源: 实验#1", "{\"algorithm\":\"jaccard\"}", 1L);
 
         ArgumentCaptor<PlagiarismTask> captor = ArgumentCaptor.forClass(PlagiarismTask.class);
         verify(repository).save(captor.capture());
@@ -58,15 +58,16 @@ class PlagiarismTaskWriterTests {
     @Test
     void updatesExistingTaskInPlace() {
         PlagiarismTask existing = new PlagiarismTask();
+        existing.setSchoolId(1L);
         existing.setBusinessType(BusinessType.LAB);
         existing.setBusinessId(BUSINESS_ID);
         existing.setSimilarityRate(10D);
-        when(repository.findByBusinessTypeAndBusinessId(BusinessType.LAB, BUSINESS_ID))
+        when(repository.findByBusinessTypeAndBusinessIdAndSchoolId(BusinessType.LAB, BUSINESS_ID, 1L))
                 .thenReturn(Optional.of(existing));
         when(repository.save(any(PlagiarismTask.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        writer.write(BusinessType.LAB, BUSINESS_ID, STUDENT_ID, 88.8D, "新摘要", "{}");
+        writer.write(BusinessType.LAB, BUSINESS_ID, STUDENT_ID, 88.8D, "新摘要", "{}", 1L);
 
         ArgumentCaptor<PlagiarismTask> captor = ArgumentCaptor.forClass(PlagiarismTask.class);
         verify(repository).save(captor.capture());
@@ -77,13 +78,13 @@ class PlagiarismTaskWriterTests {
 
     @Test
     void truncatesSummaryToColumnLimit() {
-        when(repository.findByBusinessTypeAndBusinessId(BusinessType.HOMEWORK, BUSINESS_ID))
+        when(repository.findByBusinessTypeAndBusinessIdAndSchoolId(BusinessType.HOMEWORK, BUSINESS_ID, 1L))
                 .thenReturn(Optional.empty());
         when(repository.save(any(PlagiarismTask.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         String longSummary = "相".repeat(300);
 
-        writer.write(BusinessType.HOMEWORK, BUSINESS_ID, STUDENT_ID, 50D, longSummary, "{}");
+        writer.write(BusinessType.HOMEWORK, BUSINESS_ID, STUDENT_ID, 50D, longSummary, "{}", 1L);
 
         ArgumentCaptor<PlagiarismTask> captor = ArgumentCaptor.forClass(PlagiarismTask.class);
         verify(repository).save(captor.capture());

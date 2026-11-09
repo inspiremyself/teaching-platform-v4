@@ -38,6 +38,9 @@ public class Homework extends BaseEntity {
     @Column(name = "score_released", nullable = false)
     private boolean scoreReleased;
 
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
@@ -58,4 +61,6 @@ public class Homework extends BaseEntity {
     public void setScoreVisibilityMode(ScoreVisibilityMode scoreVisibilityMode) { this.scoreVisibilityMode = scoreVisibilityMode; }
     public boolean isScoreReleased() { return scoreReleased; }
     public void setScoreReleased(boolean scoreReleased) { this.scoreReleased = scoreReleased; }
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
 }

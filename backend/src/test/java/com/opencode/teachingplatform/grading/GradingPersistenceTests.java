@@ -53,6 +53,7 @@ class GradingPersistenceTests {
     @Test
     void homeworkQuestionSupportsInlineSnapshotWithoutQuestionBankId() {
         Homework homework = new Homework();
+        homework.setSchoolId(1L);
         homework.setTitle("内联题作业");
         homework.setDescription("用于验证快照题保存");
         homework.setClassId(1L);
@@ -84,6 +85,7 @@ class GradingPersistenceTests {
         jdbcTemplate.execute("ALTER TABLE question_bank ALTER COLUMN id RESTART WITH 100");
 
         QuestionBank questionBank = new QuestionBank();
+        questionBank.setSchoolId(1L);
         questionBank.setCode("QB-GRADING-001");
         questionBank.setType("SUBJECTIVE");
         questionBank.setStem("解释统一评分模型的价值");
@@ -129,17 +131,17 @@ class GradingPersistenceTests {
     @Test
     void examScoreRecordIsWrittenOnGradingAndUpdatedInPlaceOnRepublish() {
         OffsetDateTime gradedAt = OffsetDateTime.now();
-        scoreRecordWriter.write(BusinessType.EXAM, 8001L, 2L, 1L, 12D, gradedAt);
+        scoreRecordWriter.write(BusinessType.EXAM, 8001L, 2L, 1L, 12D, gradedAt, 1L);
         entityManager.clear();
 
         assertThat(examScoreRecordCount(8001L, 2L)).isEqualTo(1);
 
-        scoreRecordWriter.write(BusinessType.EXAM, 8001L, 2L, 1L, 15D, gradedAt.plusMinutes(1));
+        scoreRecordWriter.write(BusinessType.EXAM, 8001L, 2L, 1L, 15D, gradedAt.plusMinutes(1), 1L);
         entityManager.clear();
 
         assertThat(examScoreRecordCount(8001L, 2L)).isEqualTo(1);
         ScoreRecord record = scoreRecordRepository
-                .findByBusinessTypeAndBusinessIdAndStudentId(BusinessType.EXAM, 8001L, 2L)
+                .findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(BusinessType.EXAM, 8001L, 2L, 1L)
                 .orElseThrow();
         assertThat(record.getScore()).isEqualTo(15D);
         assertThat(record.getClassId()).isEqualTo(1L);

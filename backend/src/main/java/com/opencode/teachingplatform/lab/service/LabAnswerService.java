@@ -171,7 +171,7 @@ public class LabAnswerService {
     public List<Map<String, Object>> listStudentLabSubmissions(CurrentUser currentUser, Long studentId) {
         support.requireTeacher(currentUser);
         requireTeacherStudentAccess(currentUser, studentId);
-        List<Long> ownedLabIds = labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+        List<Long> ownedLabIds = labRepository.findBySchoolIdAndCreatedByOrderByIdDesc(currentUser.schoolId(), currentUser.id()).stream()
                 .map(Lab::getId)
                 .toList();
         if (ownedLabIds.isEmpty()) {
@@ -181,7 +181,7 @@ public class LabAnswerService {
         return labSubmissionRepository.findByStudentId(studentId).stream()
                 .filter(submission -> ownedLabIdSet.contains(submission.getLabId()))
                 .sorted(Comparator.comparing(LabSubmission::getSubmittedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(submission -> toStudentLabSubmissionView(submission))
+                .map(submission -> toStudentLabSubmissionView(submission, currentUser.schoolId()))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -320,7 +320,7 @@ public class LabAnswerService {
         LabStepAnswer answer = findAnswerOwningImagePath(normalizedPath);
         LabSubmission submission = labSubmissionRepository.findById(answer.getLabSubmissionId())
                 .orElseThrow(() -> new BusinessException(40400, "实验提交不存在"));
-        Lab lab = labRepository.findById(submission.getLabId()).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
+        Lab lab = labRepository.findByIdAndSchoolId(submission.getLabId(), currentUser.schoolId()).orElseThrow(() -> new BusinessException(40400, "实验不存在"));
         requireAnswerImageAccess(currentUser, submission, lab);
         // 学生只能读取自己答案中的图片；教师与历史无学生段的旧路径跳过比对。
         LabAnswerImageSupport.assertStudentSegmentMatches(normalizedPath, currentUser, submission.getStudentId());
@@ -516,8 +516,8 @@ public class LabAnswerService {
 
 
 
-    private Map<String, Object> toStudentLabSubmissionView(LabSubmission submission) {
-        Lab lab = labRepository.findById(submission.getLabId()).orElse(null);
+    private Map<String, Object> toStudentLabSubmissionView(LabSubmission submission, Long schoolId) {
+        Lab lab = labRepository.findByIdAndSchoolId(submission.getLabId(), schoolId).orElse(null);
         if (lab == null) {
             return null;
         }
@@ -577,7 +577,7 @@ public class LabAnswerService {
             submission.setPlagiarismRate(result.similarityRate());
             labSubmissionRepository.save(submission);
             plagiarismTaskWriter.write(BusinessType.LAB, submission.getId(), submission.getStudentId(),
-                    result.similarityRate(), result.topMatchSummary(), result.rawResultJson());
+                    result.similarityRate(), result.topMatchSummary(), result.rawResultJson(), lab.getSchoolId());
         } catch (Exception ex) {
             // writer 为 REQUIRES_NEW，其回滚不污染外层事务；此处只降级查重率
             log.warn("实验查重任务写入失败，降级为 0: labId={}, submissionId={}", lab.getId(), submission.getId(), ex);

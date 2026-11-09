@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ScoreRecordRepository extends JpaRepository<ScoreRecord, Long> {
-    List<ScoreRecord> findByStudentId(Long studentId);
-    Optional<ScoreRecord> findByBusinessTypeAndBusinessIdAndStudentId(BusinessType businessType, Long businessId, Long studentId);
+    List<ScoreRecord> findBySchoolIdAndStudentId(Long schoolId, Long studentId);
+    Optional<ScoreRecord> findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+            BusinessType businessType, Long businessId, Long studentId, Long schoolId);
 }

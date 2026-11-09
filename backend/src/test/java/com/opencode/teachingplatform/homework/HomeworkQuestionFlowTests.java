@@ -198,6 +198,7 @@ class HomeworkQuestionFlowTests {
 
     private Homework saveHomework(ActivityStatus status) {
         Homework homework = new Homework();
+        homework.setSchoolId(1L);
         homework.setTitle("评分系统作业");
         homework.setDescription("题目化作业");
         homework.setClassId(1L);
@@ -210,6 +211,7 @@ class HomeworkQuestionFlowTests {
 
     private QuestionBank saveBankQuestion() {
         QuestionBank question = new QuestionBank();
+        question.setSchoolId(1L);
         question.setCode("QB-HW-001");
         question.setType("SINGLE_CHOICE");
         question.setStem("策略模式的核心目的是什么？");

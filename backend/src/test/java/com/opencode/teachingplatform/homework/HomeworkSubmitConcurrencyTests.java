@@ -163,10 +163,10 @@ class HomeworkSubmitConcurrencyTests {
             jdbcTemplate.update(
                     """
                     INSERT INTO homework (id, title, description, class_id, start_at, due_at, attachment_path,
-                                          created_by, status, created_at, updated_at)
+                                          created_by, status, created_at, updated_at, school_id)
                     VALUES (?, '并发提交作业', '并发首存幂等验证', ?,
                             TIMESTAMPADD(HOUR, -1, CURRENT_TIMESTAMP), TIMESTAMPADD(DAY, 1, CURRENT_TIMESTAMP),
-                            NULL, 1, 'PUBLISHED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                            NULL, 1, 'PUBLISHED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                     """,
                     HOMEWORK_ID,
                     CLASS_ID

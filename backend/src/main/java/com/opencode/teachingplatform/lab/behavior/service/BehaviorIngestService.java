@@ -262,7 +262,7 @@ public class BehaviorIngestService {
     }
 
     private Lab accessiblePublishedLab(CurrentUser currentUser, Long labId) {
-        Lab lab = labRepository.findById(labId)
+        Lab lab = labRepository.findByIdAndSchoolId(labId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "实验不存在"));
         if (lab.getStatus() == ActivityStatus.DRAFT) {
             throw new BusinessException(40300, "无权限访问该实验");

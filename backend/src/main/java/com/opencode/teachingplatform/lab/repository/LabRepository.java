@@ -8,7 +8,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface LabRepository extends JpaRepository<Lab, Long> {
-    List<Lab> findByCreatedByOrderByIdDesc(Long createdBy);
-    List<Lab> findByClassIdInAndStatusOrderByIdDesc(Collection<Long> classIds, com.opencode.teachingplatform.common.enums.ActivityStatus status);
-    Optional<Lab> findByIdAndCreatedBy(Long id, Long createdBy);
+    List<Lab> findBySchoolIdAndCreatedByOrderByIdDesc(Long schoolId, Long createdBy);
+    List<Lab> findBySchoolIdAndClassIdInAndStatusOrderByIdDesc(Long schoolId, Collection<Long> classIds,
+            com.opencode.teachingplatform.common.enums.ActivityStatus status);
+    Optional<Lab> findByIdAndSchoolIdAndCreatedBy(Long id, Long schoolId, Long createdBy);
+    Optional<Lab> findByIdAndSchoolId(Long id, Long schoolId);
+    List<Lab> findByIdInAndSchoolId(Collection<Long> ids, Long schoolId);
 }

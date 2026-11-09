@@ -38,13 +38,15 @@ public class ScoreRecordWriter {
      * @param classId      班级 id
      * @param score        分数
      * @param gradedAt     评分时间，为空时取当前时间
+     * @param schoolId     业务主表所属学校 id
      * @return 持久化后的成绩记录
      */
     @Transactional
     public ScoreRecord write(BusinessType businessType, Long businessId, Long studentId,
-                             Long classId, Double score, OffsetDateTime gradedAt) {
+                             Long classId, Double score, OffsetDateTime gradedAt, Long schoolId) {
         ScoreRecord scoreRecord = scoreRecordRepository
-                .findByBusinessTypeAndBusinessIdAndStudentId(businessType, businessId, studentId)
+                .findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                        businessType, businessId, studentId, schoolId)
                 .orElseGet(ScoreRecord::new);
         scoreRecord.setBusinessType(businessType);
         scoreRecord.setBusinessId(businessId);
@@ -52,6 +54,7 @@ public class ScoreRecordWriter {
         scoreRecord.setClassId(classId);
         scoreRecord.setScore(score);
         scoreRecord.setGradedAt(gradedAt == null ? OffsetDateTime.now() : gradedAt);
+        scoreRecord.setSchoolId(schoolId);
         try {
             return scoreRecordRepository.saveAndFlush(scoreRecord);
         } catch (DataIntegrityViolationException ex) {
@@ -64,10 +67,14 @@ public class ScoreRecordWriter {
      *
      * <p>用于考试从 {@code GRADED} 降回 {@code SUBMITTED} 时清理残留成绩，
      * 避免学生成绩列表继续展示已撤销的结果。</p>
+     *
+     * @param schoolId 业务主表所属学校 id
      */
     @Transactional
-    public void remove(BusinessType businessType, Long businessId, Long studentId) {
-        scoreRecordRepository.findByBusinessTypeAndBusinessIdAndStudentId(businessType, businessId, studentId)
+    public void remove(BusinessType businessType, Long businessId, Long studentId, Long schoolId) {
+        scoreRecordRepository
+                .findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                        businessType, businessId, studentId, schoolId)
                 .ifPresent(scoreRecordRepository::delete);
     }
 }

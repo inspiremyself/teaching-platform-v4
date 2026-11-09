@@ -170,7 +170,7 @@ public class LabConfigService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listTeacherLabs(CurrentUser currentUser) {
         support.requireTeacher(currentUser);
-        return labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream().map(this::toTeacherLabView).toList();
+        return labRepository.findBySchoolIdAndCreatedByOrderByIdDesc(currentUser.schoolId(), currentUser.id()).stream().map(this::toTeacherLabView).toList();
     }
 
 
@@ -194,6 +194,10 @@ public class LabConfigService {
         assertLabTimeWindowValid(request.startAt(), request.dueAt());
         Lab lab = new Lab();
         lab.setCreatedBy(currentUser.id());
+        if (currentUser.schoolId() == null) {
+            throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
+        }
+        lab.setSchoolId(currentUser.schoolId());
         applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired(), request.startAt(), request.dueAt());
         return toTeacherLabView(labRepository.save(lab));
     }
@@ -226,7 +230,7 @@ public class LabConfigService {
         support.requireTeacher(currentUser);
 
         // 源实验只校验 ownership，不复用 ownedLab：后者还要求当前仍任教源班级，会阻断跨班复用
-        Lab source = labRepository.findByIdAndCreatedBy(sourceLabId, currentUser.id())
+        Lab source = labRepository.findByIdAndSchoolIdAndCreatedBy(sourceLabId, currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
 
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
@@ -241,6 +245,10 @@ public class LabConfigService {
         // 复制主表：ID/编号/审计时间由实体自动生成，运行态字段（成绩发布、起止时间）不随源迁移
         Lab copy = new Lab();
         copy.setCreatedBy(currentUser.id());
+        if (currentUser.schoolId() == null) {
+            throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
+        }
+        copy.setSchoolId(currentUser.schoolId());
         copy.setClassId(request.classId());
         copy.setTitle(resolveCopyTitle(source.getTitle(), request.title()));
         copy.setDescription(source.getDescription());
@@ -383,7 +391,7 @@ public class LabConfigService {
         if (classIds.isEmpty()) {
             return List.of();
         }
-        return labRepository.findByClassIdInAndStatusOrderByIdDesc(classIds, ActivityStatus.PUBLISHED).stream()
+        return labRepository.findBySchoolIdAndClassIdInAndStatusOrderByIdDesc(currentUser.schoolId(), classIds, ActivityStatus.PUBLISHED).stream()
                 .map(lab -> toStudentLabView(lab, currentUser.id()))
                 .toList();
     }

@@ -40,7 +40,7 @@ public class QuestionService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> list(CurrentUser currentUser) {
-        return questionBankRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+        return questionBankRepository.findBySchoolIdAndCreatedByOrderByIdDesc(currentUser.schoolId(), currentUser.id()).stream()
                 .map(questionBankViewMapper::toView)
                 .toList();
     }
@@ -53,6 +53,10 @@ public class QuestionService {
         QuestionBank question = new QuestionBank();
         apply(question, request);
         question.setCreatedBy(currentUser.id());
+        if (currentUser.schoolId() == null) {
+            throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
+        }
+        question.setSchoolId(currentUser.schoolId());
         // 手工新增固定为 MANUAL，且不携带评分参数与来源键
         question.setSourceType(SOURCE_TYPE_MANUAL);
         question.setSourceRef(null);
@@ -68,7 +72,7 @@ public class QuestionService {
 
     @Transactional
     public Map<String, Object> update(CurrentUser currentUser, Long id, SaveQuestionRequest request) {
-        QuestionBank question = questionBankRepository.findByIdAndCreatedBy(id, currentUser.id())
+        QuestionBank question = questionBankRepository.findByIdAndSchoolIdAndCreatedBy(id, currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该题目"));
         if (questionBankRepository.existsByCodeAndIdNot(normalizeCode(request.code()), id)) {
             throw new BusinessException(40900, "题目编码已存在");
@@ -86,7 +90,7 @@ public class QuestionService {
 
     @Transactional
     public void delete(CurrentUser currentUser, Long id) {
-        QuestionBank question = questionBankRepository.findByIdAndCreatedBy(id, currentUser.id())
+        QuestionBank question = questionBankRepository.findByIdAndSchoolIdAndCreatedBy(id, currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40300, "无权限访问该题目"));
         auditLogService.log(currentUser, AuditAction.QUESTION_DELETE, AuditResourceType.QUESTION, question.getId(), Map.of("code", question.getCode()));
         questionBankRepository.delete(question);

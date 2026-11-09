@@ -103,7 +103,7 @@ public class ExamServiceSupport {
     }
 
 
-    public QuestionSnapshot resolveQuestionSnapshot(ExamQuestion examQuestion) {
+    public QuestionSnapshot resolveQuestionSnapshot(ExamQuestion examQuestion, Long schoolId) {
         if (examQuestion.getQuestionSnapshotJson() != null && !examQuestion.getQuestionSnapshotJson().isBlank()) {
             JsonNode snapshot = readJsonNode(examQuestion.getQuestionSnapshotJson());
             String questionType = jsonText(snapshot, "questionType");
@@ -124,7 +124,7 @@ public class ExamServiceSupport {
             }
         }
 
-        QuestionBank questionBank = questionBankRepository.findById(examQuestion.getQuestionId())
+        QuestionBank questionBank = questionBankRepository.findByIdAndSchoolId(examQuestion.getQuestionId(), schoolId)
                 .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
         return toSnapshot(questionBank, examQuestion.getSortOrder(), examQuestion.getQuestionScore());
     }
@@ -231,7 +231,7 @@ public class ExamServiceSupport {
 
     public void upsertScoreRecord(Exam exam, ExamSubmission submission, double totalScore) {
         scoreRecordWriter.write(BusinessType.EXAM, exam.getId(), submission.getStudentId(),
-                exam.getClassId(), totalScore, OffsetDateTime.now());
+                exam.getClassId(), totalScore, OffsetDateTime.now(), exam.getSchoolId());
     }
 
 

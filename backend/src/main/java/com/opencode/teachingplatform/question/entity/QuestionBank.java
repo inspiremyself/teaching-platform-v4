@@ -36,6 +36,9 @@ public class QuestionBank extends BaseEntity {
     @Column(name = "source_ref", length = 100)
     private String sourceRef;
 
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
     public String getType() { return type; }
@@ -60,4 +63,6 @@ public class QuestionBank extends BaseEntity {
     public void setSourceType(String sourceType) { this.sourceType = sourceType; }
     public String getSourceRef() { return sourceRef; }
     public void setSourceRef(String sourceRef) { this.sourceRef = sourceRef; }
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
 }

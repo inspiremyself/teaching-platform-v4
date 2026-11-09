@@ -78,6 +78,9 @@ public class Lab {
     @Column(name = "summary_required", nullable = false)
     private boolean summaryRequired;
 
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
     @PrePersist
     void prePersist() {
         ensureId();
@@ -170,4 +173,6 @@ public class Lab {
     public void setState(Integer state) { this.state = state; }
     public boolean isSummaryRequired() { return summaryRequired; }
     public void setSummaryRequired(boolean summaryRequired) { this.summaryRequired = summaryRequired; }
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
 }

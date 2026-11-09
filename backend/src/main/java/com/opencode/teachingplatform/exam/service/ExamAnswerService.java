@@ -107,7 +107,7 @@ public class ExamAnswerService {
 
 
     public Object startExam(CurrentUser currentUser, Long examId) {
-        Exam exam = examRepository.findById(examId)
+        Exam exam = examRepository.findByIdAndSchoolId(examId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
 
         if (exam.getStatus() != ActivityStatus.PUBLISHED) {
@@ -195,7 +195,7 @@ public class ExamAnswerService {
         }
 
         // 2.1 Load exam once for status override and score visibility checks
-        Exam exam = examRepository.findById(examId)
+        Exam exam = examRepository.findByIdAndSchoolId(examId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
 
         // 2.2 Reject submissions beyond the grace period before any write happens.
@@ -265,7 +265,7 @@ public class ExamAnswerService {
             if (!processedQuestionIds.add(eq.getQuestionId())) {
                 continue;
             }
-            QuestionSnapshot snapshot = support.resolveQuestionSnapshot(eq);
+            QuestionSnapshot snapshot = support.resolveQuestionSnapshot(eq, exam.getSchoolId());
             String questionType = snapshot.questionType();
             boolean isObjective = examScoringService.isObjective(questionType);
             // payload 出现该题（即使字段全空）以 payload 为准；缺失时才回退已持久化草稿。
@@ -354,7 +354,7 @@ public class ExamAnswerService {
      */
     @Transactional
     public Object saveDraft(CurrentUser currentUser, Long examId, ExamRequests.SubmitExamRequest request) {
-        Exam exam = examRepository.findById(examId)
+        Exam exam = examRepository.findByIdAndSchoolId(examId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         boolean isMember = classMemberRepository
                 .findByClassIdAndStudentUserId(exam.getClassId(), currentUser.id())

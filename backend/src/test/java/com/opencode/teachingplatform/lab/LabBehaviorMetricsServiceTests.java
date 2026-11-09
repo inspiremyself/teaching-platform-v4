@@ -667,8 +667,8 @@ class LabBehaviorMetricsServiceTests {
                 INSERT INTO t_experiment (experiment_id, experiment_no, experiment_name, experiment_type, instruction_type,
                                            experiment_requirement, experiment_content, state, status, material_id,
                                            class_id, created_by, score_visibility_mode, score_released, summary_required,
-                                           created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                           created_at, updated_at, school_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """, id, (int) id, "实验-" + id, 1, "1", "desc", "desc", state, status.name(), null,
                 classId, teacherId, "AFTER_TEACHER_CONFIRM", false, false);
         return id;

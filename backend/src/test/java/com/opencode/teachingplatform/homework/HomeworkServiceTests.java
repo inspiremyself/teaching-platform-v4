@@ -318,7 +318,7 @@ class HomeworkServiceTests {
         submission.setTotalScore(0D);
         HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
         jdbcTemplate.update(
-                "INSERT INTO plagiarism_task (business_type, business_id, student_id, status, similarity_rate, top_match_summary, raw_result_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
+                "INSERT INTO plagiarism_task (business_type, business_id, student_id, status, similarity_rate, top_match_summary, raw_result_json, created_at, updated_at, school_id) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)",
                 "HOMEWORK", savedSubmission.getId(), 2L, "COMPLETED", 66.67D, "最高相似来源: 历史作业#1 (66.67%)", "{\"algorithm\":\"jaccard\"}"
         );
 
@@ -649,7 +649,7 @@ class HomeworkServiceTests {
         submission.setTotalScore(0D);
         HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
         jdbcTemplate.update(
-                "INSERT INTO plagiarism_task (business_type, business_id, student_id, status, similarity_rate, top_match_summary, raw_result_json, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())",
+                "INSERT INTO plagiarism_task (business_type, business_id, student_id, status, similarity_rate, top_match_summary, raw_result_json, created_at, updated_at, school_id) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)",
                 "HOMEWORK", savedSubmission.getId(), 2L, "COMPLETED", 88.89D, "最高相似来源: 样本作业#9 (88.89%)", "{\"algorithm\":\"jaccard\"}"
         );
 
@@ -1076,8 +1076,8 @@ class HomeworkServiceTests {
         // 显式指定主键，避免 H2 identity 与种子数据显式 ID 冲突
         jdbcTemplate.update(
                 """
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, answer_json, created_by, created_at, updated_at)
-                VALUES (9002, ?, 'SINGLE', ?, 'MEDIUM', 5, '["A"]', 3, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
+                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, answer_json, created_by, created_at, updated_at, school_id)
+                VALUES (9002, ?, 'SINGLE', ?, 'MEDIUM', 5, '["A"]', 3, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)
                 """,
                 foreignCode, "他人创建的题库题目"
         );
@@ -1215,7 +1215,7 @@ class HomeworkServiceTests {
         HomeworkSubmission submission = createSubmission(homework, SubmissionStatus.GRADED);
         insertHomeworkScoreRecord(homework.getId(), 2L, 10D);
 
-        homeworkServiceSupport.refreshSubmissionGradeState(submission);
+        homeworkServiceSupport.refreshSubmissionGradeState(submission, 1L);
         homeworkSubmissionRepository.flush();
 
         HomeworkSubmission reloaded = homeworkSubmissionRepository.findById(submission.getId()).orElseThrow();
@@ -1852,8 +1852,8 @@ class HomeworkServiceTests {
     private void insertHomeworkScoreRecord(Long homeworkId, Long studentId, double score) {
         jdbcTemplate.update(
                 """
-                INSERT INTO score_record (business_type, business_id, student_id, class_id, score, graded_at, created_at, updated_at)
-                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP())
+                INSERT INTO score_record (business_type, business_id, student_id, class_id, score, graded_at, created_at, updated_at, school_id)
+                VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)
                 """,
                 "HOMEWORK", homeworkId, studentId, score);
     }
@@ -1879,6 +1879,7 @@ class HomeworkServiceTests {
 
     private Homework createHomework(Long teacherId, Long classId, String title, ActivityStatus status) {
         Homework homework = new Homework();
+        homework.setSchoolId(1L);
         homework.setTitle(title);
         homework.setDescription(title + "描述");
         homework.setClassId(classId);

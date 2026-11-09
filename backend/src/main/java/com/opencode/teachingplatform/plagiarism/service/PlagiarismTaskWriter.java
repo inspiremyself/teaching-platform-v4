@@ -38,11 +38,13 @@ public class PlagiarismTaskWriter {
      * @param rate            相似率
      * @param topMatchSummary 最高匹配摘要，超长截断
      * @param rawResultJson   原始查重结果 JSON
+     * @param schoolId        业务主表所属学校 id
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void write(BusinessType type, Long businessId, Long studentId,
-                      Double rate, String topMatchSummary, String rawResultJson) {
-        PlagiarismTask task = repository.findByBusinessTypeAndBusinessId(type, businessId)
+                      Double rate, String topMatchSummary, String rawResultJson, Long schoolId) {
+        PlagiarismTask task = repository
+                .findByBusinessTypeAndBusinessIdAndSchoolId(type, businessId, schoolId)
                 .orElseGet(PlagiarismTask::new);
         task.setBusinessType(type);
         task.setBusinessId(businessId);
@@ -51,6 +53,7 @@ public class PlagiarismTaskWriter {
         task.setSimilarityRate(rate);
         task.setTopMatchSummary(truncate(topMatchSummary));
         task.setRawResultJson(rawResultJson);
+        task.setSchoolId(schoolId);
         repository.save(task);
     }
 

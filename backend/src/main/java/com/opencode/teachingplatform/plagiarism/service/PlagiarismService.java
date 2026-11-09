@@ -40,8 +40,8 @@ public class PlagiarismService {
      */
     public List<Map<String, Object>> listTasks(CurrentUser teacher) {
         List<PlagiarismTask> tasks = teacher.role() == UserRole.TEACHER
-                ? plagiarismTaskRepository.findAll().stream().filter(task -> teacherOwnsTask(teacher, task)).toList()
-                : plagiarismTaskRepository.findAll();
+                ? plagiarismTaskRepository.findBySchoolId(teacher.schoolId()).stream().filter(task -> teacherOwnsTask(teacher, task)).toList()
+                : plagiarismTaskRepository.findBySchoolId(teacher.schoolId());
         List<Map<String, Object>> result = new ArrayList<>();
         for (PlagiarismTask task : tasks) {
             Map<String, Object> view = new LinkedHashMap<>();
@@ -50,7 +50,7 @@ public class PlagiarismService {
             view.put("businessId", task.getBusinessId());
             view.put("studentId", task.getStudentId());
             view.put("studentName", resolveStudentName(task.getStudentId()));
-            view.put("businessName", resolveBusinessName(task.getBusinessType(), task.getBusinessId()));
+            view.put("businessName", resolveBusinessName(task.getBusinessType(), task.getBusinessId(), teacher.schoolId()));
             view.put("similarityRate", task.getSimilarityRate());
             view.put("plagiarismRate", task.getSimilarityRate());
             view.put("riskLevel", riskLevel(task.getSimilarityRate()));
@@ -71,7 +71,7 @@ public class PlagiarismService {
      * 再把任务主表字段整理为前端直接可用的视图结构。</p>
      */
     public Map<String, Object> getTaskDetail(CurrentUser user, Long id) {
-        PlagiarismTask task = plagiarismTaskRepository.findById(id)
+        PlagiarismTask task = plagiarismTaskRepository.findByIdAndSchoolId(id, user.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "查重任务不存在"));
 
         // 角色白名单 + 归属校验：只允许任务归属学生本人或任务所属活动的创建教师。
@@ -95,7 +95,7 @@ public class PlagiarismService {
         view.put("businessId", task.getBusinessId());
         view.put("studentId", task.getStudentId());
         view.put("studentName", resolveStudentName(task.getStudentId()));
-        view.put("businessName", resolveBusinessName(task.getBusinessType(), task.getBusinessId()));
+        view.put("businessName", resolveBusinessName(task.getBusinessType(), task.getBusinessId(), user.schoolId()));
         view.put("similarityRate", task.getSimilarityRate());
         view.put("plagiarismRate", task.getSimilarityRate());
         view.put("riskLevel", riskLevel(task.getSimilarityRate()));
@@ -113,7 +113,7 @@ public class PlagiarismService {
      * <p>当前实现没有单独的 review 表，而是把复核结论合并回任务状态与摘要文本中。</p>
      */
     public Map<String, Object> reviewTask(CurrentUser teacher, Long id, String reviewConclusion, String reviewComment) {
-        PlagiarismTask task = plagiarismTaskRepository.findById(id)
+        PlagiarismTask task = plagiarismTaskRepository.findByIdAndSchoolId(id, teacher.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "查重任务不存在"));
         if (teacher.role() == UserRole.TEACHER && !teacherOwnsTask(teacher, task)) {
             throw new BusinessException(40300, "无权限访问该查重记录");
@@ -230,7 +230,7 @@ public class PlagiarismService {
         }
     }
 
-    private String resolveBusinessName(BusinessType businessType, Long businessId) {
+    private String resolveBusinessName(BusinessType businessType, Long businessId, Long schoolId) {
         try {
             return switch (businessType) {
                 case HOMEWORK -> {
@@ -239,8 +239,8 @@ public class PlagiarismService {
                             "SELECT homework_id FROM homework_submission WHERE id = ?",
                             Long.class, businessId);
                     yield jdbcTemplate.queryForObject(
-                            "SELECT title FROM homework WHERE id = ?",
-                            String.class, homeworkId);
+                            "SELECT title FROM homework WHERE id = ? AND school_id = ?",
+                            String.class, homeworkId, schoolId);
                 }
                 case LAB -> {
                     Long labId = jdbcTemplate.queryForObject(
@@ -255,8 +255,8 @@ public class PlagiarismService {
                             "SELECT exam_id FROM exam_submission WHERE id = ?",
                             Long.class, businessId);
                     yield jdbcTemplate.queryForObject(
-                            "SELECT title FROM exam WHERE id = ?",
-                            String.class, examId);
+                            "SELECT title FROM exam WHERE id = ? AND school_id = ?",
+                            String.class, examId, schoolId);
                 }
             };
         } catch (Exception e) {
@@ -269,18 +269,19 @@ public class PlagiarismService {
             return false;
         }
         return switch (task.getBusinessType()) {
-            case HOMEWORK -> ownsHomeworkSubmission(teacher.id(), task.getBusinessId());
+            case HOMEWORK -> ownsHomeworkSubmission(teacher.id(), task.getBusinessId(), teacher.schoolId());
             case LAB -> ownsLabSubmission(teacher.id(), task.getBusinessId());
-            case EXAM -> ownsExamSubmission(teacher.id(), task.getBusinessId());
+            case EXAM -> ownsExamSubmission(teacher.id(), task.getBusinessId(), teacher.schoolId());
         };
     }
 
-    private boolean ownsHomeworkSubmission(Long teacherId, Long submissionId) {
+    private boolean ownsHomeworkSubmission(Long teacherId, Long submissionId, Long schoolId) {
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(1) FROM homework_submission hs JOIN homework h ON hs.homework_id = h.id WHERE hs.id = ? AND h.created_by = ?",
+                "SELECT COUNT(1) FROM homework_submission hs JOIN homework h ON hs.homework_id = h.id WHERE hs.id = ? AND h.created_by = ? AND h.school_id = ?",
                 Integer.class,
                 submissionId,
-                teacherId
+                teacherId,
+                schoolId
         );
         return count != null && count > 0;
     }
@@ -295,12 +296,13 @@ public class PlagiarismService {
         return count != null && count > 0;
     }
 
-    private boolean ownsExamSubmission(Long teacherId, Long submissionId) {
+    private boolean ownsExamSubmission(Long teacherId, Long submissionId, Long schoolId) {
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(1) FROM exam_submission es JOIN exam e ON es.exam_id = e.id WHERE es.id = ? AND e.created_by = ?",
+                "SELECT COUNT(1) FROM exam_submission es JOIN exam e ON es.exam_id = e.id WHERE es.id = ? AND e.created_by = ? AND e.school_id = ?",
                 Integer.class,
                 submissionId,
-                teacherId
+                teacherId,
+                schoolId
         );
         return count != null && count > 0;
     }

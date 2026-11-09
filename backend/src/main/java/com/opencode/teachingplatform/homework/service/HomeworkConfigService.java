@@ -132,7 +132,7 @@ public class HomeworkConfigService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listTeacherHomeworks(CurrentUser currentUser) {
         support.requireTeacher(currentUser);
-        return homeworkRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+        return homeworkRepository.findBySchoolIdAndCreatedByOrderByIdDesc(currentUser.schoolId(), currentUser.id()).stream()
                 .map(this::toTeacherHomeworkView)
                 .toList();
     }
@@ -145,6 +145,10 @@ public class HomeworkConfigService {
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
         Homework homework = new Homework();
         homework.setCreatedBy(currentUser.id());
+        if (currentUser.schoolId() == null) {
+            throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
+        }
+        homework.setSchoolId(currentUser.schoolId());
         applyHomework(homework, true, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
@@ -201,7 +205,7 @@ public class HomeworkConfigService {
         if (classIds.isEmpty()) {
             return List.of();
         }
-        return homeworkRepository.findByClassIdInAndStatusOrderByIdDesc(classIds, ActivityStatus.PUBLISHED).stream()
+        return homeworkRepository.findBySchoolIdAndClassIdInAndStatusOrderByIdDesc(currentUser.schoolId(), classIds, ActivityStatus.PUBLISHED).stream()
                 .map(homework -> toStudentHomeworkView(homework, currentUser.id()))
                 .toList();
     }
@@ -245,7 +249,7 @@ public class HomeworkConfigService {
         support.requireTeacher(currentUser);
         Homework homework = support.ownedHomework(currentUser, homeworkId);
         return homeworkSubmissionRepository.findByHomeworkId(homework.getId()).stream()
-                .map(this::toTeacherSubmissionView)
+                .map(submission -> toTeacherSubmissionView(submission, currentUser.schoolId()))
                 .toList();
     }
 
@@ -257,7 +261,7 @@ public class HomeworkConfigService {
         HomeworkSubmission submission = homeworkSubmissionRepository.findById(submissionId)
                 .orElseThrow(() -> new BusinessException(40400, "作业提交不存在"));
         support.ownedHomework(currentUser, submission.getHomeworkId());
-        Map<String, Object> detail = new LinkedHashMap<>(toTeacherSubmissionView(submission));
+        Map<String, Object> detail = new LinkedHashMap<>(toTeacherSubmissionView(submission, currentUser.schoolId()));
         detail.put("questions", buildQuestionViews(submission.getHomeworkId(), submission, true, true));
         return detail;
     }
@@ -298,7 +302,7 @@ public class HomeworkConfigService {
         support.requireTeacher(currentUser);
         Homework homework = support.ownedHomework(currentUser, homeworkId);
         assertDraftOnly(homework, "新增题目");
-        QuestionBank questionBank = questionBankRepository.findByIdAndCreatedBy(request.getQuestionId(), currentUser.id())
+        QuestionBank questionBank = questionBankRepository.findByIdAndSchoolIdAndCreatedBy(request.getQuestionId(), currentUser.schoolId(), currentUser.id())
                 .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
         HomeworkQuestion question = new HomeworkQuestion();
         question.setHomeworkId(homework.getId());
@@ -844,13 +848,13 @@ public class HomeworkConfigService {
 
 
 
-    private Map<String, Object> toTeacherSubmissionView(HomeworkSubmission submission) {
-        Homework homework = homeworkRepository.findById(submission.getHomeworkId())
+    private Map<String, Object> toTeacherSubmissionView(HomeworkSubmission submission, Long schoolId) {
+        Homework homework = homeworkRepository.findByIdAndSchoolId(submission.getHomeworkId(), schoolId)
                 .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
         SysUser student = sysUserRepository.findById(submission.getStudentId())
                 .orElseThrow(() -> new BusinessException(40400, "学生不存在"));
         PlagiarismTask plagiarismTask = plagiarismTaskRepository
-                .findByBusinessTypeAndBusinessId(BusinessType.HOMEWORK, submission.getId())
+                .findByBusinessTypeAndBusinessIdAndSchoolId(BusinessType.HOMEWORK, submission.getId(), schoolId)
                 .orElse(null);
         ClassRoom classRoom = classRoomRepository.findById(homework.getClassId()).orElse(null);
         Map<Long, Long> classStudentCounts = classMemberRepository.findByClassIdIn(List.of(homework.getClassId())).stream()

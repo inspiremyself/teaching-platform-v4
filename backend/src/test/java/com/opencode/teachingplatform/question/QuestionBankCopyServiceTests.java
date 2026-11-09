@@ -72,12 +72,13 @@ class QuestionBankCopyServiceTests {
 
         assertThat(second.get("created")).isEqualTo(false);
         assertThat(asMap(second.get("question")).get("id")).isEqualTo(view.get("id"));
-        assertThat(questionBankRepository.findBySourceRef("HOMEWORK:" + question.getId())).isPresent();
+        assertThat(questionBankRepository.findBySourceRefAndSchoolId("HOMEWORK:" + question.getId(), 1L)).isPresent();
     }
 
     @Test
     void homeworkCopyRejectsDuplicateCode() {
         QuestionBank existing = new QuestionBank();
+        existing.setSchoolId(1L);
         existing.setCode("DUP-CODE-001");
         existing.setType("SHORT");
         existing.setStem("已有题目");
@@ -167,6 +168,7 @@ class QuestionBankCopyServiceTests {
 
     private HomeworkQuestion saveInlineHomeworkQuestion(String stem, String analysisText) {
         Homework homework = new Homework();
+        homework.setSchoolId(1L);
         homework.setTitle("复制来源作业");
         homework.setDescription("来源作业");
         homework.setClassId(1L);
@@ -188,6 +190,7 @@ class QuestionBankCopyServiceTests {
 
     private LabStep saveLabStep(String questionType, String answerConfigJson, String editorLanguage) {
         Lab lab = new Lab();
+        lab.setSchoolId(1L);
         lab.setTitle("复制来源实验");
         lab.setDescription("来源实验");
         lab.setClassId(1L);

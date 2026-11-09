@@ -190,7 +190,7 @@ public class LabReportService {
         }
 
         // 2. 教师数据域：只允许查询自己创建的实验下的提交
-        List<Lab> ownedLabs = labRepository.findByCreatedByOrderByIdDesc(currentUser.id());
+        List<Lab> ownedLabs = labRepository.findBySchoolIdAndCreatedByOrderByIdDesc(currentUser.schoolId(), currentUser.id());
         if (ownedLabs.isEmpty()) {
             return new PagedResult<>(List.of(), page, pageSize, 0);
         }
@@ -299,7 +299,7 @@ public class LabReportService {
         Page<LabSubmission> pageResult = labSubmissionRepository.findAll(
                 specification,
                 PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "id")));
-        return new PagedResult<>(toReportListViews(pageResult.getContent()), page, pageSize, pageResult.getTotalElements());
+        return new PagedResult<>(toReportListViews(pageResult.getContent(), currentUser.schoolId()), page, pageSize, pageResult.getTotalElements());
     }
 
 
@@ -313,7 +313,7 @@ public class LabReportService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listTeacherReportQueue(CurrentUser currentUser) {
         support.requireTeacher(currentUser);
-        List<Long> ownedLabIds = labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+        List<Long> ownedLabIds = labRepository.findBySchoolIdAndCreatedByOrderByIdDesc(currentUser.schoolId(), currentUser.id()).stream()
                 .map(Lab::getId)
                 .toList();
         if (ownedLabIds.isEmpty()) {
@@ -322,7 +322,7 @@ public class LabReportService {
         List<LabSubmission> submissions = labSubmissionRepository.findByLabIdIn(ownedLabIds).stream()
                 .sorted(Comparator.comparing(LabSubmission::getId).reversed())
                 .toList();
-        return toReportListViews(submissions);
+        return toReportListViews(submissions, currentUser.schoolId());
     }
 
 
@@ -336,7 +336,7 @@ public class LabReportService {
     @Transactional(readOnly = true)
     public Map<String, Object> getTeacherReportStats(CurrentUser currentUser) {
         support.requireTeacher(currentUser);
-        List<Long> ownedLabIds = labRepository.findByCreatedByOrderByIdDesc(currentUser.id()).stream()
+        List<Long> ownedLabIds = labRepository.findBySchoolIdAndCreatedByOrderByIdDesc(currentUser.schoolId(), currentUser.id()).stream()
                 .map(Lab::getId)
                 .toList();
         Map<String, Object> stats = new LinkedHashMap<>();
@@ -698,8 +698,8 @@ public class LabReportService {
 
         if (wasGraded) {
             scoreRecordRepository
-                    .findByBusinessTypeAndBusinessIdAndStudentId(
-                            BusinessType.LAB, lab.getId(), submission.getStudentId())
+                    .findByBusinessTypeAndBusinessIdAndStudentIdAndSchoolId(
+                            BusinessType.LAB, lab.getId(), submission.getStudentId(), lab.getSchoolId())
                     .ifPresent(scoreRecordRepository::delete);
         }
 
@@ -816,7 +816,7 @@ public class LabReportService {
      * <p>分页接口与导航队列共用这一份实现，保证两条链路的行字段口径不会漂移；
      * 同时把"逐行查实验 / 学生 / 班级"收敛成每类对象各一次 {@code findAllById}，消除 N+1。</p>
      */
-    private List<Map<String, Object>> toReportListViews(List<LabSubmission> submissions) {
+    private List<Map<String, Object>> toReportListViews(List<LabSubmission> submissions, Long schoolId) {
         if (submissions.isEmpty()) {
             return List.of();
         }
@@ -826,7 +826,7 @@ public class LabReportService {
         Set<Long> studentIds = submissions.stream()
                 .map(LabSubmission::getStudentId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        Map<Long, Lab> labById = labRepository.findAllById(labIds).stream()
+        Map<Long, Lab> labById = labRepository.findByIdInAndSchoolId(labIds, schoolId).stream()
                 .collect(Collectors.toMap(Lab::getId, Function.identity()));
         Map<Long, SysUser> studentById = sysUserRepository.findAllById(studentIds).stream()
                 .collect(Collectors.toMap(SysUser::getId, Function.identity()));

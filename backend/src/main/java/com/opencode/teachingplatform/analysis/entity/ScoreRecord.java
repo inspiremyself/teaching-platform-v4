@@ -30,6 +30,9 @@ public class ScoreRecord extends BaseEntity {
     @Column(name = "graded_at", nullable = false)
     private OffsetDateTime gradedAt;
 
+    @Column(name = "school_id", nullable = false)
+    private Long schoolId;
+
     public BusinessType getBusinessType() { return businessType; }
     public void setBusinessType(BusinessType businessType) { this.businessType = businessType; }
     public Long getBusinessId() { return businessId; }
@@ -42,4 +45,6 @@ public class ScoreRecord extends BaseEntity {
     public void setScore(Double score) { this.score = score; }
     public OffsetDateTime getGradedAt() { return gradedAt; }
     public void setGradedAt(OffsetDateTime gradedAt) { this.gradedAt = gradedAt; }
+    public Long getSchoolId() { return schoolId; }
+    public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
 }

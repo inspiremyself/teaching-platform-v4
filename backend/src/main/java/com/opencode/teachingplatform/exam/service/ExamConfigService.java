@@ -108,7 +108,7 @@ public class ExamConfigService {
 
     public Object listExams(CurrentUser currentUser) {
         if (currentUser.role() == UserRole.TEACHER) {
-            List<Exam> exams = examRepository.findByCreatedBy(currentUser.id());
+            List<Exam> exams = examRepository.findBySchoolIdAndCreatedBy(currentUser.schoolId(), currentUser.id());
             List<Map<String, Object>> result = new ArrayList<>();
             for (Exam exam : exams) {
                 var classRoom = classRoomRepository.findById(exam.getClassId()).orElse(null);
@@ -135,7 +135,7 @@ public class ExamConfigService {
             List<Map<String, Object>> result = new ArrayList<>();
             OffsetDateTime now = OffsetDateTime.now();
             for (ClassMember membership : memberships) {
-                List<Exam> exams = examRepository.findByClassId(membership.getClassId());
+                List<Exam> exams = examRepository.findBySchoolIdAndClassId(currentUser.schoolId(), membership.getClassId());
                 for (Exam exam : exams) {
                     Optional<ExamSubmission> submissionOpt = examSubmissionRepository.findByExamIdAndStudentId(exam.getId(), currentUser.id());
                     if (exam.getStatus() == ActivityStatus.DRAFT) {
@@ -192,9 +192,13 @@ public class ExamConfigService {
         exam.setScoreVisibilityMode(request.scoreVisibilityMode() == null ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM : request.scoreVisibilityMode());
         exam.setShuffleQuestions(Boolean.TRUE.equals(request.shuffleQuestions()));
         exam.setCreatedBy(currentUser.id());
+        if (currentUser.schoolId() == null) {
+            throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
+        }
+        exam.setSchoolId(currentUser.schoolId());
         assertBankQuestions(request.questions());
         assertNoDuplicateQuestions(request.questions());
-        Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id());
+        Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id(), currentUser.schoolId());
         examRepository.save(exam);
 
         if (request.questions() != null) {
@@ -215,7 +219,7 @@ public class ExamConfigService {
 
     @Transactional
     public Object updateExam(CurrentUser currentUser, Long id, ExamRequests.UpdateExamRequest request) {
-        Exam exam = examRepository.findById(id)
+        Exam exam = examRepository.findByIdAndSchoolId(id, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限修改该考试");
@@ -229,7 +233,7 @@ public class ExamConfigService {
         // Validate question-bank ownership before any mutation so a 404 leaves the exam untouched.
         assertBankQuestions(request.questions());
         assertNoDuplicateQuestions(request.questions());
-        Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id());
+        Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id(), currentUser.schoolId());
 
         exam.setTitle(request.title());
         exam.setDescription(request.description());
@@ -261,7 +265,7 @@ public class ExamConfigService {
 
 
     public Object getExamDetail(CurrentUser currentUser, Long id) {
-        Exam exam = examRepository.findById(id)
+        Exam exam = examRepository.findByIdAndSchoolId(id, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
 
         if (currentUser.role() == UserRole.TEACHER && !exam.getCreatedBy().equals(currentUser.id())) {
@@ -296,7 +300,7 @@ public class ExamConfigService {
 
         List<Map<String, Object>> questionList = new ArrayList<>();
         for (ExamQuestion eq : examQuestions) {
-            QuestionSnapshot snapshot = support.resolveQuestionSnapshot(eq);
+            QuestionSnapshot snapshot = support.resolveQuestionSnapshot(eq, currentUser.schoolId());
             Map<String, Object> qMap = new LinkedHashMap<>();
             qMap.put("questionId", eq.getQuestionId());
             qMap.put("sortOrder", eq.getSortOrder());
@@ -308,7 +312,7 @@ public class ExamConfigService {
             if (currentUser.role() == UserRole.TEACHER) {
                 qMap.put("answerJson", snapshot.answerJson());
                 if (eq.getQuestionId() != null) {
-                    questionBankRepository.findById(eq.getQuestionId()).ifPresent(qb -> qMap.put("analysisText", qb.getAnalysisText()));
+                    questionBankRepository.findByIdAndSchoolId(eq.getQuestionId(), currentUser.schoolId()).ifPresent(qb -> qMap.put("analysisText", qb.getAnalysisText()));
                 }
             }
 
@@ -387,9 +391,9 @@ public class ExamConfigService {
                                     .filter(item -> Objects.equals(item.getQuestionId(), questionId))
                                     .findFirst()
                                     .ifPresent(item -> {
-                                        qMap.put("answerJson", support.resolveQuestionSnapshot(item).answerJson());
+                                        qMap.put("answerJson", support.resolveQuestionSnapshot(item, currentUser.schoolId()).answerJson());
                                         if (item.getQuestionId() != null) {
-                                            questionBankRepository.findById(item.getQuestionId())
+                                            questionBankRepository.findByIdAndSchoolId(item.getQuestionId(), currentUser.schoolId())
                                                     .ifPresent(qb -> qMap.put("analysisText", qb.getAnalysisText()));
                                         }
                                     });
@@ -406,7 +410,7 @@ public class ExamConfigService {
 
     @Transactional
     public Object changeStatus(CurrentUser currentUser, Long id, ExamRequests.ChangeExamStatusRequest request) {
-        Exam exam = examRepository.findById(id)
+        Exam exam = examRepository.findByIdAndSchoolId(id, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限修改该考试");
@@ -439,7 +443,7 @@ public class ExamConfigService {
 
     @Transactional
     public Object releaseScores(CurrentUser currentUser, Long examId) {
-        Exam exam = examRepository.findById(examId)
+        Exam exam = examRepository.findByIdAndSchoolId(examId, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "考试不存在"));
         if (!exam.getCreatedBy().equals(currentUser.id())) {
             throw new BusinessException(40300, "无权限发布该考试成绩");
@@ -462,7 +466,7 @@ public class ExamConfigService {
             }
             Double lockedScore = locked.getTotalScore();
             scoreRecordWriter.write(BusinessType.EXAM, exam.getId(), locked.getStudentId(),
-                    exam.getClassId(), lockedScore == null ? 0D : lockedScore, now);
+                    exam.getClassId(), lockedScore == null ? 0D : lockedScore, now, exam.getSchoolId());
         }
         return ScoreReleaseSupport.releasedView(exam.getScoreVisibilityMode().name());
     }
@@ -508,13 +512,13 @@ public class ExamConfigService {
      * 逐项加载当前教师拥有的题库题目；缺失或非本人统一返回 404。
      * 必须在写主表 / 批量删除题目之前调用，保证失败路径不产生任何写操作。
      */
-    private Map<Long, QuestionBank> loadOwnedBankQuestions(List<ExamRequests.ExamQuestionItem> items, Long teacherId) {
+    private Map<Long, QuestionBank> loadOwnedBankQuestions(List<ExamRequests.ExamQuestionItem> items, Long teacherId, Long schoolId) {
         Map<Long, QuestionBank> result = new LinkedHashMap<>();
         if (items == null) {
             return result;
         }
         for (ExamRequests.ExamQuestionItem item : items) {
-            QuestionBank bank = questionBankRepository.findByIdAndCreatedBy(item.questionId(), teacherId)
+            QuestionBank bank = questionBankRepository.findByIdAndSchoolIdAndCreatedBy(item.questionId(), schoolId, teacherId)
                     .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
             result.put(item.questionId(), bank);
         }
