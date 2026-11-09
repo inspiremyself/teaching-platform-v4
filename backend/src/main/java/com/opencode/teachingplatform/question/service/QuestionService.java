@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class QuestionService {
@@ -72,8 +73,11 @@ public class QuestionService {
 
     @Transactional
     public Map<String, Object> update(CurrentUser currentUser, Long id, SaveQuestionRequest request) {
-        QuestionBank question = questionBankRepository.findByIdAndSchoolIdAndCreatedBy(id, currentUser.schoolId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该题目"));
+        QuestionBank question = questionBankRepository.findByIdAndSchoolId(id, currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
+        if (!Objects.equals(question.getCreatedBy(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该题目");
+        }
         if (questionBankRepository.existsByCodeAndIdNot(normalizeCode(request.code()), id)) {
             throw new BusinessException(40900, "题目编码已存在");
         }
@@ -90,8 +94,11 @@ public class QuestionService {
 
     @Transactional
     public void delete(CurrentUser currentUser, Long id) {
-        QuestionBank question = questionBankRepository.findByIdAndSchoolIdAndCreatedBy(id, currentUser.schoolId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该题目"));
+        QuestionBank question = questionBankRepository.findByIdAndSchoolId(id, currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "题库题目不存在"));
+        if (!Objects.equals(question.getCreatedBy(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该题目");
+        }
         auditLogService.log(currentUser, AuditAction.QUESTION_DELETE, AuditResourceType.QUESTION, question.getId(), Map.of("code", question.getCode()));
         questionBankRepository.delete(question);
     }

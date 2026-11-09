@@ -34,6 +34,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -94,8 +95,11 @@ public class QuestionBankCopyService {
         requireTeacher(currentUser);
         HomeworkQuestion question = homeworkQuestionRepository.findById(homeworkQuestionId)
                 .orElseThrow(() -> new BusinessException(40400, "作业题目不存在"));
-        Homework homework = homeworkRepository.findByIdAndSchoolIdAndCreatedBy(question.getHomeworkId(), currentUser.schoolId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该作业"));
+        Homework homework = homeworkRepository.findByIdAndSchoolId(question.getHomeworkId(), currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
+        if (!Objects.equals(homework.getCreatedBy(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该作业");
+        }
         classAccessService.assertTeacherAssignedToClass(currentUser, homework.getClassId());
         if (question.getQuestionId() != null) {
             throw new BusinessException(40000, "题库题无需复制");
@@ -138,8 +142,11 @@ public class QuestionBankCopyService {
         requireTeacher(currentUser);
         LabStep step = labStepRepository.findById(stepId)
                 .orElseThrow(() -> new BusinessException(40400, "实验题项不存在"));
-        Lab lab = labRepository.findByIdAndSchoolIdAndCreatedBy(step.getLabId(), currentUser.schoolId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
+        Lab lab = labRepository.findByIdAndSchoolId(step.getLabId(), currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "实验不存在"));
+        if (!Objects.equals(lab.getCreatedBy(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该实验");
+        }
         classAccessService.assertTeacherAssignedToClass(currentUser, lab.getClassId());
 
         String sourceRef = LAB_SOURCE_PREFIX + step.getLabId() + ":" + stepId;

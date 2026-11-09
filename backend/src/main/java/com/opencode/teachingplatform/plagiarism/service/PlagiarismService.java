@@ -49,7 +49,7 @@ public class PlagiarismService {
             view.put("businessType", task.getBusinessType().name());
             view.put("businessId", task.getBusinessId());
             view.put("studentId", task.getStudentId());
-            view.put("studentName", resolveStudentName(task.getStudentId()));
+            view.put("studentName", resolveStudentName(task.getStudentId(), teacher.schoolId()));
             view.put("businessName", resolveBusinessName(task.getBusinessType(), task.getBusinessId(), teacher.schoolId()));
             view.put("similarityRate", task.getSimilarityRate());
             view.put("plagiarismRate", task.getSimilarityRate());
@@ -94,7 +94,7 @@ public class PlagiarismService {
         view.put("businessType", task.getBusinessType().name());
         view.put("businessId", task.getBusinessId());
         view.put("studentId", task.getStudentId());
-        view.put("studentName", resolveStudentName(task.getStudentId()));
+        view.put("studentName", resolveStudentName(task.getStudentId(), user.schoolId()));
         view.put("businessName", resolveBusinessName(task.getBusinessType(), task.getBusinessId(), user.schoolId()));
         view.put("similarityRate", task.getSimilarityRate());
         view.put("plagiarismRate", task.getSimilarityRate());
@@ -220,11 +220,11 @@ public class PlagiarismService {
         return "LOW_RISK_PENDING";
     }
 
-    private String resolveStudentName(Long studentId) {
+    private String resolveStudentName(Long studentId, Long schoolId) {
         try {
             return jdbcTemplate.queryForObject(
-                    "SELECT display_name FROM sys_user WHERE id = ?",
-                    String.class, studentId);
+                    "SELECT display_name FROM sys_user WHERE id = ? AND school_id = ?",
+                    String.class, studentId, schoolId);
         } catch (Exception e) {
             return "未知学生";
         }
@@ -243,12 +243,12 @@ public class PlagiarismService {
                             String.class, homeworkId, schoolId);
                 }
                 case LAB -> {
-                    Long labId = jdbcTemplate.queryForObject(
-                            "SELECT lab_id FROM lab_submission WHERE id = ?",
+                    Long experimentId = jdbcTemplate.queryForObject(
+                            "SELECT experiment_id FROM experiment_submission WHERE id = ?",
                             Long.class, businessId);
                     yield jdbcTemplate.queryForObject(
-                            "SELECT title FROM lab WHERE id = ?",
-                            String.class, labId);
+                            "SELECT experiment_name FROM t_experiment WHERE experiment_id = ? AND school_id = ?",
+                            String.class, experimentId, schoolId);
                 }
                 case EXAM -> {
                     Long examId = jdbcTemplate.queryForObject(
@@ -270,7 +270,7 @@ public class PlagiarismService {
         }
         return switch (task.getBusinessType()) {
             case HOMEWORK -> ownsHomeworkSubmission(teacher.id(), task.getBusinessId(), teacher.schoolId());
-            case LAB -> ownsLabSubmission(teacher.id(), task.getBusinessId());
+            case LAB -> ownsLabSubmission(teacher.id(), task.getBusinessId(), teacher.schoolId());
             case EXAM -> ownsExamSubmission(teacher.id(), task.getBusinessId(), teacher.schoolId());
         };
     }
@@ -286,12 +286,13 @@ public class PlagiarismService {
         return count != null && count > 0;
     }
 
-    private boolean ownsLabSubmission(Long teacherId, Long submissionId) {
+    private boolean ownsLabSubmission(Long teacherId, Long submissionId, Long schoolId) {
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(1) FROM lab_submission ls JOIN lab l ON ls.lab_id = l.id WHERE ls.id = ? AND l.created_by = ?",
+                "SELECT COUNT(1) FROM experiment_submission es JOIN t_experiment e ON es.experiment_id = e.experiment_id WHERE es.id = ? AND e.created_by = ? AND e.school_id = ?",
                 Integer.class,
                 submissionId,
-                teacherId
+                teacherId,
+                schoolId
         );
         return count != null && count > 0;
     }

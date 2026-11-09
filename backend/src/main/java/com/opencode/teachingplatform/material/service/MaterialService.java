@@ -93,14 +93,10 @@ public class MaterialService {
 
     @Transactional(readOnly = true)
     public DownloadedMaterial downloadMaterial(CurrentUser currentUser, Long id) {
-        CourseMaterial material = courseMaterialRepository.findById(id)
+        CourseMaterial material = courseMaterialRepository.findByIdAndSchoolId(id, currentUser.schoolId())
                 .orElseThrow(() -> new BusinessException(40400, "资料不存在"));
-        // 学校维度先于角色校验：跨校资料一律不可见，避免通过 ID 猜测探测
-        if (!Objects.equals(material.getSchoolId(), currentUser.schoolId())) {
-            throw new BusinessException(40300, "无权限访问该资料");
-        }
         if (currentUser.role() == UserRole.TEACHER) {
-            if (!material.getUploaderUserId().equals(currentUser.id())) {
+            if (!Objects.equals(material.getUploaderUserId(), currentUser.id())) {
                 throw new BusinessException(40300, "无权限访问该资料");
             }
         } else if (material.getVisibility() != MaterialVisibility.ALL) {
@@ -113,8 +109,12 @@ public class MaterialService {
         if (currentUser.role() != UserRole.TEACHER) {
             throw new BusinessException(40300, "无权限管理资料");
         }
-        return courseMaterialRepository.findByIdAndUploaderUserId(id, currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该资料"));
+        CourseMaterial material = courseMaterialRepository.findByIdAndSchoolId(id, currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "资料不存在"));
+        if (!Objects.equals(material.getUploaderUserId(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该资料");
+        }
+        return material;
     }
 
     private Map<String, Object> toView(CourseMaterial material) {

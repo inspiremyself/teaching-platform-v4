@@ -84,15 +84,15 @@ class MaterialServiceTests {
     }
 
     @Test
-    void crossSchoolDownloadIsForbidden() {
-        when(courseMaterialRepository.findById(9L))
-                .thenReturn(Optional.of(material(9L, 2L, MaterialVisibility.ALL)));
+    void crossSchoolDownloadReturnsNotFound() {
+        when(courseMaterialRepository.findByIdAndSchoolId(9L, SCHOOL_ID))
+                .thenReturn(Optional.empty());
 
         BusinessException exception = assertThrows(BusinessException.class,
                 () -> materialService.downloadMaterial(
                         new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT, SCHOOL_ID, "session"), 9L));
 
-        assertEquals(40300, exception.getCode());
+        assertEquals(40400, exception.getCode());
     }
 
     @Test

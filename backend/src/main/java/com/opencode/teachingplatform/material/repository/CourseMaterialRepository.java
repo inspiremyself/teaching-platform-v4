@@ -11,5 +11,5 @@ public interface CourseMaterialRepository extends JpaRepository<CourseMaterial, 
     List<CourseMaterial> findBySchoolIdOrderByIdDesc(Long schoolId);
     List<CourseMaterial> findBySchoolIdAndVisibilityOrderByIdDesc(Long schoolId, MaterialVisibility visibility);
     List<CourseMaterial> findBySchoolIdAndUploaderUserIdOrderByIdDesc(Long schoolId, Long uploaderUserId);
-    Optional<CourseMaterial> findByIdAndUploaderUserId(Long id, Long uploaderUserId);
+    Optional<CourseMaterial> findByIdAndSchoolId(Long id, Long schoolId);
 }

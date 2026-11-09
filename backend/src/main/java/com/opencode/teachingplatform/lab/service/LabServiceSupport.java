@@ -210,8 +210,11 @@ public class LabServiceSupport {
 
 
     public Lab ownedLab(CurrentUser currentUser, Long labId) {
-        Lab lab = labRepository.findByIdAndSchoolIdAndCreatedBy(labId, currentUser.schoolId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
+        Lab lab = labRepository.findByIdAndSchoolId(labId, currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "实验不存在"));
+        if (!Objects.equals(lab.getCreatedBy(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该实验");
+        }
         classAccessService.assertTeacherAssignedToClass(currentUser, lab.getClassId());
         return lab;
     }

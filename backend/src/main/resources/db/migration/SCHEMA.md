@@ -548,3 +548,25 @@
 - `lab*` 旧表不再作为最终版数据库说明对象。
 - 考试模块中 `exam_question.question_id` 历史数据可能为空（内联题已停用，新数据必填）；发布与开始考试均会阻断历史内联题。
 - 作业模块中 `homework_question.question_id` 为可空，表示题目可以脱离题库快照独立存在。
+
+---
+
+## 四、遗留对象与已知差异
+
+> 本小节登记 1B 学校维度收口后**仍需保留**的两类对象：生产代码已零读写的遗留表，以及仍在读写但读侧尚未按校过滤的表。除注明外，表结构与 `V1`–`V26` 迁移一字不改，清理动作由后续独立任务立项。
+
+1. **`lab` / `lab_step` / `lab_submission` / `lab_step_answer`（`V1:73-132`）**
+   自 `V9` 起由 `t_experiment` / `t_experiment_item` / `experiment_submission` / `experiment_answer` 取代；「1B 遗留缺陷与读侧加固」交付后生产代码零读写 —— `PlagiarismService` 的 3 条 LAB 原生 SQL 已改查新表，`Lab`（`lab/entity/Lab.java:22`）/ `LabStep` / `LabSubmission` / `LabStepAnswer` 四个实体的 `@Table` 已分别指向 `t_experiment` / `t_experiment_item` / `experiment_submission` / `experiment_answer`。
+   结论：保留表结构，不 DROP；`V16:27-31` 的 5 行 `${mysqlOnly}` 一并保留。
+
+   **同前缀但仍在用的两张表不得纳入下线清单**（`grep "CREATE TABLE lab" db/migration/*.sql` 共 6 张，只有上面 4 张是遗留）：
+   - `lab_step_answer_log`（`V10:1`）：`LabStepAnswerLog` 实体映射，`LabAnswerService:398` 写自动保存日志，`LabServiceSupport:241` 与 `LabBehaviorMetricsService:120` 读；
+   - `lab_submission_metrics`（`V20:8`）：`LabSubmissionMetrics` 实体映射，`LabReportService:911` 经 `refreshStaleMetrics` 读写。
+
+2. **`question_attachment`（`V6:29-39`）**
+   生产代码零读写，仅 `grading/GradingPersistenceTests:99-113` 的持久化往返引用（`SchemaSmokeTests` 实测不含该类断言）。
+   结论：表结构与 `QuestionAttachment` 实体保留、不接入生产，待「遗留表下线任务」处理。
+
+3. **`behavior_event`（`V19:21`）**
+   `school_id BIGINT NULL`；写侧 `BehaviorIngestService` 已赋值，无历史回填、无 `(school_id, …)` 索引；读侧 `BehaviorEventRepository` 的 4 个自定义查询方法未按校过滤，上游 `labId` 均已按校限定。
+   结论：本期保留现状。阶段 2 启用多校真实行为数据前，须另行评估 `NOT NULL` 收紧、历史回填、索引与仓储谓词。

@@ -230,8 +230,11 @@ public class LabConfigService {
         support.requireTeacher(currentUser);
 
         // 源实验只校验 ownership，不复用 ownedLab：后者还要求当前仍任教源班级，会阻断跨班复用
-        Lab source = labRepository.findByIdAndSchoolIdAndCreatedBy(sourceLabId, currentUser.schoolId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该实验"));
+        Lab source = labRepository.findByIdAndSchoolId(sourceLabId, currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "实验不存在"));
+        if (!Objects.equals(source.getCreatedBy(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该实验");
+        }
 
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
 

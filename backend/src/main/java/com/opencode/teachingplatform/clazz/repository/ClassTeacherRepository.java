@@ -18,11 +18,8 @@ public interface ClassTeacherRepository extends JpaRepository<ClassTeacher, Long
     @Query("SELECT ct FROM ClassTeacher ct JOIN ClassRoom cr ON ct.classId = cr.id WHERE ct.teacherUserId = :teacherUserId AND cr.schoolId = :schoolId")
     List<ClassTeacher> findByTeacherUserIdAndSchoolId(@Param("teacherUserId") Long teacherUserId, @Param("schoolId") Long schoolId);
 
-    @Query("SELECT COUNT(DISTINCT ct.classId) FROM ClassTeacher ct JOIN ClassRoom cr ON ct.classId = cr.id WHERE ct.teacherUserId = :teacherUserId AND cr.status = com.opencode.teachingplatform.clazz.ClassStatus.ACTIVE")
-    long countDistinctActiveClassesByTeacherUserId(@Param("teacherUserId") Long teacherUserId);
-
-    @Query("SELECT DISTINCT ct.classId FROM ClassTeacher ct WHERE ct.teacherUserId = :teacherUserId")
-    List<Long> findClassIdsByTeacherUserId(@Param("teacherUserId") Long teacherUserId);
+    @Query("SELECT COUNT(DISTINCT ct.classId) FROM ClassTeacher ct JOIN ClassRoom cr ON ct.classId = cr.id WHERE ct.teacherUserId = :teacherUserId AND cr.schoolId = :schoolId AND cr.status = com.opencode.teachingplatform.clazz.ClassStatus.ACTIVE")
+    long countDistinctActiveClassesByTeacherUserId(@Param("teacherUserId") Long teacherUserId, @Param("schoolId") Long schoolId);
 
     long countBySubjectId(Long subjectId);
 }

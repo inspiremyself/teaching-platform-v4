@@ -84,15 +84,15 @@ class QuestionBankCopyControllerTests {
     }
 
     @Test
-    void copyingForeignHomeworkQuestionReturnsForbidden() throws Exception {
+    void copyingForeignHomeworkQuestionReturnsNotFound() throws Exception {
         when(questionBankCopyService.copyFromHomework(any(CurrentUser.class), anyLong(), any()))
-                .thenThrow(new BusinessException(40300, "无权限访问该作业"));
+                .thenThrow(new BusinessException(40400, "作业不存在"));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {
             mockMvc.perform(post("/api/v1/teacher/homework-questions/{id}/copy-to-bank", 11L))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.code").value(40300));
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.code").value(40400));
         } finally {
             SecurityContextHolder.clearContext();
         }

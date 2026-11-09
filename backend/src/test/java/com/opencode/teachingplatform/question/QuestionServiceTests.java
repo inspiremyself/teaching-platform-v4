@@ -98,7 +98,8 @@ class QuestionServiceTests {
         QuestionBank question = new QuestionBank();
         question.setSchoolId(1L);
         question.setCode("OLD-001");
-        when(questionBankRepository.findByIdAndSchoolIdAndCreatedBy(10L, 1L, 1L)).thenReturn(Optional.of(question));
+        question.setCreatedBy(1L);
+        when(questionBankRepository.findByIdAndSchoolId(10L, 1L)).thenReturn(Optional.of(question));
         when(questionBankRepository.existsByCodeAndIdNot("LINUX-001", 10L)).thenReturn(false);
         when(questionBankRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -112,7 +113,8 @@ class QuestionServiceTests {
         QuestionBank question = new QuestionBank();
         question.setSchoolId(1L);
         question.setCode("OLD-001");
-        when(questionBankRepository.findByIdAndSchoolIdAndCreatedBy(10L, 1L, 1L)).thenReturn(Optional.of(question));
+        question.setCreatedBy(1L);
+        when(questionBankRepository.findByIdAndSchoolId(10L, 1L)).thenReturn(Optional.of(question));
         when(questionBankRepository.existsByCodeAndIdNot("OTHER-001", 10L)).thenReturn(true);
 
         BusinessException ex = assertThrows(BusinessException.class,
@@ -142,7 +144,8 @@ class QuestionServiceTests {
             }
         };
         question.setCode("Q-DEL-001");
-        when(questionBankRepository.findByIdAndSchoolIdAndCreatedBy(10L, 1L, 1L)).thenReturn(java.util.Optional.of(question));
+        question.setCreatedBy(1L);
+        when(questionBankRepository.findByIdAndSchoolId(10L, 1L)).thenReturn(java.util.Optional.of(question));
 
         questionService.delete(new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER), 10L);
 

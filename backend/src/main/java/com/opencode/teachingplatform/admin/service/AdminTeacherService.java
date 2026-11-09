@@ -108,7 +108,7 @@ public class AdminTeacherService {
         view.put("username", teacher.getUsername());
         view.put("displayName", teacher.getDisplayName());
         view.put("status", teacher.getStatus().name());
-        view.put("classCount", classTeacherRepository.countDistinctActiveClassesByTeacherUserId(teacher.getId()));
+        view.put("classCount", classTeacherRepository.countDistinctActiveClassesByTeacherUserId(teacher.getId(), teacher.getSchoolId()));
         return view;
     }
 }

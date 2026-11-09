@@ -143,8 +143,11 @@ public class HomeworkServiceSupport {
 
 
     public Homework ownedHomework(CurrentUser currentUser, Long homeworkId) {
-        Homework homework = homeworkRepository.findByIdAndSchoolIdAndCreatedBy(homeworkId, currentUser.schoolId(), currentUser.id())
-                .orElseThrow(() -> new BusinessException(40300, "无权限访问该作业"));
+        Homework homework = homeworkRepository.findByIdAndSchoolId(homeworkId, currentUser.schoolId())
+                .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
+        if (!Objects.equals(homework.getCreatedBy(), currentUser.id())) {
+            throw new BusinessException(40300, "无权限访问该作业");
+        }
         classAccessService.assertTeacherAssignedToClass(currentUser, homework.getClassId());
         return homework;
     }
