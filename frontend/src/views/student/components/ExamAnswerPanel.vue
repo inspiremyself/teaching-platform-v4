@@ -243,6 +243,7 @@
         <article class="result-summary-card result-summary-card--status">
           <div class="result-summary-card__label">状态</div>
           <div class="result-summary-card__value">{{ statusLabel(detail.submissionStatus) }}</div>
+          <div v-if="resultMode === 'result' && questions.length" class="result-summary-card__desc">答对 {{ correctCount }} / 共 {{ questions.length }} 题</div>
           </article>
         <template v-if="resultMode === 'result'">
           <article class="result-summary-card">
@@ -277,17 +278,31 @@
 
       <div v-if="resultMode === 'result'" class="result-grid">
         <main class="result-main">
-          <article v-for="(question, index) in questions" :key="question.questionId" class="result-question-card">
+          <article
+            v-for="(question, index) in questions"
+            :key="question.questionId"
+            :id="`result-question-${question.questionId}`"
+            :class="['result-question-card', toneOf(question) !== 'none' ? `result-question-card--${toneOf(question)}` : '']"
+          >
             <div class="result-question-card__header">
               <div>
                 <span class="result-question-card__badge">第{{ index + 1 }}题</span>
+                <span v-if="toneOf(question) !== 'none'" :class="['result-status-badge', `result-status-badge--${toneOf(question)}`]">
+                  <span class="material-symbols-outlined">{{ toneBadge[toneOf(question)].icon }}</span>
+                  {{ toneBadge[toneOf(question)].text }}
+                </span>
                 <h2>{{ question.stem }}</h2>
               </div>
-              <span class="result-question-card__score">{{ questionScoreText(question.questionId, question) }}</span>
+              <span :class="['result-question-card__score', toneOf(question) !== 'none' ? `result-question-card__score--${toneOf(question)}` : '']">
+                {{ questionScoreText(question.questionId, question) }}
+              </span>
             </div>
 
-            <div class="result-answer-block">
-              <div class="result-answer-block__label">你的答案</div>
+            <div :class="['result-answer-block', toneOf(question) === 'correct' || toneOf(question) === 'wrong' ? `result-answer-block--${toneOf(question)}` : '']">
+              <div class="result-answer-block__label">
+                <span v-if="toneOf(question) !== 'none'" class="material-symbols-outlined result-answer-block__icon">{{ toneBadge[toneOf(question)].icon }}</span>
+                你的答案
+              </div>
               <div class="result-answer-block__value">{{ formatDisplayAnswer(question.studentAnswer ?? question.answer) }}</div>
             </div>
 
@@ -316,6 +331,27 @@
         </main>
 
         <aside class="result-side">
+          <section v-if="questions.length" class="map-card">
+            <div class="map-card__header">
+              <h3>对错速览</h3>
+            </div>
+            <div class="question-map-grid">
+              <button
+                v-for="(question, index) in questions"
+                :key="question.questionId"
+                type="button"
+                :class="['question-map-item', resultMapItemClass(question)]"
+                @click="scrollToResultQuestion(question.questionId)"
+              >
+                {{ index + 1 }}
+              </button>
+            </div>
+            <div class="map-legend">
+              <span><i class="dot dot--correct"></i>答对</span>
+              <span><i class="dot dot--wrong"></i>答错</span>
+              <span><i class="dot dot--manual"></i>教师评分题</span>
+            </div>
+          </section>
           <article class="side-card side-card--mini">
             <div class="side-card__title">结果说明</div>
             <ul class="bullet-list">
@@ -333,7 +369,21 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { ExamDetailKey } from '@/composables/useExamDetail';
-const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
+const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
+
+/** 结果态三态展示映射：tone 由 composable 判定，此处只做图标/文案/导航类名的呈现转换 */
+type ResultTone = 'correct' | 'wrong' | 'manual' | 'none';
+const toneOf = (question: { questionId: number }): ResultTone => resultTone(question.questionId);
+const toneBadge: Record<ResultTone, { icon: string; text: string }> = {
+  correct: { icon: 'check_circle', text: '回答正确' },
+  wrong: { icon: 'cancel', text: '回答错误' },
+  manual: { icon: 'hourglass_top', text: '教师评分题' },
+  none: { icon: '', text: '' },
+};
+function resultMapItemClass(question: { questionId: number }): string {
+  const tone = toneOf(question);
+  return tone === 'none' ? '' : `is-${tone}`;
+}
 </script>
 
 <style scoped>
@@ -923,6 +973,119 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   color: #191c22;
   line-height: 1.3;
   white-space: pre-wrap;
+}
+
+/* 结果页对错三态视觉：正确绿 / 错误红 / 主观题中性灰（色值见技术方案 D11） */
+.result-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.result-status-badge .material-symbols-outlined {
+  font-size: 14px;
+}
+
+.result-status-badge--correct {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+}
+
+.result-status-badge--wrong {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.result-status-badge--manual {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.result-question-card--correct {
+  border-left: 3px solid #16a34a;
+}
+
+.result-question-card--wrong {
+  border-left: 3px solid #dc2626;
+}
+
+.result-question-card--manual {
+  border-left: 3px solid #64748b;
+}
+
+.result-answer-block__icon {
+  font-size: 14px;
+  vertical-align: -3px;
+  margin-right: 2px;
+}
+
+.result-answer-block--correct {
+  background: #f0fdf4;
+}
+
+.result-answer-block--correct .result-answer-block__label,
+.result-answer-block--correct .result-answer-block__value {
+  color: #16a34a;
+}
+
+.result-answer-block--wrong {
+  background: #fef2f2;
+}
+
+.result-answer-block--wrong .result-answer-block__label,
+.result-answer-block--wrong .result-answer-block__value {
+  color: #dc2626;
+}
+
+.result-question-card__score--correct {
+  color: #16a34a;
+}
+
+.result-question-card__score--wrong {
+  color: #dc2626;
+}
+
+.result-question-card__score--manual {
+  color: #64748b;
+}
+
+.question-map-item.is-correct {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+
+.question-map-item.is-wrong {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.question-map-item.is-manual {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.dot--correct {
+  background: #16a34a;
+}
+
+.dot--wrong {
+  background: #dc2626;
+}
+
+.dot--manual {
+  background: #64748b;
 }
 
 @media (max-width: 1100px) {

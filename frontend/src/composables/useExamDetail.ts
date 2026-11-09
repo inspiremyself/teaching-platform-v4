@@ -492,6 +492,28 @@ function analysisTextOf(questionId: number, question: ExamQuestionView): string 
   return text.trim() ? text : '暂无解析'
 }
 
+/**
+ * 结果页对错三态视觉：true→correct / false→wrong / null→manual；
+ * 无判分条目→none（不渲染任何新增视觉元素）。对错唯一真相是 isCorrect，不做二次推断。
+ */
+function resultTone(questionId: number): 'correct' | 'wrong' | 'manual' | 'none' {
+  const result = resultAnswerMap.value[questionId]
+  if (!result) return 'none'
+  if (result.isCorrect === true) return 'correct'
+  if (result.isCorrect === false) return 'wrong'
+  return 'manual'
+}
+
+/** 答对题数：仅统计 isCorrect === true 的判分条目；分母用 questions.length（汇总卡展示）。 */
+const correctCount = computed(() =>
+  Object.values(resultAnswerMap.value).filter(result => result.isCorrect === true).length
+)
+
+/** 结果态题号导航点击定位：平滑滚动到对应题卡。 */
+function scrollToResultQuestion(questionId: number) {
+  document.getElementById(`result-question-${questionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 async function doStart() {
   if (notStarted.value) {
     ElMessage.warning('考试尚未开始')
@@ -700,7 +722,7 @@ onUnmounted(() => {
   stopTimer()
 })
 
-  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, router, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, deadlineAt, deadlineReached, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, qType, orderedQuestions, normalizeType, parseOptions, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
+  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, router, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, deadlineAt, deadlineReached, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, qType, orderedQuestions, normalizeType, parseOptions, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
 }
 
 export type ExamDetailState = ReturnType<typeof useExamDetail>;
