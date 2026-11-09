@@ -48,6 +48,7 @@ class ExamAutoSubmitJobTests {
     /** 本类自建题库题目 id，避免依赖可能被其它非事务用例清空的 Flyway 种子题目。 */
     private static final long SINGLE_QUESTION_ID = 90001L;
     private static final long JUDGE_QUESTION_ID = 90002L;
+    private static final long SUBJECTIVE_QUESTION_ID = 90003L;
 
     @Autowired
     private ExamService examService;
@@ -66,8 +67,10 @@ class ExamAutoSubmitJobTests {
     @BeforeEach
     void seedQuestions() {
         // 部分 @SpringBootTest 用例会清空题库表；本类自建题目，保证全量跑批时顺序无关
-        jdbcTemplate.update("DELETE FROM exam_question WHERE question_id IN (?, ?)", SINGLE_QUESTION_ID, JUDGE_QUESTION_ID);
-        jdbcTemplate.update("DELETE FROM question_bank WHERE id IN (?, ?)", SINGLE_QUESTION_ID, JUDGE_QUESTION_ID);
+        jdbcTemplate.update("DELETE FROM exam_question WHERE question_id IN (?, ?, ?)",
+                SINGLE_QUESTION_ID, JUDGE_QUESTION_ID, SUBJECTIVE_QUESTION_ID);
+        jdbcTemplate.update("DELETE FROM question_bank WHERE id IN (?, ?, ?)",
+                SINGLE_QUESTION_ID, JUDGE_QUESTION_ID, SUBJECTIVE_QUESTION_ID);
         jdbcTemplate.update(
                 """
                 INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
@@ -87,6 +90,15 @@ class ExamAutoSubmitJobTests {
                 """,
                 JUDGE_QUESTION_ID
         );
+        jdbcTemplate.update(
+                """
+                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
+                                           answer_json, created_by, created_at, updated_at, school_id)
+                VALUES (?, 'AUTOSUBMIT-SUBJECTIVE', 'SUBJECTIVE', '自动交卷主观题', 'MEDIUM', 10,
+                        NULL, '["参考答案"]', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+                """,
+                SUBJECTIVE_QUESTION_ID
+        );
     }
 
     @AfterEach
@@ -101,7 +113,10 @@ class ExamAutoSubmitJobTests {
             jdbcTemplate.update("DELETE FROM exam WHERE id = ?", examId);
         }
         createdExamIds.clear();
-        jdbcTemplate.update("DELETE FROM question_bank WHERE id IN (?, ?)", SINGLE_QUESTION_ID, JUDGE_QUESTION_ID);
+        jdbcTemplate.update("DELETE FROM exam_question WHERE question_id IN (?, ?, ?)",
+                SINGLE_QUESTION_ID, JUDGE_QUESTION_ID, SUBJECTIVE_QUESTION_ID);
+        jdbcTemplate.update("DELETE FROM question_bank WHERE id IN (?, ?, ?)",
+                SINGLE_QUESTION_ID, JUDGE_QUESTION_ID, SUBJECTIVE_QUESTION_ID);
     }
 
     @Test
@@ -118,6 +133,22 @@ class ExamAutoSubmitJobTests {
                 "SELECT COUNT(*) FROM score_record WHERE business_type = 'EXAM' AND business_id = ? AND student_id = ?",
                 Integer.class, examId, STUDENT.id());
         assertThat(scoreRecordCount).isEqualTo(1);
+    }
+
+    @Test
+    void overdueSubjectiveSubmissionIsSettledAsAutoSubmitted() {
+        Long examId = createSubjectiveExam();
+        Long submissionId = startAndExpire(examId, OffsetDateTime.now().minusMinutes(5));
+
+        job().run();
+
+        ExamSubmission settled = examSubmissionRepository.findById(submissionId).orElseThrow();
+        assertThat(settled.getStatus()).isEqualTo(ExamSubmissionStatus.AUTO_SUBMITTED);
+        assertThat(settled.getSubmittedAt()).isNotNull();
+        Integer scoreRecordCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM score_record WHERE business_type = 'EXAM' AND business_id = ? AND student_id = ?",
+                Integer.class, examId, STUDENT.id());
+        assertThat(scoreRecordCount).isZero();
     }
 
     @Test
@@ -185,6 +216,28 @@ class ExamAutoSubmitJobTests {
                                 new ExamRequests.ExamQuestionItem(SINGLE_QUESTION_ID, 1, 5.0),
                                 new ExamRequests.ExamQuestionItem(JUDGE_QUESTION_ID, 2, 3.0)
                         ),
+                        null
+                )
+        );
+        Long examId = ((Number) created.get("id")).longValue();
+        createdExamIds.add(examId);
+        return examId;
+    }
+
+    private Long createSubjectiveExam() {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> created = (Map<String, Object>) examService.createExam(
+                TEACHER,
+                new ExamRequests.CreateExamRequest(
+                        "自动交卷主观题-" + System.nanoTime(),
+                        "超时自动交卷主观题测试",
+                        1L,
+                        OffsetDateTime.now().minusHours(1),
+                        OffsetDateTime.now().plusHours(2),
+                        30,
+                        "PUBLISHED",
+                        ScoreVisibilityMode.IMMEDIATE,
+                        List.of(new ExamRequests.ExamQuestionItem(SUBJECTIVE_QUESTION_ID, 1, 10.0)),
                         null
                 )
         );

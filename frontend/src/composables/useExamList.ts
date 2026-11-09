@@ -374,6 +374,47 @@ const submitConfiguredQuestion = async (editorPayload: QuestionEditorDialogSubmi
   }
 }
 
+const validateTimeWindow = (startAt: string | null, endAt: string | null, durationMinutes: number, requireEndAt: boolean) => {
+  const duration = Number(durationMinutes)
+  if (!Number.isInteger(duration) || duration < 1 || duration > 600) {
+    ElMessage.warning('考试时长需为 1–600 分钟的整数')
+    return false
+  }
+  if (requireEndAt && !endAt) {
+    ElMessage.warning('请先设置考试结束时间')
+    return false
+  }
+  const start = startAt ? new Date(startAt).getTime() : null
+  const end = endAt ? new Date(endAt).getTime() : null
+  if (start !== null && Number.isNaN(start)) {
+    ElMessage.warning('开始时间格式不正确')
+    return false
+  }
+  if (end !== null && Number.isNaN(end)) {
+    ElMessage.warning('结束时间格式不正确')
+    return false
+  }
+  if (start !== null && end !== null && start >= end) {
+    ElMessage.warning('开始时间必须早于结束时间')
+    return false
+  }
+  return true
+}
+
+const durationExceedsWindow = computed(() => {
+  const duration = form.value.durationMinutes
+  const start = form.value.startAt ? new Date(form.value.startAt).getTime() : null
+  const end = form.value.endAt ? new Date(form.value.endAt).getTime() : null
+  if (!duration || start === null || end === null || Number.isNaN(start) || Number.isNaN(end)) return false
+  const windowMinutes = (end - start) / 60000
+  return Number.isFinite(windowMinutes) && windowMinutes > 0 && duration > windowMinutes
+})
+
+const windowTruncationHint = computed(() => {
+  if (!durationExceedsWindow.value) return ''
+  return `考试时长晚于窗口结束前 ${form.value.durationMinutes} 分钟，进入较晚的学生会被提前收卷。`
+})
+
 const submitForm = async () => {
   if (!form.value.title.trim()) {
     ElMessage.warning('请输入考试标题')
@@ -393,6 +434,9 @@ const submitForm = async () => {
   }
   if (isLegacyScoreMode.value) {
     ElMessage.error('请先将成绩可见性改为「交卷后立即可见」或「教师确认后可见」')
+    return
+  }
+  if (!validateTimeWindow(form.value.startAt, form.value.endAt, form.value.durationMinutes, false)) {
     return
   }
   if (form.value.scoreVisibilityMode === SCORE_VISIBILITY_MODE.IMMEDIATE && hasSubjectiveQuestion.value) {
@@ -454,6 +498,9 @@ const publishExam = async (row: ExamListItem) => {
   const detail = await getExamDetail(row.id)
   if ((detail.questions || []).some(q => q.questionId == null)) {
     ElMessage.error('请先将题目保存到题库后再组卷')
+    return
+  }
+  if (!validateTimeWindow(detail.startAt, detail.endAt, detail.durationMinutes, true)) {
     return
   }
   await changeExamStatus(row.id, ACTIVITY_STATUS.PUBLISHED)
@@ -521,7 +568,7 @@ onMounted(async () => {
   await fetchExams()
 })
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint };
 }
 
 export type ExamListState = ReturnType<typeof useExamList>;

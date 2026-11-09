@@ -199,6 +199,11 @@ public class ExamConfigService {
         assertBankQuestions(request.questions());
         assertNoDuplicateQuestions(request.questions());
         Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id(), currentUser.schoolId());
+        if (exam.getStatus() == ActivityStatus.PUBLISHED) {
+            assertPublishableTimeWindow(request.startAt(), request.endAt(), OffsetDateTime.now());
+        } else {
+            assertTimeWindowOrder(request.startAt(), request.endAt());
+        }
         examRepository.save(exam);
 
         if (request.questions() != null) {
@@ -234,6 +239,7 @@ public class ExamConfigService {
         assertBankQuestions(request.questions());
         assertNoDuplicateQuestions(request.questions());
         Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id(), currentUser.schoolId());
+        assertTimeWindowOrder(request.startAt(), request.endAt());
 
         exam.setTitle(request.title());
         exam.setDescription(request.description());
@@ -425,6 +431,7 @@ public class ExamConfigService {
             if (hasLegacyInlineQuestion) {
                 throw new BusinessException(40000, "请先将题目保存到题库后再组卷");
             }
+            assertPublishableTimeWindow(exam.getStartAt(), exam.getEndAt(), OffsetDateTime.now());
             exam.setStatus(ActivityStatus.PUBLISHED);
         } else if (exam.getStatus() == ActivityStatus.PUBLISHED && newStatus == ActivityStatus.CLOSED) {
             exam.setStatus(ActivityStatus.CLOSED);
@@ -563,6 +570,22 @@ public class ExamConfigService {
                 throw new BusinessException(40000, "试卷题目不能重复");
             }
         }
+    }
+
+    private void assertTimeWindowOrder(OffsetDateTime startAt, OffsetDateTime endAt) {
+        if (startAt != null && endAt != null && !startAt.isBefore(endAt)) {
+            throw new BusinessException(40000, "开始时间必须早于结束时间");
+        }
+    }
+
+    private void assertPublishableTimeWindow(OffsetDateTime startAt, OffsetDateTime endAt, OffsetDateTime now) {
+        if (endAt == null) {
+            throw new BusinessException(40000, "请先设置考试结束时间");
+        }
+        if (!endAt.isAfter(now)) {
+            throw new BusinessException(40000, "结束时间必须晚于当前时间");
+        }
+        assertTimeWindowOrder(startAt, endAt);
     }
 
 }

@@ -135,6 +135,22 @@ class ExamStudentControllerTests {
     }
 
     @Test
+    void startClosedExamReturnsErrorCodeAndMessage() throws Exception {
+        when(examService.startExam(any(CurrentUser.class), eq(10L)))
+                .thenThrow(new BusinessException(40000, "考试未发布，不能开始"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
+        try {
+            mockMvc.perform(post("/api/v1/exams/{id}/start", 10L))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("考试未发布，不能开始"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void startExamBeforeStartReturns400() throws Exception {
         when(examService.startExam(any(CurrentUser.class), eq(-1L)))
                 .thenThrow(new BusinessException(40000, "考试尚未开始"));

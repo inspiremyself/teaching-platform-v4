@@ -173,7 +173,17 @@ const formatWindow = (startAt?: string | null, endAt?: string | null) => {
 }
 
 const availabilityHint = (row: ExamListItem) => {
+  const now = Date.now()
+  if (row.submissionStatus === EXAM_SUBMISSION_STATUS.IN_PROGRESS && !row.canResume) {
+    return '本次作答已超时，等待系统结算'
+  }
   if (row.canResume) return '你已进入答题状态，可从上次进度继续。'
+  if (row.startAt && new Date(row.startAt).getTime() > now) {
+    return `考试将于 ${formatDateTime(row.startAt)} 开始`
+  }
+  if (!row.submissionStatus && row.endAt && new Date(row.endAt).getTime() <= now) {
+    return '已错过考试时间'
+  }
   if (row.canStart) return '当前处于允许参加的考试窗口，建议尽快开始。'
   if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) {
     return '你已完成交卷，主观题仍可能在等待教师批改。'

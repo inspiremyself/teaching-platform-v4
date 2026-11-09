@@ -1,5 +1,13 @@
 <template>
   <div class="exam-detail-page">
+    <div
+      v-if="isLegacyNoEndAt && (state === 'A' || state === 'B')"
+      class="intro-notice intro-notice--info legacy-notice"
+    >
+      <span class="material-symbols-outlined">info</span>
+      <span>本场未设置统一截止时间，按个人限时收卷；如教师需要统一截止时间，需新建考试。</span>
+    </div>
+
     <section v-if="state === 'A' && detail" class="intro-layout">
       <article class="intro-card intro-card--hero">
         <div class="intro-card__topline">
@@ -42,7 +50,7 @@
         <article class="side-card side-card--mini">
           <div class="side-card__title">作答须知</div>
           <ul class="bullet-list">
-            <li>开始后计时，到点自动交卷。</li>
+            <li>开始后连续计时 {{ detail.durationMinutes }} 分钟；若考试窗口先结束，则按窗口结束时间收卷。</li>
             <li>交卷后不可修改答案。</li>
             <li>主观题结果可能稍后更新。</li>
           </ul>
@@ -57,10 +65,12 @@
           <h1>{{ detail?.title }}</h1>
             <p>{{ answeredCount }} / {{ questions.length }} 题已作答。</p>
         </div>
-        <div class="timer-shell">
+        <div class="timer-shell" :class="{ 'timer-shell--urgent': isTimerUrgent }">
           <span class="material-symbols-outlined">timer</span>
-          <div>
+          <div class="timer-shell__body">
             <strong>{{ formatTime(remainingSeconds) }}</strong>
+            <small>{{ deadlineText }}</small>
+            <small>{{ limitText }}</small>
             <small>到点自动交卷</small>
           </div>
         </div>
@@ -377,7 +387,7 @@
 import { inject } from 'vue';
 import { ExamDetailKey } from '@/composables/useExamDetail';
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue';
-const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, qType, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
+const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, isTimerUrgent, deadlineText, limitText, isLegacyNoEndAt, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, qType, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
 
 /** 结果态三态展示映射：tone 由 composable 判定，此处只做图标/文案/导航类名的呈现转换 */
 type ResultTone = 'correct' | 'wrong' | 'manual' | 'none';
@@ -493,6 +503,16 @@ function resultMapItemClass(question: { questionId: number }): string {
   color: #9a3412;
   font-size: 12px;
   font-weight: 600;
+}
+
+.intro-notice--info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.legacy-notice {
+  margin: 0 0 12px;
 }
 
 .intro-metrics,
@@ -635,12 +655,23 @@ function resultMapItemClass(question: { questionId: number }): string {
 
 .timer-shell {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 6px 9px;
-  border-radius: 999px;
+  padding: 8px 10px;
+  border-radius: 12px;
   background: #ecfeff;
   border: 1px solid #ccfbf1;
+}
+
+.timer-shell__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.timer-shell__body small {
+  font-size: 11px;
+  line-height: 1.3;
 }
 
 .timer-shell .material-symbols-outlined {
@@ -657,6 +688,17 @@ function resultMapItemClass(question: { questionId: number }): string {
 .timer-shell small {
   color: #0f766e;
   font-weight: 700;
+}
+
+.timer-shell--urgent {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.timer-shell--urgent .material-symbols-outlined,
+.timer-shell--urgent strong,
+.timer-shell--urgent small {
+  color: #b91c1c;
 }
 
 .exam-question-prompt {

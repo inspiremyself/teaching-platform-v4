@@ -1555,14 +1555,206 @@ class ExamServiceTests {
         assertThat(byId.get(expiredSubmissionExamId).get("canResume")).isEqualTo(false);
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void createDraftAllowsMissingEndAt() {
+        Long examId = createExamWithWindow("草稿缺结束时间-" + System.nanoTime(),
+                OffsetDateTime.now().plusHours(1), null, 30, "DRAFT");
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+
+        assertThat(detail.get("startAt")).isNotNull();
+        assertThat(detail.get("endAt")).isNull();
+    }
+
+    @Test
+    void createDraftRejectsInvertedWindow() {
+        String title = "草稿倒置窗口-" + System.nanoTime();
+        OffsetDateTime endAt = OffsetDateTime.now().plusHours(1);
+
+        assertThatThrownBy(() -> examService.createExam(teacher, new ExamRequests.CreateExamRequest(
+                title, "", 1L, endAt.plusMinutes(1), endAt, 30, "DRAFT", null,
+                List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("开始时间必须早于结束时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM exam WHERE title = ?", Integer.class, title)).isZero();
+    }
+
+    @Test
+    void createPublishedRejectsMissingEndAt() {
+        String title = "发布缺结束时间-" + System.nanoTime();
+
+        assertThatThrownBy(() -> examService.createExam(teacher, new ExamRequests.CreateExamRequest(
+                title, "", 1L, OffsetDateTime.now().minusHours(1), null, 30, "PUBLISHED", null,
+                List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("请先设置考试结束时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM exam WHERE title = ?", Integer.class, title)).isZero();
+    }
+
+    @Test
+    void createPublishedRejectsPastEndAt() {
+        String title = "发布结束时间已过-" + System.nanoTime();
+
+        assertThatThrownBy(() -> examService.createExam(teacher, new ExamRequests.CreateExamRequest(
+                title, "", 1L, OffsetDateTime.now().minusHours(1), OffsetDateTime.now().minusMinutes(1),
+                30, "PUBLISHED", null, List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("结束时间必须晚于当前时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM exam WHERE title = ?", Integer.class, title)).isZero();
+    }
+
+    @Test
+    void createPublishedRejectsInvertedWindow() {
+        String title = "发布倒置窗口-" + System.nanoTime();
+        OffsetDateTime endAt = OffsetDateTime.now().plusHours(1);
+
+        assertThatThrownBy(() -> examService.createExam(teacher, new ExamRequests.CreateExamRequest(
+                title, "", 1L, endAt.plusMinutes(1), endAt, 30, "PUBLISHED", null,
+                List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("开始时间必须早于结束时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM exam WHERE title = ?", Integer.class, title)).isZero();
+    }
+
+    @Test
+    void publishDraftRejectsMissingEndAt() {
+        Long examId = createExamWithWindow("发布缺结束时间草稿-" + System.nanoTime(),
+                OffsetDateTime.now().minusHours(1), null, 30, "DRAFT");
+
+        assertThatThrownBy(() -> examService.changeStatus(
+                teacher, examId, new ExamRequests.ChangeExamStatusRequest("PUBLISHED")))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("请先设置考试结束时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM exam WHERE id = ?", String.class, examId))
+                .isEqualTo("DRAFT");
+    }
+
+    @Test
+    void publishDraftRejectsPastEndAt() {
+        Long examId = createExamWithWindow("发布过期草稿-" + System.nanoTime(),
+                OffsetDateTime.now().minusHours(2), OffsetDateTime.now().minusMinutes(1), 30, "DRAFT");
+
+        assertThatThrownBy(() -> examService.changeStatus(
+                teacher, examId, new ExamRequests.ChangeExamStatusRequest("PUBLISHED")))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("结束时间必须晚于当前时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM exam WHERE id = ?", String.class, examId))
+                .isEqualTo("DRAFT");
+    }
+
+    @Test
+    void publishDraftRejectsInvertedWindow() {
+        Long examId = createExamWithWindow("发布倒置草稿-" + System.nanoTime(),
+                OffsetDateTime.now().minusHours(1), OffsetDateTime.now().plusHours(1), 30, "DRAFT");
+        entityManager.flush();
+        jdbcTemplate.update("UPDATE exam SET start_at = ?, end_at = ? WHERE id = ?",
+                OffsetDateTime.now().plusHours(2), OffsetDateTime.now().plusHours(1), examId);
+        entityManager.clear();
+
+        assertThatThrownBy(() -> examService.changeStatus(
+                teacher, examId, new ExamRequests.ChangeExamStatusRequest("PUBLISHED")))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("开始时间必须早于结束时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM exam WHERE id = ?", String.class, examId))
+                .isEqualTo("DRAFT");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void updateDraftAllowsMissingEndAt() {
+        Long examId = createExamWithWindow("更新缺结束时间-" + System.nanoTime(),
+                OffsetDateTime.now().minusHours(1), OffsetDateTime.now().plusHours(1), 30, "DRAFT");
+
+        examService.updateExam(teacher, examId, new ExamRequests.UpdateExamRequest(
+                "更新缺结束时间", "", 1L, OffsetDateTime.now().plusHours(1), null, 30, null,
+                List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null));
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(teacher, examId);
+        assertThat(detail.get("endAt")).isNull();
+    }
+
+    @Test
+    void updateDraftRejectsInvertedWindowWithoutMutation() {
+        String title = "更新倒置窗口-" + System.nanoTime();
+        Long examId = createExamWithWindow(title, OffsetDateTime.now().minusHours(1),
+                OffsetDateTime.now().plusHours(1), 30, "DRAFT");
+
+        assertThatThrownBy(() -> examService.updateExam(teacher, examId, new ExamRequests.UpdateExamRequest(
+                "改名后考试", "", 1L, OffsetDateTime.now().plusHours(2), OffsetDateTime.now().plusHours(1),
+                30, null, List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("开始时间必须早于结束时间");
+
+        assertThat(jdbcTemplate.queryForObject("SELECT title FROM exam WHERE id = ?", String.class, examId))
+                .isEqualTo(title);
+        assertThat(jdbcTemplate.queryForList(
+                "SELECT question_id FROM exam_question WHERE exam_id = ?", Long.class, examId))
+                .containsExactly(1L);
+    }
+
+    @Test
+    void updatePublishedExamIsRejected() {
+        Long examId = createPublishedExamForStudent();
+
+        assertThatThrownBy(() -> examService.updateExam(teacher, examId, new ExamRequests.UpdateExamRequest(
+                "已发布不可改", "", 1L, OffsetDateTime.now().minusHours(1), OffsetDateTime.now().plusHours(1),
+                30, null, List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("只有草稿状态的考试可以修改");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void startClosedExamWithInProgressSubmissionIsRejectedButDetailResumable() {
+        Long examId = createPublishedExamForStudent();
+        examService.startExam(student, examId);
+        examService.changeStatus(teacher, examId, new ExamRequests.ChangeExamStatusRequest("CLOSED"));
+
+        assertThatThrownBy(() -> examService.startExam(student, examId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("code", 40000)
+                .hasMessage("考试未发布，不能开始");
+
+        Map<String, Object> detail = (Map<String, Object>) examService.getExamDetail(student, examId);
+        assertThat(detail.get("submissionStatus")).isEqualTo("IN_PROGRESS");
+        assertThat(detail.get("deadlineAt")).isNotNull();
+        assertThat(detail.get("remainingSeconds")).isInstanceOf(Number.class);
+    }
+
     private Long createExamWithWindow(String title, OffsetDateTime startAt, OffsetDateTime endAt,
                                       int durationMinutes, String status) {
+        boolean needsRewrite = "PUBLISHED".equals(status)
+                && (endAt == null || !endAt.isAfter(OffsetDateTime.now()));
+        OffsetDateTime createEndAt = needsRewrite ? OffsetDateTime.now().plusHours(1) : endAt;
         Map<String, Object> created = (Map<String, Object>) examService.createExam(
                 teacher,
-                new ExamRequests.CreateExamRequest(title, "", 1L, startAt, endAt, durationMinutes, status, null,
+                new ExamRequests.CreateExamRequest(title, "", 1L, startAt, createEndAt, durationMinutes, status, null,
                         List.of(new ExamRequests.ExamQuestionItem(1L, 1, 5.0)), null)
         );
-        return ((Number) created.get("id")).longValue();
+        Long examId = ((Number) created.get("id")).longValue();
+        if (needsRewrite) {
+            entityManager.flush();
+            jdbcTemplate.update("UPDATE exam SET start_at = ?, end_at = ? WHERE id = ?", startAt, endAt, examId);
+            entityManager.clear();
+        }
+        return examId;
     }
 
     private void insertForeignQuestionBankItem() {

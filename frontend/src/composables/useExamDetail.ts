@@ -1,4 +1,4 @@
-import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
+import { ACTIVITY_STATUS, EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -37,10 +37,46 @@ const resultAnswerMap = ref<Record<number, ExamAnswerDetail>>({})
 let timer: number | undefined
 let baselineSeconds = 0
 let baselineAt = 0
+let lastRemainingSeconds = 0
 let autoSubmitTriggered = false
 // 考试截止时间：来自 startExam 或详情接口，用于截止只读判定
 const deadlineAt = ref<string | null>(null)
-const deadlineReached = computed(() => deadlineAt.value != null && remainingSeconds.value <= 0)
+// 覆盖历史 deadline_at 为空的进行中提交：remaining 归零也视为到期
+const deadlineReached = computed(() => (
+  remainingSeconds.value <= 0
+  && (deadlineAt.value !== null
+    || (state.value === 'B' && detail.value?.submissionStatus === EXAM_SUBMISSION_STATUS.IN_PROGRESS))
+))
+const isTimerUrgent = computed(() => remainingSeconds.value <= 300)
+const limitMinutes = computed(() => {
+  const startedAt = detail.value?.startedAt
+  const deadline = deadlineAt.value
+  if (startedAt && deadline) {
+    const diff = Math.round((new Date(deadline).getTime() - new Date(startedAt).getTime()) / 60000)
+    if (Number.isFinite(diff)) return Math.max(0, diff)
+  }
+  return detail.value?.durationMinutes ?? 0
+})
+const windowTruncated = computed(() => {
+  const deadline = deadlineAt.value
+  const endAt = detail.value?.endAt
+  const configured = detail.value?.durationMinutes
+  if (!deadline || !endAt || !configured) return false
+  const endTime = new Date(endAt).getTime()
+  const deadlineTime = new Date(deadline).getTime()
+  return Math.abs(endTime - deadlineTime) <= 1000 && limitMinutes.value < configured
+})
+const limitText = computed(() => {
+  // 仅数据完全缺失时使用兜底文案；四舍五入后可为 0（临近截止进入）
+  if (limitMinutes.value <= 0 && !detail.value?.durationMinutes) return '本次限时以服务端为准'
+  return `本次限时 ${limitMinutes.value} 分钟${windowTruncated.value ? '（窗口提前结束）' : ''}`
+})
+const deadlineText = computed(() => (
+  deadlineAt.value ? `截止 ${formatDateTime(deadlineAt.value)}` : '截止时间待同步'
+))
+const isLegacyNoEndAt = computed(() => (
+  detail.value?.status === ACTIVITY_STATUS.PUBLISHED && !detail.value?.endAt
+))
 
 // 截止后自动交卷失败：常驻错误条 + 有限次自动重试，手动「重新交卷」可重置计数
 const MAX_AUTO_RETRIES = 6
@@ -226,11 +262,18 @@ function buildSubmitPayload() {
   }
 }
 
-/** 立即保存草稿；返回是否成功。失败只提示一次，不阻断继续作答。 */
-function flushDraft(): Promise<boolean> {
+function clearDraftTimer() {
   if (draftTimer) {
     window.clearTimeout(draftTimer)
     draftTimer = undefined
+  }
+}
+
+/** 立即保存草稿；返回是否成功。失败只提示一次，不阻断继续作答。 */
+function flushDraft(): Promise<boolean> {
+  clearDraftTimer()
+  if (deadlineReached.value) {
+    return Promise.resolve(true)
   }
   if (state.value !== 'B' || detail.value?.submissionStatus !== EXAM_SUBMISSION_STATUS.IN_PROGRESS) {
     return Promise.resolve(true)
@@ -253,8 +296,9 @@ function flushDraft(): Promise<boolean> {
 }
 
 function scheduleDraftSave() {
+  clearDraftTimer()
+  if (deadlineReached.value) return
   if (state.value !== 'B' || detail.value?.submissionStatus !== EXAM_SUBMISSION_STATUS.IN_PROGRESS) return
-  if (draftTimer) window.clearTimeout(draftTimer)
   draftTimer = window.setTimeout(() => {
     draftTimer = undefined
     void flushDraft()
@@ -320,12 +364,17 @@ function formatTime(seconds: number): string {
 function startTimer(remaining: number) {
   stopTimer()
   baselineSeconds = Math.max(0, Math.floor(remaining))
-  baselineAt = Date.now()
+  baselineAt = performance.now()
+  lastRemainingSeconds = baselineSeconds
+  remainingSeconds.value = baselineSeconds
   const update = () => {
-    const elapsed = Math.floor((Date.now() - baselineAt) / 1000)
-    remainingSeconds.value = Math.max(0, baselineSeconds - elapsed)
+    const elapsed = Math.floor((performance.now() - baselineAt) / 1000)
+    const next = Math.max(0, baselineSeconds - elapsed)
+    remainingSeconds.value = Math.min(lastRemainingSeconds, next)
+    lastRemainingSeconds = remainingSeconds.value
     if (remainingSeconds.value <= 0) {
       stopTimer()
+      clearDraftTimer()
       if (!autoSubmitTriggered) {
         autoSubmitTriggered = true
         autoSubmit()
@@ -334,6 +383,8 @@ function startTimer(remaining: number) {
   }
   if (baselineSeconds <= 0) {
     remainingSeconds.value = 0
+    lastRemainingSeconds = 0
+    clearDraftTimer()
     if (!autoSubmitTriggered) {
       autoSubmitTriggered = true
       autoSubmit()
@@ -343,6 +394,16 @@ function startTimer(remaining: number) {
   autoSubmitTriggered = false
   timer = window.setInterval(update, 1000)
   update()
+}
+
+/** 回到可见态时先用单调时钟补齐隐藏期间的时间差，再决定是否立即交卷。 */
+function recomputeRemainingFromBaseline(): number {
+  if (baselineAt === 0) return remainingSeconds.value
+  const elapsed = Math.floor((performance.now() - baselineAt) / 1000)
+  const next = Math.max(0, baselineSeconds - elapsed)
+  remainingSeconds.value = Math.min(lastRemainingSeconds, next)
+  lastRemainingSeconds = remainingSeconds.value
+  return remainingSeconds.value
 }
 
 /** 响应缺少 remainingSeconds 时，用 deadlineAt 计算一次基线。 */
@@ -669,7 +730,12 @@ function onVisibilityChange() {
     return
   }
   if (document.visibilityState === 'visible' && state.value === 'B') {
-    void loadExam()
+    const remaining = recomputeRemainingFromBaseline()
+    if (remaining <= 0 && !autoSubmitTriggered) {
+      autoSubmitTriggered = true
+      autoSubmit()
+    }
+    void loadExam().catch(() => undefined)
   }
 }
 
@@ -680,15 +746,13 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange)
-  if (draftTimer) {
-    window.clearTimeout(draftTimer)
-    draftTimer = undefined
-  }
+  clearDraftTimer()
   clearRetryTimer()
   stopTimer()
 })
 
-  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, router, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, deadlineAt, deadlineReached, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, qType, orderedQuestions, normalizeType, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
+  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, router, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, lastRemainingSeconds, deadlineAt, deadlineReached,
+  isTimerUrgent, limitMinutes, limitText, deadlineText, isLegacyNoEndAt, windowTruncated, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, qType, orderedQuestions, normalizeType, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
 }
 
 export type ExamDetailState = ReturnType<typeof useExamDetail>;

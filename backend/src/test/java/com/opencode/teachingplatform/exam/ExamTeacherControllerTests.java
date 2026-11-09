@@ -107,6 +107,52 @@ class ExamTeacherControllerTests {
     }
 
     @Test
+    void createExamRejectsDurationBelowMinimum() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "时长下界",
+                                      "classId": 1,
+                                      "durationMinutes": 0,
+                                      "status": "DRAFT",
+                                      "questions": []
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("考试时长必须大于 0 分钟"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void createExamRejectsDurationAboveMaximum() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "时长上界",
+                                      "classId": 1,
+                                      "durationMinutes": 601,
+                                      "status": "DRAFT",
+                                      "questions": []
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("考试时长不能超过 600 分钟"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCreateExamWithInlineQuestionReturns400() throws Exception {
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {

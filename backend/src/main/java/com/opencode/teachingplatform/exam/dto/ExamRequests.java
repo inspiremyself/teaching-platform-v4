@@ -3,6 +3,8 @@ package com.opencode.teachingplatform.exam.dto;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -43,7 +45,10 @@ public final class ExamRequests {
             @NotNull Long classId,
             OffsetDateTime startAt,
             OffsetDateTime endAt,
-            @NotNull Integer durationMinutes,
+            @NotNull
+            @Min(value = 1, message = "考试时长必须大于 0 分钟")
+            @Max(value = 600, message = "考试时长不能超过 600 分钟")
+            Integer durationMinutes,
             @NotBlank String status,
             ScoreVisibilityMode scoreVisibilityMode,
             @Valid List<ExamQuestionItem> questions,
@@ -56,7 +61,10 @@ public final class ExamRequests {
             @NotNull Long classId,
             OffsetDateTime startAt,
             OffsetDateTime endAt,
-            @NotNull Integer durationMinutes,
+            @NotNull
+            @Min(value = 1, message = "考试时长必须大于 0 分钟")
+            @Max(value = 600, message = "考试时长不能超过 600 分钟")
+            Integer durationMinutes,
             ScoreVisibilityMode scoreVisibilityMode,
             @Valid List<ExamQuestionItem> questions,
             Boolean shuffleQuestions

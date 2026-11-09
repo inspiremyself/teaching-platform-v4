@@ -68,6 +68,7 @@ export interface ExamDetailForStudent extends ExamDetailBase {
   notStarted?: boolean
   submissionId?: number
   submissionStatus?: ExamSubmissionStatus
+  startedAt?: string
   deadlineAt?: string
   remainingSeconds?: number
   autoScore?: number | null
