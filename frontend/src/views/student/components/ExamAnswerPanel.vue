@@ -298,6 +298,13 @@
               </span>
             </div>
 
+            <ExamOptionReview
+              :options-json="question.optionsJson"
+              :question-type="qType(question)"
+              :student-answer="question.studentAnswer ?? question.answer"
+              :standard-answer="canShowResult ? question.answerJson : null"
+            />
+
             <div :class="['result-answer-block', toneOf(question) === 'correct' || toneOf(question) === 'wrong' ? `result-answer-block--${toneOf(question)}` : '']">
               <div class="result-answer-block__label">
                 <span v-if="toneOf(question) !== 'none'" class="material-symbols-outlined result-answer-block__icon">{{ toneBadge[toneOf(question)].icon }}</span>
@@ -369,7 +376,8 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { ExamDetailKey } from '@/composables/useExamDetail';
-const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
+import ExamOptionReview from '@/components/exam/ExamOptionReview.vue';
+const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, qType, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
 
 /** 结果态三态展示映射：tone 由 composable 判定，此处只做图标/文案/导航类名的呈现转换 */
 type ResultTone = 'correct' | 'wrong' | 'manual' | 'none';
@@ -932,6 +940,11 @@ function resultMapItemClass(question: { questionId: number }): string {
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
+}
+
+/* 选项明细为子组件根节点，父级 scoped 样式可命中；组件自隐藏时不留空白 */
+.exam-option-review {
+  margin-top: 8px;
 }
 
 .result-answer-block,

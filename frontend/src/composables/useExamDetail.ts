@@ -13,6 +13,7 @@ import { getExamDetail, startExam, submitExam, saveExamDraft } from '@/api/exams
 import { ApiError } from '@/utils/request'
 import { useAuthStore } from '@/stores/auth'
 import { shuffleExamQuestions } from '@/utils/examShuffle'
+import { parseQuestionOptions } from '@/utils/examAnswer'
 import type { ExamAnswerDetail, ExamDetail, ExamQuestionView } from '@/types/exam'
 import type { StudentChoiceOption, StudentLabStepItem } from '@/types/lab'
 import type { InjectionKey } from 'vue';
@@ -124,41 +125,6 @@ function normalizeType(type: string): string {
   return map[type] ?? 'TEXT'
 }
 
-function parseOptions(options: ExamQuestionView['options'] | string | null | undefined): Array<{ key: string; label: string }> {
-  if (!options) return []
-  let list: Array<{ key: string; label: string } | string> | null = null
-  if (Array.isArray(options)) {
-    list = options
-  } else if (typeof options === 'string') {
-    try {
-      list = JSON.parse(options)
-    } catch {
-      return []
-    }
-  }
-  if (!Array.isArray(list)) return []
-  return list.map((item, index) => {
-    if (typeof item === 'object' && item && 'key' in item && 'label' in item) {
-      return item as { key: string; label: string }
-    }
-    if (typeof item === 'object' && item && 'key' in item) {
-      const record = item as Record<string, unknown>
-      return {
-        key: String(record.key ?? ''),
-        label: String(record.label ?? record.content ?? record.text ?? record.value ?? '').trim(),
-      }
-    }
-    if (typeof item === 'string') {
-      const dotIndex = item.indexOf('.')
-      if (dotIndex > 0) {
-        return { key: item.slice(0, dotIndex), label: item.slice(dotIndex + 1) }
-      }
-      return { key: String.fromCharCode(65 + index), label: item }
-    }
-    return { key: String.fromCharCode(65 + index), label: String(item) }
-  })
-}
-
 function toStudentLabStepItem(question: ExamQuestionView): StudentLabStepItem {
   return {
     id: question.questionId,
@@ -176,7 +142,7 @@ function toStudentLabStepItem(question: ExamQuestionView): StudentLabStepItem {
 
 function resolveQuestionOptions(question?: ExamQuestionView | null): StudentChoiceOption[] {
   if (!question) return []
-  return parseOptions(question.optionsJson ?? question.options).map(option => ({
+  return parseQuestionOptions(question.optionsJson ?? question.options).map(option => ({
     key: option.key,
     label: option.label,
   }))
@@ -722,7 +688,7 @@ onUnmounted(() => {
   stopTimer()
 })
 
-  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, router, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, deadlineAt, deadlineReached, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, qType, orderedQuestions, normalizeType, parseOptions, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
+  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, router, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, deadlineAt, deadlineReached, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, resultStatusDescription, qType, orderedQuestions, normalizeType, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
 }
 
 export type ExamDetailState = ReturnType<typeof useExamDetail>;

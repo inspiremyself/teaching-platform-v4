@@ -123,6 +123,15 @@
               </div>
 
               <div class="question-card__body">
+                <ExamOptionReview
+                  :options-json="answer.optionsJson"
+                  :question-type="answer.questionType"
+                  :student-answer="answer.studentAnswer"
+                  :standard-answer="answer.standardAnswer"
+                  selected-label="学生选择"
+                  correct-label="标准答案"
+                />
+
                 <div class="answer-block">
                   <div class="answer-block__label">学生答案</div>
                   <div class="answer-block__value">{{ formatDisplayAnswer(answer.studentAnswer) }}</div>
@@ -235,6 +244,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
+import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
 
 interface GradeItem {
