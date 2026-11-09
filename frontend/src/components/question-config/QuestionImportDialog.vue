@@ -12,7 +12,7 @@
   >
     <div class="question-import-dialog__shell">
       <p class="question-import-dialog__desc">
-        粘贴客观题 JSON 数组（支持单选 / 多选 / 判断），先解析校验再逐条写入题库；已存在的编码会自动跳过。
+        粘贴客观题 JSON 数组（支持单选 / 多选 / 判断），先解析校验再逐条写入题库；校验错误的行不导入，已存在的编码会自动跳过。
       </p>
 
       <el-input
@@ -183,7 +183,7 @@ const importDisabled = computed(() => {
   if (importing.value) return true
   const result = parseResult.value
   if (!result) return true
-  return result.errorCount > 0 || result.readyCount === 0
+  return result.readyCount === 0
 })
 
 const rowClassName = ({ row }: { row: ImportPreviewRow }) => {
