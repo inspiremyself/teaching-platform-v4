@@ -14,6 +14,7 @@ import type {
   ImportStudentsResult,
   ListAuditLogsParams,
   PlatformSchoolItem,
+  PlatformSubject,
   ResetStudentPasswordPayload,
   SchoolInfo,
   SchoolStatus,
@@ -62,6 +63,12 @@ export const updateSubject = (id: number, data: UpdateSubjectPayload) =>
 
 export const changeSubjectStatus = (id: number, status: SubjectStatus) =>
   request.post<AdminSubject>(`/admin/subjects/${id}/status`, { status });
+
+export const listPlatformSubjects = () =>
+  request.get<PlatformSubject[]>('/admin/subjects/platform');
+
+export const enablePlatformSubject = (platformSubjectId: number) =>
+  request.post<AdminSubject>(`/admin/subjects/platform/${platformSubjectId}/enable`);
 
 export const listAdminClasses = (teacherUserId?: number) =>
   request.get<AdminClass[]>('/admin/classes', {

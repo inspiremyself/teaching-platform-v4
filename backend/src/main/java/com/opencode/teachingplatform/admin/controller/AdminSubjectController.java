@@ -47,4 +47,15 @@ public class AdminSubjectController {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(adminSubjectService.changeStatus(currentUser, id, request));
     }
+
+    @GetMapping("/platform")
+    public ApiResponse<?> listPlatform() {
+        return ApiResponse.ok(adminSubjectService.listPlatformSubjects());
+    }
+
+    @PostMapping("/platform/{platformSubjectId}/enable")
+    public ApiResponse<?> enablePlatform(@PathVariable Long platformSubjectId) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(adminSubjectService.enablePlatformSubject(currentUser, platformSubjectId));
+    }
 }

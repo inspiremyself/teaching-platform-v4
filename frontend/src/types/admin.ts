@@ -43,6 +43,15 @@ export interface AdminSubject {
   code: string;
   status: SubjectStatus;
   assignmentCount: number;
+  globalSubjectId: number | null;
+  globalSubjectCode: string | null;
+}
+
+export interface PlatformSubject {
+  id: number;
+  code: string;
+  name: string;
+  status: SubjectStatus;
 }
 
 export interface CreateTeacherPayload {

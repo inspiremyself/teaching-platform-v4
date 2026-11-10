@@ -1,5 +1,6 @@
 package com.opencode.teachingplatform.common;
 
+import com.opencode.teachingplatform.admin.service.AdminSubjectService;
 import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.exception.BusinessException;
@@ -12,6 +13,7 @@ import com.opencode.teachingplatform.material.service.MaterialService;
 import com.opencode.teachingplatform.question.dto.QuestionRequests.SaveQuestionRequest;
 import com.opencode.teachingplatform.question.service.QuestionBankCopyService;
 import com.opencode.teachingplatform.question.service.QuestionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,9 @@ class CrossSchoolNotFoundTests {
     private JdbcTemplate jdbc;
 
     @Autowired
+    private AdminSubjectService adminSubjectService;
+
+    @Autowired
     private LabServiceSupport labServiceSupport;
 
     @Autowired
@@ -63,6 +68,12 @@ class CrossSchoolNotFoundTests {
     private MaterialService materialService;
 
     private Long classA;
+
+    @AfterEach
+    void tearDown() {
+        jdbc.update("DELETE FROM school_subject WHERE school_id = ? AND code = ?",
+                SchoolScopeFixtures.SCHOOL_B, "B-SUBJECT");
+    }
 
     @BeforeEach
     void setUp() {
@@ -164,6 +175,35 @@ class CrossSchoolNotFoundTests {
                 teacher(FOREIGN_TEACHER_ID, SchoolScopeFixtures.SCHOOL_A), QUESTION_A), "无权限访问该题目");
         assertForbidden(() -> materialService.updateMaterial(
                 teacher(FOREIGN_TEACHER_ID, SchoolScopeFixtures.SCHOOL_A), MATERIAL_A, materialRequest), "无权限访问该资料");
+    }
+
+    @Test
+    void enablePlatformSubjectForOtherSchoolReturns40400() {
+        jdbc.update("DELETE FROM school_subject WHERE school_id = ? AND code = ?",
+                SchoolScopeFixtures.SCHOOL_B, "B-SUBJECT");
+        jdbc.update("INSERT INTO school_subject (school_id, name, code, status, created_at, updated_at) "
+                        + "VALUES (?, 'B校学科', 'B-SUBJECT', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                SchoolScopeFixtures.SCHOOL_B);
+        Long bSubjectId = jdbc.queryForObject(
+                "SELECT id FROM school_subject WHERE school_id = ? AND code = 'B-SUBJECT'",
+                Long.class, SchoolScopeFixtures.SCHOOL_B);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM subject WHERE id = ?", Integer.class,
+                bSubjectId)).isZero();
+        Integer rowsBefore = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM school_subject WHERE school_id = ?", Integer.class,
+                SchoolScopeFixtures.SCHOOL_B);
+
+        CurrentUser schoolAdmin = new CurrentUser(1L, "admin9001", "校管",
+                UserRole.SCHOOL_ADMIN, SchoolScopeFixtures.SCHOOL_A, "session-cross-school");
+        assertNotFound(() -> adminSubjectService.enablePlatformSubject(schoolAdmin, bSubjectId),
+                "学科不存在");
+
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM school_subject WHERE school_id = ?", Integer.class,
+                SchoolScopeFixtures.SCHOOL_B)).isEqualTo(rowsBefore);
+        assertThat(jdbc.queryForObject(
+                "SELECT COUNT(*) FROM school_subject WHERE school_id = ? AND global_subject_id IS NOT NULL",
+                Integer.class, SchoolScopeFixtures.SCHOOL_B)).isZero();
     }
 
     private void assertNotFound(Runnable action, String message) {

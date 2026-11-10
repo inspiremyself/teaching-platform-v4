@@ -25,6 +25,9 @@ public class SchoolSubject extends BaseEntity {
     @Column(nullable = false, length = 16)
     private SubjectStatus status;
 
+    @Column(name = "global_subject_id")
+    private Long globalSubjectId;
+
     public Long getSchoolId() { return schoolId; }
     public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
     public String getName() { return name; }
@@ -33,4 +36,6 @@ public class SchoolSubject extends BaseEntity {
     public void setCode(String code) { this.code = code; }
     public SubjectStatus getStatus() { return status; }
     public void setStatus(SubjectStatus status) { this.status = status; }
+    public Long getGlobalSubjectId() { return globalSubjectId; }
+    public void setGlobalSubjectId(Long globalSubjectId) { this.globalSubjectId = globalSubjectId; }
 }

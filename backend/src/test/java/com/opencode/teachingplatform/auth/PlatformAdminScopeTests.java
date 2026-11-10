@@ -71,6 +71,17 @@ class PlatformAdminScopeTests {
     }
 
     @Test
+    void platformAdminCannotReadSchoolSubjects() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/subjects").header("Authorization", platformBearer()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/subjects/platform").header("Authorization", platformBearer()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/subjects/platform/1/enable")
+                        .header("Authorization", platformBearer()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void platformAdminLoginWritesNullSchoolAuditAndThreePermissions() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

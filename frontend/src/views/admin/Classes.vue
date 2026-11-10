@@ -202,6 +202,8 @@ const syncSubjectSelectOptions = (assignedTeachers: { subjectId: number | null; 
         code: '—',
         status: 'DISABLED',
         assignmentCount: 0,
+        globalSubjectId: null,
+        globalSubjectCode: null,
       });
     }
   }

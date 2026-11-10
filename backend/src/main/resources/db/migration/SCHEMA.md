@@ -514,6 +514,43 @@
 - 唯一约束：`UNIQUE (session_key)`
 - 外键：`fk_user_login_session_user FOREIGN KEY (user_id) REFERENCES sys_user(id)`
 
+#### `subject`
+
+平台级学科字典；`code` 全平台唯一且不可变，不硬删除。初始学科由 `V30` 写入。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `code` | `VARCHAR(64)` | 否 |  | 平台学科编码，全平台唯一、不可变 |
+| `name` | `VARCHAR(128)` | 否 |  | 展示名，可改 |
+| `status` | `VARCHAR(16)` | 否 |  | `ACTIVE` / `DISABLED` |
+| `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
+| `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
+
+**约束**
+- 主键：`PRIMARY KEY (id)`
+- 唯一约束：`UNIQUE (code)`
+
+#### `school_subject`
+
+学校学科字典，是本校启用与本地别名层；`global_subject_id` 为 NULL 表示本校自建 / 未启用。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id |
+| `name` | `VARCHAR(128)` | 否 |  | 学科名称，可为本校别名 |
+| `code` | `VARCHAR(64)` | 否 |  | 学科编码，校内唯一；映射行锁定不可改 |
+| `status` | `VARCHAR(16)` | 否 |  | `ACTIVE` / `DISABLED` |
+| `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
+| `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
+| `global_subject_id` | `BIGINT` | 是 |  | 指向 `subject.id`；NULL = 本校自建 / 未启用 |
+
+**约束**
+- 主键：`PRIMARY KEY (id)`
+- 唯一约束：`UNIQUE (school_id, code)`
+- 唯一约束：`UNIQUE (school_id, global_subject_id)`（NULL 不参与唯一约束，一校一平台学科最多一条映射行）
+
 ---
 
 ## 二、最终版数据库的关键约束汇总
@@ -537,6 +574,9 @@
 - `experiment_answer (experiment_submission_id, experiment_item_id)`
 - `experiment_blank_answer_override (experiment_id, experiment_item_id, normalized_answer)`
 - `user_login_session.session_key`
+- `subject (code)`
+- `school_subject (school_id, code)`
+- `school_subject (school_id, global_subject_id)`
 
 ### 显式索引
 
@@ -585,3 +625,4 @@
 | 日期 | 内容 |
 |---|---|
 | 2026-11-10 | V29 归属维度唯一键收敛；按 2026-11-10 PRD V1.5 与技术方案修订 §一字段表、§二约束汇总 |
+| 2026-11-10 | V30 新增平台学科字典 subject 表与 school_subject.global_subject_id 映射列；按阶段 2 技术方案补 §一 两段表结构与 §二 3 行唯一约束 |

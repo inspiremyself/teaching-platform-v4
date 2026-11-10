@@ -8,6 +8,7 @@
           <p>维护本校学科字典，供班级指派学科教师时使用。</p>
         </div>
         <div class="workbench-header__actions">
+          <el-button @click="openPlatformDialog">从平台启用</el-button>
           <el-button type="primary" @click="openCreateDialog">
             <span class="material-symbols-outlined" style="font-size: 16px; margin-right: 4px;">add</span>
             新增学科
@@ -42,6 +43,11 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column label="来源" width="140">
+          <template #default="{ row }">
+            <span>{{ row.globalSubjectCode != null ? row.globalSubjectCode : '本校自建' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="assignmentCount" label="班级指派" width="120" />
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
@@ -67,12 +73,31 @@
           <el-input v-model="form.name" maxlength="128" placeholder="例如：软件体系结构" />
         </el-form-item>
         <el-form-item label="学科编码">
-          <el-input v-model="form.code" maxlength="64" placeholder="例如：SE-ARCH" />
+          <el-input v-model="form.code" maxlength="64" placeholder="例如：SE-ARCH" :disabled="codeLocked" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="platformDialogVisible" title="从平台启用学科" width="480px">
+      <el-form label-position="top">
+        <el-form-item label="平台学科">
+          <el-select v-model="selectedPlatformId" placeholder="请选择平台学科" style="width: 100%">
+            <el-option
+              v-for="item in platformOptions"
+              :key="item.id"
+              :label="`${item.name} (${item.code})`"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="platformDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="platformSubmitting" @click="submitPlatformEnable">启用</el-button>
       </template>
     </el-dialog>
   </div>
@@ -81,8 +106,15 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { changeSubjectStatus, createSubject, listSubjects, updateSubject } from '@/api/admin';
-import type { AdminSubject, SubjectStatus } from '@/types/admin';
+import {
+  changeSubjectStatus,
+  createSubject,
+  enablePlatformSubject,
+  listPlatformSubjects,
+  listSubjects,
+  updateSubject,
+} from '@/api/admin';
+import type { AdminSubject, PlatformSubject, SubjectStatus } from '@/types/admin';
 
 const loading = ref(false);
 const submitting = ref(false);
@@ -91,6 +123,11 @@ const editingId = ref<number | null>(null);
 const rows = ref<AdminSubject[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref<SubjectStatus | ''>('');
+const platformDialogVisible = ref(false);
+const platformOptions = ref<PlatformSubject[]>([]);
+const selectedPlatformId = ref<number | null>(null);
+const platformSubmitting = ref(false);
+const codeLocked = ref(false);
 
 const form = reactive({
   name: '',
@@ -116,6 +153,7 @@ const resetForm = () => {
   form.name = '';
   form.code = '';
   editingId.value = null;
+  codeLocked.value = false;
 };
 
 const fetchData = async () => {
@@ -129,6 +167,7 @@ const fetchData = async () => {
 
 const openCreateDialog = () => {
   resetForm();
+  codeLocked.value = false;
   dialogVisible.value = true;
 };
 
@@ -136,6 +175,7 @@ const openEditDialog = (row: AdminSubject) => {
   editingId.value = row.id;
   form.name = row.name;
   form.code = row.code;
+  codeLocked.value = row.globalSubjectId != null;
   dialogVisible.value = true;
 };
 
@@ -174,6 +214,35 @@ const toggleStatus = async (row: AdminSubject) => {
   await changeSubjectStatus(row.id, nextStatus);
   ElMessage.success('学科状态已更新');
   await fetchData();
+};
+
+const openPlatformDialog = async () => {
+  selectedPlatformId.value = null;
+  try {
+    platformOptions.value = await listPlatformSubjects();
+    platformDialogVisible.value = true;
+  } catch {
+    // 全局拦截器已提示，这里仅阻止异常冒泡且不打开空下拉
+  }
+};
+
+const submitPlatformEnable = async () => {
+  if (selectedPlatformId.value == null) {
+    ElMessage.warning('请选择平台学科');
+    return;
+  }
+  platformSubmitting.value = true;
+  try {
+    await enablePlatformSubject(selectedPlatformId.value);
+    ElMessage.success('平台学科已启用');
+    platformDialogVisible.value = false;
+    selectedPlatformId.value = null;
+    await fetchData();
+  } catch {
+    // 全局拦截器已提示，这里仅阻止异常冒泡并保持弹窗打开
+  } finally {
+    platformSubmitting.value = false;
+  }
 };
 
 onMounted(fetchData);
