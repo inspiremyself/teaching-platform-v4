@@ -12,22 +12,46 @@
   >
     <div class="question-import-dialog__shell">
       <p class="question-import-dialog__desc">
-        粘贴客观题 JSON 数组（支持单选 / 多选 / 判断），先解析校验再逐条写入题库；校验错误的行不导入，已存在的编码会自动跳过。
+        上传题目 JSON 文件（支持单选 / 多选 / 判断）。任一行校验错误则整批不导入；已存在的编码与文件内重复编码自动跳过。
       </p>
 
-      <el-input
-        v-model="jsonText"
-        type="textarea"
-        :rows="10"
-        class="question-import-dialog__textarea"
-        :disabled="importing"
-        :placeholder="placeholderText"
-      />
-
       <div class="question-import-dialog__toolbar">
-        <el-button :loading="parsing" :disabled="importing" @click="handleParse">解析预览</el-button>
-        <span class="question-import-dialog__toolbar-hint">编码会自动去空格并转大写后判重。</span>
+        <el-button :disabled="importing" @click="downloadQuestionImportTemplate">下载规范示例</el-button>
+        <span class="question-import-dialog__toolbar-note">示例文件自包含字段要求、编码要求与 JSON Schema，上传的文件即模板格式。</span>
       </div>
+
+      <section class="question-import-dialog__file-panel">
+        <div class="question-import-dialog__file-panel-title">JSON 文件导入</div>
+        <div
+          :class="['question-import-dialog__file-panel-drop', { 'is-dragover': isDragOver }]"
+          @dragenter.prevent="handleImportDragEnter"
+          @dragover.prevent="handleImportDragOver"
+          @dragleave.prevent="handleImportDragLeave"
+          @drop.prevent="handleImportDrop"
+        >
+          <div class="question-import-dialog__file-panel-meta">
+            <strong>{{ importFileName || '尚未选择文件' }}</strong>
+            <span>已解析 {{ parseResult?.rows.length ?? 0 }} 道题</span>
+          </div>
+          <div class="question-import-dialog__file-panel-actions">
+            <el-upload
+              accept=".json"
+              :auto-upload="false"
+              :show-file-list="false"
+              :on-change="handleImportFileChange"
+            >
+              <el-button type="primary" plain :loading="parsing" :disabled="importing">选择 JSON 文件</el-button>
+            </el-upload>
+            <el-button v-if="selectedImportFile" :disabled="importing" @click="clearImportFile">清空文件</el-button>
+          </div>
+        </div>
+        <div class="question-import-dialog__file-panel-tips">
+          <span>可直接拖拽 .json 文件到此处</span>
+          <span>示例题为格式演示，导入前请替换，否则会写入真实题库</span>
+        </div>
+      </section>
+
+      <QuestionImportSpecPanel />
 
       <el-alert
         v-if="fatalError"
@@ -123,9 +147,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { UploadFile } from 'element-plus'
 import { createQuestion, listQuestions } from '@/api/questions'
 import { ApiError } from '@/utils/request'
-import { normalizeImportCode, parseImportJson } from '@/utils/questionImport'
+import { normalizeImportCode, parseImportDocument } from '@/utils/questionImport'
+import {
+  buildFailedItemsDocument,
+  downloadQuestionImportTemplate,
+  stripBom,
+  validateImportFileMeta,
+} from '@/utils/questionImportSpec'
+import QuestionImportSpecPanel from './QuestionImportSpecPanel.vue'
 import type { ImportParseResult, ImportPreviewRow, ImportQuestionDraft } from '@/types/question-import'
 import type { SaveQuestionPayload } from '@/types/question'
 
@@ -147,24 +179,11 @@ interface ImportResultRow {
   draft?: ImportQuestionDraft
 }
 
-const placeholderText = `[
-  {
-    "code": "S-001",
-    "type": "SINGLE",
-    "stem": "题干内容",
-    "difficulty": "EASY",
-    "options": [{ "key": "A", "content": "选项A" }, { "key": "B", "content": "选项B" }],
-    "answer": ["A"],
-    "analysis": "解析说明"
-  }
-]`
-
 const dialogVisible = computed({
   get: () => props.visible,
   set: value => emit('update:visible', value),
 })
 
-const jsonText = ref('')
 const parsing = ref(false)
 const importing = ref(false)
 const fatalError = ref('')
@@ -173,6 +192,11 @@ const importResults = ref<ImportResultRow[]>([])
 /** 本轮导入是否已执行过，用于「再次导入」文案 */
 const hasImportRound = ref(false)
 const progress = ref({ current: 0, total: 0 })
+const selectedImportFile = ref<File | null>(null)
+const importFileName = ref('')
+const isDragOver = ref(false)
+/** 并发文件选择快照：丢弃过期请求的预览写入 */
+let importFileSeq = 0
 
 const progressPercentage = computed(() =>
   progress.value.total ? Math.round((progress.value.current / progress.value.total) * 100) : 0,
@@ -197,26 +221,90 @@ const resultStatusLabel = (status: ImportResultStatus) => {
   return '失败'
 }
 
-/** 重置本轮导入进度与结果，保留 JSON 与预览 */
+/** 重置本轮导入进度与结果 */
 const resetRoundState = () => {
   importResults.value = []
   hasImportRound.value = false
   progress.value = { current: 0, total: 0 }
 }
 
-/** 解析粘贴的 JSON：先拉取题库编码做存量判重 */
-const handleParse = async () => {
+const clearImportFile = () => {
+  selectedImportFile.value = null
+  importFileName.value = ''
+  parseResult.value = null
+  fatalError.value = ''
+  isDragOver.value = false
+  resetRoundState()
+}
+
+/** 选择 / 拖拽文件后自动读取、判重并解析预览 */
+const applyImportFile = async (file: File) => {
+  const seq = ++importFileSeq
+  const metaError = validateImportFileMeta(file.name, file.size)
+  if (metaError) {
+    ElMessage.warning(metaError)
+    clearImportFile()
+    return
+  }
+
   parsing.value = true
   try {
-    const items = await listQuestions()
+    const text = stripBom(await file.text())
+    const items = await listQuestions().catch(() => null)
+    if (seq !== importFileSeq) return
+    if (!items) {
+      clearImportFile()
+      return
+    }
     const existingCodes = new Set(items.map(item => normalizeImportCode(item.code)))
-    const { result, fatalError: error } = parseImportJson(jsonText.value, existingCodes)
+    const { result, fatalError: error } = parseImportDocument(text, existingCodes)
+    selectedImportFile.value = file
+    importFileName.value = file.name
     parseResult.value = result
     fatalError.value = error
     resetRoundState()
+  } catch (error) {
+    if (seq !== importFileSeq) return
+    clearImportFile()
+    ElMessage.error(error instanceof Error ? error.message : '导入文件解析失败，请检查文件内容')
   } finally {
-    parsing.value = false
+    if (seq === importFileSeq) {
+      parsing.value = false
+      isDragOver.value = false
+    }
   }
+}
+
+const handleImportFileChange = async (uploadFile: UploadFile) => {
+  const rawFile = uploadFile.raw
+  if (!rawFile) return
+  await applyImportFile(rawFile)
+}
+
+const handleImportDragEnter = () => {
+  isDragOver.value = true
+}
+
+const handleImportDragOver = () => {
+  isDragOver.value = true
+}
+
+const handleImportDragLeave = (event: DragEvent) => {
+  const currentTarget = event.currentTarget
+  const relatedTarget = event.relatedTarget
+  if (currentTarget instanceof HTMLElement && relatedTarget instanceof Node && currentTarget.contains(relatedTarget)) {
+    return
+  }
+  isDragOver.value = false
+}
+
+const handleImportDrop = async (event: DragEvent) => {
+  const file = event.dataTransfer?.files?.[0]
+  if (!file) {
+    isDragOver.value = false
+    return
+  }
+  await applyImportFile(file)
 }
 
 /** 将校验通过的草稿转换为单题新增接口所需的 payload */
@@ -272,18 +360,19 @@ const startImport = async () => {
   }
 }
 
-/** 复制失败项原始 JSON，便于修正后再次导入 */
+/** 复制失败项 wrapper 文档，可直接保存为 .json 重新上传 */
 const copyFailedItems = async () => {
   const failedDrafts = importResults.value
     .filter(item => item.status === 'FAILED' && item.draft)
     .map(item => item.draft)
+    .filter((draft): draft is ImportQuestionDraft => !!draft)
   if (!failedDrafts.length) {
     ElMessage.info('当前没有失败项')
     return
   }
   try {
-    await navigator.clipboard.writeText(JSON.stringify(failedDrafts, null, 2))
-    ElMessage.success('失败项已复制')
+    await navigator.clipboard.writeText(JSON.stringify(buildFailedItemsDocument(failedDrafts), null, 2))
+    ElMessage.success('失败项已复制，可直接保存为 .json 文件重新上传')
   } catch {
     ElMessage.warning('当前环境不支持复制，请手动整理失败项')
   }
@@ -302,7 +391,9 @@ watch(
   () => props.visible,
   value => {
     if (!value) return
-    jsonText.value = ''
+    selectedImportFile.value = null
+    importFileName.value = ''
+    isDragOver.value = false
     parsing.value = false
     importing.value = false
     fatalError.value = ''
@@ -330,19 +421,68 @@ watch(
   line-height: 1.7;
 }
 
-.question-import-dialog__textarea :deep(.el-textarea__inner) {
-  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
 .question-import-dialog__toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.question-import-dialog__toolbar-hint {
+.question-import-dialog__toolbar-note {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.question-import-dialog__file-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.question-import-dialog__file-panel-title {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.question-import-dialog__file-panel-drop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.question-import-dialog__file-panel-drop.is-dragover {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+
+.question-import-dialog__file-panel-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.question-import-dialog__file-panel-meta strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.question-import-dialog__file-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.question-import-dialog__file-panel-tips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
   color: #94a3b8;
   font-size: 12px;
 }
