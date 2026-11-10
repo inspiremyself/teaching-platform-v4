@@ -113,7 +113,6 @@
 | `type` | `VARCHAR(32)` | 否 |  | 题型 |
 | `stem` | `TEXT` | 否 |  | 题干 |
 | `difficulty` | `VARCHAR(32)` | 否 |  | 难度 |
-| `default_score` | `INT` | 否 |  | 默认分值 |
 | `options_json` | `TEXT` | 是 |  | 选项配置 |
 | `answer_json` | `TEXT` | 是 |  | 标准答案 |
 | `analysis_text` | `TEXT` | 是 |  | 解析 |

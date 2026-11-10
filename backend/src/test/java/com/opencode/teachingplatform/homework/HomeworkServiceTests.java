@@ -474,6 +474,90 @@ class HomeworkServiceTests {
     }
 
     @Test
+    void gradingHomeworkAnswerOutsideQuestionScoreIsRejected() {
+        Homework homework = createHomework(1L, 1L, "逐题给分边界作业", ActivityStatus.PUBLISHED);
+        HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 15D, "请说明策略模式的价值");
+
+        HomeworkSubmission submission = new HomeworkSubmission();
+        submission.setHomeworkId(homework.getId());
+        submission.setStudentId(2L);
+        submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
+        HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
+
+        HomeworkAnswer answer = new HomeworkAnswer();
+        answer.setHomeworkSubmissionId(savedSubmission.getId());
+        answer.setHomeworkQuestionId(question.getId());
+        answer.setAnswerText("strategy 提升扩展性");
+        answer.setSuggestedScore(12D);
+        answer.setScoreSource("RECOMMENDED");
+        HomeworkAnswer savedAnswer = homeworkAnswerRepository.save(answer);
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        assertThatThrownBy(() -> homeworkService.gradeAnswer(teacher, savedAnswer.getId(),
+                new HomeworkRequests.GradeHomeworkAnswerRequest(16D, "超出上限", false)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+        assertThatThrownBy(() -> homeworkService.gradeAnswer(teacher, savedAnswer.getId(),
+                new HomeworkRequests.GradeHomeworkAnswerRequest(-1D, "负数", false)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+        assertThatThrownBy(() -> homeworkService.gradeAnswer(teacher, savedAnswer.getId(),
+                new HomeworkRequests.GradeHomeworkAnswerRequest(0.5D, "小数", false)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须为整数");
+
+        homeworkService.gradeAnswer(teacher, savedAnswer.getId(),
+                new HomeworkRequests.GradeHomeworkAnswerRequest(15D, "满分", false));
+        assertThat(homeworkAnswerRepository.findById(savedAnswer.getId()).orElseThrow().getScore()).isEqualTo(15D);
+    }
+
+    @Test
+    void gradingHomeworkTotalScoreAbovePlanTotalIsRejected() {
+        Homework homework = createHomework(1L, 1L, "总评上限作业", ActivityStatus.PUBLISHED);
+        createInlineHomeworkQuestion(homework.getId(), 1, 15D, "主观题一");
+        createInlineHomeworkQuestion(homework.getId(), 2, 5D, "主观题二");
+
+        HomeworkSubmission submission = new HomeworkSubmission();
+        submission.setHomeworkId(homework.getId());
+        submission.setStudentId(2L);
+        submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
+        HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        assertThatThrownBy(() -> homeworkService.gradeSubmission(teacher, savedSubmission.getId(),
+                new HomeworkRequests.GradeHomeworkRequest(21D, "超出计划满分")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("总评不能超过计划满分 20 分");
+        assertThatThrownBy(() -> homeworkService.gradeSubmission(teacher, savedSubmission.getId(),
+                new HomeworkRequests.GradeHomeworkRequest(-1D, "负数")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("总评不能为负数");
+        assertThatThrownBy(() -> homeworkService.gradeSubmission(teacher, savedSubmission.getId(),
+                new HomeworkRequests.GradeHomeworkRequest(10.5D, "小数")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须为整数");
+
+        Map<String, Object> graded = homeworkService.gradeSubmission(teacher, savedSubmission.getId(),
+                new HomeworkRequests.GradeHomeworkRequest(20D, "计划满分"));
+        assertThat(graded.get("totalScore")).isEqualTo(20D);
+    }
+
+    @Test
+    void gradingAttachmentHomeworkTotalScoreHasNoUpperLimit() {
+        Homework homework = createHomework(1L, 1L, "附件型作业总评", ActivityStatus.PUBLISHED);
+        HomeworkSubmission submission = new HomeworkSubmission();
+        submission.setHomeworkId(homework.getId());
+        submission.setStudentId(2L);
+        submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
+        HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
+
+        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
+        Map<String, Object> graded = homeworkService.gradeSubmission(teacher, savedSubmission.getId(),
+                new HomeworkRequests.GradeHomeworkRequest(999D, "附件作业不设上限"));
+        assertThat(graded.get("totalScore")).isEqualTo(999D);
+    }
+
+    @Test
     void teacherCanAcceptSuggestedScoreForHomeworkAnswer() {
         Homework homework = createHomework(1L, 1L, "教师采纳推荐分作业", ActivityStatus.PUBLISHED);
         HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 15D, "请说明策略模式的价值");
@@ -1076,8 +1160,8 @@ class HomeworkServiceTests {
         // 显式指定主键，避免 H2 identity 与种子数据显式 ID 冲突
         jdbcTemplate.update(
                 """
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, answer_json, created_by, created_at, updated_at, school_id)
-                VALUES (9002, ?, 'SINGLE', ?, 'MEDIUM', 5, '["A"]', 3, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)
+                INSERT INTO question_bank (id, code, type, stem, difficulty, answer_json, created_by, created_at, updated_at, school_id)
+                VALUES (9002, ?, 'SINGLE', ?, 'MEDIUM', '["A"]', 3, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)
                 """,
                 foreignCode, "他人创建的题库题目"
         );

@@ -10,6 +10,9 @@
           <span class="header-meta-chip">{{ experimentTypeLabel(detail.experimentType) }}</span>
           <span class="header-meta-chip">进度：{{ answeredCount }}/{{ labItems.length }}</span>
           <span class="header-meta-chip">{{ labItems.length }} 题</span>
+          <span v-if="showLabScore" class="header-meta-chip">
+            总分 {{ detail.totalScore }}<template v-if="planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template>
+          </span>
           <span class="header-meta-chip">开始：{{ detail.startAt ? formatDateTime(detail.startAt) : '不限' }}</span>
           <span class="header-meta-chip">截止：{{ detail.dueAt ? formatDateTime(detail.dueAt) : '不限' }}</span>
           <span v-if="isNotStarted" class="header-meta-chip header-meta-chip--warning">实验尚未开始</span>
@@ -86,7 +89,9 @@
                 <span>{{ questionTypeLabel(item.questionType) }}</span>
                 <span>{{ item.stepScore }} 分</span>
                 <span>{{ item.answerText?.trim() ? '已保存答案' : '待作答' }}</span>
-                <span v-if="showLabScore && item.score !== null && item.score !== undefined">得分 {{ item.score }}/{{ item.stepScore }}</span>
+                <span v-if="showLabScore && item.score !== null && item.score !== undefined">
+                  得分 {{ item.score }}<template v-if="item.stepScore > 0">/{{ item.stepScore }}</template>
+                </span>
               </span>
             </span>
             <span class="catalog-item__link">进入</span>
@@ -133,6 +138,10 @@ const labItems = computed(() => {
 });
 const answeredCount = computed(() => labItems.value.filter((item) => item.answerText?.trim()).length);
 const showLabScore = computed(() => typeof detail.value?.totalScore === 'number');
+/** 计划满分 = Σ 题项分值；为 0（全 0 分实验）时成绩页只显示得分，避免出现 `/ 0` */
+const planTotalScore = computed(() =>
+  labItems.value.reduce((sum, item) => sum + (Number(item.stepScore) || 0), 0),
+);
 const showLabFeedback = computed(() => !!detail.value?.teacherComment || showLabScore.value);
 const progressPercent = computed(() => {
   const total = labItems.value.length;

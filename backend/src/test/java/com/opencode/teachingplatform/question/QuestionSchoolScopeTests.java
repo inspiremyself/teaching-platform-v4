@@ -77,6 +77,6 @@ class QuestionSchoolScopeTests {
 
     private static QuestionRequests.SaveQuestionRequest request(String code) {
         return new QuestionRequests.SaveQuestionRequest(
-                code, "SINGLE", "跨校回归题干", "MEDIUM", 5, "[\"A\",\"B\"]", "[\"A\"]", "解析");
+                code, "SINGLE", "跨校回归题干", "MEDIUM", "[\"A\",\"B\"]", "[\"A\"]", "解析");
     }
 }

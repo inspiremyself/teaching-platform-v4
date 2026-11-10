@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.exam.dto;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -23,7 +24,11 @@ public final class ExamRequests {
             Long questionId,
             String sourceType,
             @NotNull Integer sortOrder,
-            @NotNull Double questionScore
+            @NotNull
+            @Min(value = 1, message = "分值必须为 1–100 的整数")
+            @Max(value = 100, message = "分值必须为 1–100 的整数")
+            @Digits(integer = 3, fraction = 0, message = "分值必须为 1–100 的整数")
+            Double questionScore
     ) {
         public ExamQuestionItem(Long questionId, Integer sortOrder, Double questionScore) {
             this(questionId, "BANK", sortOrder, questionScore);

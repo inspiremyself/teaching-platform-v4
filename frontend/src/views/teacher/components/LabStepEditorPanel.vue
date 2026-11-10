@@ -20,7 +20,7 @@
         <div class="lab-steps-console__meta-row">
           <span class="lab-steps-console__meta-chip lab-steps-console__meta-chip--accent">{{ labSummaryTitle }}</span>
           <span class="lab-steps-console__meta-chip">{{ rows.length }} 个题项</span>
-          <span class="lab-steps-console__meta-chip">总分 {{ totalScore }} 分</span>
+          <span class="lab-steps-console__meta-chip">计划满分 {{ totalScore }} 分</span>
           <span class="lab-steps-console__meta-chip">{{ completionSummary }}</span>
         </div>
 
@@ -269,7 +269,7 @@
                   </el-form-item>
 
                   <el-form-item label="题项分值">
-                    <el-input-number v-model="form.stepScore" :min="0" style="width: 100%" />
+                    <el-input-number v-model="form.stepScore" :min="0" :max="100" :precision="0" :step="1" style="width: 100%" />
                   </el-form-item>
                 </div>
               </el-form>

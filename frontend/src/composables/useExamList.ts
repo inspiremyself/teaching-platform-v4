@@ -115,7 +115,6 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
     ...current,
     code: matchedRow.code,
     difficulty: matchedRow.difficulty as QuestionEditorDialogValue['difficulty'],
-    defaultScore: matchedRow.defaultScore,
     analysisText: matchedRow.analysisText,
     options: parseQuestionAnswerArray(matchedRow.optionsJson).map((option, index) => {
       if (option && typeof option === 'object') {
@@ -356,7 +355,6 @@ const submitConfiguredQuestion = async (editorPayload: QuestionEditorDialogSubmi
       code: editorPayload.code,
       type: editorPayload.type,
       difficulty: editorPayload.difficulty,
-      defaultScore: editorPayload.defaultScore,
       analysisText: editorPayload.analysisText,
     })
     await updateQuestion(current.questionBankId, payload)
@@ -562,13 +560,18 @@ const submissionHint = (row: ExamListItem) => {
   return count > 0 ? `共收到 ${count} 份提交，可汇总批改` : '考试已关闭，暂无提交记录'
 }
 
+/** 计划满分 = Σ 每题配置分值；只做展示，不参与提交 */
+const planTotalScore = computed(() =>
+  configuredQuestions.value.reduce((total, item) => total + (Number(item.score) || 0), 0),
+)
+
 onMounted(async () => {
   await Promise.all([fetchClasses(), fetchQuestions()])
   resetForm()
   await fetchExams()
 })
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint };
 }
 
 export type ExamListState = ReturnType<typeof useExamList>;

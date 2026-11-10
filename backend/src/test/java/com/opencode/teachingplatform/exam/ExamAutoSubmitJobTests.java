@@ -73,9 +73,9 @@ class ExamAutoSubmitJobTests {
                 SINGLE_QUESTION_ID, JUDGE_QUESTION_ID, SUBJECTIVE_QUESTION_ID);
         jdbcTemplate.update(
                 """
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
+                INSERT INTO question_bank (id, code, type, stem, difficulty, options_json,
                                            answer_json, created_by, created_at, updated_at, school_id)
-                VALUES (?, 'AUTOSUBMIT-SINGLE', 'SINGLE', '自动交卷单选题', 'MEDIUM', 5,
+                VALUES (?, 'AUTOSUBMIT-SINGLE', 'SINGLE', '自动交卷单选题', 'MEDIUM',
                         '[{"key":"A","content":"正确"},{"key":"B","content":"错误"}]', '["A"]', 1,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """,
@@ -83,18 +83,18 @@ class ExamAutoSubmitJobTests {
         );
         jdbcTemplate.update(
                 """
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
+                INSERT INTO question_bank (id, code, type, stem, difficulty, options_json,
                                            answer_json, created_by, created_at, updated_at, school_id)
-                VALUES (?, 'AUTOSUBMIT-JUDGE', 'TRUE_FALSE', '自动交卷判断题', 'MEDIUM', 3,
+                VALUES (?, 'AUTOSUBMIT-JUDGE', 'TRUE_FALSE', '自动交卷判断题', 'MEDIUM',
                         NULL, '["true"]', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """,
                 JUDGE_QUESTION_ID
         );
         jdbcTemplate.update(
                 """
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
+                INSERT INTO question_bank (id, code, type, stem, difficulty, options_json,
                                            answer_json, created_by, created_at, updated_at, school_id)
-                VALUES (?, 'AUTOSUBMIT-SUBJECTIVE', 'SUBJECTIVE', '自动交卷主观题', 'MEDIUM', 10,
+                VALUES (?, 'AUTOSUBMIT-SUBJECTIVE', 'SUBJECTIVE', '自动交卷主观题', 'MEDIUM',
                         NULL, '["参考答案"]', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """,
                 SUBJECTIVE_QUESTION_ID

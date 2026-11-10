@@ -149,6 +149,8 @@
                         v-model="gradeFormMap[gradeKey(item)].score"
                         :min="0"
                         :max="maxScoreOf(item)"
+                        :precision="0"
+                        :step="1"
                         style="width: 100%"
                         :disabled="isSavedPreview"
                       />

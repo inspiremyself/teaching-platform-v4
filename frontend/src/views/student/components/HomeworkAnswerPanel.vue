@@ -274,7 +274,7 @@
               </div>
               <div v-if="showHomeworkResult" class="detail-meta-item detail-meta-item--accent">
                 <span>总分</span>
-                <strong>{{ detail.totalScore ?? '-' }}</strong>
+                <strong>{{ detail.totalScore ?? '-' }}<template v-if="typeof detail.totalScore === 'number' && planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template></strong>
               </div>
             </div>
           </article>
@@ -337,7 +337,7 @@
             <div class="feedback-stack">
               <div class="feedback-pill">
                 <span>总分</span>
-                <strong>{{ detail.totalScore ?? '-' }}</strong>
+                <strong>{{ detail.totalScore ?? '-' }}<template v-if="typeof detail.totalScore === 'number' && planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template></strong>
               </div>
               <div class="feedback-pill feedback-pill--blue">
                 <span>查重率</span>
@@ -356,7 +356,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { HomeworkDetailKey } from '@/composables/useHomeworkDetail';
-const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, loading, submitting, detail, currentQuestionIndex, form, autoSaveStatus, lastSavedDraft, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, countdownLabel, submitForm, restoreSavedDraft, submissionStatusLabel, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, showQuestionFeedback, answerHint, questionTypeLabel, formatRate, formatDateTime } = inject(HomeworkDetailKey)!;
+const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, loading, submitting, detail, currentQuestionIndex, form, autoSaveStatus, lastSavedDraft, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, submitForm, restoreSavedDraft, submissionStatusLabel, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, showQuestionFeedback, answerHint, questionTypeLabel, formatRate, formatDateTime } = inject(HomeworkDetailKey)!;
 </script>
 
 <style scoped>

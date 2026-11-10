@@ -17,8 +17,6 @@ public class QuestionBank extends BaseEntity {
     private String stem;
     @Column(nullable = false, length = 32)
     private String difficulty;
-    @Column(name = "default_score", nullable = false)
-    private Integer defaultScore;
     @Column(name = "options_json", columnDefinition = "json")
     private String optionsJson;
     @Column(name = "answer_json", columnDefinition = "json")
@@ -47,8 +45,6 @@ public class QuestionBank extends BaseEntity {
     public void setStem(String stem) { this.stem = stem; }
     public String getDifficulty() { return difficulty; }
     public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
-    public Integer getDefaultScore() { return defaultScore; }
-    public void setDefaultScore(Integer defaultScore) { this.defaultScore = defaultScore; }
     public String getOptionsJson() { return optionsJson; }
     public void setOptionsJson(String optionsJson) { this.optionsJson = optionsJson; }
     public String getAnswerJson() { return answerJson; }

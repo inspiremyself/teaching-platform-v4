@@ -470,6 +470,63 @@ class ExamServiceTests {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void gradingSubjectiveScoreOutsideSnapshotRangeIsRejected() {
+        Long examId = createPublishedExamForStudent();
+        Map<String, Object> startResult = (Map<String, Object>) examService.startExam(student, examId);
+        Long submissionId = ((Number) startResult.get("submissionId")).longValue();
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(2L, List.of("true"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(3L, null, "回答", null, null)
+        )));
+
+        assertThatThrownBy(() -> examService.gradeSubmission(teacher, submissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of(
+                        new ExamRequests.GradeExamAnswerItem(3L, 11.0, "超出上限")))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+        assertThatThrownBy(() -> examService.gradeSubmission(teacher, submissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of(
+                        new ExamRequests.GradeExamAnswerItem(3L, -1.0, "负数")))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+        assertThatThrownBy(() -> examService.gradeSubmission(teacher, submissionId,
+                new ExamRequests.GradeExamSubmissionRequest(List.of(
+                        new ExamRequests.GradeExamAnswerItem(3L, 0.5, "小数")))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须为整数");
+
+        Map<String, Object> gradeResult = (Map<String, Object>) examService.gradeSubmission(
+                teacher, submissionId, new ExamRequests.GradeExamSubmissionRequest(List.of(
+                        new ExamRequests.GradeExamAnswerItem(3L, 10.0, "满分"))));
+        assertThat(((Number) gradeResult.get("manualScore")).doubleValue()).isEqualTo(10.0);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void confirmAnswerWithOutOfRangeExplicitScoreIsRejected() {
+        Long examId = createPublishedExamForStudent();
+        Map<String, Object> startResult = (Map<String, Object>) examService.startExam(student, examId);
+        Long submissionId = ((Number) startResult.get("submissionId")).longValue();
+        examService.submitExam(student, examId, new ExamRequests.SubmitExamRequest(List.of(
+                new ExamRequests.SubmitAnswerItem(1L, List.of("A"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(2L, List.of("true"), null, null, null),
+                new ExamRequests.SubmitAnswerItem(3L, null, "回答", null, null)
+        )));
+
+        assertThatThrownBy(() -> examService.confirmAnswer(teacher, submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(3L, "越界", 11.0, false)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+
+        // 采纳推荐分时忽略请求中的自填分数，不做越界校验
+        Map<String, Object> result = (Map<String, Object>) examService.confirmAnswer(teacher, submissionId,
+                new ExamRequests.ConfirmExamAnswerRequest(3L, "采纳推荐", 999.0, true));
+        assertThat(((Number) result.get("manualScore")).doubleValue()).isBetween(0.0, 10.0);
+    }
+
+    @Test
     void gradingNonSubmittedSubmissionIsRejected() {
         Long examId = createPublishedExamForStudent();
         @SuppressWarnings("unchecked")
@@ -1759,9 +1816,9 @@ class ExamServiceTests {
 
     private void insertForeignQuestionBankItem() {
         jdbcTemplate.update("""
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score,
+                INSERT INTO question_bank (id, code, type, stem, difficulty,
                                            options_json, answer_json, analysis_text, created_by, created_at, updated_at, school_id)
-                VALUES (9001, 'Q-FOREIGN-9001', 'SINGLE', '他人题目', 'EASY', 5,
+                VALUES (9001, 'Q-FOREIGN-9001', 'SINGLE', '他人题目', 'EASY',
                         '["A","B"]', '["A"]', '解析', 3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """);
     }
@@ -1774,15 +1831,15 @@ class ExamServiceTests {
     /** 插入多选 / 填空题库题目，供草稿恢复用例组卷使用。 */
     private void insertDraftQuestionBankFixtures() {
         jdbcTemplate.update("""
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
+                INSERT INTO question_bank (id, code, type, stem, difficulty, options_json,
                                            answer_json, analysis_text, created_by, created_at, updated_at, school_id)
-                VALUES (9001, 'Q-DRAFT-MULTI', 'MULTIPLE', '多选题草稿恢复', 'EASY', 5,
+                VALUES (9001, 'Q-DRAFT-MULTI', 'MULTIPLE', '多选题草稿恢复', 'EASY',
                         '["A","B","C","D"]', '["A","C"]', '多选解析', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """);
         jdbcTemplate.update("""
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, options_json,
+                INSERT INTO question_bank (id, code, type, stem, difficulty, options_json,
                                            answer_json, analysis_text, created_by, created_at, updated_at, school_id)
-                VALUES (9002, 'Q-DRAFT-FILL', 'FILL_BLANK', '填空题草稿恢复', 'EASY', 5,
+                VALUES (9002, 'Q-DRAFT-FILL', 'FILL_BLANK', '填空题草稿恢复', 'EASY',
                         NULL, '[["甲","乙"]]', '填空解析', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """);
     }

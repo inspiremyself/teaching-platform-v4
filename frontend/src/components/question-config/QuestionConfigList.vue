@@ -34,6 +34,8 @@
               :model-value="item.score"
               :min="1"
               :max="100"
+              :precision="0"
+              :step="1"
               :disabled="busy || contentLocked"
               @update:model-value="handleScoreChange(item.localId, $event)"
             />

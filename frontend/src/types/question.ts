@@ -11,7 +11,6 @@ export interface QuestionItem {
   type: QuestionType | (string & {});
   stem: string;
   difficulty: QuestionDifficulty | (string & {});
-  defaultScore: number;
   optionsJson: string | null;
   answerJson: string;
   analysisText: string;
@@ -26,7 +25,6 @@ export interface SaveQuestionPayload {
   type: string;
   stem: string;
   difficulty: string;
-  defaultScore: number;
   optionsJson: string | null;
   answerJson: string;
   analysisText: string;

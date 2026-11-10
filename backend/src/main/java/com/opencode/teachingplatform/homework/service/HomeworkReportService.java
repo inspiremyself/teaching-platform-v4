@@ -142,6 +142,7 @@ public class HomeworkReportService {
         if (submission.getSubmitStatus() != SubmissionStatus.SUBMITTED) {
             throw new BusinessException(40000, "仅已提交作业允许批改");
         }
+        assertHomeworkTotalScoreInRange(homework.getId(), request.totalScore());
         submission.setTotalScore(request.totalScore());
         submission.setTeacherComment(support.defaultString(request.teacherComment()));
         submission.setSubmitStatus(SubmissionStatus.GRADED);
@@ -241,6 +242,19 @@ public class HomeworkReportService {
             if (request.score() == null) {
                 throw new BusinessException(40000, "题目分数不能为空");
             }
+            if (answer.getHomeworkQuestionId() == null) {
+                throw new BusinessException(40000, "作业题目不存在");
+            }
+            HomeworkQuestion question = homeworkQuestionRepository
+                    .findByIdAndHomeworkId(answer.getHomeworkQuestionId(), homework.getId())
+                    .orElseThrow(() -> new BusinessException(40400, "作业题目不存在"));
+            if (request.score() % 1 != 0) {
+                throw new BusinessException(40000, "分数必须为整数");
+            }
+            Double maxScore = question.getQuestionScore() == null ? null : question.getQuestionScore().doubleValue();
+            if (request.score() < 0 || (maxScore != null && request.score() > maxScore)) {
+                throw new BusinessException(40000, "分数必须在 0 到该题分值之间");
+            }
             answer.setScore(request.score());
             answer.setAcceptedAutoScore(false);
             answer.setScoreSource("TEACHER");
@@ -253,6 +267,32 @@ public class HomeworkReportService {
                 "score", saved.getScore(),
                 "acceptedAutoScore", saved.isAcceptedAutoScore()
         );
+    }
+
+    /**
+     * 作业总评分校验：整数且 0 ~ 计划满分（Σ 题目分值）。
+     * 无题目的附件型作业不设上限，沿用现状。
+     */
+    private void assertHomeworkTotalScoreInRange(Long homeworkId, Double totalScore) {
+        if (totalScore == null) {
+            throw new BusinessException(40000, "总评分数不能为空");
+        }
+        if (totalScore % 1 != 0) {
+            throw new BusinessException(40000, "分数必须为整数");
+        }
+        List<HomeworkQuestion> questions = homeworkQuestionRepository.findByHomeworkIdOrderBySortOrder(homeworkId);
+        if (questions.isEmpty()) {
+            return;
+        }
+        double planTotal = questions.stream()
+                .mapToDouble(question -> question.getQuestionScore() == null ? 0D : question.getQuestionScore())
+                .sum();
+        if (totalScore < 0) {
+            throw new BusinessException(40000, "总评不能为负数");
+        }
+        if (totalScore > planTotal) {
+            throw new BusinessException(40000, "总评不能超过计划满分 " + (long) planTotal + " 分");
+        }
     }
 
 }

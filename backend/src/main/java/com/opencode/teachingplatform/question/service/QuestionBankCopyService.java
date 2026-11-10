@@ -122,14 +122,12 @@ public class QuestionBankCopyService {
                 : null;
         String analysisText = stringValue(snapshot.get("analysisText"));
         String difficulty = hasText(snapshot.get("difficulty")) ? stringValue(snapshot.get("difficulty")) : "MEDIUM";
-        double snapshotScore = numberValue(snapshot.get("questionScore"), question.getQuestionScore());
-        int defaultScore = Math.max(1, (int) Math.round(snapshotScore));
 
-        questionContentValidator.validate(type, stem, (double) defaultScore, optionsJson, answerJson, scoringConfigJson);
+        questionContentValidator.validate(type, stem, optionsJson, answerJson, scoringConfigJson);
 
         String resolvedCode = resolveCode(code, "HW" + homeworkQuestionId);
         return persistCopiedQuestion(currentUser, sourceRef, SOURCE_HOMEWORK_INLINE, resolvedCode, type, stem,
-                difficulty, defaultScore, optionsJson, answerJson, scoringConfigJson, analysisText);
+                difficulty, optionsJson, answerJson, scoringConfigJson, analysisText);
     }
 
     /**
@@ -156,11 +154,9 @@ public class QuestionBankCopyService {
         }
 
         LabQuestionContent content = buildLabQuestionContent(step);
-        int defaultScore = Math.max(1, step.getStepScore() == null ? 1 : step.getStepScore());
         questionContentValidator.validate(
                 content.type(),
                 content.stem(),
-                (double) defaultScore,
                 content.optionsJson(),
                 content.answerJson(),
                 content.scoringConfigJson()
@@ -168,7 +164,7 @@ public class QuestionBankCopyService {
 
         String resolvedCode = resolveCode(code, "LAB" + step.getLabId() + "S" + step.getStepNo());
         return persistCopiedQuestion(currentUser, sourceRef, SOURCE_LAB_STEP, resolvedCode, content.type(),
-                content.stem(), "MEDIUM", defaultScore, content.optionsJson(), content.answerJson(),
+                content.stem(), "MEDIUM", content.optionsJson(), content.answerJson(),
                 content.scoringConfigJson(), "");
     }
 
@@ -350,7 +346,6 @@ public class QuestionBankCopyService {
                                                       String type,
                                                       String stem,
                                                       String difficulty,
-                                                      int defaultScore,
                                                       String optionsJson,
                                                       String answerJson,
                                                       String scoringConfigJson,
@@ -363,7 +358,6 @@ public class QuestionBankCopyService {
         question.setType(type);
         question.setStem(stem);
         question.setDifficulty(difficulty);
-        question.setDefaultScore(defaultScore);
         question.setOptionsJson(optionsJson);
         question.setAnswerJson(answerJson);
         question.setScoringConfigJson(scoringConfigJson);

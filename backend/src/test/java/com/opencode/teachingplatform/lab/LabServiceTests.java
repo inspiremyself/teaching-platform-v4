@@ -2738,6 +2738,64 @@ class LabServiceTests {
     }
 
     @Test
+    void gradeReportRejectsNonIntegerScores() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "SINGLE_CHOICE", "{}", "{\"correctAnswer\":\"A\"}", 30);
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("A", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("小数小结")).get("submissionId")).longValue();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+
+        assertThatThrownBy(() -> labService.gradeReport(
+                teacherUser(),
+                submissionId,
+                new LabRequests.GradeLabReportRequest("小数", List.of(new LabRequests.GradeItem(answer.getId(), 10.5D, "小数")))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须为整数");
+
+        LabStepAnswer unchanged = labStepAnswerRepository.findById(answer.getId()).orElseThrow();
+        assertThat(unchanged.getScore()).isEqualTo(30D);
+    }
+
+    @Test
+    void confirmStepScoreRejectsOutOfRangeAndNonIntegerTeacherScore() {
+        Long classId = seedClass(1L);
+        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, 1L);
+        Long stepId = seedStep(labId, 1, "TEXT", "{}", "{\"keywords\":[{\"term\":\"实验管理\",\"weight\":15}]}", 20);
+        seedStudentAccount(studentUser());
+        seedMembership(classId, studentUser().id());
+
+        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("实验管理流程完整", null));
+        Long submissionId = ((Number) labService.submitLab(studentUser(), labId, new LabRequests.SubmitLabRequest("确认分边界小结")).get("submissionId")).longValue();
+        LabStepAnswer answer = labStepAnswerRepository.findByLabSubmissionIdAndLabStepId(submissionId, stepId).orElseThrow();
+
+        assertThatThrownBy(() -> labService.confirmStepScore(
+                teacherUser(),
+                submissionId,
+                new LabRequests.ConfirmStepScoreRequest(answer.getId(), 10.5D, "小数", false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须为整数");
+        assertThatThrownBy(() -> labService.confirmStepScore(
+                teacherUser(),
+                submissionId,
+                new LabRequests.ConfirmStepScoreRequest(answer.getId(), 21D, "超分", false)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("分数必须在 0 到该题分值之间");
+
+        labService.confirmStepScore(
+                teacherUser(),
+                submissionId,
+                new LabRequests.ConfirmStepScoreRequest(answer.getId(), 20D, "满分", false)
+        );
+        assertThat(labStepAnswerRepository.findById(answer.getId()).orElseThrow().getScore()).isEqualTo(20D);
+    }
+
+    @Test
     void saveBlankAcceptedAnswersFreezesTeacherScoreButRefreshesAutoAnswerWhenScoreNotVisible() {
         Long classId = seedClass(teacherUser().id());
         Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
@@ -3904,15 +3962,14 @@ class LabServiceTests {
         long questionId = Math.abs(System.nanoTime());
         jdbcTemplate.update(
                 """
-                INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, answer_json, scoring_config_json, created_by, created_at, updated_at, school_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+                INSERT INTO question_bank (id, code, type, stem, difficulty, answer_json, scoring_config_json, created_by, created_at, updated_at, school_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
                 """,
                 questionId,
                 "QB-" + questionId,
                 "FILL_BLANK",
                 "填空题",
                 "MEDIUM",
-                10,
                 "{\"blanks\":[{\"answers\":[\"spring\"]},{\"answers\":[\"boot\"]}]}",
                 "{\"blanks\":[{\"answers\":[\"spring\"],\"score\":4},{\"answers\":[\"boot\"],\"score\":6}],\"ignoreCase\":true}",
                 teacherUser().id()

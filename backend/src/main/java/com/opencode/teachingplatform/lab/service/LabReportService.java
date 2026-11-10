@@ -586,6 +586,9 @@ public class LabReportService {
             if (stepScore == null) {
                 throw new BusinessException(40000, "实验题项分值未配置");
             }
+            if (item.score() != null && item.score() % 1 != 0) {
+                throw new BusinessException(40000, "分数必须为整数");
+            }
             if (item.score() == null || item.score() < 0 || item.score() > stepScore) {
                 throw new BusinessException(40000, "分数必须在 0 到该题分值之间");
             }
@@ -642,6 +645,19 @@ public class LabReportService {
         } else {
             if (request.score() == null) {
                 throw new BusinessException(40000, "步骤分数不能为空");
+            }
+            // 分数上限以题项配置为准，与 gradeSteps 同法加载题项并兜底校验。
+            LabStep step = labStepRepository.findByIdAndLabId(answer.getLabStepId(), lab.getId())
+                    .orElseThrow(() -> new BusinessException(40400, "实验题项不存在"));
+            Integer stepScore = step.getStepScore();
+            if (stepScore == null) {
+                throw new BusinessException(40000, "实验题项分值未配置");
+            }
+            if (request.score() % 1 != 0) {
+                throw new BusinessException(40000, "分数必须为整数");
+            }
+            if (request.score() < 0 || request.score() > stepScore) {
+                throw new BusinessException(40000, "分数必须在 0 到该题分值之间");
             }
             answer.setScore(request.score());
             answer.setScoreSource("TEACHER");

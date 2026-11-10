@@ -92,8 +92,8 @@ class CrossSchoolNotFoundTests {
                         + "VALUES (?, 'A校作业', ?, 1, 'PUBLISHED', 1)",
                 HOMEWORK_A, classA);
         jdbc.update("DELETE FROM question_bank WHERE id = ?", QUESTION_A);
-        jdbc.update("INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, created_by, school_id) "
-                        + "VALUES (?, 'QB-A-9104', 'SINGLE', 'A校题目', 'EASY', 5, 1, 1)",
+        jdbc.update("INSERT INTO question_bank (id, code, type, stem, difficulty, created_by, school_id) "
+                        + "VALUES (?, 'QB-A-9104', 'SINGLE', 'A校题目', 'EASY', 1, 1)",
                 QUESTION_A);
         jdbc.update("DELETE FROM course_material WHERE id = ?", MATERIAL_A);
         jdbc.update("INSERT INTO course_material (id, title, category, file_path, file_name, uploader_user_id, visibility, school_id) "
@@ -116,7 +116,7 @@ class CrossSchoolNotFoundTests {
     @Test
     void questionUpdateAndDeleteCrossSchoolReturn40400() {
         SaveQuestionRequest request = new SaveQuestionRequest(
-                "QB-A-9104", "SINGLE", "A校题目", "EASY", 5, null, "[\"A\"]", null);
+                "QB-A-9104", "SINGLE", "A校题目", "EASY", null, "[\"A\"]", null);
 
         assertNotFound(() -> questionService.update(
                 teacher(FOREIGN_TEACHER_ID, SchoolScopeFixtures.SCHOOL_A), SchoolScopeFixtures.QUESTION_B, request), "题库题目不存在");

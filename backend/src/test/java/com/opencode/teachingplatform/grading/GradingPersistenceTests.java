@@ -90,7 +90,6 @@ class GradingPersistenceTests {
         questionBank.setType("SUBJECTIVE");
         questionBank.setStem("解释统一评分模型的价值");
         questionBank.setDifficulty("MEDIUM");
-        questionBank.setDefaultScore(10);
         questionBank.setAnswerJson("{\"keywords\":[\"一致性\"]}");
         questionBank.setScoringConfigJson("{\"mode\":\"RECOMMEND_ONLY\"}");
         questionBank.setCreatedBy(1L);

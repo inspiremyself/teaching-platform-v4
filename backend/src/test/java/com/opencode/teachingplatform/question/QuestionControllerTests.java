@@ -67,13 +67,36 @@ class QuestionControllerTests {
                 .andExpect(jsonPath("$.data.type").value("SINGLE"))
                 .andExpect(jsonPath("$.data.stem").value("统一返回结构的主要作用是什么？"))
                 .andExpect(jsonPath("$.data.difficulty").value("MEDIUM"))
-                .andExpect(jsonPath("$.data.defaultScore").value(5));
+                .andExpect(jsonPath("$.data.defaultScore").doesNotExist());
 
         List<QuestionBank> questions = questionBankRepository.findAll();
         assertThat(questions).hasSize(1);
         assertThat(questions.getFirst().getCode()).isEqualTo("Q-NEW-001");
         assertThat(questions.getFirst().getAnswerJson()).isNotBlank();
         assertThat(questions.getFirst().getCreatedBy()).isEqualTo(1L);
+    }
+
+    @Test
+    void createQuestionIgnoresUnknownDefaultScoreField() throws Exception {
+        mockMvc.perform(post("/api/v1/questions")
+                        .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "Q-IGNORE-001",
+                                  "type": "SINGLE",
+                                  "stem": "历史客户端仍传分值",
+                                  "difficulty": "MEDIUM",
+                                  "defaultScore": 5,
+                                  "optionsJson": "[\\"A\\",\\"B\\"]",
+                                  "answerJson": "[\\"A\\"]",
+                                  "analysisText": "忽略未知字段"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.code").value("Q-IGNORE-001"))
+                .andExpect(jsonPath("$.data.defaultScore").doesNotExist());
     }
 
     @Test
@@ -85,7 +108,6 @@ class QuestionControllerTests {
         existing.setType("SINGLE");
         existing.setStem("已有题目");
         existing.setDifficulty("EASY");
-        existing.setDefaultScore(3);
         existing.setOptionsJson("[\"A\",\"B\"]");
         existing.setAnswerJson("[\"A\"]");
         existing.setAnalysisText("已有解析");
@@ -116,7 +138,6 @@ class QuestionControllerTests {
         shortQuestion.setType("SHORT");
         shortQuestion.setStem("简述接口统一返回结构的意义。");
         shortQuestion.setDifficulty("MEDIUM");
-        shortQuestion.setDefaultScore(10);
         shortQuestion.setOptionsJson(null);
         shortQuestion.setAnswerJson("[\"统一错误处理与前端解析\"]");
         shortQuestion.setAnalysisText("便于一致处理");
@@ -140,7 +161,6 @@ class QuestionControllerTests {
         owned.setType("SINGLE");
         owned.setStem("教师自己的题目");
         owned.setDifficulty("EASY");
-        owned.setDefaultScore(5);
         owned.setOptionsJson("[\"A\",\"B\"]");
         owned.setAnswerJson("[\"A\"]");
         owned.setAnalysisText("own");
@@ -154,7 +174,6 @@ class QuestionControllerTests {
         foreign.setType("SINGLE");
         foreign.setStem("其他教师题目");
         foreign.setDifficulty("EASY");
-        foreign.setDefaultScore(5);
         foreign.setOptionsJson("[\"A\",\"B\"]");
         foreign.setAnswerJson("[\"A\"]");
         foreign.setAnalysisText("foreign");
@@ -179,7 +198,6 @@ class QuestionControllerTests {
         foreign.setType("SINGLE");
         foreign.setStem("其他教师题目");
         foreign.setDifficulty("EASY");
-        foreign.setDefaultScore(5);
         foreign.setOptionsJson("[\"A\",\"B\"]");
         foreign.setAnswerJson("[\"A\"]");
         foreign.setAnalysisText("foreign");
@@ -227,7 +245,6 @@ class QuestionControllerTests {
                                   "type": "SINGLE",
                                   "stem": "无效 JSON 测试",
                                   "difficulty": "MEDIUM",
-                                  "defaultScore": 5,
                                   "optionsJson": "[\"A\",]",
                                   "answerJson": "[\"A\"]",
                                   "analysisText": "非法 JSON"
@@ -249,7 +266,6 @@ class QuestionControllerTests {
                                   "type": "SINGLE",
                                   "stem": "嵌入式 JSON 非法测试",
                                   "difficulty": "MEDIUM",
-                                  "defaultScore": 5,
                                   "optionsJson": "[\\"A\\",]",
                                   "answerJson": "[\\"A\\"]",
                                   "analysisText": "非法嵌入 JSON"
@@ -271,7 +287,6 @@ class QuestionControllerTests {
                                   "type": " SHORT ",
                                   "stem": "带空格的主观题类型",
                                   "difficulty": "MEDIUM",
-                                  "defaultScore": 10,
                                   "optionsJson": null,
                                   "answerJson": "[\\"回答\\"]",
                                   "analysisText": "主观题不需要选项"
@@ -290,7 +305,6 @@ class QuestionControllerTests {
                   "type": "SINGLE",
                   "stem": "统一返回结构的主要作用是什么？",
                   "difficulty": "MEDIUM",
-                  "defaultScore": 5,
                   "optionsJson": "[%s,%s]",
                   "answerJson": "[%s]",
                   "analysisText": "便于前后端一致处理"
@@ -305,7 +319,6 @@ class QuestionControllerTests {
                   "type": "SHORT",
                   "stem": "%s",
                   "difficulty": "MEDIUM",
-                  "defaultScore": 10,
                   "optionsJson": null,
                   "answerJson": "%s",
                   "analysisText": "主观题不需要选项"

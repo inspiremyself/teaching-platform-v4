@@ -265,6 +265,63 @@ class HomeworkTeacherControllerTests {
     }
 
     @Test
+    void addQuestionFromBankRejectsQuestionScoreOutOfRange() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homeworks/{id}/questions/bank", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "questionId": 9,
+                                      "sortOrder": 1,
+                                      "questionScore": 0
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
+
+            mockMvc.perform(post("/api/v1/teacher/homeworks/{id}/questions/bank", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "questionId": 9,
+                                      "sortOrder": 1,
+                                      "questionScore": 101
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void addInlineQuestionRejectsNonIntegerQuestionScore() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homeworks/{id}/questions/inline", 1L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "type": "SUBJECTIVE",
+                                      "stem": "请说明策略模式的价值",
+                                      "questionScore": 2.5,
+                                      "answerJson": "[\\"参考要点\\"]",
+                                      "sortOrder": 2
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCanAttachInlineQuestion() throws Exception {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", 12);
@@ -320,6 +377,30 @@ class HomeworkTeacherControllerTests {
                     .andExpect(jsonPath("$.code").value(0))
                     .andExpect(jsonPath("$.data.questions[0].id").value(11))
                     .andExpect(jsonPath("$.data.questions[0].sourceType").value("BANK"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void updateHomeworkQuestionRejectsNonIntegerQuestionScore() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(put("/api/v1/teacher/homeworks/{id}/questions/{questionId}", 1L, 11L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "type": "SINGLE",
+                                      "stem": "更新后的题干",
+                                      "questionScore": 2.5,
+                                      "optionsJson": "[{\\"key\\":\\"A\\",\\"content\\":\\"正确\\"},{\\"key\\":\\"B\\",\\"content\\":\\"错误\\"}]",
+                                      "answerJson": "[\\"A\\"]",
+                                      "sortOrder": 3
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
         } finally {
             SecurityContextHolder.clearContext();
         }

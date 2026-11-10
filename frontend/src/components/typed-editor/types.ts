@@ -35,7 +35,6 @@ export interface TypedEditorHydratedState {
 export interface QuestionEditorContext {
   code: string;
   difficulty: string;
-  defaultScore: number;
   analysisText: string;
 }
 

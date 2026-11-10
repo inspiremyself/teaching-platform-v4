@@ -153,6 +153,149 @@ class ExamTeacherControllerTests {
     }
 
     @Test
+    void createExamRejectsQuestionScoreBelowRange() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "分值下界",
+                                      "classId": 1,
+                                      "durationMinutes": 60,
+                                      "status": "DRAFT",
+                                      "questions": [
+                                        {"questionId": 1, "sortOrder": 1, "questionScore": 0}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void createExamRejectsQuestionScoreAboveRange() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "分值上界",
+                                      "classId": 1,
+                                      "durationMinutes": 60,
+                                      "status": "DRAFT",
+                                      "questions": [
+                                        {"questionId": 1, "sortOrder": 1, "questionScore": 101}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void createExamRejectsNonIntegerQuestionScore() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "分值小数",
+                                      "classId": 1,
+                                      "durationMinutes": 60,
+                                      "status": "DRAFT",
+                                      "questions": [
+                                        {"questionId": 1, "sortOrder": 1, "questionScore": 2.5}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void createExamRejectsNegativeQuestionScore() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "分值负数",
+                                      "classId": 1,
+                                      "durationMinutes": 60,
+                                      "status": "DRAFT",
+                                      "questions": [
+                                        {"questionId": 1, "sortOrder": 1, "questionScore": -1}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("分值必须为 1–100 的整数"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void createExamAcceptsBoundaryQuestionScores() throws Exception {
+        when(examService.createExam(any(CurrentUser.class), any(ExamRequests.CreateExamRequest.class)))
+                .thenReturn(Map.of("id", 10, "title", "边界分值", "classId", 1, "status", "DRAFT"));
+
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "边界分值下界",
+                                      "classId": 1,
+                                      "durationMinutes": 60,
+                                      "status": "DRAFT",
+                                      "questions": [
+                                        {"questionId": 1, "sortOrder": 1, "questionScore": 1}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0));
+
+            mockMvc.perform(post("/api/v1/exams")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "title": "边界分值上界",
+                                      "classId": 1,
+                                      "durationMinutes": 60,
+                                      "status": "DRAFT",
+                                      "questions": [
+                                        {"questionId": 2, "sortOrder": 2, "questionScore": 100}
+                                      ]
+                                    }
+                                    """))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
     void teacherCreateExamWithInlineQuestionReturns400() throws Exception {
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {

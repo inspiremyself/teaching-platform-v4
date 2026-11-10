@@ -58,9 +58,6 @@
           <el-table-column label="难度" width="120">
             <template #default="{ row }">{{ getDifficultyLabel(row.difficulty) }}</template>
           </el-table-column>
-          <el-table-column label="默认分值" width="120">
-            <template #default="{ row }">{{ row.defaultScore }} 分</template>
-          </el-table-column>
         </el-table>
       </section>
 
@@ -100,6 +97,7 @@ import type { ConfiguredQuestionItem } from '@/types/question-config'
 import type { QuestionDifficulty, QuestionItem, QuestionType } from '@/types/question'
 import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/components/typed-editor/constants'
 import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion'
+import { defaultScoreByType } from '@/constants/questionScoreDefaults'
 import QuestionConfigList from './QuestionConfigList.vue'
 
 const props = withDefaults(defineProps<{ visible: boolean; validateJudgeFormat?: boolean }>(), {
@@ -168,7 +166,7 @@ const buildConfiguredQuestion = (row: QuestionItem, index: number): ConfiguredQu
   questionType: row.type,
   stem: row.stem,
   sortOrder: index + 1,
-  score: row.defaultScore,
+  score: defaultScoreByType(row.type),
   options: parseQuestionAnswerArray(row.optionsJson).map((option, optionIndex) => {
     if (option && typeof option === 'object') {
       const record = option as Record<string, unknown>

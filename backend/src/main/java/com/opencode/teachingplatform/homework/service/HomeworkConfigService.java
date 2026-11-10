@@ -333,7 +333,6 @@ public class HomeworkConfigService {
         questionContentValidator.validate(
                 request.type(),
                 request.stem(),
-                request.questionScore(),
                 request.optionsJson(),
                 request.answerJson(),
                 request.scoringConfigJson()
@@ -387,7 +386,6 @@ public class HomeworkConfigService {
             questionContentValidator.validate(
                     request.type(),
                     request.stem(),
-                    request.questionScore(),
                     request.optionsJson(),
                     request.answerJson(),
                     request.scoringConfigJson()

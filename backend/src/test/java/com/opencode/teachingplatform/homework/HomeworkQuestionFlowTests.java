@@ -216,7 +216,6 @@ class HomeworkQuestionFlowTests {
         question.setType("SINGLE_CHOICE");
         question.setStem("策略模式的核心目的是什么？");
         question.setDifficulty("MEDIUM");
-        question.setDefaultScore(10);
         question.setOptionsJson("[{\"label\":\"A\",\"content\":\"封装可替换算法\"}]");
         question.setAnswerJson("{\"correctAnswer\":\"A\"}");
         question.setScoringConfigJson("{\"correctAnswer\":\"A\"}");

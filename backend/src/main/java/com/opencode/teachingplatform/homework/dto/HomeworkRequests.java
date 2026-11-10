@@ -1,11 +1,14 @@
 package com.opencode.teachingplatform.homework.dto;
 
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import jakarta.validation.Valid;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -78,6 +81,9 @@ public final class HomeworkRequests {
         private Integer sortOrder;
 
         @NotNull
+        @Min(value = 1, message = "分值必须为 1–100 的整数")
+        @Max(value = 100, message = "分值必须为 1–100 的整数")
+        @Digits(integer = 3, fraction = 0, message = "分值必须为 1–100 的整数")
         private Double questionScore;
 
         public AddHomeworkQuestionFromBankRequest() {
@@ -123,7 +129,11 @@ public final class HomeworkRequests {
     public record SaveHomeworkQuestionRequest(
             @NotBlank String type,
             @NotBlank String stem,
-            @NotNull @Positive Double questionScore,
+            @NotNull
+            @Min(value = 1, message = "分值必须为 1–100 的整数")
+            @Max(value = 100, message = "分值必须为 1–100 的整数")
+            @Digits(integer = 3, fraction = 0, message = "分值必须为 1–100 的整数")
+            Double questionScore,
             String optionsJson,
             @NotBlank String answerJson,
             String analysisText,

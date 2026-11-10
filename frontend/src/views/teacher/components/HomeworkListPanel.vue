@@ -226,7 +226,10 @@
           <section class="homework-dialog__group">
             <div class="homework-dialog__group-head">
               <div>
-                <div class="homework-dialog__group-title">题目配置</div>
+                <div class="homework-dialog__group-title">
+                  题目配置
+                  <span class="homework-dialog__badge homework-dialog__badge--muted">计划满分 {{ planTotalScore }} 分</span>
+                </div>
                 <p class="homework-dialog__group-desc">
                   统一复用题库选题、题目配置清单与共享编辑器。{{ editingId ? '保存时按清单增量同步：新增、修改与删除都会落到当前作业。' : '创建作业后会按当前清单写入题目。' }}
                 </p>
@@ -282,7 +285,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { HomeworksKey } from '@/composables/useHomeworks';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, resetFilters, openCreateDialog, openEditDialog, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime } = inject(HomeworksKey)!;
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, resetFilters, openCreateDialog, openEditDialog, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime } = inject(HomeworksKey)!;
 </script>
 
 <style scoped>

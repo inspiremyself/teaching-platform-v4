@@ -69,6 +69,7 @@ class QuestionBankCopyServiceTests {
         assertThat(view.get("sourceRef")).isEqualTo("HOMEWORK:" + question.getId());
         assertThat(view.get("code")).isEqualTo("HW" + question.getId());
         assertThat(view.get("type")).isEqualTo("SINGLE");
+        assertThat(view).doesNotContainKey("defaultScore");
 
         assertThat(second.get("created")).isEqualTo(false);
         assertThat(asMap(second.get("question")).get("id")).isEqualTo(view.get("id"));
@@ -83,7 +84,6 @@ class QuestionBankCopyServiceTests {
         existing.setType("SHORT");
         existing.setStem("已有题目");
         existing.setDifficulty("MEDIUM");
-        existing.setDefaultScore(5);
         existing.setAnswerJson("[\"参考\"]");
         existing.setCreatedBy(1L);
         questionBankRepository.save(existing);
@@ -120,6 +120,7 @@ class QuestionBankCopyServiceTests {
         assertThat(view.get("sourceType")).isEqualTo("LAB_STEP");
         assertThat(view.get("sourceRef")).isEqualTo("LAB:" + step.getLabId() + ":" + step.getId());
         assertThat(String.valueOf(view.get("answerJson"))).contains("T");
+        assertThat(view).doesNotContainKey("defaultScore");
     }
 
     @Test

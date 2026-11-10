@@ -23,7 +23,6 @@ public final class QuestionRequests {
             @NotBlank(message = "题目类型不能为空") String type,
             @NotBlank(message = "题干不能为空") String stem,
             @NotBlank(message = "难度不能为空") String difficulty,
-            @NotNull(message = "默认分值不能为空") Integer defaultScore,
             String optionsJson,
             @NotBlank(message = "答案不能为空") String answerJson,
             String analysisText

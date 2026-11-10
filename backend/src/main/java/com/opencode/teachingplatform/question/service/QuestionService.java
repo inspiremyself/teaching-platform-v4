@@ -107,7 +107,6 @@ public class QuestionService {
         questionContentValidator.validate(
                 request.type(),
                 request.stem(),
-                request.defaultScore() == null ? null : request.defaultScore().doubleValue(),
                 request.optionsJson(),
                 request.answerJson(),
                 null
@@ -116,7 +115,6 @@ public class QuestionService {
         question.setType(request.type().trim());
         question.setStem(request.stem().trim());
         question.setDifficulty(request.difficulty().trim());
-        question.setDefaultScore(request.defaultScore());
         question.setOptionsJson(normalizeNullable(request.optionsJson()));
         question.setAnswerJson(request.answerJson().trim());
         question.setAnalysisText(request.analysisText() == null ? "" : request.analysisText().trim());

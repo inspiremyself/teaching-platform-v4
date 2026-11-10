@@ -397,7 +397,7 @@ const openQuestionBankPicker = () => {
 /**
  * 从题库选题预填实验题项：
  * 题库仅提供题干/选项/答案等内容，题项标题、序号与分值由本页维护，
- * 分值取选择题配置分值，不回落题库默认分值。
+ * 分值取选题弹窗按题型给出的默认分（题库已无分值），保存前教师可在本页调整。
  */
 const applyPickedQuestion = async (items: ConfiguredQuestionItem[]) => {
   const item = items[0];

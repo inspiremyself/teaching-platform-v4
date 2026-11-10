@@ -156,6 +156,8 @@
                         v-model="gradeMap[answer.questionId].score"
                         :min="0"
                         :max="answer.questionScore"
+                        :precision="0"
+                        :step="1"
                         controls-position="right"
                       />
                     </div>

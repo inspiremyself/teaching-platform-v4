@@ -211,6 +211,8 @@
                         v-model="answerGradeMap[question.answer?.id || 0].score"
                         :min="0"
                         :max="question.score"
+                        :precision="0"
+                        :step="1"
                         :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || !canGradeAnswer"
                       />
                       <el-input
@@ -255,8 +257,16 @@
                 class="grade-readonly-alert"
               />
               <el-form label-position="top" class="grade-form">
-                <el-form-item label="评分（0-100）" required>
-                  <el-input-number v-model="gradeForm.totalScore" :min="0" :max="100" :precision="1" :disabled="!canGradeAnswer" style="width: 100%" />
+                <el-form-item :label="gradeScoreLabel" required>
+                  <el-input-number
+                    v-model="gradeForm.totalScore"
+                    :min="0"
+                    :max="gradeTotalMax"
+                    :precision="0"
+                    :step="1"
+                    :disabled="!canGradeAnswer"
+                    style="width: 100%"
+                  />
                 </el-form-item>
                 <el-form-item label="评语">
                   <el-input v-model="gradeForm.teacherComment" type="textarea" :rows="8" maxlength="500" show-word-limit :disabled="!canGradeAnswer" />
@@ -356,6 +366,17 @@ const filteredRows = computed(() => {
 });
 
 const activeSubmission = computed(() => filteredRows.value.find(item => item.id === activeSubmissionId.value) || filteredRows.value[0] || null);
+/** 计划满分 = Σ 题目分值；附件型作业（无题目）不设上限，返回 undefined 由 el-input-number 回落默认上限 */
+const gradeTotalMax = computed(() => {
+  const questions = selectedSubmission.value?.questions ?? [];
+  if (!questions.length) return undefined;
+  return questions.reduce((sum, question) => sum + (Number(question.score) || 0), 0);
+});
+
+const gradeScoreLabel = computed(() =>
+  gradeTotalMax.value === undefined ? '评分' : `评分（0-${gradeTotalMax.value}）`,
+);
+
 const pendingCount = computed(() => filteredRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.SUBMITTED).length);
 const gradedCount = computed(() => filteredRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.GRADED).length);
 const riskCount = computed(() => filteredRows.value.filter(row => (row.plagiarismRate ?? -1) >= 40).length);

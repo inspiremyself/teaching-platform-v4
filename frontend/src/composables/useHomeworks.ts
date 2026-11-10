@@ -35,6 +35,7 @@ import type {
 import { ApiError } from '@/utils/request';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
 import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion';
+import { defaultScoreByType } from '@/constants/questionScoreDefaults';
 import type { InjectionKey } from 'vue';
 
 export function useHomeworks() {
@@ -277,7 +278,6 @@ const buildConfiguredInlineQuestion = (
     code: editorPayload.code,
     type: editorPayload.type,
     difficulty: editorPayload.difficulty,
-    defaultScore: editorPayload.defaultScore,
     analysisText: editorPayload.analysisText,
   });
 
@@ -289,7 +289,7 @@ const buildConfiguredInlineQuestion = (
     questionType: questionPayload.type,
     stem: questionPayload.stem,
     sortOrder: current?.sortOrder ?? configuredQuestions.value.length + 1,
-    score: editorPayload.defaultScore,
+    score: current?.score ?? defaultScoreByType(questionPayload.type),
     options: mapOptionsForList(questionPayload.optionsJson),
     optionsJson: questionPayload.optionsJson,
     answerJson: questionPayload.answerJson,
@@ -644,13 +644,18 @@ const formatDateTime = (value?: string | null) => {
   return value ? value.replace('T', ' ').slice(0, 16) : '-';
 };
 
+/** 计划满分 = Σ 每题配置分值；只做展示，不参与提交 */
+const planTotalScore = computed(() =>
+  configuredQuestions.value.reduce((total, item) => total + (Number(item.score) || 0), 0),
+);
+
 onMounted(async () => {
   await fetchClasses();
   resetForm();
   await fetchHomeworks();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, originalQuestionIds, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, resequenceConfiguredQuestions, mapOptionsForList, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, mergeConfiguredQuestions, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, originalQuestionIds, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, resequenceConfiguredQuestions, mapOptionsForList, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, mergeConfiguredQuestions, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime };
 }
 
 export type HomeworksState = ReturnType<typeof useHomeworks>;

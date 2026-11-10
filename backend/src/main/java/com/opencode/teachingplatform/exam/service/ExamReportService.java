@@ -250,6 +250,7 @@ public class ExamReportService {
             if (snapshot != null && examScoringService.isObjective(snapshot.questionType())) {
                 continue; // Don't let teacher override objective auto-grades
             }
+            assertTeacherScoreInRange(item.score(), snapshot);
 
             answer.setScore(item.score());
             answer.setTeacherComment(item.teacherComment());
@@ -326,6 +327,7 @@ public class ExamReportService {
             if (request.score() == null) {
                 throw new BusinessException(40000, "题目分数不能为空");
             }
+            assertTeacherScoreInRange(request.score(), snapshot);
             answer.setScore(request.score());
             answer.setScoreSource("TEACHER");
             answer.setAcceptedAutoScore(false);
@@ -355,6 +357,22 @@ public class ExamReportService {
                 && !OffsetDateTime.now().isBefore(exam.getEndAt());
         if (exam.isScoreReleased() || deadlineReached) {
             throw new BusinessException(40000, "成绩已发布或已到期，禁止直接改分");
+        }
+    }
+
+    /**
+     * 教师显式给分校验：整数且 0 ~ 该题快照分值；快照缺失（历史脏数据）时只校验非负与整数。
+     */
+    private void assertTeacherScoreInRange(Double score, QuestionSnapshot snapshot) {
+        if (score == null) {
+            throw new BusinessException(40000, "题目分数不能为空");
+        }
+        if (score % 1 != 0) {
+            throw new BusinessException(40000, "分数必须为整数");
+        }
+        Double maxScore = snapshot == null ? null : snapshot.score();
+        if (score < 0 || (maxScore != null && score > maxScore)) {
+            throw new BusinessException(40000, "分数必须在 0 到该题分值之间");
         }
     }
 

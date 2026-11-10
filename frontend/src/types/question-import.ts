@@ -1,10 +1,9 @@
-/** 批量导入：通过校验、可直接提交的单题草稿 */
+/** 批量导入：通过校验、可直接提交的单题草稿（题库不含分值，导入不读取 score） */
 export interface ImportQuestionDraft {
   code: string
   type: 'SINGLE' | 'MULTI' | 'JUDGE'
   stem: string
   difficulty: 'EASY' | 'MEDIUM' | 'HARD'
-  score: number
   options: Array<{ key: string; content: string }>
   answer: string[]
   analysis: string

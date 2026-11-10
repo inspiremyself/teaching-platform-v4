@@ -25,7 +25,6 @@ public class QuestionBankViewMapper {
         view.put("type", question.getType());
         view.put("stem", question.getStem());
         view.put("difficulty", question.getDifficulty());
-        view.put("defaultScore", question.getDefaultScore());
         view.put("optionsJson", question.getOptionsJson());
         view.put("answerJson", question.getAnswerJson());
         view.put("analysisText", question.getAnalysisText() == null ? "" : question.getAnalysisText());

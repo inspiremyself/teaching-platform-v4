@@ -172,6 +172,7 @@
           <div class="exam-dialog__badges">
             <span class="exam-dialog__badge">{{ form.classId ? classOptions.find(c => c.id === form.classId)?.name || '已选班级' : '待选班级' }}</span>
             <span class="exam-dialog__badge exam-dialog__badge--muted">{{ configuredQuestions.length }} 题</span>
+            <span class="exam-dialog__badge exam-dialog__badge--muted">计划满分 {{ planTotalScore }} 分</span>
           </div>
         </header>
 
@@ -183,7 +184,7 @@
           </article>
           <article class="exam-dialog__summary-card">
             <span class="exam-dialog__label">组卷状态</span>
-            <strong>{{ configuredQuestions.length ? `已选 ${configuredQuestions.length} 题` : '尚未选择试题' }}</strong>
+            <strong>{{ configuredQuestions.length ? `已选 ${configuredQuestions.length} 题 / 计划满分 ${planTotalScore} 分` : '尚未选择试题' }}</strong>
             <p>复用共享题目配置组件完成选题、排序与分值微调，保存时仍按考试既有题目引用结构提交。</p>
           </article>
         </section>
@@ -355,7 +356,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { ExamListKey } from '@/composables/useExamList';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, configuredQuestions, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint } = inject(ExamListKey)!;
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint } = inject(ExamListKey)!;
 </script>
 
 <style scoped>

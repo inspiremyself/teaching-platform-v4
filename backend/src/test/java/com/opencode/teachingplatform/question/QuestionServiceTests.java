@@ -66,7 +66,6 @@ class QuestionServiceTests {
                         "SINGLE",
                         "测试题干",
                         "MEDIUM",
-                        5,
                         "[\"A\",\"B\"]",
                         "[\"A\"]",
                         "解析"
@@ -128,7 +127,6 @@ class QuestionServiceTests {
                 "SINGLE",
                 "测试题干",
                 "MEDIUM",
-                5,
                 "[\"A\",\"B\"]",
                 "[\"A\"]",
                 "解析"

@@ -75,7 +75,6 @@ interface BuildQuestionPayloadOptions {
   code: string;
   type: QuestionType;
   difficulty: string;
-  defaultScore: number;
   analysisText: string;
 }
 
@@ -90,7 +89,6 @@ export const buildQuestionPayloadFromDraft = (
     type: options.type,
     stem: draft.prompt.trim(),
     difficulty: options.difficulty,
-    defaultScore: options.defaultScore,
     optionsJson: serialized.optionsJson,
     answerJson: serialized.answerJson,
     analysisText: options.analysisText.trim(),

@@ -14,7 +14,8 @@ import java.util.Map;
  * 题目内容语义校验器。
  *
  * <p>题库、作业内联题、实验题项复制到题库三条写入链路共用同一套内容契约，
- * 因此把题型、题干、分值、选项、答案、评分参数的校验收敛到这里。
+ * 因此把题型、题干、选项、答案、评分参数的校验收敛到这里。
+ * 分值归属组卷（快照），题库内容不含分值，故本类不做分值校验；
  * 本类只做内容语义校验，不处理权限、状态与编码唯一性。</p>
  */
 @Component
@@ -37,19 +38,17 @@ public class QuestionContentValidator {
      *
      * @param type              题型，标准值为 SINGLE / MULTI / JUDGE / FILL / SHORT
      * @param stem              题干
-     * @param score             分值
      * @param optionsJson       选项 JSON，允许为空（非选择题）
      * @param answerJson        答案 JSON，统一为数组形态
      * @param scoringConfigJson 评分参数 JSON，简答题可用 keywords 代替参考答案
      */
     public void validate(String type,
                          String stem,
-                         Double score,
                          String optionsJson,
                          String answerJson,
                          String scoringConfigJson) {
         String normalizedType = normalizeType(type);
-        validateCommon(normalizedType, type, stem, score);
+        validateCommon(normalizedType, type, stem);
         validateOptionsSyntax(optionsJson);
         Object answer = readAnswer(answerJson);
         Map<String, Object> scoringConfig = readScoringConfig(scoringConfigJson);
@@ -65,15 +64,12 @@ public class QuestionContentValidator {
         }
     }
 
-    private void validateCommon(String normalizedType, String rawType, String stem, Double score) {
+    private void validateCommon(String normalizedType, String rawType, String stem) {
         if (normalizedType == null) {
             throw new BusinessException(40000, "不支持的题型：" + (rawType == null ? "" : rawType));
         }
         if (stem == null || stem.trim().isEmpty()) {
             throw new BusinessException(40000, "题干不能为空");
-        }
-        if (score == null || score <= 0D) {
-            throw new BusinessException(40000, "分值必须大于 0");
         }
     }
 

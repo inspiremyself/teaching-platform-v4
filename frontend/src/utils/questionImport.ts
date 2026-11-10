@@ -73,14 +73,7 @@ function validateRow(raw: unknown, line: number): RowValidation {
     difficulty = value as ImportQuestionDraft['difficulty']
   }
 
-  // 7. score 缺省 2，出现时必须为大于 0 的整数
-  let score = 2
-  if (record.score !== undefined && record.score !== null) {
-    if (typeof record.score !== 'number' || !Number.isInteger(record.score) || record.score <= 0) {
-      return { message: 'score 必须为正整数' }
-    }
-    score = record.score
-  }
+  // 7. 题库不含分值：历史 JSON 里的 score 直接忽略，不校验也不落库
 
   // 8. options 缺省：判断题补 T/F，选择题报错
   let rawOptions = record.options
@@ -153,7 +146,7 @@ function validateRow(raw: unknown, line: number): RowValidation {
 
   return {
     message: '',
-    draft: { code, type, stem, difficulty, score, options, answer, analysis },
+    draft: { code, type, stem, difficulty, options, answer, analysis },
   }
 }
 

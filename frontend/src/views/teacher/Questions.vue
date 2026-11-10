@@ -132,7 +132,6 @@
               <div class="question-row__identity-main">{{ row.code }}</div>
               <div class="question-row__identity-tags">
                 <span class="question-chip question-chip--type">{{ getTypeLabel(row.type) }}</span>
-                <span class="question-chip question-chip--score">{{ row.defaultScore }} 分</span>
               </div>
             </div>
           </template>
@@ -239,6 +238,7 @@ import QuestionConfigList from '@/components/question-config/QuestionConfigList.
 import { isQuestionType, type QuestionDifficulty, type QuestionItem, type QuestionType } from '@/types/question';
 import type { ConfiguredQuestionItem } from '@/types/question-config';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
+import { defaultScoreByType } from '@/constants/questionScoreDefaults';
 import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion';
 import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/components/typed-editor/constants';
 import QuestionEditorDialog, {
@@ -264,7 +264,6 @@ interface QuestionFormState {
   type: QuestionType;
   stem: string;
   difficulty: QuestionDifficulty;
-  defaultScore: number;
   analysisText: string;
 }
 
@@ -307,7 +306,6 @@ const form = reactive<QuestionFormState>({
   type: 'SINGLE',
   stem: '',
   difficulty: 'EASY',
-  defaultScore: 5,
   analysisText: '',
 });
 
@@ -343,7 +341,7 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
     questionType: form.type,
     stem: form.stem,
     sortOrder: 1,
-    score: form.defaultScore,
+    score: defaultScoreByType(form.type),
     options: editingId.value
       ? parseQuestionAnswerArray(rows.value.find(item => item.id === editingId.value)?.optionsJson ?? null).map((option, index) => {
           if (option && typeof option === 'object') {
@@ -364,7 +362,6 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
     scoringConfigJson: null,
     code: form.code,
     difficulty: form.difficulty,
-    defaultScore: form.defaultScore,
     analysisText: form.analysisText,
   };
 });
@@ -435,7 +432,6 @@ const resetForm = () => {
   form.type = 'SINGLE';
   form.stem = '';
   form.difficulty = 'EASY';
-  form.defaultScore = 5;
   form.analysisText = '';
   editingId.value = null;
 };
@@ -472,7 +468,6 @@ const openEditDialog = (row: QuestionItem) => {
   form.type = normalizeQuestionType(row.type);
   form.stem = row.stem;
   form.difficulty = isQuestionDifficulty(row.difficulty) ? row.difficulty : 'EASY';
-  form.defaultScore = row.defaultScore;
   form.analysisText = row.analysisText;
   dialogVisible.value = true;
 };
@@ -522,7 +517,6 @@ const buildPayload = (editorPayload: QuestionEditorDialogSubmitPayload) =>
     code: editorPayload.code,
     type: editorPayload.type,
     difficulty: editorPayload.difficulty,
-    defaultScore: editorPayload.defaultScore,
     analysisText: editorPayload.analysisText,
   });
 

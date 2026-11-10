@@ -153,7 +153,6 @@ const placeholderText = `[
     "type": "SINGLE",
     "stem": "题干内容",
     "difficulty": "EASY",
-    "score": 2,
     "options": [{ "key": "A", "content": "选项A" }, { "key": "B", "content": "选项B" }],
     "answer": ["A"],
     "analysis": "解析说明"
@@ -226,7 +225,6 @@ const toPayload = (draft: ImportQuestionDraft): SaveQuestionPayload => ({
   type: draft.type,
   stem: draft.stem,
   difficulty: draft.difficulty,
-  defaultScore: draft.score,
   optionsJson: JSON.stringify(draft.options),
   answerJson: JSON.stringify(draft.answer),
   analysisText: draft.analysis,

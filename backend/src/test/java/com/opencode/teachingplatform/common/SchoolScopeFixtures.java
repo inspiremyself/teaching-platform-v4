@@ -50,8 +50,8 @@ public final class SchoolScopeFixtures {
         jdbc.update("INSERT INTO exam (id, title, class_id, duration_minutes, status, created_by, school_id) "
                 + "VALUES (?, 'B校考试', ?, 60, 'PUBLISHED', ?, ?)",
                 EXAM_B, CLASS_B, TEACHER_ID, SCHOOL_B);
-        jdbc.update("INSERT INTO question_bank (id, code, type, stem, difficulty, default_score, created_by, school_id) "
-                + "VALUES (?, 'QB-B-9204', 'SINGLE', 'B校题目', 'EASY', 5, ?, ?)",
+        jdbc.update("INSERT INTO question_bank (id, code, type, stem, difficulty, created_by, school_id) "
+                + "VALUES (?, 'QB-B-9204', 'SINGLE', 'B校题目', 'EASY', ?, ?)",
                 QUESTION_B, TEACHER_ID, SCHOOL_B);
         jdbc.update("INSERT INTO score_record "
                 + "(id, business_type, business_id, student_id, class_id, score, graded_at, school_id) "

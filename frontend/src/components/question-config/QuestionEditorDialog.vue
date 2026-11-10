@@ -46,9 +46,6 @@
                   <el-option v-for="item in difficultyOptions" :key="item" :label="difficultyLabelMap[item]" :value="item" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="默认分值">
-                <el-input-number v-model="form.defaultScore" :min="1" :max="100" style="width: 100%" />
-              </el-form-item>
             </template>
 
             <template v-else-if="showConfigFields">
@@ -152,7 +149,6 @@ interface FillBlankEditorExpose {
 export interface QuestionEditorDialogValue extends ConfiguredQuestionItem {
   code?: string
   difficulty?: QuestionDifficulty
-  defaultScore?: number
   analysisText?: string
 }
 
@@ -160,7 +156,6 @@ export interface QuestionEditorDialogSubmitPayload {
   code: string
   type: QuestionType
   difficulty: QuestionDifficulty
-  defaultScore: number
   analysisText: string
   draft: TypedEditorDraft
 }
@@ -216,7 +211,6 @@ const form = reactive({
   sortOrder: 1,
   score: 5,
   difficulty: 'EASY' as QuestionDifficulty,
-  defaultScore: 5,
   analysisText: '',
   scoringConfigJson: null as string | null,
 })
@@ -280,7 +274,6 @@ const hydrateEditor = (question: QuestionEditorDialogValue | null) => {
   form.sortOrder = question?.sortOrder ?? 1
   form.score = question?.score ?? 5
   form.difficulty = question?.difficulty ?? 'EASY'
-  form.defaultScore = question?.defaultScore ?? question?.score ?? 5
   form.analysisText = question?.analysisText ?? ''
   form.scoringConfigJson = question?.scoringConfigJson ?? null
 
@@ -290,7 +283,6 @@ const hydrateEditor = (question: QuestionEditorDialogValue | null) => {
     type: normalizedType,
     stem: question?.stem ?? '',
     difficulty: question?.difficulty ?? 'EASY',
-    defaultScore: question?.defaultScore ?? question?.score ?? 5,
     optionsJson: question?.options?.length
       ? JSON.stringify(
           question.options.map(option => ({
@@ -369,7 +361,6 @@ const submit = () => {
     code: lockedCode.value,
     type: form.type,
     difficulty: form.difficulty,
-    defaultScore: form.defaultScore,
     analysisText: form.analysisText.trim(),
     draft: {
       kind: typedEditor.draft.kind,
