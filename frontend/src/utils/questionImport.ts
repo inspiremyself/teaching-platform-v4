@@ -9,6 +9,16 @@ const TYPE_LABEL: Record<ImportQuestionDraft['type'], string> = {
 
 const ALLOWED_TYPES: ImportQuestionDraft['type'][] = ['SINGLE', 'MULTI', 'JUDGE']
 const ALLOWED_DIFFICULTIES: ImportQuestionDraft['difficulty'][] = ['EASY', 'MEDIUM', 'HARD']
+/** 导入 JSON 白名单：题库只接受内容字段，任何未知键（含废止的 score）一律报错 */
+const ALLOWED_IMPORT_FIELDS = new Set([
+  'code',
+  'type',
+  'stem',
+  'difficulty',
+  'options',
+  'answer',
+  'analysis',
+])
 /** 判断题缺省 options */
 const JUDGE_DEFAULT_OPTIONS = [
   { key: 'T', content: '正确' },
@@ -46,24 +56,30 @@ function validateRow(raw: unknown, line: number): RowValidation {
   }
   const record = raw as Record<string, unknown>
 
-  // 2-3. code 非空且规范化后不超过 64 字符
+  // 2. 字段白名单：题库只接受内容字段，score 等废止字段一律报错
+  const unknownFields = Object.keys(record).filter(key => !ALLOWED_IMPORT_FIELDS.has(key))
+  if (unknownFields.length > 0) {
+    return { message: `不支持的字段：${unknownFields.join(', ')}（题库只接受内容字段）` }
+  }
+
+  // 3-4. code 非空且规范化后不超过 64 字符
   const rawCode = textOf(record.code)
   if (!rawCode) return { message: 'code 不能为空' }
   const code = normalizeImportCode(rawCode)
   if (code.length > 64) return { message: 'code 长度不能超过 64 个字符' }
 
-  // 4. stem 非空
+  // 5. stem 非空
   const stem = textOf(record.stem)
   if (!stem) return { message: 'stem 不能为空' }
 
-  // 5. type 仅支持 SINGLE / MULTI / JUDGE
+  // 6. type 仅支持 SINGLE / MULTI / JUDGE
   const typeValue = textOf(record.type).toUpperCase()
   if (!ALLOWED_TYPES.includes(typeValue as ImportQuestionDraft['type'])) {
     return { message: 'type 必须为 SINGLE / MULTI / JUDGE' }
   }
   const type = typeValue as ImportQuestionDraft['type']
 
-  // 6. difficulty 缺省 EASY
+  // 7. difficulty 缺省 EASY
   let difficulty: ImportQuestionDraft['difficulty'] = 'EASY'
   if (record.difficulty !== undefined && record.difficulty !== null) {
     const value = textOf(record.difficulty).toUpperCase()
@@ -72,8 +88,6 @@ function validateRow(raw: unknown, line: number): RowValidation {
     }
     difficulty = value as ImportQuestionDraft['difficulty']
   }
-
-  // 7. 题库不含分值：历史 JSON 里的 score 直接忽略，不校验也不落库
 
   // 8. options 缺省：判断题补 T/F，选择题报错
   let rawOptions = record.options

@@ -49,8 +49,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Object>> handleUnreadable(HttpMessageNotReadableException ex) {
+        BusinessException businessCause = findBusinessCause(ex);
+        if (businessCause != null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.of(businessCause.getCode(), businessCause.getMessage(), null));
+        }
         log.error("Request body unreadable", ex);
         return ResponseEntity.badRequest().body(ApiResponse.of(40000, "请求体 JSON 格式不正确", null));
+    }
+
+    /**
+     * 反序列化阶段抛出的业务异常会被 Jackson 与 Spring 各包一层，透出原始 code 与文案，
+     * 避免把「字段不支持」误报成笼统的 JSON 格式错误。
+     */
+    private BusinessException findBusinessCause(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof BusinessException businessException) {
+                return businessException;
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})

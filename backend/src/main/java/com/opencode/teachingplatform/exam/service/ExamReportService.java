@@ -361,7 +361,8 @@ public class ExamReportService {
     }
 
     /**
-     * 教师显式给分校验：整数且 0 ~ 该题快照分值；快照缺失（历史脏数据）时只校验非负与整数。
+     * 教师显式给分校验：整数且 0 ~ 该题快照分值。
+     * 数据保全：快照或快照分值缺失时不臆造上限，只校验非负与整数；不改写历史快照与成绩。
      */
     private void assertTeacherScoreInRange(Double score, QuestionSnapshot snapshot) {
         if (score == null) {

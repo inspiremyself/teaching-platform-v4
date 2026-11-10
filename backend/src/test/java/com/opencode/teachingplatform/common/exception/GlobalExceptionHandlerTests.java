@@ -4,6 +4,7 @@ import com.opencode.teachingplatform.common.api.ApiResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,5 +30,18 @@ class GlobalExceptionHandlerTests {
         assertNull(body.data());
         assertFalse(body.message().contains("secret_table"));
         assertFalse(body.message().contains("password_hash"));
+    }
+
+    @Test
+    void unreadableExceptionUnwrapsBusinessException() {
+        BusinessException cause = new BusinessException(40000, "题库请求不支持字段：defaultScore");
+        HttpMessageNotReadableException ex = new HttpMessageNotReadableException("JSON parse error", cause);
+
+        ResponseEntity<ApiResponse<Object>> response = handler.handleUnreadable(ex);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        ApiResponse<Object> body = response.getBody();
+        assertEquals(40000, body.code());
+        assertEquals("题库请求不支持字段：defaultScore", body.message());
     }
 }

@@ -272,6 +272,7 @@ public class HomeworkReportService {
     /**
      * 作业总评分校验：整数且 0 ~ 计划满分（Σ 题目分值）。
      * 无题目的附件型作业不设上限，沿用现状。
+     * 数据保全：题目分值缺失时不臆造上限，按 0 计入计划满分；不改写历史快照与成绩。
      */
     private void assertHomeworkTotalScoreInRange(Long homeworkId, Double totalScore) {
         if (totalScore == null) {

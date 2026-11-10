@@ -77,7 +77,7 @@ class QuestionControllerTests {
     }
 
     @Test
-    void createQuestionIgnoresUnknownDefaultScoreField() throws Exception {
+    void createQuestionRejectsUnknownDefaultScoreField() throws Exception {
         mockMvc.perform(post("/api/v1/questions")
                         .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师")))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -93,10 +93,47 @@ class QuestionControllerTests {
                                   "analysisText": "忽略未知字段"
                                 }
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.code").value("Q-IGNORE-001"))
-                .andExpect(jsonPath("$.data.defaultScore").doesNotExist());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000))
+                .andExpect(jsonPath("$.message").value("题库请求不支持字段：defaultScore"));
+
+        assertThat(questionBankRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void updateQuestionRejectsUnknownDefaultScoreField() throws Exception {
+        QuestionBank existing = new QuestionBank();
+        existing.setSchoolId(1L);
+        existing.setCode("Q-UPDATE-001");
+        existing.setCreatedBy(1L);
+        existing.setType("SINGLE");
+        existing.setStem("原题干");
+        existing.setDifficulty("EASY");
+        existing.setOptionsJson("[\"A\",\"B\"]");
+        existing.setAnswerJson("[\"A\"]");
+        QuestionBank saved = questionBankRepository.save(existing);
+
+        mockMvc.perform(put("/api/v1/questions/{id}", saved.getId())
+                        .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "code": "Q-UPDATE-001",
+                                  "type": "SINGLE",
+                                  "stem": "被改动的题干",
+                                  "difficulty": "MEDIUM",
+                                  "defaultScore": 5,
+                                  "optionsJson": "[\\"A\\",\\"B\\"]",
+                                  "answerJson": "[\\"A\\"]",
+                                  "analysisText": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000))
+                .andExpect(jsonPath("$.message").value("题库请求不支持字段：defaultScore"));
+
+        QuestionBank after = questionBankRepository.findById(saved.getId()).orElseThrow();
+        assertThat(after.getStem()).isEqualTo("原题干");
     }
 
     @Test

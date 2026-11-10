@@ -1,4 +1,4 @@
-/** 批量导入：通过校验、可直接提交的单题草稿（题库不含分值，导入不读取 score） */
+/** 批量导入：通过校验、可直接提交的单题草稿（导入只接受白名单字段，未知字段一律报错） */
 export interface ImportQuestionDraft {
   code: string
   type: 'SINGLE' | 'MULTI' | 'JUDGE'

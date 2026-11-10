@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -109,6 +110,50 @@ class QuestionBankCopyControllerTests {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.code").value(40000))
                     .andExpect(jsonPath("$.message").value("该题项类型不支持复制到题库"));
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void copyingHomeworkQuestionWithUnknownDefaultScoreFieldIsRejected() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/homework-questions/{id}/copy-to-bank", 11L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "code": "HW-CODE",
+                                      "defaultScore": 5
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("题库请求不支持字段：defaultScore"));
+
+            verifyNoInteractions(questionBankCopyService);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    @Test
+    void copyingLabStepWithUnknownDefaultScoreFieldIsRejected() throws Exception {
+        SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
+        try {
+            mockMvc.perform(post("/api/v1/teacher/lab-steps/{id}/copy-to-bank", 31L)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "code": "LAB-CODE",
+                                      "defaultScore": 5
+                                    }
+                                    """))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value(40000))
+                    .andExpect(jsonPath("$.message").value("题库请求不支持字段：defaultScore"));
+
+            verifyNoInteractions(questionBankCopyService);
         } finally {
             SecurityContextHolder.clearContext();
         }

@@ -175,13 +175,14 @@
 | `homework_id` | `BIGINT` | 否 |  | 作业 ID |
 | `question_id` | `BIGINT` | 是 |  | 题库题目 ID |
 | `sort_order` | `INT` | 否 |  | 排序 |
-| `question_score` | `DOUBLE` | 否 |  | 分值 |
+| `question_score` | `DOUBLE` | 否 |  | 分值（1–100 整数，V28 检查约束） |
 | `question_snapshot_json` | `TEXT` | 否 | `'{}'` | 题目快照 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
+- 检查约束：`ck_homework_question_score_domain CHECK (question_score >= 1 AND question_score <= 100 AND question_score = FLOOR(question_score))`（V28）
 
 #### `homework_submission`
 
@@ -260,13 +261,14 @@
 | `exam_id` | `BIGINT` | 否 |  | 考试 ID |
 | `question_id` | `BIGINT` | 是 |  | 题库题目 ID；历史数据可能为空（内联题已停用，新数据必填） |
 | `sort_order` | `INT` | 否 |  | 排序 |
-| `question_score` | `DOUBLE` | 否 |  | 分值 |
+| `question_score` | `DOUBLE` | 否 |  | 分值（1–100 整数，V28 检查约束） |
 | `question_snapshot_json` | `TEXT` | 否 | `'{}'` | 题目快照 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
+- 检查约束：`ck_exam_question_score_domain CHECK (question_score >= 1 AND question_score <= 100 AND question_score = FLOOR(question_score))`（V28）
 
 #### `exam_submission`
 
@@ -352,7 +354,7 @@
 | `experiment_item_type` | `INT` | 否 | `5` | 题目类型编码 |
 | `experiment_item_content` | `TEXT` | 否 |  | 题目内容 |
 | `experiment_item_answer` | `TEXT` | 是 |  | 参考答案 |
-| `experiment_item_score` | `INT` | 否 |  | 分值 |
+| `experiment_item_score` | `INT` | 否 |  | 分值（0–100 整数，V28 检查约束） |
 | `state` | `INT` | 否 | `1` | 状态码 |
 | `question_type` | `VARCHAR(32)` | 否 |  | 题型 |
 | `answer_config_json` | `TEXT` | 是 |  | 作答配置 |
@@ -367,6 +369,7 @@
 **约束**
 - 主键：`PRIMARY KEY (id)`
 - 唯一约束：`uk_t_experiment_item_no UNIQUE (experiment_id, experiment_item_no)`
+- 检查约束：`ck_experiment_item_score_domain CHECK (experiment_item_score >= 0 AND experiment_item_score <= 100)`（V28）
 
 #### `experiment_submission`
 

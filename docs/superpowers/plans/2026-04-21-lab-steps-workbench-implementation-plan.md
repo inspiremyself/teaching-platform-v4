@@ -1,5 +1,7 @@
 # Lab Steps Workbench Implementation Plan
 
+> **历史设计文档**：本文涉及 `defaultScore` 的描述已被 `docs/PRD/2026-11-09-题目分值归属与组卷分值规范PRD.md`（V1.5）覆盖；题库无分值，分值只属组卷配置。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Refactor the teacher lab steps page into a viewport-locked three-column workbench, extract a shared typed-editor core reused by the teacher question-bank page and teacher lab steps page, and add an optional create-question-on-save flow that runs strictly after lab step save and never creates an ongoing binding.
