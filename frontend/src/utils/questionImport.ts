@@ -9,6 +9,10 @@ const TYPE_LABEL: Record<ImportQuestionDraft['type'], string> = {
 
 const ALLOWED_TYPES: ImportQuestionDraft['type'][] = ['SINGLE', 'MULTI', 'JUDGE']
 const ALLOWED_DIFFICULTIES: ImportQuestionDraft['difficulty'][] = ['EASY', 'MEDIUM', 'HARD']
+/** 平台编码硬规则：字符集与系统自动码保留形状（与后端 QuestionCodeRules 同源） */
+const CODE_PATTERN = /^[A-Z0-9_-]+$/
+const HOMEWORK_AUTO_PATTERN = /^HW\d+$/
+const LAB_AUTO_PATTERN = /^LAB\d+S\d+$/
 /** 导入 JSON 白名单：题库只接受内容字段，任何未知键（含废止的 score）一律报错 */
 const ALLOWED_IMPORT_FIELDS = new Set([
   'code',
@@ -67,6 +71,10 @@ function validateRow(raw: unknown, line: number): RowValidation {
   if (!rawCode) return { message: 'code 不能为空' }
   const code = normalizeImportCode(rawCode)
   if (code.length > 64) return { message: 'code 长度不能超过 64 个字符' }
+  if (!CODE_PATTERN.test(code)) return { message: 'code 只能包含 A-Z、0-9、- 和 _' }
+  if (HOMEWORK_AUTO_PATTERN.test(code) || LAB_AUTO_PATTERN.test(code)) {
+    return { message: 'code 不能使用系统自动编码格式（HW{数字} / LAB{数字}S{数字}）' }
+  }
 
   // 5. stem 非空
   const stem = textOf(record.stem)
@@ -228,6 +236,17 @@ export function parseImportJson(
     readyCodes.add(draft.code)
     rows.push({ ...baseRow, status: 'READY', message: '通过', draft })
   })
+
+  // 阻断性错误存在时禁止提交：保留错误行原有文案，把本批次其余待导入行一并收口为 ERROR
+  if (rows.some(row => row.status === 'ERROR')) {
+    rows.forEach(row => {
+      if (row.status === 'READY') {
+        row.status = 'ERROR'
+        row.message = '本批次存在校验错误行，请修正后重新解析预览'
+        delete row.draft
+      }
+    })
+  }
 
   return {
     result: {

@@ -155,7 +155,81 @@ class QuestionControllerTests {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validPayload("Q-DUP-001")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value(40900));
+                .andExpect(jsonPath("$.code").value(40900))
+                .andExpect(jsonPath("$.message").value("编码已在你的题库中存在"));
+    }
+
+    @Test
+    void teacherCanCreateSameCodeAsAnotherTeacher() throws Exception {
+        QuestionBank foreign = new QuestionBank();
+        foreign.setSchoolId(1L);
+        foreign.setCode("Q-SHARED-001");
+        foreign.setCreatedBy(9L);
+        foreign.setType("SINGLE");
+        foreign.setStem("其他教师同码题目");
+        foreign.setDifficulty("EASY");
+        foreign.setOptionsJson("[\"A\",\"B\"]");
+        foreign.setAnswerJson("[\"A\"]");
+        questionBankRepository.save(foreign);
+
+        mockMvc.perform(post("/api/v1/questions")
+                        .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload("Q-SHARED-001")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.code").value("Q-SHARED-001"));
+    }
+
+    @Test
+    void createRejectsInvalidCodeWith40000() throws Exception {
+        String bearer = bearerToken(teacherUser(1L, "t9001", "演示教师"));
+
+        mockMvc.perform(post("/api/v1/questions")
+                        .header("Authorization", bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload("中文编码")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000))
+                .andExpect(jsonPath("$.message").value("题目编码只能包含 A-Z、0-9、- 和 _"));
+
+        mockMvc.perform(post("/api/v1/questions")
+                        .header("Authorization", bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload("HW12")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000))
+                .andExpect(jsonPath("$.message").value("题目编码不能使用系统自动编码格式（HW{数字} / LAB{数字}S{数字}）"));
+
+        mockMvc.perform(post("/api/v1/questions")
+                        .header("Authorization", bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload("A".repeat(65))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000))
+                .andExpect(jsonPath("$.message").value("题目编码长度不能超过 64 个字符"));
+    }
+
+    @Test
+    void updateKeepsLegacyInvalidCodeWhenUnchanged() throws Exception {
+        QuestionBank legacy = new QuestionBank();
+        legacy.setSchoolId(1L);
+        legacy.setCode("OLD 001");
+        legacy.setCreatedBy(1L);
+        legacy.setType("SINGLE");
+        legacy.setStem("存量题面");
+        legacy.setDifficulty("EASY");
+        legacy.setOptionsJson("[\"A\",\"B\"]");
+        legacy.setAnswerJson("[\"A\"]");
+        QuestionBank saved = questionBankRepository.save(legacy);
+
+        mockMvc.perform(put("/api/v1/questions/{id}", saved.getId())
+                        .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validPayload("OLD 001")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.code").value("OLD 001"));
     }
 
     @Test

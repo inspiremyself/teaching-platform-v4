@@ -93,7 +93,39 @@ class QuestionBankCopyServiceTests {
         BusinessException ex = org.junit.jupiter.api.Assertions.assertThrows(BusinessException.class, () ->
                 questionBankCopyService.copyFromHomework(TEACHER, question.getId(), "DUP-CODE-001"));
         assertThat(ex.getCode()).isEqualTo(40900);
-        assertThat(ex.getMessage()).contains("题目编码已存在");
+        assertThat(ex.getMessage()).contains("编码已在你的题库中存在");
+    }
+
+    @Test
+    void copyIgnoresOtherTeacherCodeWithSameValue() {
+        QuestionBank foreign = new QuestionBank();
+        foreign.setSchoolId(1L);
+        foreign.setCode("SHARED-CODE-001");
+        foreign.setType("SHORT");
+        foreign.setStem("其他教师同码题目");
+        foreign.setDifficulty("MEDIUM");
+        foreign.setAnswerJson("[\"参考\"]");
+        foreign.setCreatedBy(9L);
+        questionBankRepository.save(foreign);
+
+        HomeworkQuestion question = saveInlineHomeworkQuestion("其他教师同码题干", "[]");
+
+        Map<String, Object> result = questionBankCopyService.copyFromHomework(
+                TEACHER, question.getId(), "SHARED-CODE-001");
+
+        assertThat(result.get("created")).isEqualTo(true);
+        assertThat(asMap(result.get("question")).get("code")).isEqualTo("SHARED-CODE-001");
+    }
+
+    @Test
+    void copyRejectsUserSubmittedReservedCode() {
+        HomeworkQuestion question = saveInlineHomeworkQuestion("保留形状手填码题干", "[]");
+
+        assertThatThrownBy(() -> questionBankCopyService.copyFromHomework(
+                TEACHER, question.getId(), "HW12"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getCode()).isEqualTo(40000))
+                .hasMessageContaining("不能使用系统自动编码格式");
     }
 
     @Test

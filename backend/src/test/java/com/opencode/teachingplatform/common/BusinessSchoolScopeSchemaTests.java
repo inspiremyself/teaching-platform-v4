@@ -11,7 +11,12 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -76,6 +81,38 @@ class BusinessSchoolScopeSchemaTests {
         for (String index : SchoolScopeFixtures.INDEXES) {
             assertThat(indexNames).as(index).contains(index);
         }
+    }
+
+    /** V29：按列组合断言归属维度唯一键，且 code / source_ref 的单列全局唯一已消失。 */
+    @Test
+    void questionBankCodeUniqueIsOwnerScoped() throws Exception {
+        Map<String, List<String>> uniqueColumnsByIndex = new HashMap<>();
+        try (Connection connection = dataSource.getConnection()) {
+            DatabaseMetaData meta = connection.getMetaData();
+            for (String actual : actualTables(meta, "question_bank")) {
+                try (ResultSet rs = meta.getIndexInfo(null, null, actual, false, false)) {
+                    while (rs.next()) {
+                        if (rs.getBoolean("NON_UNIQUE")) {
+                            continue;
+                        }
+                        String indexName = rs.getString("INDEX_NAME");
+                        if (indexName == null) {
+                            continue;
+                        }
+                        int position = rs.getShort("ORDINAL_POSITION");
+                        String column = rs.getString("COLUMN_NAME").toLowerCase(Locale.ROOT);
+                        List<String> columns = uniqueColumnsByIndex.computeIfAbsent(indexName, key -> new ArrayList<>());
+                        while (columns.size() < position) {
+                            columns.add("");
+                        }
+                        columns.set(position - 1, column);
+                    }
+                }
+            }
+        }
+        assertThat(uniqueColumnsByIndex.values())
+                .contains(List.of("school_id", "created_by", "code"), List.of("school_id", "source_ref"))
+                .doesNotContain(List.of("code"), List.of("source_ref"));
     }
 
     /** H2 对 V9 的 CREATE TABLE IF NOT EXISTS t_experiment 存的表名大小写与其它表不一致，按实际表名回查。 */

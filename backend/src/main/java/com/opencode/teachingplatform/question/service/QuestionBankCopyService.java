@@ -125,6 +125,9 @@ public class QuestionBankCopyService {
 
         questionContentValidator.validate(type, stem, optionsJson, answerJson, scoringConfigJson);
 
+        if (code != null && !code.isBlank()) {
+            QuestionCodeRules.validateUserSubmitted(code.trim().toUpperCase(Locale.ROOT), false);
+        }
         String resolvedCode = resolveCode(code, "HW" + homeworkQuestionId);
         return persistCopiedQuestion(currentUser, sourceRef, SOURCE_HOMEWORK_INLINE, resolvedCode, type, stem,
                 difficulty, optionsJson, answerJson, scoringConfigJson, analysisText);
@@ -162,6 +165,9 @@ public class QuestionBankCopyService {
                 content.scoringConfigJson()
         );
 
+        if (code != null && !code.isBlank()) {
+            QuestionCodeRules.validateUserSubmitted(code.trim().toUpperCase(Locale.ROOT), false);
+        }
         String resolvedCode = resolveCode(code, "LAB" + step.getLabId() + "S" + step.getStepNo());
         return persistCopiedQuestion(currentUser, sourceRef, SOURCE_LAB_STEP, resolvedCode, content.type(),
                 content.stem(), "MEDIUM", content.optionsJson(), content.answerJson(),
@@ -350,8 +356,9 @@ public class QuestionBankCopyService {
                                                       String answerJson,
                                                       String scoringConfigJson,
                                                       String analysisText) {
-        if (questionBankRepository.existsByCode(code)) {
-            throw new BusinessException(40900, "题目编码已存在");
+        if (questionBankRepository.existsBySchoolIdAndCreatedByAndCode(
+                currentUser.schoolId(), currentUser.id(), code)) {
+            throw new BusinessException(40900, "编码已在你的题库中存在");
         }
         QuestionBank question = new QuestionBank();
         question.setCode(code);
@@ -374,12 +381,12 @@ public class QuestionBankCopyService {
         try {
             saved = questionBankRepository.save(question);
         } catch (DataIntegrityViolationException ex) {
-            // 并发重复复制由 uk_question_bank_source_ref 唯一索引兜底
+            // 并发重复复制由 uk_question_bank_school_source_ref 唯一索引兜底
             Optional<QuestionBank> concurrent = questionBankRepository.findBySourceRefAndSchoolId(sourceRef, currentUser.schoolId());
             if (concurrent.isPresent()) {
                 return buildResponse(concurrent.get(), false, null);
             }
-            throw new BusinessException(40900, "题目编码已存在");
+            throw new BusinessException(40900, "编码已在你的题库中存在");
         }
         auditLogService.log(currentUser, AuditAction.QUESTION_CREATE, AuditResourceType.QUESTION, saved.getId(),
                 Map.of("code", saved.getCode(), "sourceType", sourceType, "sourceRef", sourceRef));

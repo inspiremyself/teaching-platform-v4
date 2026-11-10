@@ -20,7 +20,7 @@ public final class QuestionRequests {
      * 复制到题库的请求体：编码可选，不传时由服务端按来源自动生成。
      */
     public record CopyQuestionToBankRequest(
-            @Size(max = 64) String code
+            @Size(max = 64, message = "题目编码长度不能超过 64 个字符") String code
     ) {
         @JsonAnySetter
         public void rejectUnknownField(String name, Object value) {
@@ -29,7 +29,7 @@ public final class QuestionRequests {
     }
 
     public record SaveQuestionRequest(
-            @NotBlank(message = "题目编码不能为空") String code,
+            @NotBlank(message = "题目编码不能为空") @Size(max = 64, message = "题目编码长度不能超过 64 个字符") String code,
             @NotBlank(message = "题目类型不能为空") String type,
             @NotBlank(message = "题干不能为空") String stem,
             @NotBlank(message = "难度不能为空") String difficulty,

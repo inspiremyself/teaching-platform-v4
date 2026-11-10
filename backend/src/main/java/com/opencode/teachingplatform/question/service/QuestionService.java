@@ -48,8 +48,11 @@ public class QuestionService {
 
     @Transactional
     public Map<String, Object> create(CurrentUser currentUser, SaveQuestionRequest request) {
-        if (questionBankRepository.existsByCode(normalizeCode(request.code()))) {
-            throw new BusinessException(40900, "题目编码已存在");
+        String normalized = normalizeCode(request.code());
+        QuestionCodeRules.validateUserSubmitted(normalized, false);
+        if (questionBankRepository.existsBySchoolIdAndCreatedByAndCode(
+                currentUser.schoolId(), currentUser.id(), normalized)) {
+            throw new BusinessException(40900, "编码已在你的题库中存在");
         }
         QuestionBank question = new QuestionBank();
         apply(question, request);
@@ -78,8 +81,13 @@ public class QuestionService {
         if (!Objects.equals(question.getCreatedBy(), currentUser.id())) {
             throw new BusinessException(40300, "无权限访问该题目");
         }
-        if (questionBankRepository.existsByCodeAndIdNot(normalizeCode(request.code()), id)) {
-            throw new BusinessException(40900, "题目编码已存在");
+        String rawTrimmed = request.code() == null ? null : request.code().trim();
+        boolean unchanged = Objects.equals(rawTrimmed, question.getCode());
+        String normalized = normalizeCode(request.code());
+        QuestionCodeRules.validateUserSubmitted(normalized, unchanged);
+        if (questionBankRepository.existsBySchoolIdAndCreatedByAndCodeAndIdNot(
+                currentUser.schoolId(), currentUser.id(), normalized, id)) {
+            throw new BusinessException(40900, "编码已在你的题库中存在");
         }
         // 更新只改题面内容：来源字段与 scoring_config_json 由复制链路写入，编辑不得覆盖
         apply(question, request);
@@ -135,7 +143,7 @@ public class QuestionService {
     private RuntimeException translateIntegrityViolation(DataIntegrityViolationException ex) {
         String message = ex.getMostSpecificCause() == null ? ex.getMessage() : ex.getMostSpecificCause().getMessage();
         if (message != null && message.contains("question_bank") && message.contains("code")) {
-            return new BusinessException(40900, "题目编码已存在");
+            return new BusinessException(40900, "编码已在你的题库中存在");
         }
         return ex;
     }

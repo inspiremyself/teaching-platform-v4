@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 @Table(name = "question_bank")
 public class QuestionBank extends BaseEntity {
 
-    @Column(nullable = false, unique = true, length = 64)
+    @Column(nullable = false, length = 64)
     private String code;
     @Column(nullable = false, length = 32)
     private String type;

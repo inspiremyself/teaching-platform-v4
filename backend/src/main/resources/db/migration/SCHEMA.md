@@ -1,5 +1,7 @@
 # 数据库最终版表结构说明
 
+> 口径覆盖声明（2026-11-10 PRD V1.5 覆盖）：本文件题库编码唯一性口径以 `docs/PRD/2026-11-10-题库编码作用域收敛与发号规则PRD.md` 与 `docs/技术方案/2026-11-10-题库编码作用域收敛与发号规则技术方案.md` 为准。
+
 > 本文档按**最终业务版数据库口径**整理，而不是按迁移过程中所有历史/过渡表逐个罗列。
 >
 > 也就是说：
@@ -109,7 +111,7 @@
 | 字段 | 类型 | 可空 | 默认值 | 说明 |
 |---|---|---|---|---|
 | `id` | `BIGINT` | 否 | 自增 | 主键 |
-| `code` | `VARCHAR(64)` | 否 |  | 题目编码，唯一 |
+| `code` | `VARCHAR(64)` | 否 |  | 题目编码；与 `school_id`、`created_by` 组成归属维度唯一键 |
 | `type` | `VARCHAR(32)` | 否 |  | 题型 |
 | `stem` | `TEXT` | 否 |  | 题干 |
 | `difficulty` | `VARCHAR(32)` | 否 |  | 难度 |
@@ -124,7 +126,9 @@
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
-- 唯一约束：`UNIQUE (code)`
+- 唯一约束：`UNIQUE (school_id, created_by, code)`（V29）、`UNIQUE (school_id, source_ref)`（V29）
+
+> V29：行内 UNIQUE(code) 与 uk_question_bank_source_ref 已删除，唯一键收敛为归属维度，零回填。
 
 #### `question_attachment`
 
@@ -524,7 +528,8 @@
 - `sys_user.username`
 - `class_room.code`
 - `class_member (class_id, student_user_id)`
-- `question_bank.code`
+- `question_bank (school_id, created_by, code)`
+- `question_bank (school_id, source_ref)`
 - `homework_submission (homework_id, student_id)`
 - `exam_submission (exam_id, student_id)`
 - `t_experiment_item (experiment_id, experiment_item_no)`
@@ -572,3 +577,11 @@
 3. **`behavior_event`（`V19:21`）**
    `school_id BIGINT NULL`；写侧 `BehaviorIngestService` 已赋值，无历史回填、无 `(school_id, …)` 索引；读侧 `BehaviorEventRepository` 的 4 个自定义查询方法未按校过滤，上游 `labId` 均已按校限定。
    结论：本期保留现状。阶段 2 启用多校真实行为数据前，须另行评估 `NOT NULL` 收紧、历史回填、索引与仓储谓词。
+
+---
+
+## 五、修订记录
+
+| 日期 | 内容 |
+|---|---|
+| 2026-11-10 | V29 归属维度唯一键收敛；按 2026-11-10 PRD V1.5 与技术方案修订 §一字段表、§二约束汇总 |

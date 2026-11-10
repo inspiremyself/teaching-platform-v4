@@ -162,7 +162,7 @@ class QuestionBankCopyControllerTests {
     @Test
     void copyingWithDuplicateCodeReturnsConflict() throws Exception {
         when(questionBankCopyService.copyFromLabStep(any(CurrentUser.class), anyLong(), any()))
-                .thenThrow(new BusinessException(40900, "题目编码已存在"));
+                .thenThrow(new BusinessException(40900, "编码已在你的题库中存在"));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
         try {

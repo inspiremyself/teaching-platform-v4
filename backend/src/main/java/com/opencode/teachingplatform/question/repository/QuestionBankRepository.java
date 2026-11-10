@@ -16,9 +16,9 @@ public interface QuestionBankRepository extends JpaRepository<QuestionBank, Long
 
     List<QuestionBank> findBySchoolIdAndCreatedBy(Long schoolId, Long createdBy);
 
-    boolean existsByCode(String code);
+    boolean existsBySchoolIdAndCreatedByAndCode(Long schoolId, Long createdBy, String code);
 
-    boolean existsByCodeAndIdNot(String code, Long id);
+    boolean existsBySchoolIdAndCreatedByAndCodeAndIdNot(Long schoolId, Long createdBy, String code, Long id);
 
     Optional<QuestionBank> findBySourceRefAndSchoolId(String sourceRef, Long schoolId);
 }

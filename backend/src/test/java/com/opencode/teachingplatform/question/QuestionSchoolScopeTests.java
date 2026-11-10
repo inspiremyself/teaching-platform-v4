@@ -18,7 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** 题库按校隔离、全局编码唯一与账号未绑定学校的 40000 回归。 */
+/** 题库按校隔离、归属维度编码唯一与账号未绑定学校的 40000 回归。 */
 @SpringBootTest
 @ActiveProfiles("test")
 class QuestionSchoolScopeTests {
@@ -49,14 +49,22 @@ class QuestionSchoolScopeTests {
     }
 
     @Test
-    void crossSchoolSameCodeStillReturns40900() {
+    void crossSchoolSameCodeCanCoexist() {
         QuestionRequests.SaveQuestionRequest request = request("QB-SCOPE-SAME");
         questionService.create(teacher(SchoolScopeFixtures.SCHOOL_A), request);
+        questionService.create(teacher(SchoolScopeFixtures.SCHOOL_B), request);
 
-        assertThatThrownBy(() -> questionService.create(teacher(SchoolScopeFixtures.SCHOOL_B), request))
+        assertThat(questionBankRepository.findBySchoolIdAndCreatedByOrderByIdDesc(
+                SchoolScopeFixtures.SCHOOL_A, SchoolScopeFixtures.TEACHER_ID))
+                .extracting(QuestionBank::getCode).contains("QB-SCOPE-SAME");
+        assertThat(questionBankRepository.findBySchoolIdAndCreatedByOrderByIdDesc(
+                SchoolScopeFixtures.SCHOOL_B, SchoolScopeFixtures.TEACHER_ID))
+                .extracting(QuestionBank::getCode).contains("QB-SCOPE-SAME");
+
+        assertThatThrownBy(() -> questionService.create(teacher(SchoolScopeFixtures.SCHOOL_A), request))
                 .isInstanceOfSatisfying(BusinessException.class, ex -> {
                     assertThat(ex.getCode()).isEqualTo(40900);
-                    assertThat(ex.getMessage()).isEqualTo("题目编码已存在");
+                    assertThat(ex.getMessage()).isEqualTo("编码已在你的题库中存在");
                 });
     }
 
