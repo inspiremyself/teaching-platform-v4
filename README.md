@@ -92,7 +92,7 @@ H2 联调（可选）：
 演示学科：`SE-ARCH`（软件体系结构）、`DB-PRINCIPLE`（数据库原理）  
 登录须选择对应身份（学校管理员 / 教师 / 学生 / 平台超管）。
 
-`platform9001` 是**平台级账号、无学校归属**（`sys_user.school_id = NULL`），登录后进入 `/admin/schools` 平台级学校管理，不参与任何按校数据隔离；prod 环境由 `DemoAccountProdGuard` 禁用。教师 / 学生 / 校管三套业务壳层不因此合并。
+`platform9001` 是**平台级账号、无学校归属**（`sys_user.school_id = NULL`），登录后进入 `/admin/schools` 平台级学校管理（侧栏另有「平台内容」`/admin/platform-content`，做平台课件制作 / 发布 / 授权），不参与任何按校数据隔离；prod 环境由 `DemoAccountProdGuard` 禁用。教师 / 学生 / 校管三套业务壳层不因此合并。
 
 可选探活：
 
@@ -157,7 +157,7 @@ teaching-platform-v4/
 
 ## 架构设计要点
 
-- **四角色隔离**：教师 / 学生 / 校管三套业务壳层完全独立；平台超管（`PLATFORM_ADMIN`）复用 `/admin` 壳层但仅可访问平台级学校管理，通过 JWT + `@PreAuthorize` 强制执行
+- **四角色隔离**：教师 / 学生 / 校管三套业务壳层完全独立；平台超管（`PLATFORM_ADMIN`）复用 `/admin` 壳层但仅可访问平台级学校管理与平台内容端点（`/api/v1/admin/platform-content/**`），通过 JWT + `@PreAuthorize` 强制执行
 - **策略模式评分引擎**：`grading/` 模块通过 `QuestionScoringStrategy` 接口支持 5 种题型，可扩展
 - **共享题目能力层**：`assessment/` 模块通过 QuestionSnapshot + GradingAdapter 实现实验/作业/考试的评分复用
 - **数据库版本化**：Flyway 管理 `db/migration/` 下的迁移脚本（当前 `V1`–`V25`，编号以目录实测为准），`ddl-auto=validate` 确保启动时 schema 一致性

@@ -34,12 +34,14 @@ describe('resolveRoleView', () => {
     expect(resolveRoleView(null).currentRole).toBe('STUDENT');
   });
 
-  it('平台超管侧栏与移动导航各仅一项', () => {
+  it('平台超管侧栏与移动导航各两项且顺序固定', () => {
     expect(SIDEBAR_NAV.PLATFORM_ADMIN).toEqual([
       { to: '/admin/schools', label: '学校管理', icon: 'domain' },
+      { to: '/admin/platform-content', label: '平台内容', icon: 'menu_book' },
     ]);
     expect(MOBILE_NAV.PLATFORM_ADMIN).toEqual([
       { to: '/admin/schools', label: '学校管理', icon: 'domain' },
+      { to: '/admin/platform-content', label: '平台内容', icon: 'menu_book' },
     ]);
   });
 });

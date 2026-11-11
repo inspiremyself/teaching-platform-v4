@@ -46,3 +46,36 @@ export const BACKEND_QUESTION_TYPE = {
   FILL_BLANK: 'FILL_BLANK',
   SUBJECTIVE: 'SUBJECTIVE',
 } as const;
+
+export type CoursewareStatus = LiteralUnion<'DRAFT' | 'PUBLISHED'>;
+
+export type ContentFilterType = LiteralUnion<
+  'ALL' | 'UNMOUNTED' | 'TEXTBOOK' | 'TEXTBOOK_SECTION' | 'COURSEWARE_SECTION'
+>;
+
+export type CoursewareAssetKind = LiteralUnion<'IMAGE' | 'AUDIO'>;
+
+export type PlatformSubjectStatus = LiteralUnion<'ACTIVE' | 'DISABLED'>;
+
+export const COURSEWARE_STATUS = {
+  DRAFT: 'DRAFT',
+  PUBLISHED: 'PUBLISHED',
+} as const;
+
+export const CONTENT_FILTER_TYPE = {
+  ALL: 'ALL',
+  UNMOUNTED: 'UNMOUNTED',
+  TEXTBOOK: 'TEXTBOOK',
+  TEXTBOOK_SECTION: 'TEXTBOOK_SECTION',
+  COURSEWARE_SECTION: 'COURSEWARE_SECTION',
+} as const;
+
+export const COURSEWARE_ASSET_KIND = {
+  IMAGE: 'IMAGE',
+  AUDIO: 'AUDIO',
+} as const;
+
+export const PLATFORM_SUBJECT_STATUS = {
+  ACTIVE: 'ACTIVE',
+  DISABLED: 'DISABLED',
+} as const;

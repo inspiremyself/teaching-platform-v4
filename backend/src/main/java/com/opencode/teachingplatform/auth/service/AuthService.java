@@ -260,11 +260,15 @@ public class AuthService {
                     "SCHOOL_READ", "SCHOOL_WRITE",
                     "TEACHER_READ", "TEACHER_WRITE",
                     "CLASS_READ", "CLASS_WRITE",
-                    "STUDENT_READ", "STUDENT_WRITE"
+                    "STUDENT_READ", "STUDENT_WRITE",
+                    "CONTENT_WRITE"
             );
             case TEACHER -> List.of("CLASS_READ", "LAB_WRITE", "HOMEWORK_WRITE", "EXAM_WRITE", "ANALYSIS_READ");
             case STUDENT -> List.of("MATERIAL_READ", "LAB_READ", "HOMEWORK_READ", "EXAM_READ", "SCORE_READ");
-            case PLATFORM_ADMIN -> List.of("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION");
+            case PLATFORM_ADMIN -> List.of(
+                    "SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION",
+                    "CONTENT_WRITE", "CONTENT_SHARE"
+            );
         };
     }
 

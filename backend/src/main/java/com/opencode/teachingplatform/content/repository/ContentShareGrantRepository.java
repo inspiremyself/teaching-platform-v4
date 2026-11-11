@@ -14,5 +14,7 @@ public interface ContentShareGrantRepository extends JpaRepository<ContentShareG
 
     List<ContentShareGrant> findBySchoolIdAndContentType(Long schoolId, String contentType);
 
+    List<ContentShareGrant> findByContentTypeAndContentId(String contentType, Long contentId);
+
     void deleteByContentTypeAndContentId(String contentType, Long contentId);
 }

@@ -87,6 +87,7 @@ const router = createRouter({
         { path: 'audit-logs', name: 'admin-audit-logs', component: () => import('@/views/admin/AuditLogs.vue'), meta: { title: '操作日志', roles: ['SCHOOL_ADMIN'] } },
         { path: 'school', name: 'admin-school', component: () => import('@/views/admin/School.vue'), meta: { title: '学校信息', roles: ['SCHOOL_ADMIN'] } },
         { path: 'schools', name: 'admin-schools', component: () => import('@/views/admin/Schools.vue'), meta: { title: '学校管理', roles: ['PLATFORM_ADMIN'] } },
+        { path: 'platform-content', name: 'admin-platform-content', component: () => import('@/views/admin/PlatformContent.vue'), meta: { title: '平台内容', roles: ['PLATFORM_ADMIN'] } },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' }

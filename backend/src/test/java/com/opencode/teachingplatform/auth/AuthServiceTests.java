@@ -356,7 +356,7 @@ class AuthServiceTests {
 
         assertEquals("token", result.get("token"));
         assertThat((List<String>) result.get("permissions"))
-                .containsExactly("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION");
+                .containsExactly("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION", "CONTENT_WRITE", "CONTENT_SHARE");
         verify(schoolRepository, never()).findById(anyLong());
         verify(auditLogService).logSecurity(argThat(event ->
                 event.action() == AuditAction.LOGIN_SUCCESS && event.schoolId() == null));
@@ -373,7 +373,7 @@ class AuthServiceTests {
 
         assertThat(profile).doesNotContainKeys("schoolId", "schoolName");
         assertThat((List<String>) profile.get("permissions"))
-                .containsExactly("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION");
+                .containsExactly("SCHOOL_READ", "SCHOOL_WRITE", "SCHOOL_PROVISION", "CONTENT_WRITE", "CONTENT_SHARE");
         verify(schoolRepository, never()).findById(anyLong());
     }
 

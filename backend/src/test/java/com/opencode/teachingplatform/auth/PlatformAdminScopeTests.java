@@ -82,7 +82,7 @@ class PlatformAdminScopeTests {
     }
 
     @Test
-    void platformAdminLoginWritesNullSchoolAuditAndThreePermissions() throws Exception {
+    void platformAdminLoginWritesNullSchoolAuditAndFivePermissions() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -90,7 +90,7 @@ class PlatformAdminScopeTests {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.user.role").value("PLATFORM_ADMIN"))
-                .andExpect(jsonPath("$.data.permissions.length()").value(3));
+                .andExpect(jsonPath("$.data.permissions.length()").value(5));
 
         Integer nullSchoolAudit = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM audit_log WHERE action = 'LOGIN_SUCCESS' "

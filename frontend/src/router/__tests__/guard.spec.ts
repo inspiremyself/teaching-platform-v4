@@ -28,4 +28,9 @@ describe('shouldRedirectToHome', () => {
     expect(shouldRedirectToHome(['SCHOOL_ADMIN', 'PLATFORM_ADMIN'], 'PLATFORM_ADMIN')).toBe(false);
     expect(shouldRedirectToHome(['TEACHER'], 'TEACHER')).toBe(false);
   });
+
+  it('平台内容入口只对平台超管开放、教师端入口只对教师开放', () => {
+    expect(shouldRedirectToHome(['PLATFORM_ADMIN'], 'TEACHER')).toBe(true);
+    expect(shouldRedirectToHome(['TEACHER'], 'PLATFORM_ADMIN')).toBe(true);
+  });
 });

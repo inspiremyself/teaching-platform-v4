@@ -21,4 +21,7 @@ public interface CoursewareAssignmentRepository extends JpaRepository<Courseware
     List<CoursewareAssignment> findVisibleToStudent(@Param("schoolId") Long schoolId,
                                                     @Param("classId") Long classId,
                                                     @Param("studentUserId") Long studentUserId);
+
+    /** 按课件统计布置引用数，用于删除课件前的 409 门禁（平台课件可跨校布置，不按 school_id 过滤）。 */
+    long countByCoursewareId(Long coursewareId);
 }

@@ -38,6 +38,26 @@ import type { AddHomeworkQuestionFromBankRequest, CreateHomeworkRequest, UpdateH
 import type { CreateLabPayload, UpdateLabPayload } from '@/types/lab';
 import type { UploadMaterialPayload } from '@/types/material';
 import type { CreateQuestionPayload, SaveQuestionPayload } from '@/types/question';
+import {
+  changePlatformSubjectStatus,
+  createPlatformSubject,
+  deletePlatformCourseware,
+  grantCoursewareSchools,
+  listPlatformContentSubjects,
+  listPlatformCoursewares,
+  publishCourseware,
+  revokeCoursewareSchool,
+  unpublishCourseware,
+  updatePlatformSubject,
+} from '@/api/platformContent';
+import {
+  getTeacherCoursewareVisibility,
+  listTeacherCoursewareSections,
+  listTeacherCoursewares,
+  listTeacherTextbookSections,
+  listTeacherTextbooks,
+} from '@/api/teacherContent';
+import type { CreatePlatformSubjectPayload, UpdatePlatformSubjectPayload } from '@/types/platformContent';
 
 describe('api 端点契约', () => {
   beforeEach(() => {
@@ -167,5 +187,45 @@ describe('api 端点契约', () => {
       status: 'ACTIVE',
       assignmentCount: 0,
     });
+  });
+
+  it('平台内容端点路径', async () => {
+    await listPlatformContentSubjects();
+    await createPlatformSubject({} as CreatePlatformSubjectPayload);
+    await updatePlatformSubject(3, {} as UpdatePlatformSubjectPayload);
+    await changePlatformSubjectStatus(3, 'ACTIVE');
+    await listPlatformCoursewares();
+    await publishCourseware(5);
+    await unpublishCourseware(5);
+    await grantCoursewareSchools(5, { schoolIds: [1] });
+    await revokeCoursewareSchool(5, 1);
+    await deletePlatformCourseware(5);
+    expect(calls.urls).toEqual([
+      '/admin/platform-content/subjects',
+      '/admin/platform-content/subjects',
+      '/admin/platform-content/subjects/3',
+      '/admin/platform-content/subjects/3/status',
+      '/admin/platform-content/coursewares',
+      '/admin/platform-content/coursewares/5/publish',
+      '/admin/platform-content/coursewares/5/unpublish',
+      '/admin/platform-content/coursewares/5/grants',
+      '/admin/platform-content/coursewares/5/grants/1',
+      '/admin/platform-content/coursewares/5',
+    ]);
+  });
+
+  it('教师内容端点路径', async () => {
+    await listTeacherCoursewares({ filterType: 'ALL' });
+    await listTeacherCoursewareSections(5);
+    await getTeacherCoursewareVisibility(5);
+    await listTeacherTextbooks();
+    await listTeacherTextbookSections(3);
+    expect(calls.urls).toEqual([
+      '/teacher/content/coursewares',
+      '/teacher/content/coursewares/5/sections',
+      '/teacher/content/coursewares/5/visibility',
+      '/teacher/content/textbooks',
+      '/teacher/content/textbooks/3/sections',
+    ]);
   });
 });

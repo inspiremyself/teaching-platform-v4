@@ -605,7 +605,7 @@
 | `school_subject_id` | `BIGINT` | 是 |  | 指向 `school_subject.id`（本校内容） |
 | `title` / `subtitle` | `VARCHAR(255)` | 否 / 是 |  | 标题 / 副标题 |
 | `status` | `VARCHAR(16)` | 否 | `DRAFT` | 单列状态机 |
-| `published_at` | `TIMESTAMP` | 是 |  | 发布时间；写值 / 清除规则归阶段 3 |
+| `published_at` | `TIMESTAMP` | 是 |  | 发布时间；发布写当前时间、下架清空为 NULL、重新发布覆盖新值；`status` 为唯一状态判定源（阶段 3 技术方案 TD14） |
 | `created_by` | `BIGINT` | 是 |  | 创建者用户 id |
 | `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
 
