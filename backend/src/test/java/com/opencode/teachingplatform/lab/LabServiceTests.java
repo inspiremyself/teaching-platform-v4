@@ -4142,6 +4142,18 @@ class LabServiceTests {
     }
 
     @Test
+    void copyLabInheritsSourceSubjectId() {
+        Long classId = seedClass(teacherUser().id());
+        Long sourceLabId = seedLab(classId, ActivityStatus.DRAFT, teacherUser().id());
+        jdbcTemplate.update("UPDATE t_experiment SET subject_id = 44 WHERE experiment_id = ?", sourceLabId);
+
+        Map<String, Object> view = labService.copyLab(teacherUser(), sourceLabId,
+                new LabRequests.CopyLabRequest(classId, null, null));
+        Long newLabId = ((Number) view.get("id")).longValue();
+        assertThat(labRepository.findById(newLabId).orElseThrow().getSubjectId()).isEqualTo(44L);
+    }
+
+    @Test
     void copyLabDuplicatesConfigurationAndItems() {
         Long classId = seedClass(teacherUser().id());
         Long sourceLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());

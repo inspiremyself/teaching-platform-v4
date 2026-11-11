@@ -198,6 +198,7 @@ public class LabConfigService {
             throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
         }
         lab.setSchoolId(currentUser.schoolId());
+        lab.setSubjectId(request.subjectId());
         applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), request.status(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired(), request.startAt(), request.dueAt());
         return toTeacherLabView(labRepository.save(lab));
     }
@@ -253,6 +254,8 @@ public class LabConfigService {
         }
         copy.setSchoolId(currentUser.schoolId());
         copy.setClassId(request.classId());
+        // 复制语义：学科随源实验继承，源为历史 NULL 时副本同样为 NULL（技术方案 §4.3）
+        copy.setSubjectId(source.getSubjectId());
         copy.setTitle(resolveCopyTitle(source.getTitle(), request.title()));
         copy.setDescription(source.getDescription());
         copy.setExperimentType(source.getExperimentType());
@@ -311,6 +314,9 @@ public class LabConfigService {
             assertDeadlineVisibilityPublishable(effectiveMode, request.dueAt());
         }
         applyLab(lab, request.classId(), request.title(), request.description(), request.experimentContent(), request.experimentType(), targetStatus.name(), request.materialId(), request.scoreVisibilityMode(), request.summaryRequired(), request.startAt(), request.dueAt());
+        if (request.subjectId() != null) {
+            lab.setSubjectId(request.subjectId());
+        }
         return toTeacherLabView(labRepository.save(lab));
     }
 

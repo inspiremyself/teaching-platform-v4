@@ -17,13 +17,14 @@ import type {
   SubmitHomeworkRequest,
   TeacherHomeworkDetail,
   TeacherHomeworkQuestionItem,
+  UpdateHomeworkRequest,
 } from '@/types/homework';
 
 export const listTeacherHomeworks = () => request.get<HomeworkListItem[]>('/teacher/homeworks');
 
 export const createHomework = (data: CreateHomeworkRequest) => request.post<HomeworkListItem>('/teacher/homeworks', data);
 
-export const updateHomework = (id: number | string, data: CreateHomeworkRequest) =>
+export const updateHomework = (id: number | string, data: UpdateHomeworkRequest) =>
   request.put<HomeworkListItem>(`/teacher/homeworks/${id}`, data);
 
 export const changeHomeworkStatus = (id: number | string, data: ChangeHomeworkStatusRequest) =>

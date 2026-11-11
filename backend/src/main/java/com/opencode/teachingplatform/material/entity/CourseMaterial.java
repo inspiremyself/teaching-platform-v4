@@ -37,6 +37,10 @@ public class CourseMaterial extends BaseEntity {
     @Column(name = "school_id", nullable = false)
     private Long schoolId;
 
+    /** 指向 school_subject.id；历史行 NULL。 */
+    @Column(name = "subject_id")
+    private Long subjectId;
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getCategory() { return category; }
@@ -53,4 +57,6 @@ public class CourseMaterial extends BaseEntity {
     public void setVisibility(MaterialVisibility visibility) { this.visibility = visibility; }
     public Long getSchoolId() { return schoolId; }
     public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
+    public Long getSubjectId() { return subjectId; }
+    public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
 }

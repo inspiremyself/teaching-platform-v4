@@ -228,6 +228,12 @@
             <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="学科" :required="!editingId">
+          <el-select v-model="createForm.subjectId" style="width: 100%" :placeholder="editingId ? '保持原值' : '请选择学科'">
+            <el-option v-if="editingId" label="保持原值" :value="0" />
+            <el-option v-for="item in subjectOptions" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="实验类型" required>
           <el-select v-model="createForm.experimentType" style="width: 100%">
             <el-option v-for="item in experimentTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -314,7 +320,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { LabsKey } from '@/composables/useLabs';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goReports, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel } = inject(LabsKey)!;
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, subjectOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goReports, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel } = inject(LabsKey)!;
 </script>
 
 <style scoped>

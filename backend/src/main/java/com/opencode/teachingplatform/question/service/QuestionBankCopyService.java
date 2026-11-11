@@ -130,7 +130,7 @@ public class QuestionBankCopyService {
         }
         String resolvedCode = resolveCode(code, "HW" + homeworkQuestionId);
         return persistCopiedQuestion(currentUser, sourceRef, SOURCE_HOMEWORK_INLINE, resolvedCode, type, stem,
-                difficulty, optionsJson, answerJson, scoringConfigJson, analysisText);
+                difficulty, optionsJson, answerJson, scoringConfigJson, analysisText, homework.getSubjectId());
     }
 
     /**
@@ -171,7 +171,7 @@ public class QuestionBankCopyService {
         String resolvedCode = resolveCode(code, "LAB" + step.getLabId() + "S" + step.getStepNo());
         return persistCopiedQuestion(currentUser, sourceRef, SOURCE_LAB_STEP, resolvedCode, content.type(),
                 content.stem(), "MEDIUM", content.optionsJson(), content.answerJson(),
-                content.scoringConfigJson(), "");
+                content.scoringConfigJson(), "", lab.getSubjectId());
     }
 
     /**
@@ -355,7 +355,8 @@ public class QuestionBankCopyService {
                                                       String optionsJson,
                                                       String answerJson,
                                                       String scoringConfigJson,
-                                                      String analysisText) {
+                                                      String analysisText,
+                                                      Long subjectId) {
         if (questionBankRepository.existsBySchoolIdAndCreatedByAndCode(
                 currentUser.schoolId(), currentUser.id(), code)) {
             throw new BusinessException(40900, "编码已在你的题库中存在");
@@ -374,6 +375,8 @@ public class QuestionBankCopyService {
             throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
         }
         question.setSchoolId(currentUser.schoolId());
+        // 复制语义：学科随源任务继承，源为历史 NULL 时副本同样为 NULL（技术方案 §4.3）
+        question.setSubjectId(subjectId);
         question.setSourceType(sourceType);
         question.setSourceRef(sourceRef);
 

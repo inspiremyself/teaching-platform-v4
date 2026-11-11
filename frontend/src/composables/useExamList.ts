@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listClasses } from '@/api/classes'
+import { listSubjects } from '@/api/admin'
+import type { AdminSubject } from '@/types/admin'
 import { listQuestions, updateQuestion } from '@/api/questions'
 import { changeExamStatus, createExam, getExamDetail, listExams, updateExam } from '@/api/exams'
 import QuestionConfigList from '@/components/question-config/QuestionConfigList.vue'
@@ -32,6 +34,7 @@ interface ExamFormState {
   durationMinutes: number
   scoreVisibilityMode: ScoreVisibilityMode
   shuffleQuestions: boolean
+  subjectId: number
 }
 
 const router = useRouter()
@@ -44,6 +47,10 @@ const questionDialogVisible = ref(false)
 const editingId = ref<number | null>(null)
 const rows = ref<ExamListItem[]>([])
 const classOptions = ref<TeachingClass[]>([])
+const subjectOptions = ref<AdminSubject[]>([])
+const fetchSubjects = async () => {
+  subjectOptions.value = await listSubjects('ACTIVE')
+}
 const questionPool = ref<QuestionItem[]>([])
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([])
 /** 历史内联题：不进入组卷提交，必须先删除并从题库重新选择 */
@@ -62,7 +69,8 @@ const form = ref<ExamFormState>({
   durationMinutes: 60,
   scoreVisibilityMode: SCORE_VISIBILITY_MODE.IMMEDIATE,
   shuffleQuestions: false,
-})
+  subjectId: subjectOptions.value[0]?.id ?? 0,
+  })
 
 const filteredRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase()
@@ -201,6 +209,7 @@ const resetForm = () => {
     durationMinutes: 60,
     scoreVisibilityMode: SCORE_VISIBILITY_MODE.IMMEDIATE,
     shuffleQuestions: false,
+    subjectId: subjectOptions.value[0]?.id ?? 0,
   }
   configuredQuestions.value = []
   legacyInlineQuestions.value = []
@@ -224,6 +233,8 @@ const openEditDialog = async (row: ExamListItem) => {
     durationMinutes: detail.durationMinutes,
     scoreVisibilityMode: detail.scoreVisibilityMode ?? SCORE_VISIBILITY_MODE.IMMEDIATE,
     shuffleQuestions: detail.shuffleQuestions === true,
+    // 详情不含 subjectId；编辑态默认「保持原值」，用户主动改选才提交新值
+    subjectId: 0,
   }
 
   // 历史内联题（questionId 为 null）不能进入组卷提交，只做只读分流提示
@@ -437,6 +448,11 @@ const submitForm = async () => {
   if (!validateTimeWindow(form.value.startAt, form.value.endAt, form.value.durationMinutes, false)) {
     return
   }
+  // 新建必填：学科列表为空或加载失败时本地拦截，不带 subjectId=0 提交
+  if (!editingId.value && !form.value.subjectId) {
+    ElMessage.warning('请先在学科管理中启用至少一个 ACTIVE 学科')
+    return
+  }
   if (form.value.scoreVisibilityMode === SCORE_VISIBILITY_MODE.IMMEDIATE && hasSubjectiveQuestion.value) {
     await ElMessageBox.alert('主观题需人工批改，交卷后不会立即出成绩', '提示', {
       confirmButtonText: '继续保存',
@@ -462,12 +478,15 @@ const submitForm = async () => {
       durationMinutes: form.value.durationMinutes,
       scoreVisibilityMode: form.value.scoreVisibilityMode,
       shuffleQuestions: form.value.shuffleQuestions,
+      subjectId: form.value.subjectId,
       questions,
     }
 
     if (editingId.value) {
+      const { subjectId: _omitted, ...rest } = basePayload
       const payload: UpdateExamPayload = {
-        ...basePayload,
+        // 编辑态选中「保持原值」时省略 subjectId，避免覆盖历史 NULL / 原学科
+        ...(form.value.subjectId ? basePayload : rest),
         startAt: form.value.startAt || undefined,
         endAt: form.value.endAt || undefined,
       }
@@ -566,12 +585,12 @@ const planTotalScore = computed(() =>
 )
 
 onMounted(async () => {
-  await Promise.all([fetchClasses(), fetchQuestions()])
+  await Promise.all([fetchClasses(), fetchQuestions(), fetchSubjects()])
   resetForm()
   await fetchExams()
 })
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint, subjectOptions, fetchSubjects };
 }
 
 export type ExamListState = ReturnType<typeof useExamList>;

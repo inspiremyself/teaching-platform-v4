@@ -221,12 +221,14 @@
       :submit-text="editingId ? '保存题目' : '创建题目'"
       :show-asset-fields="true"
       :show-config-fields="false"
+      :subject-options="subjectOptions"
+      v-model:subject-id="subjectId"
       @saved="submit"
     />
 
     <QuestionPickerDialog v-model:visible="pickerVisible" @confirm="applyPickedQuestions" />
 
-    <QuestionImportDialog v-model:visible="importVisible" @imported="fetchData" />
+    <QuestionImportDialog v-model:visible="importVisible" :subject-id="importSubjectId" @imported="fetchData" />
   </div>
 </template>
 
@@ -234,8 +236,10 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { createQuestion, deleteQuestion, listQuestions, updateQuestion } from '@/api/questions';
+import { listSubjects } from '@/api/admin';
+import type { AdminSubject } from '@/types/admin';
 import QuestionConfigList from '@/components/question-config/QuestionConfigList.vue';
-import { isQuestionType, type QuestionDifficulty, type QuestionItem, type QuestionType } from '@/types/question';
+import { isQuestionType, type CreateQuestionPayload, type QuestionDifficulty, type QuestionItem, type QuestionType } from '@/types/question';
 import type { ConfiguredQuestionItem } from '@/types/question-config';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
 import { defaultScoreByType } from '@/constants/questionScoreDefaults';
@@ -308,6 +312,15 @@ const form = reactive<QuestionFormState>({
   difficulty: 'EASY',
   analysisText: '',
 });
+
+const subjectOptions = ref<AdminSubject[]>([]);
+const subjectId = ref(0);
+// 导入是独立的新建动作，编辑态把 subjectId 置 0（保持原值）不影响导入
+const importSubjectId = computed(() => subjectId.value || subjectOptions.value[0]?.id || 0);
+const fetchSubjects = async () => {
+  subjectOptions.value = await listSubjects('ACTIVE');
+  subjectId.value = subjectOptions.value[0]?.id ?? 0;
+};
 
 const headerCellStyle = {
   background: '#f8fafc',
@@ -434,6 +447,8 @@ const resetForm = () => {
   form.difficulty = 'EASY';
   form.analysisText = '';
   editingId.value = null;
+  // 新建态恢复默认学科，编辑态的「保持原值」0 不残留
+  subjectId.value = subjectOptions.value[0]?.id ?? 0;
 };
 
 const resetFilters = () => {
@@ -469,6 +484,8 @@ const openEditDialog = (row: QuestionItem) => {
   form.stem = row.stem;
   form.difficulty = isQuestionDifficulty(row.difficulty) ? row.difficulty : 'EASY';
   form.analysisText = row.analysisText;
+  // 详情不含 subjectId；编辑态默认「保持原值」，用户主动改选才提交新值
+  subjectId.value = 0;
   dialogVisible.value = true;
 };
 
@@ -512,21 +529,31 @@ const editConfiguredQuestion = (item: ConfiguredQuestionItem) => {
   openEditDialog(matchedRow);
 };
 
-const buildPayload = (editorPayload: QuestionEditorDialogSubmitPayload) =>
-  buildQuestionPayloadFromDraft(editorPayload.draft, {
+const buildPayload = (editorPayload: QuestionEditorDialogSubmitPayload): CreateQuestionPayload => ({
+  ...buildQuestionPayloadFromDraft(editorPayload.draft, {
     code: editorPayload.code,
     type: editorPayload.type,
     difficulty: editorPayload.difficulty,
     analysisText: editorPayload.analysisText,
-  });
+  }),
+  subjectId: subjectId.value,
+});
 
 const submit = async (editorPayload: QuestionEditorDialogSubmitPayload) => {
+  // 新建必填：学科列表为空或加载失败时本地拦截，不带 subjectId=0 提交
+  if (!editingId.value && !subjectId.value) {
+    ElMessage.warning('请先在学科管理中启用至少一个 ACTIVE 学科');
+    return;
+  }
+
   submitting.value = true;
   try {
     const payload = buildPayload(editorPayload);
 
     if (editingId.value) {
-      await updateQuestion(editingId.value, payload);
+      // 编辑态选中「保持原值」时省略 subjectId，避免覆盖历史 NULL / 原学科
+      const { subjectId: _omitted, ...rest } = payload;
+      await updateQuestion(editingId.value, subjectId.value ? payload : rest);
       ElMessage.success('题目更新成功');
     } else {
       await createQuestion(payload);
@@ -667,6 +694,7 @@ const isQuestionDifficulty = (value: string): value is QuestionDifficulty =>
 
 onMounted(() => {
   resetForm();
+  void fetchSubjects();
   void fetchData();
 });
 </script>

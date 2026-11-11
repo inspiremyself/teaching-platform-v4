@@ -171,6 +171,12 @@
                   <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="item.id" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="学科" :required="!editingId">
+                <el-select v-model="form.subjectId" :placeholder="editingId ? '保持原值' : '请选择学科'">
+                  <el-option v-if="editingId" label="保持原值" :value="0" />
+                  <el-option v-for="item in subjectOptions" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
+              </el-form-item>
             </div>
             <el-form-item label="作业说明">
               <el-input v-model="form.description" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="补充作答目标、提交格式、评分重点等" />
@@ -285,7 +291,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { HomeworksKey } from '@/composables/useHomeworks';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, resetFilters, openCreateDialog, openEditDialog, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime } = inject(HomeworksKey)!;
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, resetFilters, openCreateDialog, openEditDialog, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime } = inject(HomeworksKey)!;
 </script>
 
 <style scoped>

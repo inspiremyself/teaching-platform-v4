@@ -205,6 +205,12 @@
                   <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="学科" :required="!editingId">
+                <el-select v-model="form.subjectId" style="width: 100%" :placeholder="editingId ? '保持原值' : '请选择学科'">
+                  <el-option v-if="editingId" label="保持原值" :value="0" />
+                  <el-option v-for="s in subjectOptions" :key="s.id" :label="s.name" :value="s.id" />
+                </el-select>
+              </el-form-item>
               <div class="dialog-grid">
                 <el-form-item label="开始时间">
                   <el-date-picker
@@ -356,7 +362,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { ExamListKey } from '@/composables/useExamList';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint } = inject(ExamListKey)!;
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint } = inject(ExamListKey)!;
 </script>
 
 <style scoped>

@@ -379,7 +379,8 @@ class QuestionControllerTests {
                                   "difficulty": "MEDIUM",
                                   "optionsJson": "[\\"A\\",]",
                                   "answerJson": "[\\"A\\"]",
-                                  "analysisText": "非法嵌入 JSON"
+                                  "analysisText": "非法嵌入 JSON",
+                                  "subjectId": 1
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
@@ -400,7 +401,8 @@ class QuestionControllerTests {
                                   "difficulty": "MEDIUM",
                                   "optionsJson": null,
                                   "answerJson": "[\\"回答\\"]",
-                                  "analysisText": "主观题不需要选项"
+                                  "analysisText": "主观题不需要选项",
+                                  "subjectId": 1
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -418,7 +420,8 @@ class QuestionControllerTests {
                   "difficulty": "MEDIUM",
                   "optionsJson": "[%s,%s]",
                   "answerJson": "[%s]",
-                  "analysisText": "便于前后端一致处理"
+                  "analysisText": "便于前后端一致处理",
+                  "subjectId": 1
                 }
                 """.formatted(code, jsonQuoted("A"), jsonQuoted("B"), jsonQuoted("A"));
     }
@@ -432,7 +435,8 @@ class QuestionControllerTests {
                   "difficulty": "MEDIUM",
                   "optionsJson": null,
                   "answerJson": "%s",
-                  "analysisText": "主观题不需要选项"
+                  "analysisText": "主观题不需要选项",
+                  "subjectId": 1
                 }
                 """.formatted(code, stem, answerJson.replace("\"", "\\\""));
     }

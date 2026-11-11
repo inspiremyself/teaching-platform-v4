@@ -141,6 +141,30 @@ class QuestionBankCopyServiceTests {
     }
 
     @Test
+    void homeworkCopyInheritsSourceSubjectId() {
+        HomeworkQuestion question = saveInlineHomeworkQuestion("学科继承题干", "[]");
+        Homework source = homeworkRepository.findById(question.getHomeworkId()).orElseThrow();
+        source.setSubjectId(42L);
+        homeworkRepository.saveAndFlush(source);
+
+        Map<String, Object> result = questionBankCopyService.copyFromHomework(TEACHER, question.getId(), null);
+        Long copiedId = ((Number) asMap(result.get("question")).get("id")).longValue();
+        assertThat(questionBankRepository.findById(copiedId).orElseThrow().getSubjectId()).isEqualTo(42L);
+    }
+
+    @Test
+    void labStepCopyInheritsSourceSubjectId() {
+        LabStep step = saveLabStep("TRUE_FALSE", "{\"correctAnswer\":[\"TRUE\"]}", "TEXT");
+        Lab source = labRepository.findById(step.getLabId()).orElseThrow();
+        source.setSubjectId(43L);
+        labRepository.saveAndFlush(source);
+
+        Map<String, Object> result = questionBankCopyService.copyFromLabStep(TEACHER, step.getId(), null);
+        Long copiedId = ((Number) asMap(result.get("question")).get("id")).longValue();
+        assertThat(questionBankRepository.findById(copiedId).orElseThrow().getSubjectId()).isEqualTo(43L);
+    }
+
+    @Test
     void labTrueFalseStepMapsToJudgeQuestion() {
         LabStep step = saveLabStep("TRUE_FALSE", "{\"correctAnswer\":[\"TRUE\"]}", "TEXT");
 

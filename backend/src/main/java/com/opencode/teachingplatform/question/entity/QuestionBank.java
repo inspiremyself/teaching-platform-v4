@@ -37,6 +37,17 @@ public class QuestionBank extends BaseEntity {
     @Column(name = "school_id", nullable = false)
     private Long schoolId;
 
+    /** 三层归属；存量行由 V31 列默认值得到 TEACHER。 */
+    @Column(name = "owner_scope", nullable = false, length = 16)
+    private String ownerScope = "TEACHER";
+
+    @Column(name = "owner_school_id")
+    private Long ownerSchoolId;
+
+    /** 指向 school_subject.id；历史行 NULL。 */
+    @Column(name = "subject_id")
+    private Long subjectId;
+
     public String getCode() { return code; }
     public void setCode(String code) { this.code = code; }
     public String getType() { return type; }
@@ -61,4 +72,10 @@ public class QuestionBank extends BaseEntity {
     public void setSourceRef(String sourceRef) { this.sourceRef = sourceRef; }
     public Long getSchoolId() { return schoolId; }
     public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
+    public String getOwnerScope() { return ownerScope; }
+    public void setOwnerScope(String ownerScope) { this.ownerScope = ownerScope; }
+    public Long getOwnerSchoolId() { return ownerSchoolId; }
+    public void setOwnerSchoolId(Long ownerSchoolId) { this.ownerSchoolId = ownerSchoolId; }
+    public Long getSubjectId() { return subjectId; }
+    public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
 }

@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.exam.controller;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.SecurityUtils;
 import com.opencode.teachingplatform.common.api.ApiResponse;
+import com.opencode.teachingplatform.content.service.TaskSubjectValidator;
 import com.opencode.teachingplatform.exam.dto.ExamRequests;
 import com.opencode.teachingplatform.exam.service.ExamService;
 import jakarta.validation.Valid;
@@ -14,9 +15,11 @@ import org.springframework.web.bind.annotation.*;
 public class ExamController {
 
     private final ExamService examService;
+    private final TaskSubjectValidator taskSubjectValidator;
 
-    public ExamController(ExamService examService) {
+    public ExamController(ExamService examService, TaskSubjectValidator taskSubjectValidator) {
         this.examService = examService;
+        this.taskSubjectValidator = taskSubjectValidator;
     }
 
     @GetMapping("/exams")
@@ -30,6 +33,7 @@ public class ExamController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> create(@Valid @RequestBody ExamRequests.CreateExamRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForCreate(currentUser, request.subjectId());
         return ApiResponse.ok(examService.createExam(currentUser, request));
     }
 
@@ -37,6 +41,7 @@ public class ExamController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> update(@PathVariable Long id, @Valid @RequestBody ExamRequests.UpdateExamRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForUpdate(currentUser, request.subjectId());
         return ApiResponse.ok(examService.updateExam(currentUser, id, request));
     }
 

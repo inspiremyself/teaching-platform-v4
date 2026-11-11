@@ -30,8 +30,17 @@ public final class LabRequests {
             Boolean summaryRequired,
             // 实验开放时间窗：startAt 为空表示不限制开始；dueAt 为空表示不限制截止（实体列 lab.start_at / lab.end_at）
             OffsetDateTime startAt,
-            OffsetDateTime dueAt
+            OffsetDateTime dueAt,
+            Long subjectId
     ) {
+        /** 兼容历史调用方：未携带学科时由入口校验层按新建必填规则拦截。 */
+        public CreateLabRequest(String title, String description, String experimentContent,
+                                Integer experimentType, Long classId, String status, Long materialId,
+                                ScoreVisibilityMode scoreVisibilityMode, Boolean summaryRequired,
+                                OffsetDateTime startAt, OffsetDateTime dueAt) {
+            this(title, description, experimentContent, experimentType, classId, status, materialId,
+                    scoreVisibilityMode, summaryRequired, startAt, dueAt, null);
+        }
     }
 
     /**
@@ -59,8 +68,17 @@ public final class LabRequests {
             Boolean summaryRequired,
             // 与 CreateLabRequest 同义：传 null 表示清空该边界
             OffsetDateTime startAt,
-            OffsetDateTime dueAt
+            OffsetDateTime dueAt,
+            Long subjectId
     ) {
+        /** 兼容历史调用方：省略表示保持原值。 */
+        public UpdateLabRequest(String title, String description, String experimentContent,
+                                Integer experimentType, Long classId, String status, Long materialId,
+                                ScoreVisibilityMode scoreVisibilityMode, Boolean summaryRequired,
+                                OffsetDateTime startAt, OffsetDateTime dueAt) {
+            this(title, description, experimentContent, experimentType, classId, status, materialId,
+                    scoreVisibilityMode, summaryRequired, startAt, dueAt, null);
+        }
     }
 
     public record ChangeLabStatusRequest(

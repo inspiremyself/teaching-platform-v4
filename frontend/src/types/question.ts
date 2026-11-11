@@ -28,4 +28,11 @@ export interface SaveQuestionPayload {
   optionsJson: string | null;
   answerJson: string;
   analysisText: string;
+  /** 新建必填；编辑历史题目可省略，省略表示保持原值 */
+  subjectId?: number;
+}
+
+/** 新建题目的请求体：学科必填，指向本校 ACTIVE 的 school_subject.id */
+export interface CreateQuestionPayload extends SaveQuestionPayload {
+  subjectId: number;
 }

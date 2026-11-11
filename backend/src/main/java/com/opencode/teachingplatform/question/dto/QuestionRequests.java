@@ -35,8 +35,15 @@ public final class QuestionRequests {
             @NotBlank(message = "难度不能为空") String difficulty,
             String optionsJson,
             @NotBlank(message = "答案不能为空") String answerJson,
-            String analysisText
+            String analysisText,
+            Long subjectId
     ) {
+
+        /** 兼容历史调用方：省略表示保持原值。 */
+        public SaveQuestionRequest(String code, String type, String stem, String difficulty,
+                                   String optionsJson, String answerJson, String analysisText) {
+            this(code, type, stem, difficulty, optionsJson, answerJson, analysisText, null);
+        }
 
         /**
          * 题库请求只接受 record 声明的字段：任何未知键（含题库已废止的分值字段）直接拒绝，

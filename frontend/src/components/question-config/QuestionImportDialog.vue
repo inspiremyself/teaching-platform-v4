@@ -159,9 +159,9 @@ import {
 } from '@/utils/questionImportSpec'
 import QuestionImportSpecPanel from './QuestionImportSpecPanel.vue'
 import type { ImportParseResult, ImportPreviewRow, ImportQuestionDraft } from '@/types/question-import'
-import type { SaveQuestionPayload } from '@/types/question'
+import type { CreateQuestionPayload } from '@/types/question'
 
-const props = defineProps<{ visible: boolean }>()
+const props = defineProps<{ visible: boolean; subjectId: number }>()
 
 const emit = defineEmits<{
   'update:visible': [boolean]
@@ -308,7 +308,7 @@ const handleImportDrop = async (event: DragEvent) => {
 }
 
 /** 将校验通过的草稿转换为单题新增接口所需的 payload */
-const toPayload = (draft: ImportQuestionDraft): SaveQuestionPayload => ({
+const toPayload = (draft: ImportQuestionDraft): CreateQuestionPayload => ({
   code: draft.code,
   type: draft.type,
   stem: draft.stem,
@@ -316,6 +316,7 @@ const toPayload = (draft: ImportQuestionDraft): SaveQuestionPayload => ({
   optionsJson: JSON.stringify(draft.options),
   answerJson: JSON.stringify(draft.answer),
   analysisText: draft.analysis,
+  subjectId: props.subjectId,
 })
 
 /** 串行导入 READY 行；40900 视为编码已被占用并跳过 */
@@ -324,6 +325,11 @@ const startImport = async () => {
   if (!result) return
   const readyRows = result.rows.filter(row => row.status === 'READY' && row.draft)
   if (!readyRows.length) return
+  // 导入属新建动作：学科列表为空 / 加载失败时本地拦截，不带 subjectId=0 提交
+  if (!props.subjectId) {
+    ElMessage.warning('请先在学科管理中启用至少一个 ACTIVE 学科')
+    return
+  }
 
   importing.value = true
   importResults.value = []

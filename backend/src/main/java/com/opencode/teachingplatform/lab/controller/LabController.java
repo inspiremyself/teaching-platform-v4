@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.lab.controller;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.SecurityUtils;
 import com.opencode.teachingplatform.common.api.ApiResponse;
+import com.opencode.teachingplatform.content.service.TaskSubjectValidator;
 import com.opencode.teachingplatform.lab.behavior.dto.BehaviorRequests;
 import com.opencode.teachingplatform.lab.behavior.service.BehaviorIngestService;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
@@ -32,10 +33,13 @@ public class LabController {
 
     private final LabService labService;
     private final BehaviorIngestService behaviorIngestService;
+    private final TaskSubjectValidator taskSubjectValidator;
 
-    public LabController(LabService labService, BehaviorIngestService behaviorIngestService) {
+    public LabController(LabService labService, BehaviorIngestService behaviorIngestService,
+                         TaskSubjectValidator taskSubjectValidator) {
         this.labService = labService;
         this.behaviorIngestService = behaviorIngestService;
+        this.taskSubjectValidator = taskSubjectValidator;
     }
 
     @GetMapping("/teacher/labs")
@@ -49,6 +53,7 @@ public class LabController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> createLab(@Valid @RequestBody LabRequests.CreateLabRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForCreate(currentUser, request.subjectId());
         return ApiResponse.ok(labService.createLab(currentUser, request));
     }
 
@@ -70,6 +75,7 @@ public class LabController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> updateLab(@PathVariable Long id, @Valid @RequestBody LabRequests.UpdateLabRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForUpdate(currentUser, request.subjectId());
         return ApiResponse.ok(labService.updateLab(currentUser, id, request));
     }
 

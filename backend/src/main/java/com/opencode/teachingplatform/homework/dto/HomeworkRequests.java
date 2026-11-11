@@ -26,8 +26,15 @@ public final class HomeworkRequests {
             ScoreVisibilityMode scoreVisibilityMode,
             String attachmentPath,
             OffsetDateTime startAt,
-            OffsetDateTime dueAt
+            OffsetDateTime dueAt,
+            Long subjectId
     ) {
+        /** 兼容历史调用方：未携带学科时由入口校验层按新建必填规则拦截。 */
+        public CreateHomeworkRequest(String title, String description, Long classId, String status,
+                                     ScoreVisibilityMode scoreVisibilityMode, String attachmentPath,
+                                     OffsetDateTime startAt, OffsetDateTime dueAt) {
+            this(title, description, classId, status, scoreVisibilityMode, attachmentPath, startAt, dueAt, null);
+        }
     }
 
     public record UpdateHomeworkRequest(
@@ -38,8 +45,15 @@ public final class HomeworkRequests {
             ScoreVisibilityMode scoreVisibilityMode,
             String attachmentPath,
             OffsetDateTime startAt,
-            OffsetDateTime dueAt
+            OffsetDateTime dueAt,
+            Long subjectId
     ) {
+        /** 兼容历史调用方：省略表示保持原值。 */
+        public UpdateHomeworkRequest(String title, String description, Long classId, String status,
+                                     ScoreVisibilityMode scoreVisibilityMode, String attachmentPath,
+                                     OffsetDateTime startAt, OffsetDateTime dueAt) {
+            this(title, description, classId, status, scoreVisibilityMode, attachmentPath, startAt, dueAt, null);
+        }
     }
 
     public record ChangeHomeworkStatusRequest(

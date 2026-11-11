@@ -57,8 +57,18 @@ public final class ExamRequests {
             @NotBlank String status,
             ScoreVisibilityMode scoreVisibilityMode,
             @Valid List<ExamQuestionItem> questions,
-            Boolean shuffleQuestions
-    ) {}
+            Boolean shuffleQuestions,
+            Long subjectId
+    ) {
+        /** 兼容历史调用方：未携带学科时由入口校验层按新建必填规则拦截。 */
+        public CreateExamRequest(String title, String description, Long classId,
+                                 OffsetDateTime startAt, OffsetDateTime endAt, Integer durationMinutes,
+                                 String status, ScoreVisibilityMode scoreVisibilityMode,
+                                 List<ExamQuestionItem> questions, Boolean shuffleQuestions) {
+            this(title, description, classId, startAt, endAt, durationMinutes, status,
+                    scoreVisibilityMode, questions, shuffleQuestions, null);
+        }
+    }
 
     public record UpdateExamRequest(
             @NotBlank String title,
@@ -72,8 +82,18 @@ public final class ExamRequests {
             Integer durationMinutes,
             ScoreVisibilityMode scoreVisibilityMode,
             @Valid List<ExamQuestionItem> questions,
-            Boolean shuffleQuestions
-    ) {}
+            Boolean shuffleQuestions,
+            Long subjectId
+    ) {
+        /** 兼容历史调用方：省略表示保持原值。 */
+        public UpdateExamRequest(String title, String description, Long classId,
+                                 OffsetDateTime startAt, OffsetDateTime endAt, Integer durationMinutes,
+                                 ScoreVisibilityMode scoreVisibilityMode,
+                                 List<ExamQuestionItem> questions, Boolean shuffleQuestions) {
+            this(title, description, classId, startAt, endAt, durationMinutes,
+                    scoreVisibilityMode, questions, shuffleQuestions, null);
+        }
+    }
 
     public record ChangeExamStatusRequest(
             @NotBlank String status

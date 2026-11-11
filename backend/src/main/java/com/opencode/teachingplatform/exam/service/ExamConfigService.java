@@ -196,6 +196,7 @@ public class ExamConfigService {
             throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
         }
         exam.setSchoolId(currentUser.schoolId());
+        exam.setSubjectId(request.subjectId());
         assertBankQuestions(request.questions());
         assertNoDuplicateQuestions(request.questions());
         Map<Long, QuestionBank> bankQuestions = loadOwnedBankQuestions(request.questions(), currentUser.id(), currentUser.schoolId());
@@ -250,6 +251,9 @@ public class ExamConfigService {
         exam.setScoreVisibilityMode(request.scoreVisibilityMode() == null ? exam.getScoreVisibilityMode() : request.scoreVisibilityMode());
         if (request.shuffleQuestions() != null) {
             exam.setShuffleQuestions(request.shuffleQuestions());
+        }
+        if (request.subjectId() != null) {
+            exam.setSubjectId(request.subjectId());
         }
         examRepository.save(exam);
 

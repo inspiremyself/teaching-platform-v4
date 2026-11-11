@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.homework.controller;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.SecurityUtils;
 import com.opencode.teachingplatform.common.api.ApiResponse;
+import com.opencode.teachingplatform.content.service.TaskSubjectValidator;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
 import com.opencode.teachingplatform.homework.service.HomeworkService;
 import jakarta.validation.Valid;
@@ -16,9 +17,11 @@ import java.util.Map;
 public class HomeworkController {
 
     private final HomeworkService homeworkService;
+    private final TaskSubjectValidator taskSubjectValidator;
 
-    public HomeworkController(HomeworkService homeworkService) {
+    public HomeworkController(HomeworkService homeworkService, TaskSubjectValidator taskSubjectValidator) {
         this.homeworkService = homeworkService;
+        this.taskSubjectValidator = taskSubjectValidator;
     }
 
     @GetMapping("/teacher/homeworks")
@@ -32,6 +35,7 @@ public class HomeworkController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> createHomework(@Valid @RequestBody HomeworkRequests.CreateHomeworkRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForCreate(currentUser, request.subjectId());
         return ApiResponse.ok(homeworkService.createHomework(currentUser, request));
     }
 
@@ -39,6 +43,7 @@ public class HomeworkController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> updateHomework(@PathVariable Long id, @Valid @RequestBody HomeworkRequests.UpdateHomeworkRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForUpdate(currentUser, request.subjectId());
         return ApiResponse.ok(homeworkService.updateHomework(currentUser, id, request));
     }
 

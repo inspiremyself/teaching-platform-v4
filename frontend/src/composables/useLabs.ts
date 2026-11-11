@@ -3,6 +3,8 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { listClasses } from '@/api/classes';
+import { listSubjects } from '@/api/admin';
+import type { AdminSubject } from '@/types/admin';
 import { uploadMaterial } from '@/api/materials';
 import { changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab } from '@/api/labs';
 import type { TeachingClass } from '@/types/class';
@@ -18,6 +20,10 @@ const createDialogVisible = ref(false);
 const editingId = ref<number | null>(null);
 const rows = ref<LabItem[]>([]);
 const classOptions = ref<TeachingClass[]>([]);
+const subjectOptions = ref<AdminSubject[]>([]);
+const fetchSubjects = async () => {
+  subjectOptions.value = await listSubjects('ACTIVE');
+};
 const searchKeyword = ref('');
 const statusFilter = ref<LabStatus | ''>('');
 const classFilter = ref('');
@@ -48,6 +54,7 @@ const createForm = reactive<Omit<CreateLabPayload, 'classId'> & { classId?: numb
   startAt: undefined,
   dueAt: undefined,
   scoreVisibilityMode: SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM,
+  subjectId: 0,
 });
 
 const publishedCount = computed(() => rows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length);
@@ -128,6 +135,7 @@ const resetCreateForm = () => {
   createForm.startAt = undefined;
   createForm.dueAt = undefined;
   createForm.scoreVisibilityMode = SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
+  createForm.subjectId = subjectOptions.value[0]?.id ?? 0;
   editingId.value = null;
 };
 
@@ -168,6 +176,8 @@ const openEditDialog = (row: LabItem) => {
   createForm.startAt = row.startAt || undefined;
   createForm.dueAt = row.dueAt || undefined;
   createForm.scoreVisibilityMode = row.scoreVisibilityMode || SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
+  // 详情不含 subjectId；编辑态默认「保持原值」，用户主动改选才提交新值
+  createForm.subjectId = 0;
   createDialogVisible.value = true;
 };
 
@@ -178,6 +188,12 @@ const handleGuidanceSelected = async (uploadFile: { raw?: File }) => {
   if (!rawFile) {
     return;
   }
+  // 上传指导文件是独立的「新建资料」动作，不能复用编辑态的「保持原值」0
+  const guidanceSubjectId = createForm.subjectId || subjectOptions.value[0]?.id || 0;
+  if (!guidanceSubjectId) {
+    ElMessage.warning('请先在学科管理中启用至少一个 ACTIVE 学科');
+    return;
+  }
 
   uploadingGuidance.value = true;
   try {
@@ -186,6 +202,7 @@ const handleGuidanceSelected = async (uploadFile: { raw?: File }) => {
       category: 'LAB_GUIDE',
       description: createForm.description.trim() || '实验指导文件',
       visibility: 'ALL',
+      subjectId: guidanceSubjectId,
       file: rawFile,
     };
     const material = await uploadMaterial(payload);
@@ -258,6 +275,11 @@ const submitCreate = async () => {
     ElMessage.warning('请先设置实验结束时间');
     return;
   }
+  // 新建必填：学科列表为空或加载失败时本地拦截，不带 subjectId=0 提交
+  if (!editingId.value && !createForm.subjectId) {
+    ElMessage.warning('请先在学科管理中启用至少一个 ACTIVE 学科');
+    return;
+  }
 
   submitting.value = true;
   try {
@@ -273,10 +295,13 @@ const submitCreate = async () => {
       startAt: createForm.startAt,
       dueAt: createForm.dueAt,
       scoreVisibilityMode: createForm.scoreVisibilityMode,
+      subjectId: createForm.subjectId,
     };
 
     if (editingId.value) {
-      await updateTeacherLab(editingId.value, payload);
+      // 编辑态选中「保持原值」时省略 subjectId，避免覆盖历史 NULL / 原学科
+      const { subjectId: _omitted, ...rest } = payload;
+      await updateTeacherLab(editingId.value, createForm.subjectId ? payload : rest);
       ElMessage.success('实验更新成功');
     } else {
       await createTeacherLab(payload);
@@ -353,12 +378,12 @@ const updatedLabel = (row: LabItem) => {
 };
 
 onMounted(async () => {
-  await fetchClasses();
+  await Promise.all([fetchClasses(), fetchSubjects()]);
   resetCreateForm();
   await fetchData();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goReports, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goReports, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel, subjectOptions, fetchSubjects };
 }
 
 export type LabsState = ReturnType<typeof useLabs>;

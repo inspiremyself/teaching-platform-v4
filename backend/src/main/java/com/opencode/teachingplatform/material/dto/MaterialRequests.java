@@ -14,6 +14,15 @@ public final class MaterialRequests {
         private String description;
         private MaterialVisibility visibility;
         private MultipartFile file;
+        private Long subjectId;
+
+        public Long getSubjectId() {
+            return subjectId;
+        }
+
+        public void setSubjectId(Long subjectId) {
+            this.subjectId = subjectId;
+        }
 
         public String getTitle() {
             return title;
@@ -61,6 +70,15 @@ public final class MaterialRequests {
         private String category;
         private String description;
         private MaterialVisibility visibility;
+        private Long subjectId;
+
+        public Long getSubjectId() {
+            return subjectId;
+        }
+
+        public void setSubjectId(Long subjectId) {
+            this.subjectId = subjectId;
+        }
 
         public String getTitle() {
             return title;

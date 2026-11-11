@@ -10,6 +10,7 @@ export const uploadMaterial = (data: UploadMaterialPayload) => {
   formData.append('category', data.category);
   formData.append('description', data.description);
   formData.append('visibility', data.visibility);
+  formData.append('subjectId', String(data.subjectId));
   formData.append('file', data.file);
   return request.post<MaterialItem>('/materials', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

@@ -56,6 +56,7 @@ public class QuestionService {
         }
         QuestionBank question = new QuestionBank();
         apply(question, request);
+        applySubjectId(question, request);
         question.setCreatedBy(currentUser.id());
         if (currentUser.schoolId() == null) {
             throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
@@ -91,6 +92,7 @@ public class QuestionService {
         }
         // 更新只改题面内容：来源字段与 scoring_config_json 由复制链路写入，编辑不得覆盖
         apply(question, request);
+        applySubjectId(question, request);
         try {
             QuestionBank saved = questionBankRepository.save(question);
             auditLogService.log(currentUser, AuditAction.QUESTION_UPDATE, AuditResourceType.QUESTION, saved.getId(), Map.of("code", saved.getCode()));
@@ -126,6 +128,13 @@ public class QuestionService {
         question.setOptionsJson(normalizeNullable(request.optionsJson()));
         question.setAnswerJson(request.answerJson().trim());
         question.setAnalysisText(request.analysisText() == null ? "" : request.analysisText().trim());
+    }
+
+    /** 学科归属只在显式传入时写入：编辑历史题目省略 subjectId 表示保持原值。 */
+    private void applySubjectId(QuestionBank question, SaveQuestionRequest request) {
+        if (request.subjectId() != null) {
+            question.setSubjectId(request.subjectId());
+        }
     }
 
     private String normalizeCode(String code) {

@@ -4,6 +4,8 @@ import com.opencode.teachingplatform.admin.service.AdminSubjectService;
 import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.content.dto.ContentRequests.ContentRef;
+import com.opencode.teachingplatform.content.service.ContentVisibilityService;
 import com.opencode.teachingplatform.homework.service.HomeworkServiceSupport;
 import com.opencode.teachingplatform.lab.dto.LabRequests;
 import com.opencode.teachingplatform.lab.service.LabConfigService;
@@ -67,6 +69,9 @@ class CrossSchoolNotFoundTests {
     @Autowired
     private MaterialService materialService;
 
+    @Autowired
+    private ContentVisibilityService contentVisibilityService;
+
     private Long classA;
 
     @AfterEach
@@ -122,6 +127,20 @@ class CrossSchoolNotFoundTests {
     void ownedHomeworkCrossSchoolReturns40400() {
         assertNotFound(() -> homeworkServiceSupport.ownedHomework(
                 teacher(FOREIGN_TEACHER_ID, SchoolScopeFixtures.SCHOOL_A), SchoolScopeFixtures.HOMEWORK_B), "作业不存在");
+    }
+
+    /** V31 新增内容域：跨校 / 未授权的 PLATFORM 内容一律 40400，不泄露存在性。 */
+    @Test
+    void contentDomainCrossSchoolAndUnauthorizedReturn40400() {
+        CurrentUser foreignTeacher = teacher(FOREIGN_TEACHER_ID, SchoolScopeFixtures.SCHOOL_A);
+        ContentRef unauthorized = new ContentRef("COURSEWARE", 990001L, "PLATFORM", null, 999L);
+        assertNotFound(() -> contentVisibilityService.assertVisible(foreignTeacher, unauthorized),
+                "内容不存在或未授权");
+
+        ContentRef schoolOwned = new ContentRef("COURSEWARE", 990002L, "SCHOOL",
+                SchoolScopeFixtures.SCHOOL_B, 999L);
+        assertNotFound(() -> contentVisibilityService.assertVisible(foreignTeacher, schoolOwned),
+                "内容不存在或未授权");
     }
 
     @Test

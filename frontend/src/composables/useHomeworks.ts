@@ -3,6 +3,8 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { listClasses } from '@/api/classes';
+import { listSubjects } from '@/api/admin';
+import type { AdminSubject } from '@/types/admin';
 import {
   addHomeworkQuestionFromBank,
   addInlineHomeworkQuestion,
@@ -31,6 +33,7 @@ import type {
   HomeworkListItem,
   HomeworkStatus,
   SaveHomeworkQuestionRequest,
+  UpdateHomeworkRequest,
 } from '@/types/homework';
 import { ApiError } from '@/utils/request';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
@@ -51,6 +54,11 @@ const editingId = ref<number | null>(null);
 const originalStatus = ref<HomeworkStatus>(ACTIVITY_STATUS.DRAFT);
 const rows = ref<HomeworkListItem[]>([]);
 const classOptions = ref<TeachingClass[]>([]);
+const subjectOptions = ref<AdminSubject[]>([]);
+
+const fetchSubjects = async () => {
+  subjectOptions.value = await listSubjects('ACTIVE');
+};
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([]);
 /** 已落库的作业题目 id：用于计算删除集合与增量提交 */
 const originalQuestionIds = ref<number[]>([]);
@@ -72,6 +80,7 @@ const form = reactive<CreateHomeworkRequest>({
   attachmentPath: '',
   startAt: null,
   dueAt: null,
+  subjectId: 0,
 });
 
 /** 编辑态已存在的提交数量：>0 时锁定班级与“回退草稿”，与后端状态机保持一致。 */
@@ -173,6 +182,7 @@ const resetForm = () => {
   form.startAt = null;
   form.dueAt = null;
   form.scoreVisibilityMode = SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
+  form.subjectId = subjectOptions.value[0]?.id ?? 0;
   editingSubmissionCount.value = 0;
   editingId.value = null;
   originalStatus.value = ACTIVITY_STATUS.DRAFT;
@@ -198,7 +208,17 @@ const buildPayload = (): CreateHomeworkRequest => ({
   attachmentPath: form.attachmentPath?.trim() || null,
   startAt: form.startAt || null,
   dueAt: form.dueAt || null,
+  subjectId: form.subjectId,
 });
+
+/** 编辑态选中「保持原值」时省略 subjectId，避免覆盖历史 NULL / 原学科 */
+const buildUpdatePayload = (payload: CreateHomeworkRequest): UpdateHomeworkRequest => {
+  if (form.subjectId) {
+    return payload;
+  }
+  const { subjectId: _omitted, ...rest } = payload;
+  return rest;
+};
 
 const openCreateDialog = () => {
   resetForm();
@@ -221,6 +241,8 @@ const openEditDialog = async (row: HomeworkListItem) => {
     form.startAt = detail.startAt || null;
     form.dueAt = detail.dueAt || null;
     form.scoreVisibilityMode = detail.scoreVisibilityMode || SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM;
+    // 详情不含 subjectId；编辑态默认「保持原值」，用户主动改选才提交新值
+    form.subjectId = 0;
     configuredQuestions.value = detail.questions.map(question => ({
       localId: `hwq-${question.id}`,
       homeworkQuestionId: question.id,
@@ -549,6 +571,11 @@ const submitForm = async () => {
     ElMessage.warning('请选择所属班级');
     return;
   }
+  // 新建必填：学科列表为空或加载失败时本地拦截，不带 subjectId=0 提交
+  if (!editingId.value && !form.subjectId) {
+    ElMessage.warning('请先在学科管理中启用至少一个 ACTIVE 学科');
+    return;
+  }
 
   submitting.value = true;
   try {
@@ -560,7 +587,7 @@ const submitForm = async () => {
       if (originalStatus.value !== ACTIVITY_STATUS.CLOSED) {
         await persistConfiguredQuestions(editingId.value);
       }
-      await updateHomework(editingId.value, payload);
+      await updateHomework(editingId.value, buildUpdatePayload(payload));
       await copyInlineQuestionsAfterSave();
       ElMessage.success(`作业已保存，题目共 ${configuredQuestions.value.length} 道`);
     } else {
@@ -650,12 +677,12 @@ const planTotalScore = computed(() =>
 );
 
 onMounted(async () => {
-  await fetchClasses();
+  await Promise.all([fetchClasses(), fetchSubjects()]);
   resetForm();
   await fetchHomeworks();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, originalQuestionIds, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, resequenceConfiguredQuestions, mapOptionsForList, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, mergeConfiguredQuestions, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, originalQuestionIds, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, resequenceConfiguredQuestions, mapOptionsForList, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, mergeConfiguredQuestions, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime, subjectOptions, fetchSubjects };
 }
 
 export type HomeworksState = ReturnType<typeof useHomeworks>;

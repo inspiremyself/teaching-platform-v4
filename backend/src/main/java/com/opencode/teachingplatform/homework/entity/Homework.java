@@ -41,6 +41,10 @@ public class Homework extends BaseEntity {
     @Column(name = "school_id", nullable = false)
     private Long schoolId;
 
+    /** 指向 school_subject.id；历史行 NULL。 */
+    @Column(name = "subject_id")
+    private Long subjectId;
+
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getDescription() { return description; }
@@ -63,4 +67,6 @@ public class Homework extends BaseEntity {
     public void setScoreReleased(boolean scoreReleased) { this.scoreReleased = scoreReleased; }
     public Long getSchoolId() { return schoolId; }
     public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
+    public Long getSubjectId() { return subjectId; }
+    public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
 }

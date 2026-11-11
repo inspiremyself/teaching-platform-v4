@@ -149,6 +149,7 @@ public class HomeworkConfigService {
             throw new BusinessException(40000, "账号未绑定学校，无法创建教学数据");
         }
         homework.setSchoolId(currentUser.schoolId());
+        homework.setSubjectId(request.subjectId());
         applyHomework(homework, true, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
@@ -166,6 +167,9 @@ public class HomeworkConfigService {
         }
         classAccessService.assertTeacherAssignedToClass(currentUser, request.classId());
         applyHomework(homework, false, request.classId(), request.title(), request.description(), request.status(), request.scoreVisibilityMode(), request.attachmentPath(), request.startAt(), request.dueAt());
+        if (request.subjectId() != null) {
+            homework.setSubjectId(request.subjectId());
+        }
         return toTeacherHomeworkView(homeworkRepository.save(homework));
     }
 

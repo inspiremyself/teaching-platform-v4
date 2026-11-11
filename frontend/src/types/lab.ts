@@ -111,9 +111,14 @@ export interface CreateLabPayload {
   summaryRequired: boolean;
   startAt?: string | null;
   dueAt?: string | null;
+  /** 新建必填；指向本校 ACTIVE 的 school_subject.id */
+  subjectId: number;
 }
 
-export interface UpdateLabPayload extends CreateLabPayload {}
+/** 编辑历史实验可省略 subjectId：省略表示保持原值 */
+export interface UpdateLabPayload extends Omit<CreateLabPayload, 'subjectId'> {
+  subjectId?: number;
+}
 
 export interface ChangeLabStatusPayload {
   status: LabStatus;

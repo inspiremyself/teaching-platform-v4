@@ -83,9 +83,9 @@ class BusinessSchoolScopeSchemaTests {
         }
     }
 
-    /** V29：按列组合断言归属维度唯一键，且 code / source_ref 的单列全局唯一已消失。 */
+    /** V29 归属维度唯一键，V31 再纳入 owner_scope：code / source_ref 的单列全局唯一已消失。 */
     @Test
-    void questionBankCodeUniqueIsOwnerScoped() throws Exception {
+    void questionBankOwnerScopeUniqueKey() throws Exception {
         Map<String, List<String>> uniqueColumnsByIndex = new HashMap<>();
         try (Connection connection = dataSource.getConnection()) {
             DatabaseMetaData meta = connection.getMetaData();
@@ -111,8 +111,16 @@ class BusinessSchoolScopeSchemaTests {
             }
         }
         assertThat(uniqueColumnsByIndex.values())
-                .contains(List.of("school_id", "created_by", "code"), List.of("school_id", "source_ref"))
-                .doesNotContain(List.of("code"), List.of("source_ref"));
+                .contains(List.of("school_id", "owner_scope", "created_by", "code"), List.of("school_id", "source_ref"))
+                .doesNotContain(List.of("school_id", "created_by", "code"), List.of("code"), List.of("source_ref"));
+        // H2 会为具名唯一约束生成带后缀的索引名（如 ..._INDEX_C），按约束名前缀判定
+        List<String> constraintNames = uniqueColumnsByIndex.keySet().stream()
+                .map(name -> name.toUpperCase(Locale.ROOT))
+                .toList();
+        assertThat(constraintNames).as("V31 新具名键存在")
+                .anyMatch(name -> name.startsWith("UK_QUESTION_BANK_SCOPE_CREATOR_CODE"));
+        assertThat(constraintNames).as("V29 旧具名键已删")
+                .noneMatch(name -> name.startsWith("UK_QUESTION_BANK_SCHOOL_CREATOR_CODE"));
     }
 
     /** H2 对 V9 的 CREATE TABLE IF NOT EXISTS t_experiment 存的表名大小写与其它表不一致，按实际表名回查。 */

@@ -111,6 +111,13 @@ export interface CreateHomeworkRequest {
   attachmentPath?: string | null;
   startAt?: string | null;
   dueAt?: string | null;
+  /** 新建必填；指向本校 ACTIVE 的 school_subject.id */
+  subjectId: number;
+}
+
+/** 编辑历史作业可省略 subjectId：省略表示保持原值（TD12） */
+export interface UpdateHomeworkRequest extends Omit<CreateHomeworkRequest, 'subjectId'> {
+  subjectId?: number;
 }
 
 export interface GradeHomeworkRequest {

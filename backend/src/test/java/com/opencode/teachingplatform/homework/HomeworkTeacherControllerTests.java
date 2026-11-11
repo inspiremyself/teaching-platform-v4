@@ -19,6 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.opencode.teachingplatform.content.service.TaskSubjectValidator;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -42,6 +43,9 @@ class HomeworkTeacherControllerTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private TaskSubjectValidator taskSubjectValidator;
 
     @MockBean
     private HomeworkService homeworkService;

@@ -61,6 +61,7 @@ public class MaterialService {
         material.setFileName(originalFilename == null || originalFilename.isBlank() ? "material.bin" : originalFilename);
         material.setUploaderUserId(currentUser.id());
         material.setSchoolId(currentUser.schoolId());
+        material.setSubjectId(request.getSubjectId());
         material.setVisibility(request.getVisibility() == null ? MaterialVisibility.ALL : request.getVisibility());
         CourseMaterial saved = courseMaterialRepository.save(material);
         return toView(saved);
@@ -80,6 +81,9 @@ public class MaterialService {
         }
         if (request.getVisibility() != null) {
             material.setVisibility(request.getVisibility());
+        }
+        if (request.getSubjectId() != null) {
+            material.setSubjectId(request.getSubjectId());
         }
         return toView(courseMaterialRepository.save(material));
     }

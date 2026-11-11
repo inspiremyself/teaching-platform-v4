@@ -2,12 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const calls = vi.hoisted(() => ({
   urls: [] as string[],
+  bodies: [] as unknown[],
   getResponse: {} as Record<string, unknown>,
 }));
 
 vi.mock('@/utils/request', () => {
-  const record = (url: string) => {
+  const record = (url: string, body?: unknown) => {
     calls.urls.push(url);
+    if (body !== undefined) {
+      calls.bodies.push(body);
+    }
     return Promise.resolve(calls.getResponse);
   };
   return {
@@ -23,17 +27,22 @@ import {
   listSubjects,
   updateSubject,
 } from '@/api/admin';
-import { createExam, getExamDetail, listExams } from '@/api/exams';
-import { addHomeworkQuestionFromBank, listTeacherHomeworks } from '@/api/homeworks';
+import { createExam, getExamDetail, listExams, updateExam } from '@/api/exams';
+import { addHomeworkQuestionFromBank, createHomework, listTeacherHomeworks, updateHomework } from '@/api/homeworks';
+import { createTeacherLab, updateTeacherLab } from '@/api/labs';
+import { uploadMaterial } from '@/api/materials';
 import { createQuestion, listQuestions, updateQuestion } from '@/api/questions';
 import type { CreateSubjectPayload, UpdateSubjectPayload } from '@/types/admin';
-import type { CreateExamPayload } from '@/types/exam';
-import type { AddHomeworkQuestionFromBankRequest } from '@/types/homework';
-import type { SaveQuestionPayload } from '@/types/question';
+import type { CreateExamPayload, UpdateExamPayload } from '@/types/exam';
+import type { AddHomeworkQuestionFromBankRequest, CreateHomeworkRequest, UpdateHomeworkRequest } from '@/types/homework';
+import type { CreateLabPayload, UpdateLabPayload } from '@/types/lab';
+import type { UploadMaterialPayload } from '@/types/material';
+import type { CreateQuestionPayload, SaveQuestionPayload } from '@/types/question';
 
 describe('api 端点契约', () => {
   beforeEach(() => {
     calls.urls.length = 0;
+    calls.bodies.length = 0;
     calls.getResponse = {};
   });
 
@@ -65,7 +74,7 @@ describe('api 端点契约', () => {
 
   it('题库端点路径', async () => {
     await listQuestions();
-    await createQuestion({} as SaveQuestionPayload);
+    await createQuestion({} as CreateQuestionPayload);
     await updateQuestion(9, {} as SaveQuestionPayload);
     expect(calls.urls).toEqual(['/questions', '/questions', '/questions/9']);
   });
@@ -81,6 +90,42 @@ describe('api 端点契约', () => {
       '/admin/subjects/9',
       '/admin/subjects/9/status',
     ]);
+  });
+
+  it('5 处任务 create/update URL 不变且 subjectId 原样透传', async () => {
+    const subjectId = 7;
+    await createExam({ subjectId } as CreateExamPayload);
+    await updateExam(12, { subjectId } as UpdateExamPayload);
+    await createHomework({ subjectId } as CreateHomeworkRequest);
+    await updateHomework(3, { subjectId } as CreateHomeworkRequest);
+    await createTeacherLab({ subjectId } as CreateLabPayload);
+    await updateTeacherLab(4, { subjectId } as UpdateLabPayload);
+    await createQuestion({ subjectId } as CreateQuestionPayload);
+    await updateQuestion(9, { subjectId } as SaveQuestionPayload);
+    await uploadMaterial({
+      title: '讲义', category: 'COURSE', description: '', visibility: 'ALL', subjectId,
+      file: new Blob(['x']),
+    } as unknown as UploadMaterialPayload);
+    expect(calls.urls).toEqual([
+      '/exams', '/exams/12',
+      '/teacher/homeworks', '/teacher/homeworks/3',
+      '/teacher/labs', '/teacher/labs/4',
+      '/questions', '/questions/9',
+      '/materials',
+    ]);
+    expect(calls.bodies.slice(0, 8)).toEqual(
+      Array.from({ length: 8 }, () => expect.objectContaining({ subjectId })),
+    );
+    expect((calls.bodies[8] as FormData).get('subjectId')).toBe('7');
+  });
+
+  it('编辑态省略 subjectId 时原样透传、不注入默认值', async () => {
+    await updateExam(12, {} as UpdateExamPayload);
+    await updateHomework(3, {} as UpdateHomeworkRequest);
+    await updateTeacherLab(4, {} as UpdateLabPayload);
+    await updateQuestion(9, {} as SaveQuestionPayload);
+    expect(calls.urls).toEqual(['/exams/12', '/teacher/homeworks/3', '/teacher/labs/4', '/questions/9']);
+    expect(calls.bodies).toEqual([{}, {}, {}, {}]);
   });
 
   it('平台学科启用端点路径', async () => {

@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.material.controller;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
 import com.opencode.teachingplatform.auth.security.SecurityUtils;
 import com.opencode.teachingplatform.common.api.ApiResponse;
+import com.opencode.teachingplatform.content.service.TaskSubjectValidator;
 import com.opencode.teachingplatform.material.dto.MaterialRequests.UpdateMaterialRequest;
 import com.opencode.teachingplatform.material.dto.MaterialRequests.UploadMaterialRequest;
 import com.opencode.teachingplatform.material.service.MaterialService;
@@ -23,9 +24,11 @@ import java.util.Map;
 public class MaterialController {
 
     private final MaterialService materialService;
+    private final TaskSubjectValidator taskSubjectValidator;
 
-    public MaterialController(MaterialService materialService) {
+    public MaterialController(MaterialService materialService, TaskSubjectValidator taskSubjectValidator) {
         this.materialService = materialService;
+        this.taskSubjectValidator = taskSubjectValidator;
     }
 
     @GetMapping
@@ -39,6 +42,7 @@ public class MaterialController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> create(@ModelAttribute UploadMaterialRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForCreate(currentUser, request.getSubjectId());
         return ApiResponse.ok(materialService.uploadMaterial(currentUser, request));
     }
 
@@ -46,6 +50,7 @@ public class MaterialController {
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> update(@PathVariable Long id, @RequestBody UpdateMaterialRequest request) {
         CurrentUser currentUser = SecurityUtils.currentUser();
+        taskSubjectValidator.requireForUpdate(currentUser, request.getSubjectId());
         return ApiResponse.ok(materialService.updateMaterial(currentUser, id, request));
     }
 

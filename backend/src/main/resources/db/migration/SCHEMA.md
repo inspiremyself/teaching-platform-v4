@@ -551,6 +551,146 @@
 - 唯一约束：`UNIQUE (school_id, code)`
 - 唯一约束：`UNIQUE (school_id, global_subject_id)`（NULL 不参与唯一约束，一校一平台学科最多一条映射行）
 
+### 7. 内容目录与三层归属表（V31）
+
+> 由 `V31__content_catalog_and_ownership.sql` 一次建成（阶段 2 主方案）。多态列一律不建 DB 外键；`owner_scope` / 分域学科列 / `target_type` 的取值由应用层强制，不加 DB CHECK。表 / 列说明以本文件为单一事实来源，DDL 内只写 `-- ` 行注释。
+
+#### `textbook`
+
+平台级教材目录；同一学科 0..N 条，学科是归属列、不是树节点。不设启用状态列，学校是否启用由 `school_textbook` 逐条唯一承载。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `global_subject_id` | `BIGINT` | 否 |  | 指向 `subject.id` |
+| `code` | `VARCHAR(64)` | 否 |  | 同学科内教材编码 |
+| `title` | `VARCHAR(255)` | 否 |  | 教材名称 |
+| `created_by` | `BIGINT` | 是 |  | 平台超管用户 id |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### `textbook_section`
+
+教材小节树；`parent_id` 为 NULL 表示顶层，叶子 = 不存在子行（不加 `is_leaf` 标记列）。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `textbook_id` | `BIGINT` | 否 |  | 所属教材 |
+| `parent_id` | `BIGINT` | 是 |  | 父小节；NULL = 顶层 |
+| `heading` | `VARCHAR(255)` | 否 |  | 小节标题 |
+| `sort_order` | `INT` | 否 |  | 同级呈现次序 |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### `school_textbook`
+
+学校逐条启用教材；新增教材不自动写本表、不继承同学科其它教材的挂载行。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `school_id` | `BIGINT` | 否 |  | 租户隔离列 |
+| `textbook_id` | `BIGINT` | 否 |  | 被启用的平台教材 |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### `courseware`
+
+课件主表；本期只产生 `owner_scope = PLATFORM` 的行。分域学科两列互斥、由应用层强制；`status` 单列 `DRAFT` / `PUBLISHED`，下架置回 `DRAFT`。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `owner_scope` | `VARCHAR(16)` | 否 |  | `PLATFORM` / `SCHOOL` / `TEACHER` |
+| `owner_school_id` | `BIGINT` | 是 |  | `PLATFORM` 行 NULL |
+| `global_subject_id` | `BIGINT` | 是 |  | 指向 `subject.id`（平台内容） |
+| `school_subject_id` | `BIGINT` | 是 |  | 指向 `school_subject.id`（本校内容） |
+| `title` / `subtitle` | `VARCHAR(255)` | 否 / 是 |  | 标题 / 副标题 |
+| `status` | `VARCHAR(16)` | 否 | `DRAFT` | 单列状态机 |
+| `published_at` | `TIMESTAMP` | 是 |  | 发布时间；写值 / 清除规则归阶段 3 |
+| `created_by` | `BIGINT` | 是 |  | 创建者用户 id |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### `courseware_section`
+
+课件正文按小节分行；`content_json` 是正文唯一真相源。MySQL 侧由 `${mysqlOnly}` 升级为 `LONGTEXT NOT NULL`，H2 侧保留 `TEXT`/CLOB。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `courseware_id` | `BIGINT` | 否 |  | 所属课件 |
+| `heading` | `VARCHAR(255)` | 否 |  | 小节标题 |
+| `sort_order` | `INT` | 否 |  | 课件内小节次序；整份布置按此展开 |
+| `content_json` | `TEXT` / `LONGTEXT` | 否 |  | 结构化正文 |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### `courseware_asset`
+
+图片 / 音频素材；只存 `data/files/` 下相对路径，不内联 base64。`kind` 取 `IMAGE` / `AUDIO`。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `courseware_id` | `BIGINT` | 否 |  | 所属课件 |
+| `kind` | `VARCHAR(16)` | 否 |  | `IMAGE` / `AUDIO` |
+| `file_path` | `VARCHAR(512)` | 否 |  | 相对路径 |
+| `mime` | `VARCHAR(128)` | 是 |  | MIME 类型 |
+| `size_bytes` | `BIGINT` | 是 |  | 文件字节数 |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### `courseware_assignment`
+
+一次布置 = 同一 `assignment_group_id` 下「目标 × 小节」的多行；顺序为布置时快照。`section_id` 为 NULL 表示整份布置。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `school_id` | `BIGINT` | 否 |  | 租户隔离列 |
+| `class_id` | `BIGINT` | 否 |  | 目标所属班级；鉴权 / 按班查询唯一依据 |
+| `target_type` | `VARCHAR(16)` | 否 |  | `CLASS`（整班）/ `STUDENT`（班内点名） |
+| `target_id` | `BIGINT` | 否 |  | `CLASS` = `class_id`；`STUDENT` = `student_user_id` |
+| `courseware_id` | `BIGINT` | 否 |  | 被布置课件 |
+| `section_id` | `BIGINT` | 是 |  | NULL = 整份 |
+| `assignment_group_id` | `VARCHAR(36)` | 否 |  | 服务端生成 UUID v4 |
+| `display_order` | `INT` | 否 |  | 同一目标组内次序；整份 = 0 |
+| `start_at` / `end_at` | `TIMESTAMP` | 是 |  | 布置时间窗 |
+| `created_by` | `BIGINT` | 是 |  | 布置教师用户 id |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列；组间排序依据 |
+
+#### `content_mount`
+
+统一挂载关系；一个内容单元 0..N 行（0 行 = 暂不挂载）。`content_type` 取 `COURSEWARE` / `QUESTION`，`mount_type` 取 `TEXTBOOK` / `TEXTBOOK_SECTION` / `COURSEWARE_SECTION`；课件不得挂到自身小节。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `content_type` | `VARCHAR(16)` | 否 |  | 挂载主体类型 |
+| `content_id` | `BIGINT` | 否 |  | 内容单元 id（多态） |
+| `mount_type` | `VARCHAR(24)` | 否 |  | 目录目标类型 |
+| `mount_target_id` | `BIGINT` | 否 |  | 目录目标 id（多态） |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### `content_share_grant`
+
+平台内容按学校集合授权；同一条记录只读引用、不做跨校复制。取消授权删单行，删除平台内容时同事务清该内容全部 grant 行。
+
+| 字段 | 类型 | 可空 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 否 | 自增 | 主键 |
+| `content_type` | `VARCHAR(16)` | 否 |  | `COURSEWARE` / `QUESTION` |
+| `content_id` | `BIGINT` | 否 |  | 被授权内容 id（多态） |
+| `school_id` | `BIGINT` | 否 |  | 被授权学校 |
+| `granted_by` | `BIGINT` | 否 |  | 平台超管用户 id |
+| `created_at` / `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 审计列 |
+
+#### V31 对存量表的加列
+
+| 表 | 新增列 | 说明 |
+|---|---|---|
+| `question_bank` | `owner_scope VARCHAR(16) NOT NULL DEFAULT 'TEACHER'`、`owner_school_id BIGINT NULL`、`subject_id BIGINT NULL` | 存量行由默认值得到 `TEACHER`，不回填；`subject_id` 指向 `school_subject.id`，历史行 NULL |
+| `t_experiment` | `subject_id BIGINT NULL` | 指向 `school_subject.id`；历史行 NULL |
+| `homework` | `subject_id BIGINT NULL` | 同上 |
+| `exam` | `subject_id BIGINT NULL` | 同上 |
+| `course_material` | `subject_id BIGINT NULL` | 同上 |
+
 ---
 
 ## 二、最终版数据库的关键约束汇总
@@ -565,7 +705,7 @@
 - `sys_user.username`
 - `class_room.code`
 - `class_member (class_id, student_user_id)`
-- `question_bank (school_id, created_by, code)`
+- `question_bank (school_id, owner_scope, created_by, code)`（`uk_question_bank_scope_creator_code`，V31 换键；旧 `uk_question_bank_school_creator_code` 已删）
 - `question_bank (school_id, source_ref)`
 - `homework_submission (homework_id, student_id)`
 - `exam_submission (exam_id, student_id)`
@@ -577,6 +717,12 @@
 - `subject (code)`
 - `school_subject (school_id, code)`
 - `school_subject (school_id, global_subject_id)`
+- `textbook (global_subject_id, code)`（`uk_textbook_subject_code`）
+- `school_textbook (school_id, textbook_id)`（`uk_school_textbook`）
+- `courseware_section (courseware_id, sort_order)`（`uk_courseware_section_order`）
+- `courseware_assignment (assignment_group_id, target_type, target_id, display_order)`（`uk_assignment_target_order`）
+- `content_mount (content_type, content_id, mount_type, mount_target_id)`（`uk_content_mount`）
+- `content_share_grant (content_type, content_id, school_id)`（`uk_content_share_grant`）
 
 ### 显式索引
 
@@ -586,6 +732,16 @@
 - `idx_question_bank_school_created_by ON question_bank (school_id, created_by)`
 - `idx_score_record_school_student ON score_record (school_id, student_id)`
 - `idx_plagiarism_task_school_student ON plagiarism_task (school_id, student_id)`
+- `idx_textbook_section_parent ON textbook_section (textbook_id, parent_id, sort_order)`
+- `idx_courseware_scope ON courseware (owner_scope, owner_school_id)`
+- `idx_courseware_global_subject ON courseware (global_subject_id)`
+- `idx_courseware_school_subject ON courseware (school_subject_id)`
+- `idx_courseware_asset_courseware ON courseware_asset (courseware_id)`
+- `idx_assignment_school_class ON courseware_assignment (school_id, class_id, created_at)`
+- `idx_assignment_target ON courseware_assignment (school_id, target_type, target_id, created_at)`
+- `idx_assignment_courseware ON courseware_assignment (courseware_id)`
+- `idx_content_mount_target ON content_mount (mount_type, mount_target_id)`
+- `idx_content_share_grant_school ON content_share_grant (school_id, content_type)`
 
 ---
 
@@ -626,3 +782,4 @@
 |---|---|
 | 2026-11-10 | V29 归属维度唯一键收敛；按 2026-11-10 PRD V1.5 与技术方案修订 §一字段表、§二约束汇总 |
 | 2026-11-10 | V30 新增平台学科字典 subject 表与 school_subject.global_subject_id 映射列；按阶段 2 技术方案补 §一 两段表结构与 §二 3 行唯一约束 |
+| 2026-11-11 | V31 内容目录与三层归属：新增 9 张内容表、7 个显式唯一约束（含 `uk_question_bank_scope_creator_code` 换键）、10 个显式索引；`question_bank` 加 3 列，`t_experiment` / `homework` / `exam` / `course_material` 各加 `subject_id` 1 列；按阶段 2 主方案补 §一 §7 段与存量表加列说明、§二 约束 / 索引清单 |

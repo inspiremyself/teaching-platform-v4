@@ -56,6 +56,13 @@
                 <el-input-number v-model="form.score" :min="1" :max="100" style="width: 100%" />
               </el-form-item>
             </template>
+
+            <el-form-item v-if="subjectOptions" label="学科" :required="!editing">
+              <el-select :model-value="subjectId" :placeholder="editing ? '保持原值' : '请选择学科'" @update:model-value="onSubjectChange">
+                <el-option v-if="editing" label="保持原值" :value="0" />
+                <el-option v-for="item in subjectOptions" :key="item.id" :label="item.name" :value="item.id" />
+              </el-select>
+            </el-form-item>
           </div>
         </section>
 
@@ -131,6 +138,7 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { ConfiguredQuestionItem } from '@/types/question-config'
+import type { AdminSubject } from '@/types/admin'
 import type { QuestionDifficulty, QuestionItem, QuestionType } from '@/types/question'
 import FillBlankEditor from '@/components/typed-editor/FillBlankEditor.vue'
 import ObjectiveEditor from '@/components/typed-editor/ObjectiveEditor.vue'
@@ -170,6 +178,9 @@ const props = withDefaults(
     submitText?: string
     showAssetFields?: boolean
     showConfigFields?: boolean
+    /** 仅题库页传入：为题目绑定本校 ACTIVE 学科；其它复用方不传，不显示该下拉 */
+    subjectOptions?: AdminSubject[]
+    subjectId?: number
   }>(),
   {
     initialQuestion: null,
@@ -184,8 +195,11 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:visible': [boolean]
+  'update:subjectId': [number]
   saved: [QuestionEditorDialogSubmitPayload]
 }>()
+
+const onSubjectChange = (value: number) => emit('update:subjectId', value)
 
 const typeOptions: QuestionType[] = [...QUESTION_TYPED_EDITOR_KIND_OPTIONS]
 const difficultyOptions: QuestionDifficulty[] = ['EASY', 'MEDIUM', 'HARD']

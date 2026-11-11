@@ -141,6 +141,11 @@
                   <el-option v-for="category in materialCategoryOptions" :key="`upload-${category}`" :label="categoryLabel(category)" :value="category" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="学科" required>
+                <el-select v-model="uploadForm.subjectId" placeholder="请选择学科">
+                  <el-option v-for="item in subjectOptions" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
+              </el-form-item>
             </div>
             <el-form-item label="资料说明"><el-input v-model="uploadForm.description" type="textarea" :rows="4" placeholder="补充适用章节、投放对象或使用方式" /></el-form-item>
           </section>
@@ -208,6 +213,12 @@
                   <el-option v-for="category in materialCategoryOptions" :key="`edit-${category}`" :label="categoryLabel(category)" :value="category" />
                 </el-select>
               </el-form-item>
+              <el-form-item label="学科" :required="false">
+                <el-select v-model="editForm.subjectId" placeholder="保持原值">
+                  <el-option label="保持原值" :value="0" />
+                  <el-option v-for="item in subjectOptions" :key="item.id" :label="item.name" :value="item.id" />
+                </el-select>
+              </el-form-item>
             </div>
             <el-form-item label="资料说明"><el-input v-model="editForm.description" type="textarea" :rows="4" placeholder="补充适用章节、投放对象或使用方式" /></el-form-item>
             <el-form-item label="可见范围">
@@ -235,6 +246,8 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { deleteMaterial, downloadMaterial, listMaterials, updateMaterial, uploadMaterial } from '@/api/materials';
+import { listSubjects } from '@/api/admin';
+import type { AdminSubject } from '@/types/admin';
 import type { MaterialItem, MaterialVisibility } from '@/types/material';
 
 const loading = ref(false);
@@ -254,13 +267,21 @@ const uploadForm = reactive({
   category: 'COURSE',
   description: '',
   visibility: 'ALL' as MaterialVisibility,
+  subjectId: 0,
 });
+
+const subjectOptions = ref<AdminSubject[]>([]);
+const fetchSubjects = async () => {
+  subjectOptions.value = await listSubjects('ACTIVE');
+  uploadForm.subjectId = subjectOptions.value[0]?.id ?? 0;
+};
 
 const editForm = reactive({
   title: '',
   category: 'COURSE',
   description: '',
   visibility: 'ALL' as MaterialVisibility,
+  subjectId: 0,
 });
 
 const materialCategoryOptions = ['COURSE', 'LECTURE', 'LAB', 'HOMEWORK', 'EXAM', 'NOTICE'];
@@ -306,6 +327,7 @@ const resetUploadForm = () => {
   uploadForm.category = 'COURSE';
   uploadForm.description = '';
   uploadForm.visibility = 'ALL';
+  uploadForm.subjectId = subjectOptions.value[0]?.id ?? 0;
   selectedFile.value = null;
 };
 
@@ -330,6 +352,11 @@ const submitUpload = async () => {
     ElMessage.warning('请选择要上传的文件');
     return;
   }
+  // 新建必填：学科列表为空或加载失败时本地拦截，不带 subjectId=0 提交
+  if (!uploadForm.subjectId) {
+    ElMessage.warning('请先在学科管理中启用至少一个 ACTIVE 学科');
+    return;
+  }
 
   uploading.value = true;
   try {
@@ -348,6 +375,8 @@ const openEditDialog = (row: MaterialItem) => {
   editForm.category = row.category;
   editForm.description = row.description;
   editForm.visibility = row.visibility;
+  // 详情不含 subjectId；编辑态默认「保持原值」
+  editForm.subjectId = 0;
   editDialogVisible.value = true;
 };
 
@@ -358,7 +387,9 @@ const submitEdit = async () => {
 
   saving.value = true;
   try {
-    await updateMaterial(editingId.value, { ...editForm });
+    // 编辑态选中「保持原值」时省略 subjectId，避免覆盖历史 NULL / 原学科
+    const { subjectId, ...rest } = editForm;
+    await updateMaterial(editingId.value, subjectId ? { ...editForm } : rest);
     ElMessage.success('资料信息更新成功');
     editDialogVisible.value = false;
     await fetchData();
@@ -447,7 +478,10 @@ const fileTone = (fileName: string) => {
   return 'blue';
 };
 
-onMounted(fetchData);
+onMounted(() => {
+  void fetchSubjects();
+  void fetchData();
+});
 </script>
 
 <style scoped>

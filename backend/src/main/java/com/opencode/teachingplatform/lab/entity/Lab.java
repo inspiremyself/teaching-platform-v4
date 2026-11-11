@@ -81,6 +81,10 @@ public class Lab {
     @Column(name = "school_id", nullable = false)
     private Long schoolId;
 
+    /** 指向 school_subject.id；历史行 NULL。 */
+    @Column(name = "subject_id")
+    private Long subjectId;
+
     @PrePersist
     void prePersist() {
         ensureId();
@@ -175,4 +179,6 @@ public class Lab {
     public void setSummaryRequired(boolean summaryRequired) { this.summaryRequired = summaryRequired; }
     public Long getSchoolId() { return schoolId; }
     public void setSchoolId(Long schoolId) { this.schoolId = schoolId; }
+    public Long getSubjectId() { return subjectId; }
+    public void setSubjectId(Long subjectId) { this.subjectId = subjectId; }
 }
