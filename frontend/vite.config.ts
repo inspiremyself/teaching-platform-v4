@@ -16,6 +16,14 @@ export default defineConfig({
     port: 5173,
     // 允许 cpolar 等内网穿透域名（免费隧道子域会变，用前导点匹配全部子域）
     allowedHosts: ['.cpolar.top', '.cpolar.cn'],
+    warmup: {
+      clientFiles: [
+        './src/main.ts',
+        './src/App.vue',
+        './src/router/index.ts',
+        './src/views/auth/Login.vue',
+      ],
+    },
     proxy: {
       '/api': {
         target: apiTarget,
