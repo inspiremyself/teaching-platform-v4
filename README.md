@@ -102,6 +102,19 @@ env USERNAME=admin9001 ROLE=SCHOOL_ADMIN ./scripts/common/healthcheck-login.sh
 env USERNAME=platform9001 ROLE=PLATFORM_ADMIN FORCE_LOGIN=true ./scripts/common/healthcheck-login.sh
 ```
 
+### AI 生成配置
+
+平台课件「AI 生成」需要 OpenAI 兼容网关。配置键声明在 `backend/src/main/resources/application.yml` 的 `app.courseware.ai.*`，值由环境变量注入，仓库内不提供 `api-key`：
+
+```bash
+export COURSEWARE_AI_BASE_URL=https://<网关地址>/v1
+export COURSEWARE_AI_API_KEY=<密钥>
+export COURSEWARE_AI_MODEL=<模型名>
+export COURSEWARE_AI_TIMEOUT_SECONDS=120
+```
+
+未配置时平台超管点「AI 生成」返回 `code = 40000`（message 为「AI 生成服务未配置，请联系管理员」）且不落库；配置键同样支持 `--app.courseware.ai.model=...` 等 Spring 属性覆盖。详见 [`docs/技术方案/2026-11-12-阶段3AI网关配置项声明化整改技术方案.md`](docs/技术方案/2026-11-12-阶段3AI网关配置项声明化整改技术方案.md)。
+
 ### 数据备份（MySQL 表结构 + 数据）
 
 Flyway 迁移、覆盖库或重要里程碑前：

@@ -3,7 +3,7 @@ package com.opencode.teachingplatform.content.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.common.exception.BusinessException;
-import org.springframework.beans.factory.annotation.Value;
+import com.opencode.teachingplatform.content.config.CoursewareAiProperties;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -18,8 +18,9 @@ import java.util.Map;
 /**
  * OpenAI 兼容网关封装：只用 JDK 21 HttpClient，不引入第三方 SDK。
  *
- * <p>四项参数全部经环境变量注入，不写进任何 application*.yml；缺少 base-url / api-key / model
- * 时 {@link #isConfigured()} 为 false，AI 生成入口直接拒绝并保证不落库。</p>
+ * <p>四项参数绑定自 {@code app.courseware.ai.*} 配置键，值经 ${COURSEWARE_AI_*:}
+ * 占位符由环境变量注入；缺少 base-url / api-key / model 时 {@link #isConfigured()} 为 false，
+ * AI 生成入口直接拒绝并保证不落库。</p>
  */
 @Service
 public class CoursewareAiGateway {
@@ -32,16 +33,12 @@ public class CoursewareAiGateway {
     private final String model;
     private final int timeoutSeconds;
 
-    public CoursewareAiGateway(ObjectMapper objectMapper,
-                               @Value("${COURSEWARE_AI_BASE_URL:}") String baseUrl,
-                               @Value("${COURSEWARE_AI_API_KEY:}") String apiKey,
-                               @Value("${COURSEWARE_AI_MODEL:}") String model,
-                               @Value("${COURSEWARE_AI_TIMEOUT_SECONDS:120}") int timeoutSeconds) {
+    public CoursewareAiGateway(ObjectMapper objectMapper, CoursewareAiProperties properties) {
         this.objectMapper = objectMapper;
-        this.baseUrl = baseUrl == null ? "" : baseUrl.trim();
-        this.apiKey = apiKey == null ? "" : apiKey.trim();
-        this.model = model == null ? "" : model.trim();
-        this.timeoutSeconds = timeoutSeconds <= 0 ? 120 : timeoutSeconds;
+        this.baseUrl = properties.getBaseUrl() == null ? "" : properties.getBaseUrl().trim();
+        this.apiKey = properties.getApiKey() == null ? "" : properties.getApiKey().trim();
+        this.model = properties.getModel() == null ? "" : properties.getModel().trim();
+        this.timeoutSeconds = properties.getTimeoutSeconds() <= 0 ? 120 : properties.getTimeoutSeconds();
     }
 
     /** 网关是否具备可用配置；空串即未配置，不提供任何可用密钥。 */

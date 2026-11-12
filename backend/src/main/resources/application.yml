@@ -37,6 +37,13 @@ app:
   audit-log:
     retention-days: 180
     retention-enabled: true
+  courseware:
+    ai:
+      # 四项值只由环境变量注入；仓库内不提供可用 api-key
+      base-url: ${COURSEWARE_AI_BASE_URL:}
+      api-key: ${COURSEWARE_AI_API_KEY:}
+      model: ${COURSEWARE_AI_MODEL:}
+      timeout-seconds: ${COURSEWARE_AI_TIMEOUT_SECONDS:120}
 
 # 实验作答行为采集与风险标记（技术方案 §4.4；本地 profile 不覆盖，全走默认值）
 lab:
