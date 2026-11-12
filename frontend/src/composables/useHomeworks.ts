@@ -677,7 +677,7 @@ const planTotalScore = computed(() =>
 );
 
 onMounted(async () => {
-  await Promise.all([fetchClasses(), fetchSubjects()]);
+  await Promise.allSettled([fetchClasses(), fetchSubjects()]);
   resetForm();
   await fetchHomeworks();
 });

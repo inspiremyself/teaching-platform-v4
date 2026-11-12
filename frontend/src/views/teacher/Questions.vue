@@ -694,7 +694,7 @@ const isQuestionDifficulty = (value: string): value is QuestionDifficulty =>
 
 onMounted(() => {
   resetForm();
-  void fetchSubjects();
+  void fetchSubjects().catch(() => { subjectOptions.value = []; });
   void fetchData();
 });
 </script>

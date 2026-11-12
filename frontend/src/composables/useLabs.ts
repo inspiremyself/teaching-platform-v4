@@ -378,7 +378,7 @@ const updatedLabel = (row: LabItem) => {
 };
 
 onMounted(async () => {
-  await Promise.all([fetchClasses(), fetchSubjects()]);
+  await Promise.allSettled([fetchClasses(), fetchSubjects()]);
   resetCreateForm();
   await fetchData();
 });

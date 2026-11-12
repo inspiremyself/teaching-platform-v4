@@ -479,7 +479,7 @@ const fileTone = (fileName: string) => {
 };
 
 onMounted(() => {
-  void fetchSubjects();
+  void fetchSubjects().catch(() => { subjectOptions.value = []; });
   void fetchData();
 });
 </script>

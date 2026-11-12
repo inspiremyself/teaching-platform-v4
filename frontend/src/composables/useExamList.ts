@@ -585,7 +585,7 @@ const planTotalScore = computed(() =>
 )
 
 onMounted(async () => {
-  await Promise.all([fetchClasses(), fetchQuestions(), fetchSubjects()])
+  await Promise.allSettled([fetchClasses(), fetchQuestions(), fetchSubjects()])
   resetForm()
   await fetchExams()
 })

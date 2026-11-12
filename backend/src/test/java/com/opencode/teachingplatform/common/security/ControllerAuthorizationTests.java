@@ -1,5 +1,6 @@
 package com.opencode.teachingplatform.common.security;
 
+import com.opencode.teachingplatform.admin.controller.AdminSubjectController;
 import com.opencode.teachingplatform.auth.controller.AuthController;
 import com.opencode.teachingplatform.exam.controller.ExamController;
 import com.opencode.teachingplatform.lab.controller.LabController;
@@ -56,6 +57,18 @@ class ControllerAuthorizationTests {
                 .isEqualTo("hasAnyRole('TEACHER','STUDENT','SCHOOL_ADMIN')");
         assertThat(valueOf(LabController.class, "previewAnswerImage"))
                 .isEqualTo("hasAnyRole('TEACHER','STUDENT')");
+        assertThat(valueOf(AdminSubjectController.class, "list"))
+                .isEqualTo("hasAnyRole('SCHOOL_ADMIN','TEACHER')");
+        assertThat(valueOf(AdminSubjectController.class, "create"))
+                .isEqualTo("hasRole('SCHOOL_ADMIN')");
+        assertThat(valueOf(AdminSubjectController.class, "update"))
+                .isEqualTo("hasRole('SCHOOL_ADMIN')");
+        assertThat(valueOf(AdminSubjectController.class, "changeStatus"))
+                .isEqualTo("hasRole('SCHOOL_ADMIN')");
+        assertThat(valueOf(AdminSubjectController.class, "listPlatform"))
+                .isEqualTo("hasRole('SCHOOL_ADMIN')");
+        assertThat(valueOf(AdminSubjectController.class, "enablePlatform"))
+                .isEqualTo("hasRole('SCHOOL_ADMIN')");
     }
 
     @Test

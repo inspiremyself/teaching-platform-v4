@@ -91,6 +91,47 @@ class AdminSubjectControllerTests extends AdminIntegrationTestSupport {
     }
 
     @Test
+    void teacherListsActiveSubjectsOfOwnSchoolOnly() throws Exception {
+        seedOtherSchoolSubject();
+        jdbc.update("UPDATE school_subject SET status = 'DISABLED' WHERE school_id = 1 AND code = 'SE-ARCH'");
+
+        String body = mockMvc.perform(get("/api/v1/admin/subjects?status=ACTIVE")
+                        .header("Authorization", bearer(teacherId("t9001"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.message").value("OK"))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andReturn().getResponse().getContentAsString();
+        List<String> codes = new ArrayList<>();
+        for (JsonNode row : objectMapper.readTree(body).path("data")) {
+            assertThat(row.path("status").asText()).isEqualTo("ACTIVE");
+            codes.add(row.path("code").asText());
+        }
+        assertThat(codes).isNotEmpty().doesNotContain("B-SUBJECT", "SE-ARCH");
+    }
+
+    @Test
+    void nonTeacherRolesCannotAccessSchoolAdminSubjectEndpoints() throws Exception {
+        Long studentId = sysUserRepository.findByUsernameAndRole("20260001", UserRole.STUDENT)
+                .orElseThrow().getId();
+        Long platformAdminId = sysUserRepository.findByUsernameAndRole("platform9001", UserRole.PLATFORM_ADMIN)
+                .orElseThrow().getId();
+
+        expectAllSubjectEndpointsForbidden(bearer(studentId));
+        expectAllSubjectEndpointsForbidden(bearer(platformAdminId));
+    }
+
+    @Test
+    void teacherCannotUseSchoolAdminSubjectEndpoints() throws Exception {
+        Integer rowsBefore = jdbc.queryForObject("SELECT COUNT(*) FROM school_subject", Integer.class);
+
+        expectWriteAndPlatformEndpointsForbidden(bearer(teacherId("t9001")));
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM school_subject", Integer.class))
+                .isEqualTo(rowsBefore);
+    }
+
+    @Test
     void createSubject() throws Exception {
         mockMvc.perform(post("/api/v1/admin/subjects")
                         .header("Authorization", adminBearer())
@@ -325,5 +366,43 @@ class AdminSubjectControllerTests extends AdminIntegrationTestSupport {
         jdbc.update("DELETE FROM school_subject WHERE school_id = 2 AND code = 'B-SUBJECT'");
         jdbc.update("INSERT INTO school_subject (school_id, name, code, status, created_at, updated_at) "
                 + "VALUES (2, 'B校学科', 'B-SUBJECT', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+    }
+
+    private void expectAllSubjectEndpointsForbidden(String bearer) throws Exception {
+        expectForbidden(mockMvc.perform(get("/api/v1/admin/subjects")
+                .header("Authorization", bearer)));
+        expectWriteAndPlatformEndpointsForbidden(bearer);
+    }
+
+    private void expectWriteAndPlatformEndpointsForbidden(String bearer) throws Exception {
+        expectForbidden(mockMvc.perform(post("/api/v1/admin/subjects")
+                .header("Authorization", bearer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name": "操作系统", "code": "os"}
+                        """)));
+        expectForbidden(mockMvc.perform(put("/api/v1/admin/subjects/1")
+                .header("Authorization", bearer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"name": "已更新学科", "code": "UPDATE-TEST"}
+                        """)));
+        expectForbidden(mockMvc.perform(post("/api/v1/admin/subjects/1/status")
+                .header("Authorization", bearer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"status": "DISABLED"}
+                        """)));
+        expectForbidden(mockMvc.perform(get("/api/v1/admin/subjects/platform")
+                .header("Authorization", bearer)));
+        expectForbidden(mockMvc.perform(post("/api/v1/admin/subjects/platform/1/enable")
+                .header("Authorization", bearer)));
+    }
+
+    private void expectForbidden(ResultActions actions) throws Exception {
+        actions.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(40300))
+                .andExpect(jsonPath("$.message").value("Access Denied"))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 }
