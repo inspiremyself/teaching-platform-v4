@@ -512,7 +512,8 @@
 **约束**
 - 主键：`PRIMARY KEY (id)`
 - 唯一约束：`UNIQUE (session_key)`
-- 外键：`fk_user_login_session_user FOREIGN KEY (user_id) REFERENCES sys_user(id)`
+- 索引：`idx_user_login_session_user_status (user_id, status, created_at)（V32）`
+- MySQL 侧 V11 建外键时自动生成的 user_id 单列索引保留不删（V32 只删外键）
 
 #### `subject`
 
@@ -697,8 +698,8 @@
 
 ### 显式外键
 
-- `user_login_session.user_id -> sys_user.id`
 - `lab_step_answer_log.lab_step_answer_id -> experiment_answer.id`
+- `lab_submission_metrics.submission_id -> experiment_submission.id`
 
 ### 显式唯一约束
 

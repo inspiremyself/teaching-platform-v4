@@ -21,7 +21,6 @@ import com.opencode.teachingplatform.school.repository.SchoolRepository;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,7 +43,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -172,7 +170,7 @@ class AuthServiceTests {
         when(passwordEncoder.matches("123456", "{noop}123456")).thenReturn(true);
         when(userLoginSessionRepository.findFirstByUser_IdAndStatusOrderByCreatedAtDesc(1L, LoginSessionStatus.ACTIVE))
                 .thenReturn(Optional.of(existingSession));
-        when(sysUserRepository.saveAndFlush(user)).thenReturn(user);
+        when(sysUserRepository.save(user)).thenReturn(user);
         when(userLoginSessionRepository.save(any(UserLoginSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(jwtTokenService.calculateExpirationAt(any(Instant.class))).thenReturn(OffsetDateTime.now().plusDays(1));
         when(jwtTokenService.issueToken(eq(user), any(String.class), any(Instant.class))).thenReturn("fresh-token");
@@ -183,25 +181,6 @@ class AuthServiceTests {
         assertEquals(LoginSessionStatus.KICKED, existingSession.getStatus());
         assertTrue(existingSession.getInvalidatedAt() != null);
         verify(userLoginSessionRepository, atLeastOnce()).save(any(UserLoginSession.class));
-    }
-
-    @Test
-    void loginFlushesSysUserBeforeInsertingSession() {
-        SysUser user = activeTeacher();
-        when(sysUserRepository.findAllByUsernameAndRole("t9001", UserRole.TEACHER)).thenReturn(List.of(user));
-        when(passwordEncoder.matches("123456", "{noop}123456")).thenReturn(true);
-        when(userLoginSessionRepository.findFirstByUser_IdAndStatusOrderByCreatedAtDesc(1L, LoginSessionStatus.ACTIVE))
-                .thenReturn(Optional.empty());
-        stubSuccessfulSession(user);
-
-        Map<String, Object> result = authService.login(new LoginRequest("t9001", "123456", UserRole.TEACHER));
-
-        assertEquals("token", result.get("token"));
-        assertTrue(user.getLastLoginAt() != null);
-        InOrder inOrder = inOrder(sysUserRepository, userLoginSessionRepository);
-        inOrder.verify(sysUserRepository).saveAndFlush(user);
-        inOrder.verify(userLoginSessionRepository).save(any(UserLoginSession.class));
-        verify(sysUserRepository, never()).save(any(SysUser.class));
     }
 
     @Test
@@ -446,7 +425,7 @@ class AuthServiceTests {
     }
 
     private void stubSuccessfulSession(SysUser user) {
-        when(sysUserRepository.saveAndFlush(user)).thenReturn(user);
+        when(sysUserRepository.save(user)).thenReturn(user);
         when(userLoginSessionRepository.save(any(UserLoginSession.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(jwtTokenService.calculateExpirationAt(any(Instant.class)))

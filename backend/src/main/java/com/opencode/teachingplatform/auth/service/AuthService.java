@@ -116,10 +116,7 @@ public class AuthService {
                 .ifPresent(existingSession -> handleExistingActiveSession(existingSession, request.forceLogin(), now));
 
         user.setLastLoginAt(now);
-        // insert user_login_session 经外键对 sys_user 父行取 S 锁；若把 update sys_user 留到 commit flush，
-        // 并发登录会互持 S 锁再互等 X 锁，触发 MySQL 1213。先 flush 把父行 X 锁提前到子行 INSERT 之前，
-        // 本事务的 FK 校验由已持有的 X 锁直接满足，同账号登录在父行上串行。
-        SysUser saved = sysUserRepository.saveAndFlush(user);
+        SysUser saved = sysUserRepository.save(user);
         UserLoginSession loginSession = createActiveSession(saved, now);
         String token = jwtTokenService.issueToken(saved, loginSession.getSessionKey(), now.toInstant());
         auditLogService.logSecurity(new SecurityAuditEvent(
