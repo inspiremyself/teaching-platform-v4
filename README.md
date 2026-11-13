@@ -94,6 +94,8 @@ H2 联调（可选）：
 
 `platform9001` 是**平台级账号、无学校归属**（`sys_user.school_id = NULL`），登录后进入 `/admin/schools` 平台级学校管理（侧栏另有「平台内容」`/admin/platform-content`，做平台课件制作 / 发布 / 授权），不参与任何按校数据隔离；prod 环境由 `DemoAccountProdGuard` 禁用。教师 / 学生 / 校管三套业务壳层不因此合并。
 
+内容入口按角色隔离：平台超管 `/admin/platform-content`「平台内容」负责平台课件制作 / 发布 / 授权；教师 `/teacher/content`「教学内容」浏览已授权课件并按小节布置学习任务、按班查看布置记录；学生 `/student/content`「学习内容」阅读布置给本班或点名到本人的课件小节（图文、音频与公式），不含作答与评分。三套壳层不因此合并。
+
 可选探活：
 
 ```bash

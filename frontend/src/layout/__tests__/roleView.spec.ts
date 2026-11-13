@@ -44,4 +44,26 @@ describe('resolveRoleView', () => {
       { to: '/admin/platform-content', label: '平台内容', icon: 'menu_book' },
     ]);
   });
+
+  it('学生侧栏七项、移动导航六项且学习内容均为第三项', () => {
+    expect(SIDEBAR_NAV.STUDENT).toEqual([
+      { to: '/student/dashboard', label: '总览', icon: 'dashboard' },
+      { to: '/student/materials', label: '课程资料', icon: 'menu_book' },
+      { to: '/student/content', label: '学习内容', icon: 'auto_stories' },
+      { to: '/student/labs', label: '实验任务', icon: 'science' },
+      { to: '/student/homeworks', label: '作业任务', icon: 'assignment_turned_in' },
+      { to: '/student/exams', label: '考试任务', icon: 'quiz' },
+      { to: '/student/scores', label: '成绩反馈', icon: 'grade' },
+    ]);
+    expect(MOBILE_NAV.STUDENT).toEqual([
+      { to: '/student/dashboard', label: '总览', icon: 'dashboard' },
+      { to: '/student/materials', label: '资料', icon: 'menu_book' },
+      { to: '/student/content', label: '内容', icon: 'auto_stories' },
+      { to: '/student/labs', label: '实验', icon: 'science' },
+      { to: '/student/homeworks', label: '作业', icon: 'assignment_turned_in' },
+      { to: '/profile', label: '我的', icon: 'person' },
+    ]);
+    expect(SIDEBAR_NAV.STUDENT[2].to).toBe('/student/content');
+    expect(MOBILE_NAV.STUDENT[2].to).toBe('/student/content');
+  });
 });

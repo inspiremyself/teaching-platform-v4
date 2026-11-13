@@ -32,6 +32,7 @@ export const SIDEBAR_NAV: Record<AppRole, NavItem[]> = {
   STUDENT: [
     { to: '/student/dashboard', label: '总览', icon: 'dashboard' },
     { to: '/student/materials', label: '课程资料', icon: 'menu_book' },
+    { to: '/student/content', label: '学习内容', icon: 'auto_stories' },
     { to: '/student/labs', label: '实验任务', icon: 'science' },
     { to: '/student/homeworks', label: '作业任务', icon: 'assignment_turned_in' },
     { to: '/student/exams', label: '考试任务', icon: 'quiz' },
@@ -63,6 +64,7 @@ export const MOBILE_NAV: Record<AppRole, NavItem[]> = {
   STUDENT: [
     { to: '/student/dashboard', label: '总览', icon: 'dashboard' },
     { to: '/student/materials', label: '资料', icon: 'menu_book' },
+    { to: '/student/content', label: '内容', icon: 'auto_stories' },
     { to: '/student/labs', label: '实验', icon: 'science' },
     { to: '/student/homeworks', label: '作业', icon: 'assignment_turned_in' },
     { to: '/profile', label: '我的', icon: 'person' },

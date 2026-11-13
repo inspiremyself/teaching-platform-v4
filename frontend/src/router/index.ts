@@ -63,6 +63,7 @@ const router = createRouter({
       children: [
         { path: 'dashboard', name: 'student-dashboard', component: () => import('@/views/student/Dashboard.vue'), meta: { title: '学生工作台' } },
         { path: 'materials', name: 'student-materials', component: () => import('@/views/student/Materials.vue') },
+        { path: 'content', name: 'student-content', component: () => import('@/views/student/Content.vue'), meta: { title: '学习内容', roles: ['STUDENT'] } },
         { path: 'labs', name: 'student-labs', component: () => import('@/views/student/Labs.vue') },
         { path: 'labs/:id', name: 'student-lab-detail', component: () => import('@/views/student/LabDetail.vue') },
         { path: 'labs/:id/steps', name: 'student-lab-steps', component: () => import('@/views/student/LabSteps.vue') },

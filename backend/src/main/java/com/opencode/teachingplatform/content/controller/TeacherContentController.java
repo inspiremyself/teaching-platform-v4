@@ -9,9 +9,12 @@ import com.opencode.teachingplatform.content.dto.ContentViews.ContentVisibilityI
 import com.opencode.teachingplatform.content.dto.ContentViews.CoursewareSectionItem;
 import com.opencode.teachingplatform.content.dto.ContentViews.DownloadedAsset;
 import com.opencode.teachingplatform.content.dto.ContentViews.PlatformSubjectItem;
+import com.opencode.teachingplatform.content.dto.ContentViews.TeacherAssignmentItem;
 import com.opencode.teachingplatform.content.dto.ContentViews.TextbookItem;
 import com.opencode.teachingplatform.content.dto.ContentViews.TextbookSectionItem;
+import com.opencode.teachingplatform.content.service.CoursewareAssignmentWriteService;
 import com.opencode.teachingplatform.content.service.TeacherContentService;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * 教师内容浏览端点族：五类筛选 + 按课件内小节预览。
+ * 教师内容浏览端点族：五类筛选 + 按课件内小节预览 + 按班读取已布置记录。
  *
- * <p>只提供 GET，不含任何写入端点；布置动作归阶段 4。</p>
+ * <p>只提供 GET，不含任何写入端点；布置写入动作归阶段 4 的独立 Controller。</p>
  */
 @RestController
 @RequestMapping("/api/v1/teacher/content")
@@ -37,9 +40,12 @@ import java.util.List;
 public class TeacherContentController {
 
     private final TeacherContentService teacherContentService;
+    private final CoursewareAssignmentWriteService coursewareAssignmentWriteService;
 
-    public TeacherContentController(TeacherContentService teacherContentService) {
+    public TeacherContentController(TeacherContentService teacherContentService,
+                                    CoursewareAssignmentWriteService coursewareAssignmentWriteService) {
         this.teacherContentService = teacherContentService;
+        this.coursewareAssignmentWriteService = coursewareAssignmentWriteService;
     }
 
     @GetMapping("/coursewares")
@@ -101,5 +107,11 @@ public class TeacherContentController {
     public ApiResponse<ContentVisibilityItem> listVisibility(@PathVariable Long coursewareId) {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(teacherContentService.visibility(currentUser, coursewareId));
+    }
+
+    @GetMapping("/assignments")
+    public ApiResponse<List<TeacherAssignmentItem>> listAssignments(@RequestParam @NotNull Long classId) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(coursewareAssignmentWriteService.listByClass(currentUser, classId));
     }
 }

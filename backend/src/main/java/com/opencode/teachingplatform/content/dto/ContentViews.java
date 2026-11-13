@@ -62,4 +62,29 @@ public final class ContentViews {
     /** 可见性判定结果。 */
     public record ContentVisibilityItem(boolean visible, String status) {
     }
+
+    /** 一次布置的结果；rowCount 为「目标数 × 选中节数」。 */
+    public record CreateAssignmentResult(String assignmentGroupId, Integer rowCount) {
+    }
+
+    /** 教师按班读取的一条布置行。 */
+    public record TeacherAssignmentItem(String assignmentGroupId, Long coursewareId, String coursewareTitle,
+                                        Long classId, String targetType, Long targetId, Long sectionId,
+                                        Integer displayOrder, OffsetDateTime startAt, OffsetDateTime endAt,
+                                        OffsetDateTime createdAt) {
+    }
+
+    /** 学生阅读列表的一个任务卡片；sections 已按布置快照顺序展开。 */
+    public record StudentAssignmentGroup(String assignmentGroupId, Long coursewareId, String coursewareTitle,
+                                         OffsetDateTime createdAt, List<StudentSectionRef> sections) {
+    }
+
+    /** 学生任务卡片内的一节。 */
+    public record StudentSectionRef(Long sectionId, String heading) {
+    }
+
+    /** 学生端小节正文；contentJson 读当前值，不校验课件状态。 */
+    public record StudentSectionContent(Long coursewareId, Long sectionId, String heading, String contentJson,
+                                        List<CoursewareAssetItem> assets) {
+    }
 }

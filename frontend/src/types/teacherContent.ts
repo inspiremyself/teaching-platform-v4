@@ -24,3 +24,35 @@ export interface ContentFilterParams {
 }
 
 export type { CoursewareSectionItem, PlatformSubjectItem, TextbookItem };
+
+export interface AssignmentTargetPayload {
+  classId: number;
+  studentIds: number[];
+}
+
+export interface CreateAssignmentPayload {
+  coursewareId: number;
+  sectionIds: number[];
+  targets: AssignmentTargetPayload[];
+  startAt?: string | null;
+  endAt?: string | null;
+}
+
+export interface CreateAssignmentResult {
+  assignmentGroupId: string;
+  rowCount: number;
+}
+
+export interface TeacherAssignmentItem {
+  assignmentGroupId: string;
+  coursewareId: number;
+  coursewareTitle: string;
+  classId: number;
+  targetType: 'CLASS' | 'STUDENT';
+  targetId: number;
+  sectionId: number | null;
+  displayOrder: number;
+  startAt: string | null;
+  endAt: string | null;
+  createdAt: string;
+}

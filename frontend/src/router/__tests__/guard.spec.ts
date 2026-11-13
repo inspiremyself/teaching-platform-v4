@@ -33,4 +33,9 @@ describe('shouldRedirectToHome', () => {
     expect(shouldRedirectToHome(['PLATFORM_ADMIN'], 'TEACHER')).toBe(true);
     expect(shouldRedirectToHome(['TEACHER'], 'PLATFORM_ADMIN')).toBe(true);
   });
+
+  it('学习内容入口只对 STUDENT 开放', () => {
+    expect(shouldRedirectToHome(['STUDENT'], 'TEACHER')).toBe(true);
+    expect(shouldRedirectToHome(['STUDENT'], 'STUDENT')).toBe(false);
+  });
 });

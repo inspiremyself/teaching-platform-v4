@@ -51,12 +51,19 @@ import {
   updatePlatformSubject,
 } from '@/api/platformContent';
 import {
+  createCoursewareAssignment,
   getTeacherCoursewareVisibility,
+  listCoursewareAssignments,
   listTeacherCoursewareSections,
   listTeacherCoursewares,
   listTeacherTextbookSections,
   listTeacherTextbooks,
 } from '@/api/teacherContent';
+import {
+  getStudentSection,
+  listStudentAssignments,
+  readStudentAsset,
+} from '@/api/studentContent';
 import type { CreatePlatformSubjectPayload, UpdatePlatformSubjectPayload } from '@/types/platformContent';
 
 describe('api 端点契约', () => {
@@ -226,6 +233,25 @@ describe('api 端点契约', () => {
       '/teacher/content/coursewares/5/visibility',
       '/teacher/content/textbooks',
       '/teacher/content/textbooks/3/sections',
+    ]);
+  });
+
+  it('阶段 4 布置与学生学习端点路径', async () => {
+    await createCoursewareAssignment({
+      coursewareId: 5,
+      sectionIds: [1],
+      targets: [{ classId: 1, studentIds: [] }],
+    });
+    await listCoursewareAssignments(1);
+    await listStudentAssignments();
+    await getStudentSection(5, 1);
+    await readStudentAsset(5, 3);
+    expect(calls.urls).toEqual([
+      '/teacher/content/assignments',
+      '/teacher/content/assignments',
+      '/student/content/assignments',
+      '/student/content/coursewares/5/sections/1',
+      '/student/content/coursewares/5/assets/3',
     ]);
   });
 });

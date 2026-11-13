@@ -1,8 +1,10 @@
 import { computed, ref } from 'vue';
 import type { InjectionKey } from 'vue';
 import {
+  createCoursewareAssignment,
   getTeacherCoursewareSection,
   getTeacherCoursewareVisibility,
+  listCoursewareAssignments,
   listTeacherCoursewareSections,
   listTeacherCoursewares,
   listTeacherSubjects,
@@ -11,7 +13,12 @@ import {
   readTeacherCoursewareAssetBlob,
 } from '@/api/teacherContent';
 import type { ContentFilterType } from '@/types/enums';
-import type { ContentBrowseItem, ContentVisibilityItem } from '@/types/teacherContent';
+import type {
+  ContentBrowseItem,
+  ContentVisibilityItem,
+  CreateAssignmentPayload,
+  TeacherAssignmentItem,
+} from '@/types/teacherContent';
 import type {
   CoursewareAssetItem,
   CoursewareSectionItem,
@@ -35,6 +42,7 @@ export const useTeacherContent = () => {
   const selectedCoursewareId = ref<number | null>(null);
   const loading = ref(false);
   const generation = ref(0);
+  const assignments = ref<TeacherAssignmentItem[]>([]);
 
   const filterLabel = computed(() => {
     switch (filterType.value) {
@@ -112,6 +120,13 @@ export const useTeacherContent = () => {
     return URL.createObjectURL(blob);
   };
 
+  const loadAssignments = async (classId: number) => {
+    assignments.value = await listCoursewareAssignments(classId);
+  };
+
+  const createAssignment = async (payload: CreateAssignmentPayload) =>
+    createCoursewareAssignment(payload);
+
   return {
     filterType,
     filterLabel,
@@ -127,12 +142,15 @@ export const useTeacherContent = () => {
     visibility,
     selectedCoursewareId,
     loading,
+    assignments,
     loadCoursewares,
     loadSections,
     loadFilters,
     loadTextbookSections,
     loadSection,
     readAsset,
+    loadAssignments,
+    createAssignment,
   };
 };
 

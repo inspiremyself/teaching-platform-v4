@@ -85,6 +85,7 @@
         />
       </el-select>
       <el-button type="primary" @click="onSearch">筛选</el-button>
+      <el-button @click="onOpenAssignments">布置记录</el-button>
     </section>
 
     <section class="teacher-content__list" v-loading="teacherContent.loading.value">
@@ -102,6 +103,14 @@
         <p class="teacher-content__subtitle">{{ item.subtitle }}</p>
         <div class="teacher-content__actions">
           <el-button link type="primary" @click="onOpen(item.id)">查看小节</el-button>
+          <el-button
+            v-if="item.status === COURSEWARE_STATUS.PUBLISHED"
+            link
+            type="primary"
+            @click="onAssign(item.id)"
+          >
+            布置
+          </el-button>
         </div>
       </el-card>
     </section>
@@ -118,19 +127,61 @@
         <ContentPreview :content-json="section.contentJson" :read-asset="readAssetFor" />
       </div>
     </el-dialog>
+
+    <el-drawer v-model="assignmentDrawerVisible" title="按班查看布置记录" size="620px">
+      <el-select
+        v-model="assignmentClassId"
+        placeholder="请选择班级"
+        class="teacher-content__class-select"
+        @change="onAssignmentClassChange"
+      >
+        <el-option
+          v-for="item in assignmentClasses"
+          :key="item.id"
+          :label="`${item.name}（${item.code}）`"
+          :value="item.id"
+        />
+      </el-select>
+      <el-table :data="teacherContent.assignments.value" empty-text="该班级暂无布置记录">
+        <el-table-column prop="coursewareTitle" label="课件" min-width="140" />
+        <el-table-column prop="targetType" label="目标类型" width="100" />
+        <el-table-column prop="targetId" label="目标 ID" width="100" />
+        <el-table-column prop="sectionId" label="小节 ID" width="100" />
+        <el-table-column prop="displayOrder" label="顺序" width="80" />
+        <el-table-column prop="startAt" label="开始时间" min-width="160" />
+        <el-table-column prop="endAt" label="结束时间" min-width="160" />
+      </el-table>
+    </el-drawer>
+
+    <CoursewareAssignmentDialog
+      :courseware-id="assignmentCoursewareId"
+      :visible="assignmentDialogVisible"
+      @close="assignmentDialogVisible = false"
+      @created="onAssignmentCreated"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { inject, ref } from 'vue';
 import { ElMessage } from 'element-plus';
+import { listClasses } from '@/api/classes';
+import { getTeacherCoursewareVisibility } from '@/api/teacherContent';
 import ContentPreview from '@/components/content-preview/ContentPreview.vue';
 import { teacherContentKey } from '@/composables/useTeacherContent';
+import { COURSEWARE_STATUS } from '@/types/enums';
+import type { TeachingClass } from '@/types/class';
+import CoursewareAssignmentDialog from './CoursewareAssignmentDialog.vue';
 
 const teacherContent = inject(teacherContentKey)!;
 const previewVisible = ref(false);
 const selectedTextbookId = ref<number | null>(null);
 const selectedCoursewareId = ref<number | null>(null);
+const assignmentDialogVisible = ref(false);
+const assignmentCoursewareId = ref(0);
+const assignmentDrawerVisible = ref(false);
+const assignmentClasses = ref<TeachingClass[]>([]);
+const assignmentClassId = ref<number | null>(null);
 
 const onTextbookChange = async (textbookId: number | null) => {
   teacherContent.sectionId.value = null;
@@ -158,6 +209,35 @@ const onOpen = async (coursewareId: number) => {
   previewVisible.value = true;
   if (teacherContent.visibility.value && !teacherContent.visibility.value.visible) {
     ElMessage.warning('该课件当前不可见，请联系平台管理员授权');
+  }
+};
+
+const onAssign = async (coursewareId: number) => {
+  const visibility = await getTeacherCoursewareVisibility(coursewareId);
+  if (!visibility.visible) {
+    ElMessage.warning('该课件当前不可见，请联系平台管理员授权');
+    return;
+  }
+  assignmentCoursewareId.value = coursewareId;
+  assignmentDialogVisible.value = true;
+};
+
+const onOpenAssignments = async () => {
+  assignmentClasses.value = await listClasses();
+  assignmentDrawerVisible.value = true;
+};
+
+const onAssignmentClassChange = async (classId: number | null) => {
+  if (!classId) {
+    return;
+  }
+  await teacherContent.loadAssignments(classId);
+};
+
+const onAssignmentCreated = async () => {
+  ElMessage.success('布置成功');
+  if (assignmentClassId.value) {
+    await teacherContent.loadAssignments(assignmentClassId.value);
   }
 };
 </script>
@@ -198,5 +278,10 @@ const onOpen = async (coursewareId: number) => {
 
 .teacher-content__section-title {
   margin: 0 0 8px;
+}
+
+.teacher-content__class-select {
+  width: 260px;
+  margin-bottom: 16px;
 }
 </style>

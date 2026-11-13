@@ -4,7 +4,10 @@ import type {
   ContentFilterParams,
   ContentVisibilityItem,
   CoursewareSectionItem,
+  CreateAssignmentPayload,
+  CreateAssignmentResult,
   PlatformSubjectItem,
+  TeacherAssignmentItem,
   TextbookItem,
 } from '@/types/teacherContent';
 import type { TextbookSectionItem } from '@/types/platformContent';
@@ -40,3 +43,9 @@ export const readTeacherCoursewareAssetBlob = async (
   );
   return new Blob([buffer]);
 };
+
+export const createCoursewareAssignment = (data: CreateAssignmentPayload) =>
+  request.post<CreateAssignmentResult>(`${BASE}/assignments`, data);
+
+export const listCoursewareAssignments = (classId: number) =>
+  request.get<TeacherAssignmentItem[]>(`${BASE}/assignments`, { params: { classId } });
