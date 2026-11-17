@@ -24,8 +24,6 @@ public class HomeworkSubmission extends BaseEntity {
     private String answerText;
     @Column(name = "answer_file_path")
     private String answerFilePath;
-    @Column(name = "plagiarism_rate")
-    private Double plagiarismRate;
     @Column(name = "total_score")
     private Double totalScore;
     @Column(name = "teacher_comment", columnDefinition = "TEXT")
@@ -43,8 +41,6 @@ public class HomeworkSubmission extends BaseEntity {
     public void setAnswerText(String answerText) { this.answerText = answerText; }
     public String getAnswerFilePath() { return answerFilePath; }
     public void setAnswerFilePath(String answerFilePath) { this.answerFilePath = answerFilePath; }
-    public Double getPlagiarismRate() { return plagiarismRate; }
-    public void setPlagiarismRate(Double plagiarismRate) { this.plagiarismRate = plagiarismRate; }
     public Double getTotalScore() { return totalScore; }
     public void setTotalScore(Double totalScore) { this.totalScore = totalScore; }
     public String getTeacherComment() { return teacherComment; }

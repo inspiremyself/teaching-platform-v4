@@ -79,7 +79,6 @@ class HomeworkQuestionFlowTests {
                                 created.setHomeworkId(homeworkId);
                                 created.setStudentId(studentId);
                                 created.setSubmitStatus(SubmissionStatus.SAVED);
-                                created.setPlagiarismRate(0D);
                                 created.setTotalScore(0D);
                                 homeworkSubmissionRepository.saveAndFlush(created);
                                 return SubmissionStatus.SAVED;

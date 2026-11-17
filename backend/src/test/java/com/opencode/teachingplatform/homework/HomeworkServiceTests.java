@@ -27,7 +27,6 @@ import com.opencode.teachingplatform.grading.strategy.SubjectiveRecommendationSt
 import com.opencode.teachingplatform.grading.strategy.TrueFalseScoringStrategy;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,8 +61,6 @@ import static org.mockito.Mockito.verify;
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         com.opencode.teachingplatform.common.infra.audit.AuditLogService.class,
-        LocalPlagiarismService.class,
-        com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter.class,
         ScoringEngine.class,
         SingleChoiceScoringStrategy.class,
         MultipleChoiceScoringStrategy.class,
@@ -110,9 +107,6 @@ class HomeworkServiceTests {
     private QuestionBankRepository questionBankRepository;
 
     @Autowired
-    private LocalPlagiarismService localPlagiarismService;
-
-    @Autowired
     private ClassRoomRepository classRoomRepository;
 
     /**
@@ -135,7 +129,6 @@ class HomeworkServiceTests {
                                 created.setHomeworkId(homeworkId);
                                 created.setStudentId(studentId);
                                 created.setSubmitStatus(SubmissionStatus.SAVED);
-                                created.setPlagiarismRate(0D);
                                 created.setTotalScore(0D);
                                 homeworkSubmissionRepository.saveAndFlush(created);
                                 return SubmissionStatus.SAVED;
@@ -164,7 +157,7 @@ class HomeworkServiceTests {
         );
 
         assertThat(submissionColumns)
-                .contains("ANSWER_TEXT", "ANSWER_FILE_PATH", "PLAGIARISM_RATE", "TOTAL_SCORE", "TEACHER_COMMENT");
+                .contains("ANSWER_TEXT", "ANSWER_FILE_PATH", "TOTAL_SCORE", "TEACHER_COMMENT");
         assertThat(homeworkColumns)
                 .contains("CLASS_ID", "START_AT", "DUE_AT", "ATTACHMENT_PATH", "CREATED_BY", "STATUS");
         assertThat(submissionUniqueConstraintCount).isNotNull().isGreaterThanOrEqualTo(1);
@@ -285,7 +278,6 @@ class HomeworkServiceTests {
         submission.setStudentId(2L);
         submission.setAnswerText("学生提交内容");
         submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        submission.setPlagiarismRate(15D);
         submission.setTotalScore(0D);
         submission = homeworkSubmissionRepository.save(submission);
 
@@ -314,13 +306,8 @@ class HomeworkServiceTests {
         submission.setAnswerText("学生提交详情内容");
         submission.setAnswerFilePath("/uploads/homework/detail.docx");
         submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        submission.setPlagiarismRate(66.67D);
         submission.setTotalScore(0D);
         HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
-        jdbcTemplate.update(
-                "INSERT INTO plagiarism_task (business_type, business_id, student_id, status, similarity_rate, top_match_summary, raw_result_json, created_at, updated_at, school_id) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)",
-                "HOMEWORK", savedSubmission.getId(), 2L, "COMPLETED", 66.67D, "最高相似来源: 历史作业#1 (66.67%)", "{\"algorithm\":\"jaccard\"}"
-        );
 
         CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
         Map<String, Object> detail = homeworkService.getTeacherSubmissionDetail(teacher, savedSubmission.getId());
@@ -332,7 +319,6 @@ class HomeworkServiceTests {
         assertThat(detail.get("studentNo")).isEqualTo("20260001");
         assertThat(detail.get("submitStatus")).isEqualTo("SUBMITTED");
         assertThat(detail.get("answerFilePath")).isEqualTo("/uploads/homework/detail.docx");
-        assertThat(detail.get("topMatchSummary")).isEqualTo("最高相似来源: 历史作业#1 (66.67%)");
     }
 
     @Test
@@ -687,69 +673,6 @@ class HomeworkServiceTests {
     }
 
     @Test
-    void questionBasedSubmissionFeedsLaterPlagiarismCandidates() {
-        // 查重候选已收敛为同一作业内比对（FR-9），历史提交必须落在同一 homeworkId
-        Homework homework = createHomework(1L, 1L, "题目化作业", ActivityStatus.PUBLISHED);
-        HomeworkQuestion question = createInlineHomeworkQuestion(homework.getId(), 1, 15D, "请说明策略模式的价值");
-
-        HomeworkSubmission historySubmission = new HomeworkSubmission();
-        historySubmission.setHomeworkId(homework.getId());
-        historySubmission.setStudentId(3L);
-        historySubmission.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        historySubmission.setAnswerText("");
-        HomeworkSubmission savedHistorySubmission = homeworkSubmissionRepository.save(historySubmission);
-
-        HomeworkAnswer historyAnswer = new HomeworkAnswer();
-        historyAnswer.setHomeworkSubmissionId(savedHistorySubmission.getId());
-        historyAnswer.setHomeworkQuestionId(question.getId());
-        historyAnswer.setAnswerText("软件体系结构设计原则与分层架构说明");
-        historyAnswer.setScoreSource("RECOMMENDED");
-        homeworkAnswerRepository.save(historyAnswer);
-
-        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
-        homeworkService.submitHomework(
-                student,
-                homework.getId(),
-                new HomeworkRequests.SubmitHomeworkRequest(List.of(
-                        new HomeworkRequests.SubmitHomeworkAnswerItem(question.getId(), null, "软件体系结构设计原则与分层架构说明", null, null)
-                ))
-        );
-
-        HomeworkSubmission currentSubmission = homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homework.getId(), student.id()).orElseThrow();
-        // 含主观题且未评分：提交后保持 SUBMITTED，等待教师批改
-        assertThat(currentSubmission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
-        assertThat(currentSubmission.getPlagiarismRate()).isEqualTo(100D);
-    }
-
-    @Test
-    void teacherSubmissionListIncludesTopMatchSummary() {
-        Homework homework = createHomework(1L, 1L, "列表作业", ActivityStatus.PUBLISHED);
-        HomeworkSubmission submission = new HomeworkSubmission();
-        submission.setHomeworkId(homework.getId());
-        submission.setStudentId(2L);
-        submission.setAnswerText("学生提交内容");
-        submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        submission.setPlagiarismRate(88.89D);
-        submission.setTotalScore(0D);
-        HomeworkSubmission savedSubmission = homeworkSubmissionRepository.save(submission);
-        jdbcTemplate.update(
-                "INSERT INTO plagiarism_task (business_type, business_id, student_id, status, similarity_rate, top_match_summary, raw_result_json, created_at, updated_at, school_id) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP(), CURRENT_TIMESTAMP(), 1)",
-                "HOMEWORK", savedSubmission.getId(), 2L, "COMPLETED", 88.89D, "最高相似来源: 样本作业#9 (88.89%)", "{\"algorithm\":\"jaccard\"}"
-        );
-
-        CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
-
-        List<Map<String, Object>> submissions = homeworkService.listTeacherSubmissions(teacher, homework.getId());
-
-        assertThat(submissions).singleElement().satisfies(item -> {
-            assertThat(item.get("topMatchSummary")).isEqualTo("最高相似来源: 样本作业#9 (88.89%)");
-            assertThat(item.get("className")).isNotNull().asString().isNotBlank();
-            assertThat(item.get("studentNo")).isEqualTo("20260001");
-            assertThat(item.get("submittedAt")).isNotNull();
-        });
-    }
-
-    @Test
     void teacherCannotGradeSubmissionWhenStatusIsNotSubmitted() {
         Homework homework = createHomework(1L, 1L, "已批改作业", ActivityStatus.PUBLISHED);
         HomeworkSubmission submission = new HomeworkSubmission();
@@ -771,10 +694,9 @@ class HomeworkServiceTests {
     }
 
     @Test
-    void studentSubmitCreatesRealPlagiarismResultWithoutFakeStatusField() {
+    void studentSubmitHomeworkPersistsSubmission() {
         Homework homework = createHomework(1L, 1L, "待提交作业", ActivityStatus.PUBLISHED);
         CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
-        Integer plagiarismTaskCountBefore = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM plagiarism_task", Integer.class);
 
         Map<String, Object> result = homeworkService.submitHomework(
                 student,
@@ -783,55 +705,9 @@ class HomeworkServiceTests {
         );
 
         HomeworkSubmission saved = homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homework.getId(), student.id()).orElseThrow();
-        Integer plagiarismTaskCountAfter = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM plagiarism_task", Integer.class);
 
         assertThat(result.get("status")).isEqualTo("SUBMITTED");
-        assertThat(result).doesNotContainKey("plagiarismStatus");
-        assertThat(result.get("plagiarismRate")).isEqualTo(0D);
-        assertThat(saved.getPlagiarismRate()).isEqualTo(0D);
         assertThat(saved.getAnswerFilePath()).isEqualTo("/uploads/homework/answer.docx");
-        assertThat(plagiarismTaskCountAfter).isEqualTo(plagiarismTaskCountBefore + 1);
-    }
-
-    @Test
-    void submitHomeworkCreatesRealPlagiarismTask() {
-        // 查重候选已收敛为同一作业内比对（FR-9），历史提交必须落在同一 homeworkId
-        Homework homework = createHomework(1L, 1L, "历史作业", ActivityStatus.PUBLISHED);
-
-        HomeworkSubmission historySubmission = new HomeworkSubmission();
-        historySubmission.setHomeworkId(homework.getId());
-        historySubmission.setStudentId(3L);
-        historySubmission.setAnswerText("软件体系结构设计原则与分层架构说明");
-        historySubmission.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        historySubmission.setPlagiarismRate(0D);
-        historySubmission.setTotalScore(0D);
-        homeworkSubmissionRepository.save(historySubmission);
-
-        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
-
-        Map<String, Object> result = homeworkService.submitHomework(
-                student,
-                homework.getId(),
-                new HomeworkRequests.SubmitHomeworkRequest("软件体系结构设计原则与分层架构说明", "/uploads/homework/answer.docx", null)
-        );
-
-        HomeworkSubmission saved = homeworkSubmissionRepository.findByHomeworkIdAndStudentId(homework.getId(), student.id()).orElseThrow();
-        Map<String, Object> task = jdbcTemplate.queryForMap(
-                "SELECT business_id, student_id, similarity_rate, top_match_summary, raw_result_json FROM plagiarism_task WHERE business_id = ?",
-                saved.getId()
-        );
-
-        assertThat(result.get("status")).isEqualTo("SUBMITTED");
-        assertThat(saved.getPlagiarismRate()).isEqualTo(100D);
-        assertThat(task.get("business_id")).isEqualTo(saved.getId());
-        assertThat(task.get("student_id")).isEqualTo(student.id());
-        assertThat(((Number) task.get("similarity_rate")).doubleValue()).isEqualTo(100D);
-        assertThat(String.valueOf(task.get("top_match_summary"))).contains("历史作业");
-        assertThat(String.valueOf(task.get("raw_result_json")))
-                .contains("jaccard")
-                .contains("similarityRate")
-                .contains("topMatchReference")
-                .contains("topMatchSummary");
     }
 
     @Test
@@ -901,62 +777,6 @@ class HomeworkServiceTests {
     }
 
     @Test
-    void plagiarismNormalizationTreatsCommonFullWidthAndHalfWidthVariantsAsEquivalent() {
-        LocalPlagiarismService.PlagiarismAnalysisResult result = localPlagiarismService.analyze(
-                "ＡＢＣ１２３，（）ａｂｃ",
-                List.of(new LocalPlagiarismService.CandidateText("样本", "ABC123,()abc"))
-        );
-
-        assertThat(result.similarityRate()).isEqualTo(100D);
-        assertThat(result.rawResultJson()).contains("jaccard");
-    }
-
-    @Test
-    void plagiarismRateChangesWithDifferentSubmissionText() {
-        // 查重候选已收敛为同一作业内比对（FR-9）：每个作业各自放一份历史提交
-        Homework sameTextHomework = createHomework(1L, 1L, "相同文本作业", ActivityStatus.PUBLISHED);
-        Homework differentTextHomework = createHomework(1L, 1L, "不同文本作业", ActivityStatus.PUBLISHED);
-
-        HomeworkSubmission sameHistory = new HomeworkSubmission();
-        sameHistory.setHomeworkId(sameTextHomework.getId());
-        sameHistory.setStudentId(3L);
-        sameHistory.setAnswerText("abcdefghijklmnop");
-        sameHistory.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        sameHistory.setPlagiarismRate(0D);
-        sameHistory.setTotalScore(0D);
-        homeworkSubmissionRepository.save(sameHistory);
-
-        HomeworkSubmission differentHistory = new HomeworkSubmission();
-        differentHistory.setHomeworkId(differentTextHomework.getId());
-        differentHistory.setStudentId(3L);
-        differentHistory.setAnswerText("abcdefghijklmnop");
-        differentHistory.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        differentHistory.setPlagiarismRate(0D);
-        differentHistory.setTotalScore(0D);
-        homeworkSubmissionRepository.save(differentHistory);
-
-        CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
-
-        homeworkService.submitHomework(
-                student,
-                sameTextHomework.getId(),
-                new HomeworkRequests.SubmitHomeworkRequest("abcdefghijklmnop", null, null)
-        );
-        HomeworkSubmission sameSaved = homeworkSubmissionRepository.findByHomeworkIdAndStudentId(sameTextHomework.getId(), student.id()).orElseThrow();
-
-        homeworkService.submitHomework(
-                student,
-                differentTextHomework.getId(),
-                new HomeworkRequests.SubmitHomeworkRequest("zzzzzzzzzzzzzzzz", null, null)
-        );
-        HomeworkSubmission differentSaved = homeworkSubmissionRepository.findByHomeworkIdAndStudentId(differentTextHomework.getId(), student.id()).orElseThrow();
-
-        assertThat(sameSaved.getPlagiarismRate()).isGreaterThan(differentSaved.getPlagiarismRate());
-        assertThat(sameSaved.getPlagiarismRate()).isEqualTo(100D);
-        assertThat(differentSaved.getPlagiarismRate()).isEqualTo(0D);
-    }
-
-    @Test
     void createHomeworkAcceptsOffsetDateTimeFields() {
         CurrentUser teacher = new CurrentUser(1L, "t9001", "演示教师", UserRole.TEACHER);
         OffsetDateTime startAt = OffsetDateTime.parse("2026-04-01T08:00:00+08:00");
@@ -993,7 +813,6 @@ class HomeworkServiceTests {
         submission.setAnswerText("学生已提交内容");
         submission.setAnswerFilePath("/uploads/homework/student.docx");
         submission.setSubmitStatus(SubmissionStatus.SUBMITTED);
-        submission.setPlagiarismRate(12.34D);
         submission.setTotalScore(0D);
         homeworkSubmissionRepository.save(submission);
 
@@ -1370,7 +1189,6 @@ class HomeworkServiceTests {
         CurrentUser student = new CurrentUser(2L, "20260001", "演示学生", UserRole.STUDENT);
         int submissionCountBefore = countHomeworkSubmissions(homework.getId());
         int answerCountBefore = countHomeworkAnswers(homework.getId());
-        int plagiarismCountBefore = countPlagiarismTasks();
         int scoreCountBefore = countHomeworkScoreRecords(homework.getId(), student.id());
 
         assertThatThrownBy(() -> homeworkService.submitHomework(
@@ -1382,7 +1200,6 @@ class HomeworkServiceTests {
 
         assertThat(countHomeworkSubmissions(homework.getId())).isEqualTo(submissionCountBefore);
         assertThat(countHomeworkAnswers(homework.getId())).isEqualTo(answerCountBefore);
-        assertThat(countPlagiarismTasks()).isEqualTo(plagiarismCountBefore);
         assertThat(countHomeworkScoreRecords(homework.getId(), student.id())).isEqualTo(scoreCountBefore);
     }
 
@@ -1895,11 +1712,6 @@ class HomeworkServiceTests {
                 WHERE hs.homework_id = ?
                 """,
                 Integer.class, homeworkId);
-        return count == null ? 0 : count;
-    }
-
-    private int countPlagiarismTasks() {
-        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM plagiarism_task", Integer.class);
         return count == null ? 0 : count;
     }
 

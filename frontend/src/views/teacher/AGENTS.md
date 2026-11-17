@@ -23,7 +23,6 @@
 | 作业提交管理 | `HomeworkSubmissions.vue` | 批改、反馈、提交明细 |
 | 考试管理 | `exams/List.vue` | 创建/编辑/发布/结果入口 |
 | 考试成绩 | `exams/Results.vue` | 成绩与批改 |
-| 查重 | `Plagiarism.vue` | 风险列表与复核动作 |
 
 ## 规范引用
 

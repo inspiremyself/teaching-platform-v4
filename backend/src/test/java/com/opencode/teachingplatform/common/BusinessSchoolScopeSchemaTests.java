@@ -145,7 +145,6 @@ class BusinessSchoolScopeSchemaTests {
         assertThat(count("SELECT COUNT(*) FROM t_experiment WHERE experiment_id IN (1001,1002,1003) AND school_id = 1"))
                 .isEqualTo(3);
         assertThat(count("SELECT COUNT(*) FROM score_record WHERE id IN (-1,-2,-3) AND school_id = 1")).isEqualTo(3);
-        assertThat(count("SELECT COUNT(*) FROM plagiarism_task WHERE id IN (-1,-2) AND school_id = 1")).isEqualTo(2);
     }
 
     /** 只断言 V26 回填的历史行；id >= 9000 是测试夹具按 currentUser.schoolId() 写入的运行时行。 */
@@ -170,10 +169,6 @@ class BusinessSchoolScopeSchemaTests {
         assertThat(count("SELECT COUNT(*) FROM score_record sr JOIN t_experiment e "
                 + "ON e.experiment_id = sr.business_id "
                 + "WHERE sr.business_type = 'LAB' AND sr.school_id <> e.school_id")).isZero();
-        assertThat(count("SELECT COUNT(*) FROM plagiarism_task p "
-                + "JOIN homework_submission hs ON hs.id = p.business_id "
-                + "JOIN homework h ON h.id = hs.homework_id "
-                + "WHERE p.business_type = 'HOMEWORK' AND p.school_id <> h.school_id")).isZero();
     }
 
     @Test
@@ -181,9 +176,6 @@ class BusinessSchoolScopeSchemaTests {
         assertThat(count("SELECT COUNT(*) FROM score_record WHERE business_type = 'LAB' "
                 + "AND business_id NOT IN (SELECT experiment_id FROM t_experiment) AND school_id = 1"))
                 .as("② 类 score_record 保留回填值").isGreaterThanOrEqualTo(1);
-        assertThat(count("SELECT COUNT(*) FROM plagiarism_task WHERE business_type = 'LAB' "
-                + "AND business_id NOT IN (SELECT id FROM experiment_submission) AND school_id = 1"))
-                .as("② 类 plagiarism_task 保留回填值").isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -198,8 +190,6 @@ class BusinessSchoolScopeSchemaTests {
                 + "WHERE u.id IS NULL OR u.school_id IS NULL")).isZero();
         assertThat(count("SELECT COUNT(*) FROM score_record sr LEFT JOIN class_room cr ON cr.id = sr.class_id "
                 + "WHERE cr.id IS NULL OR cr.school_id IS NULL")).isZero();
-        assertThat(count("SELECT COUNT(*) FROM plagiarism_task p LEFT JOIN sys_user u ON u.id = p.student_id "
-                + "WHERE u.id IS NULL OR u.school_id IS NULL")).isZero();
     }
 
     private Integer count(String sql) {

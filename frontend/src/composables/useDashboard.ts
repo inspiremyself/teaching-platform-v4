@@ -56,7 +56,6 @@ const translateDashboardText = (text: string) => {
     [/total students|active students|student count|students/i, '学生总数'],
     [/avg grade|average grade|avg score|average score|class average/i, '平均成绩'],
     [/pending submissions|pending grading|to grade|submissions/i, '待批改提交'],
-    [/plagiarism alerts|risk alert|alerts|high risk/i, '风险提醒'],
     [/recent submission trend|student performance trends|engagement trend|trend/i, '近期趋势'],
     [/my tasks|tasks reminders|tasks alerts|tasks/i, '待办与提醒'],
     [/recent submissions/i, '近期提交'],

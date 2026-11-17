@@ -68,14 +68,9 @@ class HomeworkSubmitConcurrencyTests {
 
     @AfterEach
     void cleanupFixture() {
-        // 按业务关联级联清理：答案 → 查重任务 → 成绩 → 提交 → 题目 → 作业
+        // 按业务关联级联清理：答案 → 成绩 → 提交 → 题目 → 作业
         jdbcTemplate.update(
                 "DELETE FROM homework_answer WHERE homework_submission_id IN "
-                        + "(SELECT id FROM homework_submission WHERE homework_id = ?)",
-                HOMEWORK_ID
-        );
-        jdbcTemplate.update(
-                "DELETE FROM plagiarism_task WHERE business_type = 'HOMEWORK' AND business_id IN "
                         + "(SELECT id FROM homework_submission WHERE homework_id = ?)",
                 HOMEWORK_ID
         );

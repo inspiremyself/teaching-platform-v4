@@ -38,10 +38,6 @@ import com.opencode.teachingplatform.homework.repository.HomeworkAnswerRepositor
 import com.opencode.teachingplatform.homework.repository.HomeworkQuestionRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkSubmissionRepository;
-import com.opencode.teachingplatform.plagiarism.entity.PlagiarismTask;
-import com.opencode.teachingplatform.plagiarism.repository.PlagiarismTaskRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;

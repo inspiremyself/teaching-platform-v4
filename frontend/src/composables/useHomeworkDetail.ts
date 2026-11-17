@@ -395,10 +395,6 @@ function questionTypeLabel(type?: string | null) {
   return '简答题';
 }
 
-const formatRate = (rate?: number | null) => {
-  return typeof rate === 'number' ? `${rate.toFixed(2)}%` : '-';
-};
-
 const formatDateTime = (value?: string | null) => {
   return value ? value.replace('T', ' ').slice(0, 16) : '-';
 };
@@ -431,7 +427,7 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 
-  return { ACTIVITY_STATUS, SUBMISSION_STATUS, computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, onBeforeRouteLeave, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromStep, isDraftAnswered, normalizeStudentAnswerQuestionType, getStudentHomeworkDetail, saveStudentHomeworkDraft, submitHomework, route, router, loading, submitting, detail, currentQuestionIndex, questionDrafts, form, autoSaveStatus, suppressAutoSave, lastSavedDraft, autoSaveTimer, draftFailureNotified, homeworkId, nowMs, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, syncForm, fetchData, buildDraftPayload, submitForm, clearAutoSaveTimer, saveDraft, isDraftResponseStale, scheduleAutoSave, flushDraft, restoreSavedDraft, submissionStatusLabel, toStudentLabStepItem, resolveQuestionOptions, parseJsonArray, ensureQuestionDraft, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, selectedOptionsOf, showQuestionFeedback, answerHint, questionTypeLabel, formatRate, formatDateTime, handleBeforeUnload, clockTimer };
+  return { ACTIVITY_STATUS, SUBMISSION_STATUS, computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, onBeforeRouteLeave, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromStep, isDraftAnswered, normalizeStudentAnswerQuestionType, getStudentHomeworkDetail, saveStudentHomeworkDraft, submitHomework, route, router, loading, submitting, detail, currentQuestionIndex, questionDrafts, form, autoSaveStatus, suppressAutoSave, lastSavedDraft, autoSaveTimer, draftFailureNotified, homeworkId, nowMs, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, syncForm, fetchData, buildDraftPayload, submitForm, clearAutoSaveTimer, saveDraft, isDraftResponseStale, scheduleAutoSave, flushDraft, restoreSavedDraft, submissionStatusLabel, toStudentLabStepItem, resolveQuestionOptions, parseJsonArray, ensureQuestionDraft, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, selectedOptionsOf, showQuestionFeedback, answerHint, questionTypeLabel, formatDateTime, handleBeforeUnload, clockTimer };
 }
 
 export type HomeworkDetailState = ReturnType<typeof useHomeworkDetail>;

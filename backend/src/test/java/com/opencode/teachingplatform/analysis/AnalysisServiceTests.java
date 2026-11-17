@@ -138,28 +138,6 @@ class AnalysisServiceTests {
     }
 
     @Test
-    void dashboardScopesPlagiarismCountToTeacherCreatedHomework() {
-        seedOwnHomeworkFixture();
-        insertPlagiarismTask(PLAG_OWN_HIGH_ID, "HOMEWORK", SUBMISSION_OWN_ID, 88.0);
-        insertOtherTeacherHighRiskFixture();
-
-        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
-
-        assertEquals(1, summaryCardValue(dashboard, "highRiskPlagiarismCount"));
-    }
-
-    @Test
-    void highRiskPlagiarismCountIgnoresBoundarySimilarityAndNonHomeworkTasks() {
-        seedOwnHomeworkFixture();
-        insertPlagiarismTask(PLAG_BOUNDARY_ID, "HOMEWORK", SUBMISSION_OWN_ID, 50.0);
-        insertPlagiarismTask(PLAG_NON_HOMEWORK_ID, "LAB", SUBMISSION_OWN_ID, 99.0);
-
-        Map<String, Object> dashboard = analysisService.getDashboard(teacher());
-
-        assertEquals(0, summaryCardValue(dashboard, "highRiskPlagiarismCount"));
-    }
-
-    @Test
     void dashboardScopesTrendToTeacherClassesAndSchool() {
         seedOwnHomeworkFixture();
         int baseline = totalTrendScoreCount(analysisService.getDashboard(teacher()));
@@ -201,7 +179,6 @@ class AnalysisServiceTests {
 
         Map<String, Object> dashboard = analysisService.getDashboard(newTeacher);
 
-        assertEquals(0, summaryCardValue(dashboard, "highRiskPlagiarismCount"));
         assertTrue(((List<?>) dashboard.get("trend")).isEmpty());
     }
 
@@ -505,10 +482,6 @@ class AnalysisServiceTests {
     private static final long HOMEWORK_FOREIGN_ID = -302L;
     private static final long SUBMISSION_OWN_ID = -3021L;
     private static final long SUBMISSION_FOREIGN_ID = -3022L;
-    private static final long PLAG_OWN_HIGH_ID = -3031L;
-    private static final long PLAG_FOREIGN_HIGH_ID = -3032L;
-    private static final long PLAG_BOUNDARY_ID = -3033L;
-    private static final long PLAG_NON_HOMEWORK_ID = -3034L;
     private static final long TREND_OWN_SCORE_ID = -3041L;
     private static final long TREND_FOREIGN_SCORE_ID = -3042L;
     private static final long TREND_UNASSIGNED_SCORE_ID = -3043L;
@@ -521,16 +494,6 @@ class AnalysisServiceTests {
         insertClassTeacher(OWN_CLASS_ID, TEACHER_ID);
         insertHomework(HOMEWORK_OWN_ID, "教师自有作业", OWN_CLASS_ID, TEACHER_ID);
         insertHomeworkSubmission(SUBMISSION_OWN_ID, HOMEWORK_OWN_ID);
-    }
-
-    /**
-     * 构造“其他教师布置的作业”夹具，用于验证高风险查重数量不会跨教师统计。
-     */
-    private void insertOtherTeacherHighRiskFixture() {
-        insertClass(FOREIGN_CLASS_ID, "他校查重班", "PLAG-FOREIGN", 2L);
-        insertHomework(HOMEWORK_FOREIGN_ID, "他人作业", FOREIGN_CLASS_ID, OTHER_TEACHER_ID);
-        insertHomeworkSubmission(SUBMISSION_FOREIGN_ID, HOMEWORK_FOREIGN_ID);
-        insertPlagiarismTask(PLAG_FOREIGN_HIGH_ID, "HOMEWORK", SUBMISSION_FOREIGN_ID, 95.0);
     }
 
     private void insertCourseMaterial(long id, String title, long schoolId, String updatedAt) {
@@ -571,14 +534,6 @@ class AnalysisServiceTests {
         );
     }
 
-    private void insertPlagiarismTask(long id, String businessType, long businessId, double similarityRate) {
-        jdbcTemplate.update(
-                "INSERT INTO plagiarism_task (id, business_type, business_id, student_id, status, similarity_rate, school_id) " +
-                        "VALUES (?, ?, ?, ?, 'COMPLETED', ?, 1)",
-                id, businessType, businessId, STUDENT_ID, similarityRate
-        );
-    }
-
     private void insertTrendScoreRecord(long id, long classId, double score) {
         jdbcTemplate.update(
                 "INSERT INTO score_record (id, business_type, business_id, student_id, class_id, score, graded_at, school_id) " +
@@ -601,8 +556,6 @@ class AnalysisServiceTests {
     void cleanupTeacherIsolationFixture() {
         jdbcTemplate.update("DELETE FROM score_record WHERE id IN (?, ?, ?)",
                 TREND_OWN_SCORE_ID, TREND_FOREIGN_SCORE_ID, TREND_UNASSIGNED_SCORE_ID);
-        jdbcTemplate.update("DELETE FROM plagiarism_task WHERE id IN (?, ?, ?, ?)",
-                PLAG_OWN_HIGH_ID, PLAG_FOREIGN_HIGH_ID, PLAG_BOUNDARY_ID, PLAG_NON_HOMEWORK_ID);
         jdbcTemplate.update("DELETE FROM homework_submission WHERE id IN (?, ?)",
                 SUBMISSION_OWN_ID, SUBMISSION_FOREIGN_ID);
         jdbcTemplate.update("DELETE FROM homework WHERE id IN (?, ?)",

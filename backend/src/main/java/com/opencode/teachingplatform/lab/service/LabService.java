@@ -40,8 +40,6 @@ import com.opencode.teachingplatform.lab.repository.LabStepRepository;
 import com.opencode.teachingplatform.lab.repository.LabSubmissionRepository;
 import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import com.opencode.teachingplatform.material.repository.CourseMaterialRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;

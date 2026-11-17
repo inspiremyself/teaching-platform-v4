@@ -46,7 +46,6 @@ public class HomeworkSubmissionClaimService {
                     created.setHomeworkId(homeworkId);
                     created.setStudentId(studentId);
                     created.setSubmitStatus(SubmissionStatus.SAVED);
-                    created.setPlagiarismRate(0D);
                     created.setTotalScore(0D);
                     // 立即 flush，让唯一键冲突在本方法内暴露，便于调用方就地捕获
                     submissionRepository.saveAndFlush(created);

@@ -12,10 +12,10 @@
 | 认证安全 | `auth/` | JWT、CurrentUser、登录、改密 |
 | 通用能力 | `common/` | `ApiResponse`、`PagedResult`、异常、枚举、文件、审计 |
 | 实验闭环 | `lab/` | 教师配置、学生作答、评分、自动评分 |
-| 作业闭环 | `homework/` | 教师发布/批改、学生提交、查重链路 |
+| 作业闭环 | `homework/` | 教师发布/批改、学生提交 |
 | 考试闭环 | `exam/` | 创建、发布、开考、交卷、阅卷 |
 | 资料/题库/班级/学生 | `material/` `question/` `clazz/` `student/` | 支撑型业务域 |
-| 统计/查重 | `analysis/` `plagiarism/` | 聚合与独立工作流 |
+| 统计分析 | `analysis/` | 聚合与看板 |
 
 ## 规范引用
 

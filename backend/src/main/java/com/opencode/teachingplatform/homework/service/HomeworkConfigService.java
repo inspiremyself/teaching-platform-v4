@@ -38,10 +38,6 @@ import com.opencode.teachingplatform.homework.repository.HomeworkAnswerRepositor
 import com.opencode.teachingplatform.homework.repository.HomeworkQuestionRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkSubmissionRepository;
-import com.opencode.teachingplatform.plagiarism.entity.PlagiarismTask;
-import com.opencode.teachingplatform.plagiarism.repository.PlagiarismTaskRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
@@ -71,9 +67,6 @@ public class HomeworkConfigService {
     private final ClassAccessService classAccessService;
     private final ClassMemberRepository classMemberRepository;
     private final SysUserRepository sysUserRepository;
-    private final PlagiarismTaskRepository plagiarismTaskRepository;
-    private final LocalPlagiarismService localPlagiarismService;
-    private final PlagiarismTaskWriter plagiarismTaskWriter;
     private final ScoreRecordRepository scoreRecordRepository;
     private final ScoreRecordWriter scoreRecordWriter;
     private final AuditLogService auditLogService;
@@ -93,9 +86,6 @@ public class HomeworkConfigService {
                            ClassAccessService classAccessService,
                            ClassMemberRepository classMemberRepository,
                            SysUserRepository sysUserRepository,
-                           PlagiarismTaskRepository plagiarismTaskRepository,
-                           LocalPlagiarismService localPlagiarismService,
-                           PlagiarismTaskWriter plagiarismTaskWriter,
                            ScoreRecordRepository scoreRecordRepository,
                            ScoreRecordWriter scoreRecordWriter,
                            AuditLogService auditLogService,
@@ -114,9 +104,6 @@ public class HomeworkConfigService {
         this.classAccessService = classAccessService;
         this.classMemberRepository = classMemberRepository;
         this.sysUserRepository = sysUserRepository;
-        this.plagiarismTaskRepository = plagiarismTaskRepository;
-        this.localPlagiarismService = localPlagiarismService;
-        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.scoreRecordRepository = scoreRecordRepository;
         this.scoreRecordWriter = scoreRecordWriter;
         this.auditLogService = auditLogService;
@@ -237,7 +224,6 @@ public class HomeworkConfigService {
         detail.put("answerText", submission == null ? "" : support.defaultString(submission.getAnswerText()));
         detail.put("answerFilePath", submission == null ? null : submission.getAnswerFilePath());
         detail.put("attachmentAnswerPath", submission == null ? null : submission.getAnswerFilePath());
-        detail.put("plagiarismRate", submission == null ? null : submission.getPlagiarismRate());
         detail.put("totalScore", submission == null || !scoreVisible ? null : submission.getTotalScore());
         detail.put("teacherComment", submission == null || !scoreVisible ? null : submission.getTeacherComment());
         detail.put("remainingMinutes", homework.getDueAt() == null ? null : remainingMinutes(homework.getDueAt()));
@@ -855,9 +841,6 @@ public class HomeworkConfigService {
                 .orElseThrow(() -> new BusinessException(40400, "作业不存在"));
         SysUser student = sysUserRepository.findById(submission.getStudentId())
                 .orElseThrow(() -> new BusinessException(40400, "学生不存在"));
-        PlagiarismTask plagiarismTask = plagiarismTaskRepository
-                .findByBusinessTypeAndBusinessIdAndSchoolId(BusinessType.HOMEWORK, submission.getId(), schoolId)
-                .orElse(null);
         ClassRoom classRoom = classRoomRepository.findById(homework.getClassId()).orElse(null);
         Map<Long, Long> classStudentCounts = classMemberRepository.findByClassIdIn(List.of(homework.getClassId())).stream()
                 .collect(Collectors.groupingBy(ClassMember::getClassId, Collectors.counting()));
@@ -874,8 +857,6 @@ public class HomeworkConfigService {
         view.put("submitStatus", submission.getSubmitStatus().name());
         view.put("answerText", support.defaultString(submission.getAnswerText()));
         view.put("answerFilePath", submission.getAnswerFilePath());
-        view.put("plagiarismRate", submission.getPlagiarismRate());
-        view.put("topMatchSummary", plagiarismTask == null ? null : plagiarismTask.getTopMatchSummary());
         view.put("totalScore", submission.getTotalScore());
         view.put("teacherComment", submission.getTeacherComment());
         view.put("classStudentCount", classStudentCounts.getOrDefault(homework.getClassId(), 0L));

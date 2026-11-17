@@ -40,8 +40,6 @@ import com.opencode.teachingplatform.lab.repository.LabStepRepository;
 import com.opencode.teachingplatform.lab.repository.LabSubmissionRepository;
 import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import com.opencode.teachingplatform.material.repository.CourseMaterialRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
@@ -106,8 +104,6 @@ public class LabConfigService {
     private final BehaviorEventRepository behaviorEventRepository;
     private final Path storageRoot;
     private final LabSubmissionClaimService labSubmissionClaimService;
-    private final LocalPlagiarismService localPlagiarismService;
-    private final PlagiarismTaskWriter plagiarismTaskWriter;
     private static final String LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE = "实验尚未配置题项，无法发布";
     private static final String LAB_NOT_STARTED_MESSAGE = "实验尚未开始";
     private static final String LAB_DEADLINE_PASSED_MESSAGE = "实验已截止，不能保存/提交";
@@ -136,8 +132,6 @@ public class LabConfigService {
                       LabSubmissionMetricsRepository labSubmissionMetricsRepository,
                       BehaviorEventRepository behaviorEventRepository,
                       LabSubmissionClaimService labSubmissionClaimService,
-                      LocalPlagiarismService localPlagiarismService,
-                      PlagiarismTaskWriter plagiarismTaskWriter,
                       @Value("${app.file-storage-root}") String storageRoot,
                       LabServiceSupport support) {
         this.labRepository = labRepository;
@@ -160,8 +154,6 @@ public class LabConfigService {
         this.labSubmissionMetricsRepository = labSubmissionMetricsRepository;
         this.behaviorEventRepository = behaviorEventRepository;
         this.labSubmissionClaimService = labSubmissionClaimService;
-        this.localPlagiarismService = localPlagiarismService;
-        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.storageRoot = Path.of(storageRoot).toAbsolutePath().normalize();
         this.support = support;
     }

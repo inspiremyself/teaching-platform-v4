@@ -83,8 +83,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         // 类级 NOT_SUPPORTED：claim 的真实 REQUIRES_NEW 可读到已提交种子，直接使用真实 Bean
         com.opencode.teachingplatform.lab.service.LabSubmissionClaimService.class,
-        com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService.class,
-        com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter.class,
         LabBehaviorMetricsService.class, BehaviorConfig.class,
         LabBehaviorMetricsServiceTests.TestBeans.class})
 @ActiveProfiles("test")

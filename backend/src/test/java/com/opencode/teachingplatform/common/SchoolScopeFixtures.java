@@ -3,7 +3,7 @@ package com.opencode.teachingplatform.common;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 1B 跨校回归共享夹具：只在测试库内造第二所学校与六表业务行，不写迁移 seed、不改演示账号。
+ * 1B 跨校回归共享夹具：只在测试库内造第二所学校与五表业务行，不写迁移 seed、不改演示账号。
  */
 public final class SchoolScopeFixtures {
 
@@ -18,7 +18,6 @@ public final class SchoolScopeFixtures {
     public static final long EXAM_B = 9203L;
     public static final long QUESTION_B = 9204L;
     public static final long SCORE_B = 9205L;
-    public static final long PLAGIARISM_B = 9206L;
 
     private SchoolScopeFixtures() {
     }
@@ -26,7 +25,6 @@ public final class SchoolScopeFixtures {
     /** 清理并重建 B 校数据；可重复调用，保证测试间不互相污染。 */
     public static void seedSecondSchool(JdbcTemplate jdbc) {
         jdbc.update("DELETE FROM score_record WHERE school_id = ?", SCHOOL_B);
-        jdbc.update("DELETE FROM plagiarism_task WHERE school_id = ?", SCHOOL_B);
         jdbc.update("DELETE FROM question_bank WHERE school_id = ?", SCHOOL_B);
         jdbc.update("DELETE FROM exam WHERE school_id = ?", SCHOOL_B);
         jdbc.update("DELETE FROM homework WHERE school_id = ?", SCHOOL_B);
@@ -57,21 +55,16 @@ public final class SchoolScopeFixtures {
                 + "(id, business_type, business_id, student_id, class_id, score, graded_at, school_id) "
                 + "VALUES (?, 'EXAM', ?, ?, ?, 60, CURRENT_TIMESTAMP, ?)",
                 SCORE_B, EXAM_B, STUDENT_ID, CLASS_B, SCHOOL_B);
-        jdbc.update("INSERT INTO plagiarism_task "
-                + "(id, business_type, business_id, student_id, status, similarity_rate, school_id) "
-                + "VALUES (?, 'HOMEWORK', ?, ?, 'COMPLETED', 55, ?)",
-                PLAGIARISM_B, HOMEWORK_B, STUDENT_ID, SCHOOL_B);
     }
 
-    /** 六表字段名，供 schema 断言遍历。 */
+    /** 五表字段名，供 schema 断言遍历。 */
     public static final String[] TABLES = {
-            "T_EXPERIMENT", "HOMEWORK", "EXAM", "QUESTION_BANK", "SCORE_RECORD", "PLAGIARISM_TASK"
+            "T_EXPERIMENT", "HOMEWORK", "EXAM", "QUESTION_BANK", "SCORE_RECORD"
     };
 
-    /** 六条索引名，与 V26 第 7 段一致。 */
+    /** 五条索引名，与 V26 第 7 段一致（查重表已随功能下线删除）。 */
     public static final String[] INDEXES = {
             "IDX_T_EXPERIMENT_SCHOOL_CLASS", "IDX_HOMEWORK_SCHOOL_CLASS", "IDX_EXAM_SCHOOL_CLASS",
-            "IDX_QUESTION_BANK_SCHOOL_CREATED_BY", "IDX_SCORE_RECORD_SCHOOL_STUDENT",
-            "IDX_PLAGIARISM_TASK_SCHOOL_STUDENT"
+            "IDX_QUESTION_BANK_SCHOOL_CREATED_BY", "IDX_SCORE_RECORD_SCHOOL_STUDENT"
     };
 }

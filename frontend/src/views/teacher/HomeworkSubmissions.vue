@@ -5,7 +5,7 @@
         <div class="workbench-header__main">
           <div class="submissions-header__eyebrow">教师后台 / 作业提交与批改</div>
           <h1>{{ homeworkTitle || '作业提交与批改' }}</h1>
-          <p>围绕学生提交明细、查重线索、得分区与教师反馈区组织批改工作流。</p>
+          <p>围绕学生提交明细、得分区与教师反馈区组织批改工作流。</p>
         </div>
         <div class="workbench-header__actions submissions-hero__actions">
           <el-button @click="router.push('/teacher/homeworks')">返回作业管理</el-button>
@@ -18,8 +18,6 @@
         <span class="workbench-meta__item"><strong>{{ pendingCount }}</strong> 待批改</span>
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已批改</span>
         <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ averageScoreText }}</strong> 平均得分</span>
-        <span class="workbench-meta__item">{{ plagiarismFilterLabel }}</span>
-        <span class="workbench-meta__item"><strong>{{ riskCount }}</strong> 高风险查重</span>
       </div>
     </section>
 
@@ -27,7 +25,7 @@
       <div class="toolbar-card__main">
         <div class="toolbar-search">
           <span class="material-symbols-outlined">search</span>
-          <el-input v-model="searchQuery" placeholder="搜索学生姓名、学号或查重摘要" clearable />
+          <el-input v-model="searchQuery" placeholder="搜索学生姓名或学号" clearable />
         </div>
         <div class="toolbar-filters">
           <el-select v-model="statusFilter" placeholder="全部状态" clearable>
@@ -35,13 +33,6 @@
             <el-option label="已保存" :value="SUBMISSION_STATUS.SAVED" />
             <el-option label="待批改" :value="SUBMISSION_STATUS.SUBMITTED" />
             <el-option label="已批改" :value="SUBMISSION_STATUS.GRADED" />
-          </el-select>
-          <el-select v-model="plagiarismFilter" placeholder="全部查重范围" clearable>
-            <el-option label="全部查重范围" value="" />
-            <el-option label="低风险（< 20%）" value="low" />
-            <el-option label="中风险（20%-39%）" value="medium" />
-            <el-option label="高风险（≥ 40%）" value="high" />
-            <el-option label="无查重结果" value="none" />
           </el-select>
         </div>
       </div>
@@ -58,7 +49,7 @@
         <header class="panel-header">
           <div>
             <h2>提交队列</h2>
-            <p>保留学生上下文、提交状态、查重摘要与得分表达，支持直接切换当前批改对象。</p>
+            <p>保留学生上下文、提交状态与得分表达，支持直接切换当前批改对象。</p>
           </div>
         </header>
 
@@ -77,7 +68,6 @@
                   <strong>{{ row.studentName }}</strong>
                   <span class="submission-row__username">{{ row.studentUsername }}</span>
                 </div>
-                <p>{{ row.topMatchSummary || '当前无查重摘要，点击后可查看提交全文和评分区。' }}</p>
               </div>
             </div>
 
@@ -87,10 +77,6 @@
                 <el-tag :type="submissionStatusTagType(row.submitStatus)" effect="light">
                   {{ submissionStatusLabel(row.submitStatus) }}
                 </el-tag>
-              </div>
-              <div>
-                <span class="submission-row__label">查重率</span>
-                <strong>{{ formatRate(row.plagiarismRate) }}</strong>
               </div>
               <div>
                 <span class="submission-row__label">总分</span>
@@ -122,10 +108,6 @@
               <strong>{{ submissionStatusLabel(activeSubmission.submitStatus) }}</strong>
             </div>
             <div>
-              <span class="quick-grade-card__label">查重分析</span>
-              <strong>{{ formatRate(activeSubmission.plagiarismRate) }}</strong>
-            </div>
-            <div>
               <span class="quick-grade-card__label">当前得分</span>
               <strong>{{ scoreText(activeSubmission.totalScore) }}</strong>
             </div>
@@ -134,13 +116,6 @@
           <div class="quick-grade-card__section">
             <div class="quick-grade-card__section-title">提交内容预览</div>
             <div class="quick-grade-card__preview">{{ previewText(activeSubmission.answerText) }}</div>
-          </div>
-
-          <div class="quick-grade-card__section">
-            <div class="quick-grade-card__section-title">查重摘要</div>
-            <p class="quick-grade-card__muted">
-              {{ activeSubmission.topMatchSummary || '当前未返回查重摘要，仍可基于正文与附件路径继续评分。' }}
-            </p>
           </div>
 
           <div class="quick-grade-card__section">
@@ -168,10 +143,6 @@
               <div class="identity-box">
                 <span class="identity-box__label">提交状态</span>
                 <strong>{{ submissionStatusLabel(selectedSubmission.submitStatus) }}</strong>
-              </div>
-              <div class="identity-box">
-                <span class="identity-box__label">查重率</span>
-                <strong>{{ formatRate(selectedSubmission.plagiarismRate) }}</strong>
               </div>
               <div class="identity-box">
                 <span class="identity-box__label">附件路径</span>
@@ -326,7 +297,6 @@ const answerGradeMap = reactive<Record<number, { score: number; teacherComment: 
 const activeSubmissionId = ref<number | null>(null);
 const searchQuery = ref('');
 const statusFilter = ref<HomeworkSubmissionStatus | ''>('');
-const plagiarismFilter = ref<'low' | 'medium' | 'high' | 'none' | ''>('');
 
 const gradeForm = reactive<GradeHomeworkRequest>({
   totalScore: 0,
@@ -344,24 +314,14 @@ const filteredRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
 
   return rows.value.filter(row => {
-    const rate = typeof row.plagiarismRate === 'number' ? row.plagiarismRate : null;
-
     const matchesKeyword =
       !keyword ||
       row.studentName.toLowerCase().includes(keyword) ||
-      row.studentUsername.toLowerCase().includes(keyword) ||
-      row.topMatchSummary?.toLowerCase().includes(keyword);
+      row.studentUsername.toLowerCase().includes(keyword);
 
     const matchesStatus = !statusFilter.value || row.submitStatus === statusFilter.value;
 
-    const matchesPlagiarism =
-      !plagiarismFilter.value ||
-      (plagiarismFilter.value === 'none' && rate === null) ||
-      (plagiarismFilter.value === 'low' && rate !== null && rate < 20) ||
-      (plagiarismFilter.value === 'medium' && rate !== null && rate >= 20 && rate < 40) ||
-      (plagiarismFilter.value === 'high' && rate !== null && rate >= 40);
-
-    return matchesKeyword && matchesStatus && matchesPlagiarism;
+    return matchesKeyword && matchesStatus;
   });
 });
 
@@ -379,21 +339,12 @@ const gradeScoreLabel = computed(() =>
 
 const pendingCount = computed(() => filteredRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.SUBMITTED).length);
 const gradedCount = computed(() => filteredRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.GRADED).length);
-const riskCount = computed(() => filteredRows.value.filter(row => (row.plagiarismRate ?? -1) >= 40).length);
 
 const averageScoreText = computed(() => {
   const scored = filteredRows.value.filter(row => typeof row.totalScore === 'number');
   if (!scored.length) return '-';
   const avg = scored.reduce((sum, row) => sum + (row.totalScore ?? 0), 0) / scored.length;
   return `${avg.toFixed(1)} 分`;
-});
-
-const plagiarismFilterLabel = computed(() => {
-  if (!plagiarismFilter.value) return '全部查重';
-  if (plagiarismFilter.value === 'low') return '低风险';
-  if (plagiarismFilter.value === 'medium') return '中风险';
-  if (plagiarismFilter.value === 'high') return '高风险';
-  return '无结果';
 });
 
 const fetchData = async () => {
@@ -514,7 +465,6 @@ const confirmReturnSubmission = () => {
 const resetFilters = () => {
   searchQuery.value = '';
   statusFilter.value = '';
-  plagiarismFilter.value = '';
 };
 
 const submissionStatusLabel = (status: HomeworkSubmissionStatus) => {
@@ -528,10 +478,6 @@ const submissionStatusTagType = (status: HomeworkSubmissionStatus) => {
   if (status === SUBMISSION_STATUS.GRADED) return 'success';
   if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
   return 'info';
-};
-
-const formatRate = (rate?: number | null) => {
-  return typeof rate === 'number' ? `${rate.toFixed(2)}%` : '-';
 };
 
 const scoreText = (score?: number | null) => {

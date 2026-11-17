@@ -38,10 +38,6 @@ import com.opencode.teachingplatform.homework.repository.HomeworkAnswerRepositor
 import com.opencode.teachingplatform.homework.repository.HomeworkQuestionRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkSubmissionRepository;
-import com.opencode.teachingplatform.plagiarism.entity.PlagiarismTask;
-import com.opencode.teachingplatform.plagiarism.repository.PlagiarismTaskRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
@@ -71,9 +67,6 @@ public class HomeworkReportService {
     private final ClassAccessService classAccessService;
     private final ClassMemberRepository classMemberRepository;
     private final SysUserRepository sysUserRepository;
-    private final PlagiarismTaskRepository plagiarismTaskRepository;
-    private final LocalPlagiarismService localPlagiarismService;
-    private final PlagiarismTaskWriter plagiarismTaskWriter;
     private final ScoreRecordRepository scoreRecordRepository;
     private final ScoreRecordWriter scoreRecordWriter;
     private final AuditLogService auditLogService;
@@ -93,9 +86,6 @@ public class HomeworkReportService {
                            ClassAccessService classAccessService,
                            ClassMemberRepository classMemberRepository,
                            SysUserRepository sysUserRepository,
-                           PlagiarismTaskRepository plagiarismTaskRepository,
-                           LocalPlagiarismService localPlagiarismService,
-                           PlagiarismTaskWriter plagiarismTaskWriter,
                            ScoreRecordRepository scoreRecordRepository,
                            ScoreRecordWriter scoreRecordWriter,
                            AuditLogService auditLogService,
@@ -114,9 +104,6 @@ public class HomeworkReportService {
         this.classAccessService = classAccessService;
         this.classMemberRepository = classMemberRepository;
         this.sysUserRepository = sysUserRepository;
-        this.plagiarismTaskRepository = plagiarismTaskRepository;
-        this.localPlagiarismService = localPlagiarismService;
-        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.scoreRecordRepository = scoreRecordRepository;
         this.scoreRecordWriter = scoreRecordWriter;
         this.auditLogService = auditLogService;

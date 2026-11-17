@@ -268,10 +268,6 @@
                 <span>提交状态</span>
                 <strong>{{ submissionStatusLabel(detail.submissionStatus) }}</strong>
               </div>
-              <div class="detail-meta-item">
-                <span>查重率</span>
-                <strong>{{ formatRate(detail.plagiarismRate) }}</strong>
-              </div>
               <div v-if="showHomeworkResult" class="detail-meta-item detail-meta-item--accent">
                 <span>总分</span>
                 <strong>{{ detail.totalScore ?? '-' }}<template v-if="typeof detail.totalScore === 'number' && planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template></strong>
@@ -339,10 +335,6 @@
                 <span>总分</span>
                 <strong>{{ detail.totalScore ?? '-' }}<template v-if="typeof detail.totalScore === 'number' && planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template></strong>
               </div>
-              <div class="feedback-pill feedback-pill--blue">
-                <span>查重率</span>
-                <strong>{{ formatRate(detail.plagiarismRate) }}</strong>
-              </div>
             </div>
 
             <p class="detail-card__paragraph detail-card__paragraph--compact">{{ detail.teacherComment || '当前尚无教师评语。' }}</p>
@@ -356,7 +348,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { HomeworkDetailKey } from '@/composables/useHomeworkDetail';
-const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, loading, submitting, detail, currentQuestionIndex, form, autoSaveStatus, lastSavedDraft, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, submitForm, restoreSavedDraft, submissionStatusLabel, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, showQuestionFeedback, answerHint, questionTypeLabel, formatRate, formatDateTime } = inject(HomeworkDetailKey)!;
+const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, loading, submitting, detail, currentQuestionIndex, form, autoSaveStatus, lastSavedDraft, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, submitForm, restoreSavedDraft, submissionStatusLabel, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, showQuestionFeedback, answerHint, questionTypeLabel, formatDateTime } = inject(HomeworkDetailKey)!;
 </script>
 
 <style scoped>

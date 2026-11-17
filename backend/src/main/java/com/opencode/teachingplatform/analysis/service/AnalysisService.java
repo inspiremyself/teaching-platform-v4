@@ -87,20 +87,10 @@ public class AnalysisService {
                 Double.class, teacherId, teacher.schoolId());
         double averageScore = avgScore != null ? Math.round(avgScore * 10.0) / 10.0 : 0.0;
 
-        // highRiskPlagiarismCount: 仅统计当前教师布置作业中相似度超过 50% 的查重任务
-        int highRiskPlagiarismCount = count(
-                "SELECT COUNT(*) FROM plagiarism_task pt " +
-                        "JOIN homework_submission hs ON hs.id = pt.business_id " +
-                        "JOIN homework h ON h.id = hs.homework_id " +
-                        "WHERE pt.business_type = 'HOMEWORK' AND pt.similarity_rate > 50 AND h.created_by = ? " +
-                        "AND pt.school_id = ? AND h.school_id = ?",
-                teacherId, teacher.schoolId(), teacher.schoolId());
-
         List<Map<String, Object>> summaryCards = new ArrayList<>(List.of(
                 summaryCard("activityCount", "教学活动总数", activityCount, "实验、作业与考试总量"),
                 summaryCard("pendingGradeCount", "待批改任务", pendingGradeCount, "需要教师处理的提交"),
-                summaryCard("averageScore", "平均成绩", averageScore, "当前教师班级平均分"),
-                summaryCard("highRiskPlagiarismCount", "高风险查重", highRiskPlagiarismCount, "我布置的作业中相似度超过 50% 的记录")
+                summaryCard("averageScore", "平均成绩", averageScore, "当前教师班级平均分")
         ));
         int totalNotStarted = snapshots.stream()
                 .mapToInt(snapshot -> snapshot.expectedCount - snapshot.participatedCount)

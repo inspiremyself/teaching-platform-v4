@@ -6,7 +6,7 @@
 
 ## OVERVIEW
 
-高校教学一体化平台，覆盖 **实验、作业、考试** 三条核心教学闭环，并配套题库、课程资料、查重、成绩分析与学校组织管理。
+高校教学一体化平台，覆盖 **实验、作业、考试** 三条核心教学闭环，并配套题库、课程资料、成绩分析与学校组织管理（查重功能已于 2026-11 下线）。
 
 - 四角色：`SCHOOL_ADMIN`（学校管理员）/ `TEACHER`（教师）/ `STUDENT`（学生）/ `PLATFORM_ADMIN`（平台超管，`sys_user.school_id = NULL`、无学校归属）；前端三套业务壳层不合并，平台超管复用 `/admin` 壳层但仅可达 `/admin/schools`；后端 JWT + `@PreAuthorize`。
 - 前后端分离：Vue 3 + TypeScript + Element Plus；Spring Boot 3.3 + Spring Security + JPA + Flyway。
@@ -45,7 +45,6 @@ teaching-platform-v4/
 │  │  ├─ homework/                 # 作业闭环
 │  │  ├─ lab/                      # 实验闭环（含 behavior 埋点）
 │  │  ├─ material/                 # 课程资料
-│  │  ├─ plagiarism/               # 查重
 │  │  ├─ question/                 # 题库
 │  │  ├─ school/                   # 学校/学科实体与仓储
 │  │  └─ student/                  # 学生

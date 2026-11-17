@@ -44,8 +44,7 @@ const router = createRouter({
         { path: 'homeworks/:id/submissions', name: 'teacher-homework-submissions', component: () => import('@/views/teacher/HomeworkSubmissions.vue') },
         { path: 'exams', name: 'teacher-exams', component: () => import('@/views/teacher/exams/List.vue') },
         { path: 'exams/:id/results', name: 'teacher-exam-results', component: () => import('@/views/teacher/exams/Results.vue') },
-        { path: 'analysis', component: () => import('@/views/teacher/Analysis.vue') },
-        { path: 'plagiarism', component: () => import('@/views/teacher/Plagiarism.vue') }
+        { path: 'analysis', component: () => import('@/views/teacher/Analysis.vue') }
       ]
     },
     {

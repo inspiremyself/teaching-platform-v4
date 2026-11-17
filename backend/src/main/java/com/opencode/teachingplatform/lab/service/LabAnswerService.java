@@ -40,8 +40,6 @@ import com.opencode.teachingplatform.lab.repository.LabStepRepository;
 import com.opencode.teachingplatform.lab.repository.LabSubmissionRepository;
 import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import com.opencode.teachingplatform.material.repository.CourseMaterialRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
@@ -106,8 +104,6 @@ public class LabAnswerService {
     private final BehaviorEventRepository behaviorEventRepository;
     private final Path storageRoot;
     private final LabSubmissionClaimService labSubmissionClaimService;
-    private final LocalPlagiarismService localPlagiarismService;
-    private final PlagiarismTaskWriter plagiarismTaskWriter;
     private static final String LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE = "实验尚未配置题项，无法发布";
     private static final String LAB_NOT_STARTED_MESSAGE = "实验尚未开始";
     private static final String LAB_DEADLINE_PASSED_MESSAGE = "实验已截止，不能保存/提交";
@@ -136,8 +132,6 @@ public class LabAnswerService {
                       LabSubmissionMetricsRepository labSubmissionMetricsRepository,
                       BehaviorEventRepository behaviorEventRepository,
                       LabSubmissionClaimService labSubmissionClaimService,
-                      LocalPlagiarismService localPlagiarismService,
-                      PlagiarismTaskWriter plagiarismTaskWriter,
                       @Value("${app.file-storage-root}") String storageRoot,
                       LabServiceSupport support) {
         this.labRepository = labRepository;
@@ -160,8 +154,6 @@ public class LabAnswerService {
         this.labSubmissionMetricsRepository = labSubmissionMetricsRepository;
         this.behaviorEventRepository = behaviorEventRepository;
         this.labSubmissionClaimService = labSubmissionClaimService;
-        this.localPlagiarismService = localPlagiarismService;
-        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.storageRoot = Path.of(storageRoot).toAbsolutePath().normalize();
         this.support = support;
     }
@@ -380,8 +372,6 @@ public class LabAnswerService {
         // 提交瞬间前端缓冲中的尾部事件（LAB_LEAVE、末段心跳）可能尚未到达，
         // 本次以已到事件为准，迟到事件由教师首读的懒算兜底重算（时机②）
         labBehaviorMetricsService.computeForSubmission(submission);
-        // 查重作为提交链路最后一个外部副作用：失败只降级查重率，不阻断提交
-        refreshPlagiarism(lab, submission);
         return Map.of(
                 "submissionId", submission.getId(),
                 "status", submission.getSubmitStatus().name()
@@ -532,88 +522,6 @@ public class LabAnswerService {
         view.put("submittedAt", submission.getSubmittedAt());
         view.put("gradedAt", submission.getGradedAt());
         return view;
-    }
-
-
-
-    /**
-     * 刷新实验提交的查重率与查重任务。
-     *
-     * <p>分析阶段与写入阶段分别 try/catch 降级：分析与任务写入任何失败都只把查重率置 0，
-     * 不阻断提交主流程；任务写入使用独立事务（{@link PlagiarismTaskWriter}），
-     * 其回滚不会污染外层提交事务。</p>
-     *
-     * @param lab        当前实验
-     * @param submission 当前提交
-     */
-    private void refreshPlagiarism(Lab lab, LabSubmission submission) {
-        LocalPlagiarismService.PlagiarismAnalysisResult result;
-        try {
-            String sourceText = labSubmissionText(submission.getId());
-            if (sourceText.isBlank()) {
-                submission.setPlagiarismRate(0D);
-                labSubmissionRepository.save(submission);
-                return;
-            }
-            List<LocalPlagiarismService.CandidateText> candidates =
-                    labSubmissionRepository.findByLabIdAndSubmitStatusIn(
-                                    lab.getId(), List.of(SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED))
-                            .stream()
-                            .filter(candidate -> !Objects.equals(candidate.getId(), submission.getId()))
-                            .map(candidate -> Map.entry(candidate, labSubmissionText(candidate.getId())))
-                            .filter(entry -> !entry.getValue().isBlank())
-                            .map(entry -> new LocalPlagiarismService.CandidateText(
-                                    resolveLabReference(lab, entry.getKey().getStudentId()), entry.getValue()))
-                            .toList();
-            result = localPlagiarismService.analyze(sourceText, candidates);
-        } catch (Exception ex) {
-            log.warn("实验查重分析失败，降级为 0: labId={}, submissionId={}", lab.getId(), submission.getId(), ex);
-            submission.setPlagiarismRate(0D);
-            labSubmissionRepository.save(submission);
-            return;
-        }
-
-        try {
-            submission.setPlagiarismRate(result.similarityRate());
-            labSubmissionRepository.save(submission);
-            plagiarismTaskWriter.write(BusinessType.LAB, submission.getId(), submission.getStudentId(),
-                    result.similarityRate(), result.topMatchSummary(), result.rawResultJson(), lab.getSchoolId());
-        } catch (Exception ex) {
-            // writer 为 REQUIRES_NEW，其回滚不污染外层事务；此处只降级查重率
-            log.warn("实验查重任务写入失败，降级为 0: labId={}, submissionId={}", lab.getId(), submission.getId(), ex);
-            submission.setPlagiarismRate(0D);
-            labSubmissionRepository.save(submission);
-        }
-    }
-
-
-
-    /**
-     * 拼接整份实验提交的作答文本，供查重比对。
-     *
-     * <p>与作业查重同口径：{@code answerText} 为空时回退 {@code answerJson}，
-     * 避免选择题 / JSON 作答被当成空文本导致查重恒为 0。</p>
-     */
-    private String labSubmissionText(Long submissionId) {
-        return labStepAnswerRepository.findByLabSubmissionId(submissionId).stream()
-                .map(answer -> answer.getAnswerText() == null || answer.getAnswerText().isBlank()
-                        ? answer.getAnswerJson()
-                        : answer.getAnswerText())
-                .filter(Objects::nonNull)
-                .filter(text -> !text.isBlank())
-                .collect(Collectors.joining("\n"));
-    }
-
-
-
-    /**
-     * 生成实验查重候选的可读来源标识，便于教师定位相似报告。
-     */
-    private String resolveLabReference(Lab lab, Long studentId) {
-        String studentName = sysUserRepository.findById(studentId)
-                .map(SysUser::getDisplayName)
-                .orElse("学生#" + studentId);
-        return "实验《" + lab.getTitle() + "》-" + studentName;
     }
 
 }

@@ -77,7 +77,6 @@ export interface StudentHomeworkDetail {
   submissionStatus?: HomeworkSubmissionStatus | null;
   answerText?: string | null;
   questions?: HomeworkQuestionItem[];
-  plagiarismRate?: number | null;
   totalScore?: number | null;
   teacherComment?: string | null;
 }
@@ -92,8 +91,6 @@ export interface HomeworkSubmissionItem {
   submitStatus: HomeworkSubmissionStatus;
   answerText: string;
   answerFilePath?: string | null;
-  plagiarismRate?: number | null;
-  topMatchSummary?: string | null;
   totalScore?: number | null;
   teacherComment?: string | null;
   questions?: HomeworkQuestionItem[];

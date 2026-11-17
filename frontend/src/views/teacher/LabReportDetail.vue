@@ -138,7 +138,6 @@
                 <article class="insight-card">
                   <div class="pane-title">评分参考</div>
                   <div class="insight-line"><span>系统参考分</span><strong>{{ displaySuggestedScore(item) }}</strong></div>
-                  <div class="insight-line"><span>相似度</span><strong>{{ formatPercent(item.plagiarismRate ?? item.similarityRate) }}</strong></div>
                   <div class="insight-detail">{{ item.autoJudgeDetail || '当前暂无系统评分说明。' }}</div>
                 </article>
 
@@ -417,13 +416,6 @@ const fetchData = async () => {
 
   await restoreScrollContext();
   await scrollToQueryAnswer();
-};
-
-const formatPercent = (value?: number | null) => {
-  if (value === null || value === undefined) {
-    return '暂无查重';
-  }
-  return `${Math.round(value * 100)}%`;
 };
 
 const formatDateTime = (value?: string | null) => value ? value.replace('T', ' ').slice(0, 16) : '-';

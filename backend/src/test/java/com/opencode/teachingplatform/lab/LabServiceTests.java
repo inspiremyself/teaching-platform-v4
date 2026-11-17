@@ -74,8 +74,6 @@ import static org.mockito.Mockito.verify;
         com.opencode.teachingplatform.lab.service.LabServiceSupport.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
-        com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService.class,
-        com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter.class,
         LabServiceTests.TestBeans.class})
 @ActiveProfiles("test")
 class LabServiceTests {
@@ -108,13 +106,6 @@ class LabServiceTests {
     @MockBean
     private LabSubmissionClaimService labSubmissionClaimService;
 
-    /**
-     * 查重服务默认走真实算法（spy 委托真实实现），仅降级用例通过 doThrow 注入异常；
-     * Spring Boot 会在每个用例结束后自动重置 spy 桩，不影响其他用例。
-     */
-    @org.springframework.boot.test.mock.mockito.SpyBean
-    private com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService localPlagiarismService;
-
     @org.junit.jupiter.api.BeforeEach
     void stubBehaviorMetricsService() {
         // 懒算默认返回空集（全部行视为无 metrics → behavior 为 null，不影响既有断言）；verify 场景单独覆盖
@@ -131,7 +122,6 @@ class LabServiceTests {
                         created.setLabId(labId);
                         created.setStudentId(studentId);
                         created.setSubmitStatus(SubmissionStatus.SAVED);
-                        created.setPlagiarismRate(0D);
                         created.setTotalScore(0D);
                         labSubmissionRepository.saveAndFlush(created);
                     }
@@ -1539,7 +1529,6 @@ class LabServiceTests {
         existing.setLabId(labId);
         existing.setStudentId(studentUser().id());
         existing.setSubmitStatus(SubmissionStatus.SAVED);
-        existing.setPlagiarismRate(0D);
         existing.setTotalScore(0D);
         labSubmissionRepository.saveAndFlush(existing);
 
@@ -3695,92 +3684,6 @@ class LabServiceTests {
     }
 
     @Test
-    void submitLabComputesPlagiarismAgainstSameLabSubmissions() {
-        Long classId = seedClass(teacherUser().id());
-        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
-        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
-        CurrentUser firstStudent = new CurrentUser(210L, "student-plag-a", "查重学生A", UserRole.STUDENT);
-        CurrentUser secondStudent = new CurrentUser(211L, "student-plag-b", "查重学生B", UserRole.STUDENT);
-        seedStudentAccount(firstStudent);
-        seedStudentAccount(secondStudent);
-        seedMembership(classId, firstStudent.id());
-        seedMembership(classId, secondStudent.id());
-
-        String copiedText = "基于策略模式的评分引擎将可替换算法封装在独立实现中，便于横向扩展";
-        labService.saveAnswer(firstStudent, labId, stepId, new LabRequests.SaveStepAnswerRequest(copiedText, null));
-        labService.submitLab(firstStudent, labId, new LabRequests.SubmitLabRequest("查重第一份"));
-
-        labService.saveAnswer(secondStudent, labId, stepId, new LabRequests.SaveStepAnswerRequest(copiedText, null));
-        Long secondSubmissionId = ((Number) labService.submitLab(secondStudent, labId,
-                new LabRequests.SubmitLabRequest("查重第二份")).get("submissionId")).longValue();
-
-        LabSubmission secondSubmission = labSubmissionRepository.findById(secondSubmissionId).orElseThrow();
-        // 同一实验内后提交的完整抄写必须命中高相似率
-        assertThat(secondSubmission.getPlagiarismRate()).isGreaterThan(0D);
-        Integer labTaskCount = jdbcTemplate.queryForObject(
-                """
-                SELECT COUNT(*) FROM plagiarism_task
-                WHERE business_type = 'LAB' AND business_id = ?
-                """,
-                Integer.class,
-                secondSubmissionId
-        );
-        assertThat(labTaskCount).isEqualTo(1);
-    }
-
-    @Test
-    void submitLabDoesNotCompareSubmissionsFromDifferentLabs() {
-        Long classId = seedClass(teacherUser().id());
-        Long firstLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
-        Long secondLabId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
-        Long firstStepId = seedStep(firstLabId, 1, "TEXT", "{}", 10);
-        Long secondStepId = seedStep(secondLabId, 1, "TEXT", "{}", 10);
-        CurrentUser firstStudent = new CurrentUser(212L, "student-plag-c", "查重学生C", UserRole.STUDENT);
-        CurrentUser secondStudent = new CurrentUser(213L, "student-plag-d", "查重学生D", UserRole.STUDENT);
-        seedStudentAccount(firstStudent);
-        seedStudentAccount(secondStudent);
-        seedMembership(classId, firstStudent.id());
-        seedMembership(classId, secondStudent.id());
-
-        String sameText = "跨实验的不同题目不应互相计入查重率，候选范围必须收敛在同一实验内";
-        labService.saveAnswer(firstStudent, firstLabId, firstStepId, new LabRequests.SaveStepAnswerRequest(sameText, null));
-        labService.submitLab(firstStudent, firstLabId, new LabRequests.SubmitLabRequest("实验一提交"));
-
-        labService.saveAnswer(secondStudent, secondLabId, secondStepId, new LabRequests.SaveStepAnswerRequest(sameText, null));
-        Long secondSubmissionId = ((Number) labService.submitLab(secondStudent, secondLabId,
-                new LabRequests.SubmitLabRequest("实验二提交")).get("submissionId")).longValue();
-
-        assertThat(labSubmissionRepository.findById(secondSubmissionId).orElseThrow().getPlagiarismRate()).isZero();
-    }
-
-    @Test
-    void submitLabDegradesPlagiarismRateWhenAnalysisFails() {
-        Long classId = seedClass(teacherUser().id());
-        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
-        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
-        seedStudentAccount(studentUser());
-        seedMembership(classId, studentUser().id());
-        org.mockito.Mockito.doThrow(new IllegalStateException("查重引擎不可用"))
-                .when(localPlagiarismService)
-                .analyze(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyList());
-
-        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("查重异常降级", null));
-        Long submissionId = ((Number) labService.submitLab(studentUser(), labId,
-                new LabRequests.SubmitLabRequest("异常降级小结")).get("submissionId")).longValue();
-
-        // 查重失败只降级查重率，提交本身必须成功且不落查重任务
-        LabSubmission submission = labSubmissionRepository.findById(submissionId).orElseThrow();
-        assertThat(submission.getSubmitStatus()).isEqualTo(SubmissionStatus.SUBMITTED);
-        assertThat(submission.getPlagiarismRate()).isZero();
-        Integer taskCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM plagiarism_task WHERE business_type = 'LAB' AND business_id = ?",
-                Integer.class,
-                submissionId
-        );
-        assertThat(taskCount).isZero();
-    }
-
-    @Test
     void createLabRejectsMissingOrForeignSchoolMaterial() {
         Long classId = seedClass(teacherUser().id());
         long foreignMaterialId = Math.abs(System.nanoTime());
@@ -3806,28 +3709,6 @@ class LabServiceTests {
 
         Integer after = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM t_experiment", Integer.class);
         assertThat(after).isEqualTo(before);
-    }
-
-    @Test
-    void teacherReportDetailReadsPlagiarismRateFromSubmission() {
-        Long classId = seedClass(teacherUser().id());
-        Long labId = seedLab(classId, ActivityStatus.PUBLISHED, teacherUser().id());
-        Long stepId = seedStep(labId, 1, "TEXT", "{}", 10);
-        seedStudentAccount(studentUser());
-        seedMembership(classId, studentUser().id());
-        labService.saveAnswer(studentUser(), labId, stepId, new LabRequests.SaveStepAnswerRequest("教师报告查重率", null));
-        Long submissionId = ((Number) labService.submitLab(studentUser(), labId,
-                new LabRequests.SubmitLabRequest("报告查重小结")).get("submissionId")).longValue();
-        LabSubmission submission = labSubmissionRepository.findById(submissionId).orElseThrow();
-        submission.setPlagiarismRate(66.6D);
-        labSubmissionRepository.saveAndFlush(submission);
-
-        Map<String, Object> detail = labService.getTeacherReportDetail(teacherUser(), submissionId);
-
-        assertThat(detail.get("plagiarismRate")).isEqualTo(66.6D);
-        List<Map<String, Object>> items = (List<Map<String, Object>>) detail.get("items");
-        // 顶层与逐题查重率同源，避免前端出现两套口径
-        assertThat(items).allSatisfy(item -> assertThat(item.get("plagiarismRate")).isEqualTo(66.6D));
     }
 
     @TestConfiguration

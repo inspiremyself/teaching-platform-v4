@@ -272,8 +272,6 @@ export interface LabReportAnswerItem {
   maxScore?: number | null;
   stepScore?: number | null;
   teacherComment?: string | null;
-  plagiarismRate?: number | null;
-  similarityRate?: number | null;
   autoScore?: number | null;
   suggestedScore?: number | null;
   scoreSource?: LabScoreSource | null;

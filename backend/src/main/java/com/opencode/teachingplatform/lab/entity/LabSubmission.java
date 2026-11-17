@@ -27,8 +27,6 @@ public class LabSubmission extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "submit_status", nullable = false, length = 16)
     private SubmissionStatus submitStatus;
-    @Column(name = "plagiarism_rate")
-    private Double plagiarismRate;
     @Column(name = "total_score")
     private Double totalScore;
     @Column(name = "teacher_comment", columnDefinition = "TEXT")
@@ -48,8 +46,6 @@ public class LabSubmission extends BaseEntity {
     public void setStudentId(Long studentId) { this.studentId = studentId; }
     public SubmissionStatus getSubmitStatus() { return submitStatus; }
     public void setSubmitStatus(SubmissionStatus submitStatus) { this.submitStatus = submitStatus; }
-    public Double getPlagiarismRate() { return plagiarismRate; }
-    public void setPlagiarismRate(Double plagiarismRate) { this.plagiarismRate = plagiarismRate; }
     public Double getTotalScore() { return totalScore; }
     public void setTotalScore(Double totalScore) { this.totalScore = totalScore; }
     public String getTeacherComment() { return teacherComment; }

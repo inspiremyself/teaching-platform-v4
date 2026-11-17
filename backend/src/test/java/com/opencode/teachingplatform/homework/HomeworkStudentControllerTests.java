@@ -73,11 +73,10 @@ class HomeworkStudentControllerTests {
     }
 
     @Test
-    void studentCanSubmitHomeworkWithRealPlagiarismRate() throws Exception {
+    void studentCanSubmitHomework() throws Exception {
         when(homeworkService.submitHomework(any(CurrentUser.class), org.mockito.ArgumentMatchers.eq(1L), any())).thenReturn(Map.of(
                 "submissionId", 9,
-                "status", "SUBMITTED",
-                "plagiarismRate", 42.86
+                "status", "SUBMITTED"
         ));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateStudent());
@@ -93,9 +92,7 @@ class HomeworkStudentControllerTests {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(0))
                     .andExpect(jsonPath("$.data.submissionId").value(9))
-                    .andExpect(jsonPath("$.data.status").value("SUBMITTED"))
-                    .andExpect(jsonPath("$.data.plagiarismRate").value(42.86))
-                    .andExpect(jsonPath("$.data.plagiarismStatus").doesNotExist());
+                    .andExpect(jsonPath("$.data.status").value("SUBMITTED"));
         } finally {
             SecurityContextHolder.clearContext();
         }

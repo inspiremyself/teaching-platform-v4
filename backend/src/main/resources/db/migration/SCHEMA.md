@@ -122,7 +122,7 @@
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
 | `scoring_config_json` | `TEXT` | 是 |  | 判分配置 |
-| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，五表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -166,7 +166,7 @@
 | `score_released` | `BOOLEAN` | 否 | `FALSE` | 是否已发布成绩 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
-| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，五表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -198,7 +198,6 @@
 | `submit_status` | `VARCHAR(16)` | 否 |  | 提交状态 |
 | `answer_text` | `TEXT` | 是 |  | 整体答案 |
 | `answer_file_path` | `VARCHAR(255)` | 是 |  | 附件路径 |
-| `plagiarism_rate` | `DOUBLE` | 是 |  | 查重率 |
 | `total_score` | `DOUBLE` | 是 |  | 总分 |
 | `teacher_comment` | `TEXT` | 是 |  | 教师评语 |
 | `graded_at` | `TIMESTAMP` | 是 |  | 批改时间 |
@@ -252,7 +251,7 @@
 | `shuffle_questions` | `BOOLEAN` | 否 | `FALSE` | 是否按学生维度乱序展示题目 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
-| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，五表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -342,7 +341,7 @@
 | `summary_required` | `BOOLEAN` | 否 | `FALSE` | 是否要求实验总结 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
-| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，五表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (experiment_id)`
@@ -383,7 +382,6 @@
 | `experiment_id` | `BIGINT` | 否 |  | 实验 ID |
 | `student_id` | `BIGINT` | 否 |  | 学生 ID |
 | `submit_status` | `VARCHAR(16)` | 否 |  | 提交状态 |
-| `plagiarism_rate` | `DOUBLE` | 是 |  | 查重率 |
 | `total_score` | `DOUBLE` | 是 |  | 总分 |
 | `teacher_comment` | `TEXT` | 是 |  | 教师评语 |
 | `summary_text` | `TEXT` | 是 |  | 实验总结 |
@@ -458,25 +456,6 @@
 
 ### 6. 其他业务表
 
-#### `plagiarism_task`
-
-| 字段 | 类型 | 可空 | 默认值 | 说明 |
-|---|---|---|---|---|
-| `id` | `BIGINT` | 否 | 自增 | 主键 |
-| `business_type` | `VARCHAR(16)` | 否 |  | 业务类型 |
-| `business_id` | `BIGINT` | 否 |  | 业务 ID |
-| `student_id` | `BIGINT` | 否 |  | 学生 ID |
-| `status` | `VARCHAR(16)` | 否 |  | 状态 |
-| `similarity_rate` | `DOUBLE` | 是 |  | 相似度 |
-| `top_match_summary` | `VARCHAR(255)` | 是 |  | 最高匹配摘要 |
-| `raw_result_json` | `TEXT` | 是 |  | 原始结果 |
-| `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
-| `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
-| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
-
-**约束**
-- 主键：`PRIMARY KEY (id)`
-
 #### `score_record`
 
 | 字段 | 类型 | 可空 | 默认值 | 说明 |
@@ -490,7 +469,7 @@
 | `graded_at` | `TIMESTAMP` | 否 |  | 评分时间 |
 | `created_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 创建时间 |
 | `updated_at` | `TIMESTAMP` | 否 | `CURRENT_TIMESTAMP` | 更新时间 |
-| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，六表唯一租户隔离列 |
+| `school_id` | `BIGINT` | 否 |  | 所属学校 id；1B V26 回填，五表唯一租户隔离列 |
 
 **约束**
 - 主键：`PRIMARY KEY (id)`
@@ -732,7 +711,6 @@
 - `idx_exam_school_class ON exam (school_id, class_id)`
 - `idx_question_bank_school_created_by ON question_bank (school_id, created_by)`
 - `idx_score_record_school_student ON score_record (school_id, student_id)`
-- `idx_plagiarism_task_school_student ON plagiarism_task (school_id, student_id)`
 - `idx_textbook_section_parent ON textbook_section (textbook_id, parent_id, sort_order)`
 - `idx_courseware_scope ON courseware (owner_scope, owner_school_id)`
 - `idx_courseware_global_subject ON courseware (global_subject_id)`

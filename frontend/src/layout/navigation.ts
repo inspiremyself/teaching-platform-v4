@@ -26,7 +26,6 @@ export const SIDEBAR_NAV: Record<AppRole, NavItem[]> = {
     { to: '/teacher/homeworks', label: '作业', icon: 'assignment' },
     { to: '/teacher/exams', label: '考试', icon: 'quiz' },
     { to: '/teacher/analysis', label: '分析报表', icon: 'analytics' },
-    { to: '/teacher/plagiarism', label: '查重治理', icon: 'search' },
   ],
   STUDENT: [
     { to: '/student/dashboard', label: '总览', icon: 'dashboard' },

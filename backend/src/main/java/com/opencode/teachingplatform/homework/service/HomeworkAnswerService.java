@@ -14,7 +14,6 @@ import com.opencode.teachingplatform.analysis.repository.ScoreRecordRepository;
 import com.opencode.teachingplatform.common.infra.audit.AuditAction;
 import com.opencode.teachingplatform.common.infra.audit.AuditLogService;
 import com.opencode.teachingplatform.common.infra.audit.AuditResourceType;
-import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.auth.entity.SysUser;
 import com.opencode.teachingplatform.auth.repository.SysUserRepository;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
@@ -38,10 +37,6 @@ import com.opencode.teachingplatform.homework.repository.HomeworkAnswerRepositor
 import com.opencode.teachingplatform.homework.repository.HomeworkQuestionRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkRepository;
 import com.opencode.teachingplatform.homework.repository.HomeworkSubmissionRepository;
-import com.opencode.teachingplatform.plagiarism.entity.PlagiarismTask;
-import com.opencode.teachingplatform.plagiarism.repository.PlagiarismTaskRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
@@ -71,9 +66,6 @@ public class HomeworkAnswerService {
     private final ClassAccessService classAccessService;
     private final ClassMemberRepository classMemberRepository;
     private final SysUserRepository sysUserRepository;
-    private final PlagiarismTaskRepository plagiarismTaskRepository;
-    private final LocalPlagiarismService localPlagiarismService;
-    private final PlagiarismTaskWriter plagiarismTaskWriter;
     private final ScoreRecordRepository scoreRecordRepository;
     private final ScoreRecordWriter scoreRecordWriter;
     private final AuditLogService auditLogService;
@@ -93,9 +85,6 @@ public class HomeworkAnswerService {
                            ClassAccessService classAccessService,
                            ClassMemberRepository classMemberRepository,
                            SysUserRepository sysUserRepository,
-                           PlagiarismTaskRepository plagiarismTaskRepository,
-                           LocalPlagiarismService localPlagiarismService,
-                           PlagiarismTaskWriter plagiarismTaskWriter,
                            ScoreRecordRepository scoreRecordRepository,
                            ScoreRecordWriter scoreRecordWriter,
                            AuditLogService auditLogService,
@@ -114,9 +103,6 @@ public class HomeworkAnswerService {
         this.classAccessService = classAccessService;
         this.classMemberRepository = classMemberRepository;
         this.sysUserRepository = sysUserRepository;
-        this.plagiarismTaskRepository = plagiarismTaskRepository;
-        this.localPlagiarismService = localPlagiarismService;
-        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.scoreRecordRepository = scoreRecordRepository;
         this.scoreRecordWriter = scoreRecordWriter;
         this.auditLogService = auditLogService;
@@ -173,8 +159,7 @@ public class HomeworkAnswerService {
             }
             return Map.of(
                     "submissionId", submission.getId(),
-                    "status", submission.getSubmitStatus().name(),
-                    "plagiarismRate", Objects.requireNonNullElse(submission.getPlagiarismRate(), 0D)
+                    "status", submission.getSubmitStatus().name()
             );
         }
         submission.setHomeworkId(homeworkId);
@@ -190,19 +175,10 @@ public class HomeworkAnswerService {
         }
         // 全客观题作业在提交阶段即完成结案：含主观题或存在未评分答案时保持/置回 SUBMITTED
         support.refreshSubmissionGradeState(saved, currentUser.schoolId());
-        LocalPlagiarismService.PlagiarismAnalysisResult plagiarismResult = localPlagiarismService.analyze(
-                plagiarismSourceText(saved, request),
-                buildHomeworkCandidates(saved.getHomeworkId(), saved.getId(), currentUser.schoolId())
-        );
-        saved.setPlagiarismRate(plagiarismResult.similarityRate());
-        homeworkSubmissionRepository.save(saved);
-        plagiarismTaskWriter.write(BusinessType.HOMEWORK, saved.getId(), saved.getStudentId(),
-                plagiarismResult.similarityRate(), plagiarismResult.topMatchSummary(), plagiarismResult.rawResultJson(), homework.getSchoolId());
 
         return Map.of(
                 "submissionId", saved.getId(),
-                "status", saved.getSubmitStatus().name(),
-                "plagiarismRate", saved.getPlagiarismRate()
+                "status", saved.getSubmitStatus().name()
         );
     }
 
@@ -253,7 +229,7 @@ public class HomeworkAnswerService {
         submission.setSubmitStatus(SubmissionStatus.SAVED);
         submission.setAnswerText(support.defaultString(request.answerText()));
         submission.setAnswerFilePath(support.blankToNull(request.resolvedAttachmentPath()));
-        // 草稿阶段的提交级评分字段一律清空；plagiarismRate 保留原值（草稿不触发查重）。
+        // 草稿阶段的提交级评分字段一律清空。
         submission.setTotalScore(null);
         submission.setTeacherComment(null);
         submission.setGradedAt(null);
@@ -362,15 +338,6 @@ public class HomeworkAnswerService {
 
 
 
-    private String plagiarismSourceText(HomeworkSubmission submission, HomeworkRequests.SubmitHomeworkRequest request) {
-        if (!request.questionBased()) {
-            return support.defaultString(request.answerText());
-        }
-        return submissionCandidateText(submission);
-    }
-
-
-
     private String resolveAnswerJson(HomeworkRequests.SubmitHomeworkAnswerItem item) {
         if (item.answerJson() != null && !item.answerJson().isBlank()) {
             return item.answerJson();
@@ -399,44 +366,5 @@ public class HomeworkAnswerService {
     }
 
 
-
-    /**
-     * 构造作业查重候选集：只与同一作业下的已提交/已批改提交比对，避免跨作业误判。
-     *
-     * @param homeworkId          作业 id
-     * @param currentSubmissionId 当前提交 id（从候选集中排除）
-     * @return 候选文本集合
-     */
-    private List<LocalPlagiarismService.CandidateText> buildHomeworkCandidates(Long homeworkId, Long currentSubmissionId, Long schoolId) {
-        return homeworkSubmissionRepository
-                .findByHomeworkIdAndSubmitStatusIn(homeworkId, List.of(SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED))
-                .stream()
-                .filter(candidate -> !Objects.equals(candidate.getId(), currentSubmissionId))
-                .map(candidate -> Map.entry(candidate, submissionCandidateText(candidate)))
-                .filter(entry -> entry.getValue() != null && !entry.getValue().isBlank())
-                .map(entry -> new LocalPlagiarismService.CandidateText(resolveHomeworkReference(entry.getKey().getHomeworkId(), schoolId), entry.getValue()))
-                .toList();
-    }
-
-
-
-    private String submissionCandidateText(HomeworkSubmission submission) {
-        List<HomeworkAnswer> answers = homeworkAnswerRepository.findByHomeworkSubmissionId(submission.getId());
-        if (!answers.isEmpty()) {
-            return answers.stream()
-                    .map(answer -> answer.getAnswerText() == null || answer.getAnswerText().isBlank() ? answer.getAnswerJson() : answer.getAnswerText())
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.joining("\n"));
-        }
-        return support.defaultString(submission.getAnswerText());
-    }
-
-
-
-    private String resolveHomeworkReference(Long homeworkId, Long schoolId) {
-        return homeworkRepository.findByIdAndSchoolId(homeworkId, schoolId)
-                .map(homework -> homework.getTitle() + "#" + homework.getId())
-                .orElse("homework#" + homeworkId);
-    }
 
 }

@@ -40,8 +40,6 @@ import com.opencode.teachingplatform.lab.repository.LabStepRepository;
 import com.opencode.teachingplatform.lab.repository.LabSubmissionRepository;
 import com.opencode.teachingplatform.material.entity.CourseMaterial;
 import com.opencode.teachingplatform.material.repository.CourseMaterialRepository;
-import com.opencode.teachingplatform.plagiarism.service.LocalPlagiarismService;
-import com.opencode.teachingplatform.plagiarism.service.PlagiarismTaskWriter;
 import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
@@ -106,8 +104,6 @@ public class LabReportService {
     private final BehaviorEventRepository behaviorEventRepository;
     private final Path storageRoot;
     private final LabSubmissionClaimService labSubmissionClaimService;
-    private final LocalPlagiarismService localPlagiarismService;
-    private final PlagiarismTaskWriter plagiarismTaskWriter;
     private static final String LAB_PUBLISH_WITHOUT_ITEMS_MESSAGE = "实验尚未配置题项，无法发布";
     private static final String LAB_NOT_STARTED_MESSAGE = "实验尚未开始";
     private static final String LAB_DEADLINE_PASSED_MESSAGE = "实验已截止，不能保存/提交";
@@ -136,8 +132,6 @@ public class LabReportService {
                       LabSubmissionMetricsRepository labSubmissionMetricsRepository,
                       BehaviorEventRepository behaviorEventRepository,
                       LabSubmissionClaimService labSubmissionClaimService,
-                      LocalPlagiarismService localPlagiarismService,
-                      PlagiarismTaskWriter plagiarismTaskWriter,
                       @Value("${app.file-storage-root}") String storageRoot,
                       LabServiceSupport support) {
         this.labRepository = labRepository;
@@ -160,8 +154,6 @@ public class LabReportService {
         this.labSubmissionMetricsRepository = labSubmissionMetricsRepository;
         this.behaviorEventRepository = behaviorEventRepository;
         this.labSubmissionClaimService = labSubmissionClaimService;
-        this.localPlagiarismService = localPlagiarismService;
-        this.plagiarismTaskWriter = plagiarismTaskWriter;
         this.storageRoot = Path.of(storageRoot).toAbsolutePath().normalize();
         this.support = support;
     }
@@ -389,10 +381,8 @@ public class LabReportService {
         detail.put("teacherComment", submission.getTeacherComment());
         detail.put("submittedAt", submission.getSubmittedAt());
         detail.put("gradedAt", submission.getGradedAt());
-        // 查重率统一读取提交行上的真实结果（草稿未提交为 0）
-        detail.put("plagiarismRate", submission.getPlagiarismRate());
         detail.put("items", steps.stream()
-                .map(step -> toTeacherReportItem(step, answers, submission.getPlagiarismRate()))
+                .map(step -> toTeacherReportItem(step, answers))
                 .toList());
         return detail;
     }
@@ -994,7 +984,7 @@ public class LabReportService {
 
 
 
-    private Map<String, Object> toTeacherReportItem(LabStep step, List<LabStepAnswer> answers, Double plagiarismRate) {
+    private Map<String, Object> toTeacherReportItem(LabStep step, List<LabStepAnswer> answers) {
         LabStepAnswer answer = answers.stream().filter(item -> Objects.equals(item.getLabStepId(), step.getId())).findFirst().orElse(null);
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("stepId", step.getId());
@@ -1013,7 +1003,6 @@ public class LabReportService {
         item.put("suggestedScore", answer == null ? null : answer.getSuggestedScore());
         item.put("scoreSource", answer == null ? null : answer.getScoreSource());
         item.put("autoJudgeDetail", answer == null ? null : answer.getAutoJudgeDetail());
-        item.put("plagiarismRate", plagiarismRate);
         item.put("teacherComment", answer == null ? null : answer.getTeacherComment());
         return item;
     }

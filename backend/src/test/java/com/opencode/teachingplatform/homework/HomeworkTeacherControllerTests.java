@@ -146,9 +146,7 @@ class HomeworkTeacherControllerTests {
                 "className", "SE2026-1",
                 "studentUsername", "20260001",
                 "studentNo", "20260001",
-                "submitStatus", "SUBMITTED",
-                "plagiarismRate", 66.67,
-                "topMatchSummary", "最高相似来源: 历史作业#1 (66.67%)"
+                "submitStatus", "SUBMITTED"
         ));
 
         SecurityContextHolder.getContext().setAuthentication(authenticateTeacher());
@@ -160,9 +158,7 @@ class HomeworkTeacherControllerTests {
                     .andExpect(jsonPath("$.data.className").value("SE2026-1"))
                     .andExpect(jsonPath("$.data.studentUsername").value("20260001"))
                     .andExpect(jsonPath("$.data.studentNo").value("20260001"))
-                    .andExpect(jsonPath("$.data.submitStatus").value("SUBMITTED"))
-                    .andExpect(jsonPath("$.data.plagiarismRate").value(66.67))
-                    .andExpect(jsonPath("$.data.topMatchSummary").value("最高相似来源: 历史作业#1 (66.67%)"));
+                    .andExpect(jsonPath("$.data.submitStatus").value("SUBMITTED"));
         } finally {
             SecurityContextHolder.clearContext();
         }
