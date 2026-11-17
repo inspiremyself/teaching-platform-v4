@@ -3,7 +3,7 @@
     <section class="overview-header">
       <button type="button" class="overview-back" @click="router.back()">
         <span class="material-symbols-outlined">arrow_back</span>
-        <span>返回批改队列</span>
+        <span>返回实验台账</span>
       </button>
       <div class="overview-header__top">
         <div>
@@ -33,6 +33,7 @@
                   </button>
                 </th>
                 <th class="overview-matrix__status-head">提交状态</th>
+                <th class="overview-matrix__action-head">批改操作</th>
                 <th class="overview-matrix__behavior-head">时长</th>
                 <th class="overview-matrix__behavior-head">粘贴</th>
                 <th class="overview-matrix__behavior-head">风险</th>
@@ -67,6 +68,13 @@
                     {{ statusLabel(student.submitStatus) }}
                   </el-tag>
                   <span v-else class="overview-matrix__muted">未提交</span>
+                </td>
+                <td class="overview-matrix__action">
+                  <div class="overview-actions">
+                    <el-button v-if="student.submissionId != null" type="primary" plain size="small" @click="goReportDetail(student.submissionId!)">批改报告</el-button>
+                    <el-button v-if="student.submissionId != null" plain size="small" @click="openReportView(student)">实验报告</el-button>
+                    <span v-if="student.submissionId == null" class="overview-matrix__muted">未提交</span>
+                  </div>
                 </td>
                 <td class="overview-matrix__behavior">
                   <template v-if="student.behavior">
@@ -104,7 +112,7 @@ import { SUBMISSION_STATUS } from '@/types/enums';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getTeacherLabSubmissionOverview } from '@/api/labs';
-import type { LabReportStatus, LabSubmissionOverview } from '@/types/lab';
+import type { LabReportStatus, LabSubmissionOverview, LabSubmissionOverviewStudent } from '@/types/lab';
 import {
   formatActiveDuration,
   formatTotalDuration,
@@ -143,6 +151,19 @@ const goStudentSubmissions = (studentId: number, studentName?: string, studentNo
 
 const goItemWall = (itemId: number) => {
   router.push({ name: 'teacher-lab-item-answers', params: { labId: labId(), itemId } });
+};
+
+const goReportDetail = (submissionId: number) => {
+  router.push('/teacher/lab-reports/' + submissionId);
+};
+
+const openReportView = (student: LabSubmissionOverviewStudent) => {
+  if (student.submissionId == null) return;
+  const href = router.resolve({
+    name: 'teacher-lab-report-view',
+    params: { labId: labId(), studentId: student.studentId },
+  }).href;
+  window.open(href, '_blank', 'noopener,noreferrer');
 };
 
 const statusLabel = (status?: LabReportStatus | null) => {
@@ -296,6 +317,23 @@ onMounted(() => {
 
 .overview-matrix__status {
   min-width: 110px;
+}
+
+.overview-matrix__action-head,
+.overview-matrix__action {
+  min-width: 150px;
+  background: #fdfefe;
+}
+
+.overview-matrix__action-head {
+  background: #f8fafc;
+}
+
+.overview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 .overview-matrix__behavior-head,

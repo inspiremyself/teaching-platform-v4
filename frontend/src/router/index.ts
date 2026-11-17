@@ -38,7 +38,6 @@ const router = createRouter({
         { path: 'labs/:labId/items/:itemId/answers', name: 'teacher-lab-item-answers', component: () => import('@/views/teacher/LabItemAnswersWall.vue'), meta: { title: '子题答案墙' } },
         { path: 'labs/:id/blank-regrade/batch', name: 'teacher-lab-blank-regrade-batch', component: () => import('@/views/teacher/LabBlankRegradeBatch.vue') },
         { path: 'labs/:id/blank-regrade', name: 'teacher-lab-blank-regrade', component: () => import('@/views/teacher/LabBlankRegrade.vue') },
-        { path: 'lab-reports', name: 'teacher-lab-reports', component: () => import('@/views/teacher/LabReports.vue') },
         { path: 'lab-reports/:id/batch-grade', name: 'teacher-lab-report-batch-grade', component: () => import('@/views/teacher/LabReportBatchGrade.vue') },
         { path: 'lab-reports/:id', name: 'teacher-lab-report-detail', component: () => import('@/views/teacher/LabReportDetail.vue') },
         { path: 'homeworks', name: 'teacher-homeworks', component: () => import('@/views/teacher/Homeworks.vue') },

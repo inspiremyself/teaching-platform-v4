@@ -23,7 +23,6 @@ export const SIDEBAR_NAV: Record<AppRole, NavItem[]> = {
     { to: '/teacher/materials', label: '教学资料', icon: 'folder' },
     { to: '/teacher/questions', label: '题库', icon: 'database' },
     { to: '/teacher/labs', label: '实验', icon: 'science' },
-    { to: '/teacher/lab-reports', label: '实验报告', icon: 'history_edu' },
     { to: '/teacher/homeworks', label: '作业', icon: 'assignment' },
     { to: '/teacher/exams', label: '考试', icon: 'quiz' },
     { to: '/teacher/analysis', label: '分析报表', icon: 'analytics' },

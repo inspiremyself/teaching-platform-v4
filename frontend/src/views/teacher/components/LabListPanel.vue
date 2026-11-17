@@ -8,7 +8,6 @@
           <p>按班级维护实验、题项与发布状态。</p>
         </div>
         <div class="labs-header__actions">
-          <el-button @click="goReports()">查看报告队列</el-button>
           <el-button type="primary" @click="openCreateDialog">新建实验</el-button>
         </div>
       </div>
@@ -151,6 +150,7 @@
             <div class="lab-row__actions">
               <div class="lab-row__actions-grid">
                 <el-button type="primary" plain @click="goSteps(row.id)">步骤配置</el-button>
+                <el-button plain @click="goResult(row.id)">查看结果</el-button>
                 <el-button plain @click="goBlankRegrade(row.id)">批量重判</el-button>
                 <el-button @click="openEditDialog(row)">编辑</el-button>
                 <el-button class="lab-row__toggle-action" :type="row.status === ACTIVITY_STATUS.PUBLISHED ? 'warning' : 'success'" plain @click="toggleStatus(row)">
@@ -320,7 +320,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { LabsKey } from '@/composables/useLabs';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, subjectOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goReports, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel } = inject(LabsKey)!;
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, subjectOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel } = inject(LabsKey)!;
 </script>
 
 <style scoped>

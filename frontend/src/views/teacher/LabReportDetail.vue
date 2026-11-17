@@ -17,8 +17,9 @@
           <el-button plain :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</el-button>
           <el-button plain :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</el-button>
           <el-button plain :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</el-button>
+          <el-button plain :disabled="!canReturn" :loading="returning" @click="handleReturn">打回</el-button>
           <el-button plain @click="goBatchGrade">批量快捷批改</el-button>
-          <el-button @click="router.back()">返回批改队列</el-button>
+          <el-button @click="router.back()">返回</el-button>
         </div>
       </div>
     </div>
@@ -203,8 +204,8 @@
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue } from '@/api/labs';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue, returnTeacherLabReport } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
@@ -439,6 +440,35 @@ const scrollToQueryAnswer = async () => {
   }
   await nextTick();
   scrollToAnswer(answerId);
+};
+
+const returning = ref(false);
+
+const canReturn = computed(() =>
+  detail.value?.submitStatus === SUBMISSION_STATUS.SUBMITTED
+  || detail.value?.submitStatus === SUBMISSION_STATUS.GRADED
+);
+
+const returnConfirmMessage = () =>
+  detail.value?.submitStatus === SUBMISSION_STATUS.GRADED
+    ? '该报告已批改，打回后成绩将清除，学生可重新编辑提交，是否继续？'
+    : '打回后学生可修改作答并重新提交，是否继续？';
+
+const handleReturn = async () => {
+  if (returning.value || !canReturn.value) return;
+  try {
+    await ElMessageBox.confirm(returnConfirmMessage(), '打回确认', { type: 'warning' });
+  } catch {
+    return;
+  }
+  returning.value = true;
+  try {
+    await returnTeacherLabReport(reportId.value);
+    ElMessage.success('已打回，学生可重新编辑提交');
+    await fetchData();
+  } finally {
+    returning.value = false;
+  }
 };
 
 const goBatchGrade = () => {

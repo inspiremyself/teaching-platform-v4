@@ -318,16 +318,8 @@ const goSteps = (labId: number) => {
   router.push(`/teacher/labs/${labId}/steps`);
 };
 
-const goReports = (row?: LabItem) => {
-  router.push({
-    path: '/teacher/lab-reports',
-    query: row
-      ? {
-          labId: String(row.id),
-          keyword: row.title,
-        }
-      : undefined,
-  });
+const goResult = (labId: number) => {
+  router.push({ name: 'teacher-lab-submission-overview', params: { labId } });
 };
 
 const goBlankRegrade = (labId: number) => {
@@ -383,7 +375,7 @@ onMounted(async () => {
   await fetchData();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goReports, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel, subjectOptions, fetchSubjects };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel, subjectOptions, fetchSubjects };
 }
 
 export type LabsState = ReturnType<typeof useLabs>;

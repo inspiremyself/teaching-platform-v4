@@ -14,7 +14,6 @@ import type {
   LabReportBehaviorDetail,
   LabReportDetail,
   LabReportItem,
-  LabReportQuery,
   LabSubmissionOverview,
   ReturnLabReportResult,
   StudentLabSubmissionItem,
@@ -30,11 +29,9 @@ import type {
   SubmitLabResult,
   TeacherLabBlankAnswerDistribution,
   TeacherLabBlankItem,
-  TeacherLabReportStats,
   UpdateLabPayload,
   UpdateLabStepPayload,
 } from '@/types/lab';
-import type { PagedResult } from '@/types/common';
 import type { CopyQuestionToBankRequest, CopyQuestionToBankResult } from '@/types/homework';
 import { behaviorEventsPath } from '@/api/endpoints';
 
@@ -75,17 +72,8 @@ export const deleteTeacherLabStep = (stepId: number | string) =>
 export const copyLabStepToBank = (stepId: number | string, data: CopyQuestionToBankRequest) =>
   request.post<CopyQuestionToBankResult>(`/teacher/lab-steps/${stepId}/copy-to-bank`, data);
 
-/** 教师端实验报告队列（分页 + 筛选），供队列页使用 */
-export const listTeacherLabReports = async (params?: LabReportQuery) => {
-  const result = await request.get<PagedResult<LabReportItem>>('/teacher/lab-reports', { params });
-  return { list: result.items, total: result.total };
-};
-
 /** 教师端实验报告导航队列（全量、无分页），供详情页 / 批量批改页构建上一份下一份队列 */
 export const listTeacherLabReportQueue = () => request.get<LabReportItem[]>('/teacher/lab-reports/queue');
-
-/** 教师端实验报告全局统计（全量口径，不受筛选影响） */
-export const getTeacherLabReportStats = () => request.get<TeacherLabReportStats>('/teacher/lab-reports/stats');
 
 export const getTeacherLabReportDetail = (reportId: number | string) =>
   request.get<LabReportDetail>(`/teacher/lab-reports/${reportId}`);

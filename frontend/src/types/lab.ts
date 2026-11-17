@@ -474,23 +474,6 @@ export interface ConfirmLabStepScorePayload {
   acceptSuggested?: boolean;
 }
 
-export interface LabReportQuery {
-  keyword?: string;
-  status?: string;
-  labId?: number;
-  /** 行为风险等级筛选（D10）：NONE = metrics 缺失或含 NO_BEHAVIOR_DATA */
-  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'NONE';
-  page?: number;
-  pageSize?: number;
-}
-
-/** 教师端实验报告全局统计（全量口径，不受列表筛选影响） */
-export interface TeacherLabReportStats {
-  total: number;
-  submitted: number;
-  graded: number;
-}
-
 export interface LabSubmissionOverviewItem {
   stepId: number;
   stepNo: number;
