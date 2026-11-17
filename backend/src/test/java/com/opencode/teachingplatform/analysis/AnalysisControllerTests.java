@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -42,9 +43,18 @@ class AnalysisControllerTests {
     @Autowired
     private UserLoginSessionRepository userLoginSessionRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+        jdbcTemplate.update("DELETE FROM exam_submission WHERE id = ?", 930201L);
+        jdbcTemplate.update("DELETE FROM exam WHERE id = ?", 930101L);
+        jdbcTemplate.update("DELETE FROM class_member WHERE class_id = ?", 930001L);
+        jdbcTemplate.update("DELETE FROM class_teacher WHERE class_id = ?", 930001L);
+        jdbcTemplate.update("DELETE FROM class_room WHERE id = ?", 930001L);
+        jdbcTemplate.update("DELETE FROM sys_user WHERE id IN (?, ?)", 930011L, 930012L);
     }
 
     @Test
@@ -118,7 +128,8 @@ class AnalysisControllerTests {
                 .andExpect(jsonPath("$.message").value("OK"))
                 .andExpect(jsonPath("$.timestamp").exists())
                 .andExpect(jsonPath("$.data.summaryCards").isArray())
-                .andExpect(jsonPath("$.data.summaryCards.length()").value(4))
+                .andExpect(jsonPath("$.data.summaryCards.length()").value(5))
+                .andExpect(jsonPath("$.data.summaryCards[4].key").value("notStartedCount"))
                 .andExpect(jsonPath("$.data.summaryCards[0].key").value("activityCount"))
                 .andExpect(jsonPath("$.data.summaryCards[0].title").value("教学活动总数"))
                 .andExpect(jsonPath("$.data.summaryCards[0].value").isNumber())
@@ -218,6 +229,58 @@ class AnalysisControllerTests {
                         .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师"))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(40300));
+    }
+
+    @Test
+    void teacherParticipationReturnsDetail() throws Exception {
+        seedParticipationFixture();
+
+        mockMvc.perform(get("/api/v1/analysis/teacher/participation/EXAM/{id}", 930101L)
+                        .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.businessType").value("EXAM"))
+                .andExpect(jsonPath("$.data.businessId").value(930101))
+                .andExpect(jsonPath("$.data.students").isArray())
+                .andExpect(jsonPath("$.data.students.length()").value(2));
+    }
+
+    @Test
+    void studentCannotAccessParticipation() throws Exception {
+        seedParticipationFixture();
+
+        mockMvc.perform(get("/api/v1/analysis/teacher/participation/EXAM/{id}", 930101L)
+                        .header("Authorization", bearerToken(studentUser(2L, "20260001", "演示学生"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(40300));
+    }
+
+    @Test
+    void participationRejectsInvalidBusinessType() throws Exception {
+        mockMvc.perform(get("/api/v1/analysis/teacher/participation/UNKNOWN/{id}", 930101L)
+                        .header("Authorization", bearerToken(teacherUser(1L, "t9001", "演示教师"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40000));
+    }
+
+    private void seedParticipationFixture() {
+        jdbcTemplate.update("INSERT INTO class_room (id, name, code, school_id, status) "
+                + "VALUES (930001, '名单端点测试班', 'PART-CONTROLLER-930001', 1, 'ACTIVE')");
+        jdbcTemplate.update("INSERT INTO class_teacher (class_id, teacher_user_id, role, assigned_at) "
+                + "VALUES (930001, 1, 'SUBJECT', CURRENT_TIMESTAMP)");
+        jdbcTemplate.update("INSERT INTO sys_user (id, username, password_hash, display_name, role, status, school_id) "
+                + "VALUES (930011, 'controllerPartA', '{noop}test', '名单学生A', 'STUDENT', 'ACTIVE', 1)");
+        jdbcTemplate.update("INSERT INTO sys_user (id, username, password_hash, display_name, role, status, school_id) "
+                + "VALUES (930012, 'controllerPartB', '{noop}test', '名单学生B', 'STUDENT', 'ACTIVE', 1)");
+        jdbcTemplate.update("INSERT INTO class_member (id, class_id, student_user_id, joined_at) VALUES "
+                + "(930011, 930001, 930011, CURRENT_TIMESTAMP)");
+        jdbcTemplate.update("INSERT INTO class_member (id, class_id, student_user_id, joined_at) VALUES "
+                + "(930012, 930001, 930012, CURRENT_TIMESTAMP)");
+        jdbcTemplate.update("INSERT INTO exam (id, title, class_id, duration_minutes, status, created_by, "
+                + "score_visibility_mode, score_released, school_id) "
+                + "VALUES (930101, '名单端点考试', 930001, 60, 'PUBLISHED', 1, 'IMMEDIATE', FALSE, 1)");
+        jdbcTemplate.update("INSERT INTO exam_submission (id, exam_id, student_id, status) "
+                + "VALUES (930201, 930101, 930011, 'SUBMITTED')");
     }
 
     private void ensureGradedExamSubmissionExists() throws Exception {

@@ -1,6 +1,7 @@
 import { getToken } from '@/utils/authToken';
 import { API_BASE_URL } from '@/utils/request';
 import type { LabBehaviorEventItem } from '@/types/lab';
+import type { ParticipationBusinessType } from '@/types/analysis';
 
 const authHeaders = (): Record<string, string> => {
   const token = getToken();
@@ -16,6 +17,11 @@ export const buildLabAnswerImageUrl = (path: string) =>
 /** 相对 baseURL 的路径，供 axios 通道使用 */
 export const behaviorEventsPath = (labId: number | string) =>
   `/student/labs/${labId}/behavior-events`;
+
+export const teacherParticipationPath = (
+  businessType: ParticipationBusinessType,
+  businessId: number,
+) => `/analysis/teacher/participation/${businessType}/${businessId}`;
 
 /** 完整 URL，供 fetch keepalive 通道使用 */
 export const buildBehaviorEventsUrl = (labId: number | string) =>

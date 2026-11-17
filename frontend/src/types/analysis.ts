@@ -32,6 +32,60 @@ export interface AnalysisInsight {
   description: string;
 }
 
+export type ParticipationBusinessType = 'LAB' | 'HOMEWORK' | 'EXAM';
+
+export interface TeacherParticipationActivity {
+  businessId: number;
+  businessTitle: string;
+  expectedCount: number;
+  participatedCount: number;
+  completedCount: number;
+  notStartedCount: number;
+  participationRate: number;
+  completionRate: number;
+}
+
+export interface TeacherParticipationOverviewRow {
+  businessType: ParticipationBusinessType;
+  label: string;
+  activityCount: number;
+  expectedCount: number;
+  participatedCount: number;
+  completedCount: number;
+  notStartedCount: number;
+  participationRate: number;
+  completionRate: number;
+  activities: TeacherParticipationActivity[];
+}
+
+export type TeacherParticipationOverview = TeacherParticipationOverviewRow[];
+
+export interface TeacherParticipationStudent {
+  studentId: number;
+  studentNo: string;
+  studentName: string;
+  participation: 'NOT_STARTED' | 'PARTICIPATED';
+  completion: 'COMPLETED' | 'IN_PROGRESS';
+  submissionId: number | null;
+  submitStatus: string | null;
+  submittedAt: string | null;
+}
+
+export interface TeacherParticipationDetail {
+  businessType: ParticipationBusinessType;
+  businessId: number;
+  businessTitle: string;
+  classId: number;
+  className: string;
+  expectedCount: number;
+  participatedCount: number;
+  completedCount: number;
+  notStartedCount: number;
+  participationRate: number;
+  completionRate: number;
+  students: TeacherParticipationStudent[];
+}
+
 export interface TeacherAnalysisOverview {
   summaryCards: AnalysisSummaryCard[];
   trend: TeacherTrendItem[];
@@ -50,6 +104,7 @@ export interface TeacherAnalysisOverview {
   sectionComparison: TeacherComparisonItem[];
   businessBreakdown: TeacherBusinessBreakdownItem[];
   insights: AnalysisInsight[];
+  participationOverview: TeacherParticipationOverview;
 }
 
 export interface TeacherDashboardData {

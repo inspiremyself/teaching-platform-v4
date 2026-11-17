@@ -151,6 +151,8 @@
               </div>
               <el-empty v-else description="暂无班级对比数据" />
             </el-card>
+
+            <ParticipationPanel v-if="participationOverview.length" :overview="participationOverview" />
           </section>
 
           <aside class="analysis-side">
@@ -197,6 +199,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { DataLine, List, Opportunity, Warning } from '@element-plus/icons-vue';
 import { getAnalysis } from '@/api/teacher';
+import ParticipationPanel from '@/views/teacher/components/ParticipationPanel.vue';
 import type { AnalysisInsight, AnalysisSummaryCard, TeacherAnalysisOverview, TeacherBusinessBreakdownItem, TeacherComparisonItem, TeacherTrendItem } from '@/types/analysis';
 
 const loading = ref(false);
@@ -210,6 +213,7 @@ const trend = computed<TeacherTrendItem[]>(() => analysis.value?.trend ?? []);
 const sectionComparison = computed<TeacherComparisonItem[]>(() => analysis.value?.sectionComparison ?? []);
 const businessBreakdown = computed<TeacherBusinessBreakdownItem[]>(() => analysis.value?.businessBreakdown ?? []);
 const insights = computed<AnalysisInsight[]>(() => analysis.value?.insights ?? []);
+const participationOverview = computed(() => analysis.value?.participationOverview ?? []);
 const maxTrendCount = computed(() => Math.max(...trend.value.map(item => item.scoreCount), 1));
 const maxTrendScore = computed(() => Math.max(...trend.value.map(item => item.avgScore), 0));
 const trendChartPoints = computed(() => {

@@ -6,6 +6,7 @@ import com.opencode.teachingplatform.auth.security.SecurityUtils;
 import com.opencode.teachingplatform.common.api.ApiResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,6 +32,13 @@ public class AnalysisController {
     public ApiResponse<?> teacherOverview() {
         CurrentUser currentUser = SecurityUtils.currentUser();
         return ApiResponse.ok(analysisService.getTeacherOverview(currentUser));
+    }
+
+    @GetMapping("/teacher/participation/{businessType}/{businessId}")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<?> teacherParticipation(@PathVariable String businessType, @PathVariable Long businessId) {
+        CurrentUser currentUser = SecurityUtils.currentUser();
+        return ApiResponse.ok(analysisService.getTeacherParticipation(currentUser, businessType, businessId));
     }
 
     @GetMapping("/my-scores")

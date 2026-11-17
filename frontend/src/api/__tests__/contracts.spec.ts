@@ -50,6 +50,7 @@ import {
   unpublishCourseware,
   updatePlatformSubject,
 } from '@/api/platformContent';
+import { getTeacherParticipation } from '@/api/teacher';
 import {
   createCoursewareAssignment,
   getTeacherCoursewareVisibility,
@@ -71,6 +72,11 @@ describe('api 端点契约', () => {
     calls.urls.length = 0;
     calls.bodies.length = 0;
     calls.getResponse = {};
+  });
+
+  it('教师参与名单端点路径', async () => {
+    await getTeacherParticipation('LAB', 910001);
+    expect(calls.urls).toEqual(['/analysis/teacher/participation/LAB/910001']);
   });
 
   it('考试端点路径', async () => {

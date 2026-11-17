@@ -1,5 +1,11 @@
 import request from '@/utils/request';
-import type { TeacherAnalysisOverview, TeacherDashboardData } from '@/types/analysis';
+import { teacherParticipationPath } from '@/api/endpoints';
+import type {
+  ParticipationBusinessType,
+  TeacherAnalysisOverview,
+  TeacherDashboardData,
+  TeacherParticipationDetail,
+} from '@/types/analysis';
 
 export interface PlagiarismTask {
   id: number;
@@ -35,6 +41,10 @@ export interface ReviewPlagiarismPayload {
 
 export const getAnalysis = () => request.get<TeacherAnalysisOverview>('/analysis/teacher-overview');
 export const getTeacherDashboard = () => request.get<TeacherDashboardData>('/analysis/dashboard');
+export const getTeacherParticipation = (
+  businessType: ParticipationBusinessType,
+  businessId: number,
+) => request.get<TeacherParticipationDetail>(teacherParticipationPath(businessType, businessId));
 export const getPlagiarism = () => request.get<PlagiarismTask[]>('/plagiarism/tasks');
 export const getPlagiarismDetail = (id: string | number) =>
   request.get<PlagiarismTask>(`/plagiarism/tasks/${id}`);

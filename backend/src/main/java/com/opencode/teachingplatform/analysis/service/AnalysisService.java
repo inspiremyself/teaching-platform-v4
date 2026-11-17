@@ -2,7 +2,15 @@ package com.opencode.teachingplatform.analysis.service;
 
 import com.opencode.teachingplatform.analysis.service.StudentScoreVisibilityResolver.VisibleScore;
 import com.opencode.teachingplatform.auth.security.CurrentUser;
+import com.opencode.teachingplatform.clazz.service.ClassAccessService;
+import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.exam.entity.Exam;
+import com.opencode.teachingplatform.exam.repository.ExamRepository;
 import com.opencode.teachingplatform.grading.BusinessType;
+import com.opencode.teachingplatform.homework.entity.Homework;
+import com.opencode.teachingplatform.homework.repository.HomeworkRepository;
+import com.opencode.teachingplatform.lab.entity.Lab;
+import com.opencode.teachingplatform.lab.repository.LabRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -23,13 +32,31 @@ public class AnalysisService {
 
     private final JdbcTemplate jdbcTemplate;
     private final StudentScoreVisibilityResolver visibilityResolver;
+    private final LabRepository labRepository;
+    private final HomeworkRepository homeworkRepository;
+    private final ExamRepository examRepository;
+    private final ClassAccessService classAccessService;
 
-    public AnalysisService(JdbcTemplate jdbcTemplate, StudentScoreVisibilityResolver visibilityResolver) {
+    public AnalysisService(JdbcTemplate jdbcTemplate,
+                           StudentScoreVisibilityResolver visibilityResolver,
+                           LabRepository labRepository,
+                           HomeworkRepository homeworkRepository,
+                           ExamRepository examRepository,
+                           ClassAccessService classAccessService) {
         this.jdbcTemplate = jdbcTemplate;
         this.visibilityResolver = visibilityResolver;
+        this.labRepository = labRepository;
+        this.homeworkRepository = homeworkRepository;
+        this.examRepository = examRepository;
+        this.classAccessService = classAccessService;
     }
 
     public Map<String, Object> getDashboard(CurrentUser teacher) {
+        List<ParticipationSnapshot> snapshots = buildParticipationRows(teacher.id(), teacher.schoolId());
+        return buildDashboard(teacher, snapshots);
+    }
+
+    private Map<String, Object> buildDashboard(CurrentUser teacher, List<ParticipationSnapshot> snapshots) {
         Long teacherId = teacher.id();
 
         // activityCount: labs + homeworks + exams created by this teacher
@@ -69,12 +96,17 @@ public class AnalysisService {
                         "AND pt.school_id = ? AND h.school_id = ?",
                 teacherId, teacher.schoolId(), teacher.schoolId());
 
-        List<Map<String, Object>> summaryCards = List.of(
+        List<Map<String, Object>> summaryCards = new ArrayList<>(List.of(
                 summaryCard("activityCount", "教学活动总数", activityCount, "实验、作业与考试总量"),
                 summaryCard("pendingGradeCount", "待批改任务", pendingGradeCount, "需要教师处理的提交"),
                 summaryCard("averageScore", "平均成绩", averageScore, "当前教师班级平均分"),
                 summaryCard("highRiskPlagiarismCount", "高风险查重", highRiskPlagiarismCount, "我布置的作业中相似度超过 50% 的记录")
-        );
+        ));
+        int totalNotStarted = snapshots.stream()
+                .mapToInt(snapshot -> snapshot.expectedCount - snapshot.participatedCount)
+                .sum();
+        summaryCards.add(summaryCard("notStartedCount", "未开始人次", totalNotStarted,
+                "我创建活动中尚无提交行的学生人次"));
 
         // trend: last 7 days — group in Java so H2 (UT/path-b-h2) and MySQL (path-b) both work
         List<Map<String, Object>> trend = loadScoreTrendLast7Days(teacher.id(), teacher.schoolId());
@@ -92,7 +124,8 @@ public class AnalysisService {
     }
 
     public Map<String, Object> getTeacherOverview(CurrentUser teacher) {
-        Map<String, Object> dashboard = getDashboard(teacher);
+        List<ParticipationSnapshot> snapshots = buildParticipationRows(teacher.id(), teacher.schoolId());
+        Map<String, Object> dashboard = buildDashboard(teacher, snapshots);
 
         List<Map<String, Object>> sectionComparison = jdbcTemplate.query(
                 "SELECT cr.name AS class_name, ROUND(AVG(sr.score), 1) AS avg_score, COUNT(sr.id) AS graded_count " +
@@ -148,10 +181,19 @@ public class AnalysisService {
             insights.add(insight("warning", "重点关注项", weakest.get("label") + " 平均分相对偏低，建议优先复盘。"));
         }
 
+        List<Map<String, Object>> participationOverview = new ArrayList<>();
+        for (String businessType : List.of("LAB", "HOMEWORK", "EXAM")) {
+            List<ParticipationSnapshot> typeSnapshots = snapshots.stream()
+                    .filter(snapshot -> businessType.equals(snapshot.businessType))
+                    .toList();
+            participationOverview.add(toParticipationOverviewRow(businessType, typeSnapshots));
+        }
+
         Map<String, Object> result = new LinkedHashMap<>(dashboard);
         result.put("sectionComparison", sectionComparison);
         result.put("businessBreakdown", businessBreakdown);
         result.put("insights", insights);
+        result.put("participationOverview", participationOverview);
         return result;
     }
 
@@ -387,6 +429,272 @@ public class AnalysisService {
                         "WHERE cm.student_user_id = ? AND ex.status IN ('PUBLISHED','CLOSED') AND ex.school_id = ?",
                 String.class, studentId, schoolId));
         return keys;
+    }
+
+    private static final class ParticipationSnapshot {
+        final String businessType;
+        final Long businessId;
+        final String businessTitle;
+        final OffsetDateTime createdAt;
+        final Set<Long> studentIds = new HashSet<>();
+        int expectedCount;
+        int participatedCount;
+        int completedCount;
+
+        ParticipationSnapshot(String businessType, Long businessId, String businessTitle, OffsetDateTime createdAt) {
+            this.businessType = businessType;
+            this.businessId = businessId;
+            this.businessTitle = businessTitle;
+            this.createdAt = createdAt;
+        }
+    }
+
+    private List<ParticipationSnapshot> buildParticipationRows(Long teacherId, Long schoolId) {
+        String sql = "SELECT 'LAB' AS business_type, e.experiment_id AS business_id, e.experiment_name AS business_title, " +
+                "e.class_id, e.created_at, cm.student_user_id, u.username AS student_no, u.display_name AS student_name, " +
+                "es.id AS submission_id, es.submit_status AS submission_status " +
+                "FROM t_experiment e " +
+                "JOIN class_room cr ON cr.id = e.class_id AND cr.school_id = ? " +
+                "LEFT JOIN class_member cm ON cm.class_id = e.class_id " +
+                "LEFT JOIN sys_user u ON u.id = cm.student_user_id " +
+                "LEFT JOIN experiment_submission es ON es.experiment_id = e.experiment_id AND es.student_id = cm.student_user_id " +
+                "WHERE e.created_by = ? AND e.school_id = ? AND e.status IN ('PUBLISHED','CLOSED') " +
+                "UNION ALL " +
+                "SELECT 'HOMEWORK' AS business_type, h.id AS business_id, h.title AS business_title, " +
+                "h.class_id, h.created_at, cm.student_user_id, u.username AS student_no, u.display_name AS student_name, " +
+                "hs.id AS submission_id, hs.submit_status AS submission_status " +
+                "FROM homework h " +
+                "JOIN class_room cr ON cr.id = h.class_id AND cr.school_id = ? " +
+                "LEFT JOIN class_member cm ON cm.class_id = h.class_id " +
+                "LEFT JOIN sys_user u ON u.id = cm.student_user_id " +
+                "LEFT JOIN homework_submission hs ON hs.homework_id = h.id AND hs.student_id = cm.student_user_id " +
+                "WHERE h.created_by = ? AND h.school_id = ? AND h.status IN ('PUBLISHED','CLOSED') " +
+                "UNION ALL " +
+                "SELECT 'EXAM' AS business_type, ex.id AS business_id, ex.title AS business_title, " +
+                "ex.class_id, ex.created_at, cm.student_user_id, u.username AS student_no, u.display_name AS student_name, " +
+                "exs.id AS submission_id, exs.status AS submission_status " +
+                "FROM exam ex " +
+                "JOIN class_room cr ON cr.id = ex.class_id AND cr.school_id = ? " +
+                "LEFT JOIN class_member cm ON cm.class_id = ex.class_id " +
+                "LEFT JOIN sys_user u ON u.id = cm.student_user_id " +
+                "LEFT JOIN exam_submission exs ON exs.exam_id = ex.id AND exs.student_id = cm.student_user_id " +
+                "WHERE ex.created_by = ? AND ex.school_id = ? AND ex.status IN ('PUBLISHED','CLOSED')";
+        Map<String, ParticipationSnapshot> byKey = new LinkedHashMap<>();
+        jdbcTemplate.query(sql, rs -> {
+            String businessType = rs.getString("business_type");
+            long rawBusinessId = rs.getLong("business_id");
+            if (rs.wasNull()) {
+                return;
+            }
+            Long businessId = rawBusinessId;
+            String businessTitle = rs.getString("business_title");
+            OffsetDateTime createdAt = rs.getObject("created_at", OffsetDateTime.class);
+            String key = businessType + "#" + businessId;
+            ParticipationSnapshot snapshot = byKey.computeIfAbsent(key, ignored -> new ParticipationSnapshot(
+                    businessType, businessId, businessTitle, createdAt));
+            long studentId = rs.getLong("student_user_id");
+            if (rs.wasNull() || !snapshot.studentIds.add(studentId)) {
+                return;
+            }
+            snapshot.expectedCount++;
+            if (rs.getObject("submission_id", Long.class) != null) {
+                snapshot.participatedCount++;
+                if (isCompleted(businessType, rs.getString("submission_status"))) {
+                    snapshot.completedCount++;
+                }
+            }
+        }, schoolId, teacherId, schoolId, schoolId, teacherId, schoolId, schoolId, teacherId, schoolId);
+        return new ArrayList<>(byKey.values());
+    }
+
+    private boolean isCompleted(String businessType, String submissionStatus) {
+        if (submissionStatus == null) {
+            return false;
+        }
+        return switch (businessType) {
+            case "LAB", "HOMEWORK" -> "SUBMITTED".equals(submissionStatus) || "GRADED".equals(submissionStatus);
+            case "EXAM" -> "SUBMITTED".equals(submissionStatus)
+                    || "AUTO_SUBMITTED".equals(submissionStatus)
+                    || "GRADED".equals(submissionStatus);
+            default -> false;
+        };
+    }
+
+    private Map<String, Object> toParticipationActivity(ParticipationSnapshot snapshot) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("businessId", snapshot.businessId);
+        row.put("businessTitle", snapshot.businessTitle);
+        row.put("expectedCount", snapshot.expectedCount);
+        row.put("participatedCount", snapshot.participatedCount);
+        row.put("completedCount", snapshot.completedCount);
+        row.put("notStartedCount", snapshot.expectedCount - snapshot.participatedCount);
+        row.put("participationRate", snapshot.expectedCount == 0
+                ? 0.0 : roundOne(snapshot.participatedCount * 100.0 / snapshot.expectedCount));
+        row.put("completionRate", snapshot.expectedCount == 0
+                ? 0.0 : roundOne(snapshot.completedCount * 100.0 / snapshot.expectedCount));
+        return row;
+    }
+
+    private Map<String, Object> toParticipationOverviewRow(String businessType, List<ParticipationSnapshot> snapshots) {
+        List<Map<String, Object>> activities = snapshots.stream()
+                .sorted(Comparator
+                        .comparing((ParticipationSnapshot snapshot) -> snapshot.createdAt,
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(snapshot -> snapshot.businessId))
+                .map(this::toParticipationActivity)
+                .toList();
+        int expectedCount = snapshots.stream().mapToInt(snapshot -> snapshot.expectedCount).sum();
+        int participatedCount = snapshots.stream().mapToInt(snapshot -> snapshot.participatedCount).sum();
+        int completedCount = snapshots.stream().mapToInt(snapshot -> snapshot.completedCount).sum();
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("businessType", businessType);
+        row.put("label", businessTypeLabel(businessType));
+        row.put("activityCount", activities.size());
+        row.put("expectedCount", expectedCount);
+        row.put("participatedCount", participatedCount);
+        row.put("completedCount", completedCount);
+        row.put("notStartedCount", expectedCount - participatedCount);
+        row.put("participationRate", expectedCount == 0 ? 0.0 : roundOne(participatedCount * 100.0 / expectedCount));
+        row.put("completionRate", expectedCount == 0 ? 0.0 : roundOne(completedCount * 100.0 / expectedCount));
+        row.put("activities", activities);
+        return row;
+    }
+
+    private List<Map<String, Object>> queryParticipationStudents(String businessType, Long schoolId, Long teacherId,
+                                                                 Long businessId, Map<String, Object> detailContext) {
+        String baseSql;
+        String idColumn;
+        switch (businessType) {
+            case "LAB" -> {
+                baseSql = "SELECT cr.name AS class_name, cm.student_user_id, u.username AS student_no, " +
+                        "u.display_name AS student_name, es.id AS submission_id, es.submit_status AS submission_status, " +
+                        "es.submitted_at AS submitted_at FROM t_experiment e " +
+                        "JOIN class_room cr ON cr.id = e.class_id AND cr.school_id = ? " +
+                        "LEFT JOIN class_member cm ON cm.class_id = e.class_id " +
+                        "LEFT JOIN sys_user u ON u.id = cm.student_user_id " +
+                        "LEFT JOIN experiment_submission es ON es.experiment_id = e.experiment_id AND es.student_id = cm.student_user_id " +
+                        "WHERE e.created_by = ? AND e.school_id = ? AND e.status IN ('PUBLISHED','CLOSED')";
+                idColumn = "e.experiment_id";
+            }
+            case "HOMEWORK" -> {
+                baseSql = "SELECT cr.name AS class_name, cm.student_user_id, u.username AS student_no, " +
+                        "u.display_name AS student_name, hs.id AS submission_id, hs.submit_status AS submission_status, " +
+                        "hs.updated_at AS submitted_at FROM homework h " +
+                        "JOIN class_room cr ON cr.id = h.class_id AND cr.school_id = ? " +
+                        "LEFT JOIN class_member cm ON cm.class_id = h.class_id " +
+                        "LEFT JOIN sys_user u ON u.id = cm.student_user_id " +
+                        "LEFT JOIN homework_submission hs ON hs.homework_id = h.id AND hs.student_id = cm.student_user_id " +
+                        "WHERE h.created_by = ? AND h.school_id = ? AND h.status IN ('PUBLISHED','CLOSED')";
+                idColumn = "h.id";
+            }
+            case "EXAM" -> {
+                baseSql = "SELECT cr.name AS class_name, cm.student_user_id, u.username AS student_no, " +
+                        "u.display_name AS student_name, exs.id AS submission_id, exs.status AS submission_status, " +
+                        "exs.submitted_at AS submitted_at FROM exam ex " +
+                        "JOIN class_room cr ON cr.id = ex.class_id AND cr.school_id = ? " +
+                        "LEFT JOIN class_member cm ON cm.class_id = ex.class_id " +
+                        "LEFT JOIN sys_user u ON u.id = cm.student_user_id " +
+                        "LEFT JOIN exam_submission exs ON exs.exam_id = ex.id AND exs.student_id = cm.student_user_id " +
+                        "WHERE ex.created_by = ? AND ex.school_id = ? AND ex.status IN ('PUBLISHED','CLOSED')";
+                idColumn = "ex.id";
+            }
+            default -> throw new BusinessException(40000, "不支持的业务类型");
+        }
+        String sql = baseSql + " AND " + idColumn + " = ? ORDER BY u.username ASC";
+        List<Map<String, Object>> students = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        jdbcTemplate.query(sql, rs -> {
+            String className = rs.getString("class_name");
+            if (className != null && !detailContext.containsKey("className")) {
+                detailContext.put("className", className);
+            }
+            long studentId = rs.getLong("student_user_id");
+            if (rs.wasNull() || !seen.add(studentId)) {
+                return;
+            }
+            long rawSubmissionId = rs.getLong("submission_id");
+            boolean hasSubmission = !rs.wasNull();
+            String submissionStatus = hasSubmission ? rs.getString("submission_status") : null;
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("studentId", studentId);
+            row.put("studentNo", rs.getString("student_no"));
+            row.put("studentName", rs.getString("student_name"));
+            row.put("participation", hasSubmission ? "PARTICIPATED" : "NOT_STARTED");
+            row.put("completion", isCompleted(businessType, submissionStatus) ? "COMPLETED" : "IN_PROGRESS");
+            row.put("submissionId", hasSubmission ? rawSubmissionId : null);
+            row.put("submitStatus", submissionStatus);
+            row.put("submittedAt", hasSubmission ? rs.getObject("submitted_at", OffsetDateTime.class) : null);
+            students.add(row);
+        }, schoolId, teacherId, schoolId, businessId);
+        students.sort(Comparator.comparing(row -> (String) row.get("studentNo")));
+        return students;
+    }
+
+    public Map<String, Object> getTeacherParticipation(CurrentUser teacher, String businessType, Long businessId) {
+        if (!List.of("LAB", "HOMEWORK", "EXAM").contains(businessType)) {
+            throw new BusinessException(40000, "不支持的业务类型");
+        }
+        Long classId;
+        String businessTitle;
+        switch (businessType) {
+            case "LAB" -> {
+                Lab lab = labRepository.findByIdAndSchoolId(businessId, teacher.schoolId())
+                        .orElseThrow(() -> new BusinessException(40400, "活动不存在"));
+                if (!Objects.equals(lab.getCreatedBy(), teacher.id())) {
+                    throw new BusinessException(40300, "无权限查看该活动");
+                }
+                classId = lab.getClassId();
+                businessTitle = lab.getTitle();
+            }
+            case "HOMEWORK" -> {
+                Homework homework = homeworkRepository.findByIdAndSchoolId(businessId, teacher.schoolId())
+                        .orElseThrow(() -> new BusinessException(40400, "活动不存在"));
+                if (!Objects.equals(homework.getCreatedBy(), teacher.id())) {
+                    throw new BusinessException(40300, "无权限查看该活动");
+                }
+                classId = homework.getClassId();
+                businessTitle = homework.getTitle();
+            }
+            case "EXAM" -> {
+                Exam exam = examRepository.findByIdAndSchoolId(businessId, teacher.schoolId())
+                        .orElseThrow(() -> new BusinessException(40400, "活动不存在"));
+                if (!Objects.equals(exam.getCreatedBy(), teacher.id())) {
+                    throw new BusinessException(40300, "无权限查看该活动");
+                }
+                classId = exam.getClassId();
+                businessTitle = exam.getTitle();
+            }
+            default -> throw new BusinessException(40000, "不支持的业务类型");
+        }
+        classAccessService.assertTeacherAssignedToClass(teacher, classId);
+
+        Map<String, Object> detailContext = new LinkedHashMap<>();
+        List<Map<String, Object>> students = queryParticipationStudents(
+                businessType, teacher.schoolId(), teacher.id(), businessId, detailContext);
+        int expectedCount = students.size();
+        int participatedCount = (int) students.stream()
+                .filter(row -> "PARTICIPATED".equals(row.get("participation")))
+                .count();
+        int completedCount = (int) students.stream()
+                .filter(row -> "COMPLETED".equals(row.get("completion")))
+                .count();
+        int notStartedCount = expectedCount - participatedCount;
+        String className = (String) detailContext.get("className");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("businessType", businessType);
+        result.put("businessId", businessId);
+        result.put("businessTitle", businessTitle);
+        result.put("classId", classId);
+        result.put("className", className == null ? "" : className);
+        result.put("expectedCount", expectedCount);
+        result.put("participatedCount", participatedCount);
+        result.put("completedCount", completedCount);
+        result.put("notStartedCount", notStartedCount);
+        result.put("participationRate", expectedCount == 0 ? 0.0 : roundOne(participatedCount * 100.0 / expectedCount));
+        result.put("completionRate", expectedCount == 0 ? 0.0 : roundOne(completedCount * 100.0 / expectedCount));
+        result.put("students", students);
+        return result;
     }
 
     private Map<String, Object> summaryCard(String key, String title, Object value, String description) {
