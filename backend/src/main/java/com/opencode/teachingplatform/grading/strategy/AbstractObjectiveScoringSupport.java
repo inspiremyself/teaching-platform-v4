@@ -1,14 +1,19 @@
 package com.opencode.teachingplatform.grading.strategy;
 
 import com.opencode.teachingplatform.grading.model.ScoringContext;
+import com.opencode.teachingplatform.grading.support.AnswerNormalizationSupport;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * 客观题策略公共基座。
+ *
+ * <p>答案归一化逻辑统一委托 {@link AnswerNormalizationSupport}（与 GradingAdapter、
+ * LabScoringSupport 共用同一实现）；本类只保留策略侧的 {@code protected} 调用形态，
+ * 5 个题型策略的调用点因此零改动。</p>
+ */
 abstract class AbstractObjectiveScoringSupport {
 
     protected double scoreOf(ScoringContext context) {
@@ -16,29 +21,15 @@ abstract class AbstractObjectiveScoringSupport {
     }
 
     protected String normalizeToken(Object value) {
-        return value == null ? "" : String.valueOf(value).trim().toLowerCase(Locale.ROOT);
+        return AnswerNormalizationSupport.normalizeToken(value);
     }
 
     protected String normalizeText(Object value) {
-        return normalizeToken(value).replace('，', ',');
+        return AnswerNormalizationSupport.normalizeText(value);
     }
 
     protected Set<String> normalizeSet(Object value) {
-        LinkedHashSet<String> result = new LinkedHashSet<>();
-        if (value instanceof Collection<?> collection) {
-            for (Object item : collection) {
-                String normalized = normalizeToken(item);
-                if (!normalized.isBlank()) {
-                    result.add(normalized);
-                }
-            }
-            return result;
-        }
-        String normalized = normalizeToken(value);
-        if (!normalized.isBlank()) {
-            result.add(normalized);
-        }
-        return result;
+        return AnswerNormalizationSupport.normalizeSet(value);
     }
 
     @SuppressWarnings("unchecked")
@@ -57,26 +48,14 @@ abstract class AbstractObjectiveScoringSupport {
     }
 
     protected int asInt(Object value) {
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value instanceof String text && !text.isBlank()) {
-            return Integer.parseInt(text);
-        }
-        return 0;
+        return AnswerNormalizationSupport.asInt(value);
     }
 
     protected double asDouble(Object value) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        if (value instanceof String text && !text.isBlank()) {
-            return Double.parseDouble(text);
-        }
-        return 0D;
+        return AnswerNormalizationSupport.asDoubleOrZero(value);
     }
 
     protected double round(double value) {
-        return Math.round(value * 100.0) / 100.0;
+        return AnswerNormalizationSupport.round(value);
     }
 }

@@ -10,6 +10,7 @@ import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringContext;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
+import com.opencode.teachingplatform.grading.support.AnswerNormalizationSupport;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -259,7 +260,7 @@ public class GradingAdapter {
 
     private Object resolveStudentAnswer(QuestionAnswerPayload payload, QuestionType questionType) {
         return switch (questionType) {
-            case SINGLE_CHOICE, TRUE_FALSE -> firstNonBlank(
+            case SINGLE_CHOICE, TRUE_FALSE -> AnswerNormalizationSupport.firstNonBlank(
                     firstSelectedOption(payload.selectedOptions()),
                     firstParsedAnswer(payload.answerJson()),
                     payload.answerText()
@@ -284,7 +285,7 @@ public class GradingAdapter {
                 }
                 yield payload.answerText() == null ? List.of() : List.of(payload.answerText());
             }
-            case SUBJECTIVE -> firstNonBlank(payload.answerText(), firstParsedAnswer(payload.answerJson()));
+            case SUBJECTIVE -> AnswerNormalizationSupport.firstNonBlank(payload.answerText(), firstParsedAnswer(payload.answerJson()));
         };
     }
 
@@ -455,15 +456,6 @@ public class GradingAdapter {
     private Object firstNonNull(Object... values) {
         for (Object value : values) {
             if (value != null) {
-                return value;
-            }
-        }
-        return null;
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
                 return value;
             }
         }

@@ -103,9 +103,6 @@ export const returnTeacherLabReport = (reportId: number | string) =>
 export const confirmTeacherLabStepScore = (reportId: number | string, data: ConfirmLabStepScorePayload) =>
   request.post<void>(`/teacher/lab-reports/${reportId}/confirm-step-score`, data);
 
-export const releaseTeacherLabScores = (labId: number | string) =>
-  request.post<void>(`/teacher/labs/${labId}/release-scores`);
-
 export const listStudentLabs = () => request.get<StudentLabListItem[]>('/student/labs');
 
 export const getStudentLabDetail = (labId: number | string) => request.get<StudentLabDetail>(`/student/labs/${labId}`);

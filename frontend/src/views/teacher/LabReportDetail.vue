@@ -208,6 +208,7 @@ import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabR
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
+import { displaySuggestedScore, maxScoreOf, resolvedInitialScore, scoreSourceLabel, scoreSourceTagType } from './components/scoreDisplay';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import type { StepBrief } from './components/BehaviorSummaryCard.vue';
 
@@ -274,8 +275,6 @@ const resolveItemId = (item: LabReportAnswerItem) => item.answerId ?? item.id ??
 const isValidItemId = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const itemKey = (item: LabReportAnswerItem) => String(resolveItemId(item) ?? 0);
 const gradeKey = (item: LabReportAnswerItem) => itemKey(item);
-const maxScoreOf = (item: LabReportAnswerItem) => item.maxScore ?? item.stepScore ?? 100;
-const resolvedInitialScore = (item: LabReportAnswerItem) => item.score ?? item.autoScore ?? item.suggestedScore ?? 0;
 
 const statusLabel = (status?: LabReportStatus) => {
   if (status === SUBMISSION_STATUS.SAVED) return '已保存';
@@ -293,30 +292,6 @@ const questionTypeLabel = (type?: LabQuestionType) => {
   if (type === 'FILL_BLANK') return '填空题';
   if (type === 'CODE') return '代码题';
   return type || '未标注题型';
-};
-
-const scoreSourceLabel = (source?: string | null) => {
-  if (source === 'AUTO') return '自动评分';
-  if (source === 'SUGGESTED') return '建议评分';
-  if (source === 'TEACHER') return '教师评分';
-  return '未标注';
-};
-
-const scoreSourceTagType = (source?: string | null) => {
-  if (source === 'AUTO') return 'success';
-  if (source === 'SUGGESTED') return 'warning';
-  if (source === 'TEACHER') return 'info';
-  return 'default';
-};
-
-const displaySuggestedScore = (item: LabReportAnswerItem) => {
-  if (item.autoScore !== null && item.autoScore !== undefined) {
-    return `自动 ${item.autoScore}`;
-  }
-  if (item.suggestedScore !== null && item.suggestedScore !== undefined) {
-    return `建议 ${item.suggestedScore}`;
-  }
-  return '暂无';
 };
 
 const ensureGradeEntry = (item: LabReportAnswerItem) => {

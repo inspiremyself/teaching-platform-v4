@@ -118,6 +118,7 @@ import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import type { StepBrief } from './components/BehaviorSummaryCard.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
+import { displaySuggestedScore, maxScoreOf, resolvedInitialScore } from './components/scoreDisplay';
 
 const route = useRoute();
 const router = useRouter();
@@ -176,8 +177,6 @@ const resolveItemId = (item: LabReportAnswerItem) => item.answerId ?? item.id ??
 const isValidItemId = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 const itemKey = (item: LabReportAnswerItem) => String(resolveItemId(item) ?? 0);
 const gradeKey = (item: LabReportAnswerItem) => itemKey(item);
-const maxScoreOf = (item: LabReportAnswerItem) => item.maxScore ?? item.stepScore ?? 100;
-const resolvedInitialScore = (item: LabReportAnswerItem) => item.score ?? item.autoScore ?? item.suggestedScore ?? 0;
 
 const questionTypeLabel = (type?: LabQuestionType) => {
   if (type === 'TEXT') return '文本题';
@@ -188,12 +187,6 @@ const questionTypeLabel = (type?: LabQuestionType) => {
   if (type === 'FILL_BLANK') return '填空题';
   if (type === 'CODE') return '代码题';
   return type || '未标注题型';
-};
-
-const displaySuggestedScore = (item: LabReportAnswerItem) => {
-  if (item.autoScore !== null && item.autoScore !== undefined) return `自动 ${item.autoScore}`;
-  if (item.suggestedScore !== null && item.suggestedScore !== undefined) return `建议 ${item.suggestedScore}`;
-  return '暂无';
 };
 
 const hydrateGradeForm = (items: LabReportAnswerItem[]) => {

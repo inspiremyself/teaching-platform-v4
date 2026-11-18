@@ -7,6 +7,7 @@ import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringContext;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
+import com.opencode.teachingplatform.grading.support.AnswerNormalizationSupport;
 import com.opencode.teachingplatform.lab.entity.ExperimentBlankAnswerOverride;
 import com.opencode.teachingplatform.lab.entity.LabStep;
 import com.opencode.teachingplatform.lab.entity.LabStepAnswer;
@@ -14,9 +15,7 @@ import com.opencode.teachingplatform.lab.repository.ExperimentBlankAnswerOverrid
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -33,7 +32,6 @@ public class LabScoringSupport {
 
     private final ObjectMapper objectMapper;
     private final ScoringEngine scoringEngine;
-    private final LabAssessmentAdapter labAssessmentAdapter;
     private final ExperimentBlankAnswerOverrideRepository overrideRepository;
 
     public LabScoringSupport(ObjectMapper objectMapper,
@@ -41,7 +39,6 @@ public class LabScoringSupport {
                              ExperimentBlankAnswerOverrideRepository overrideRepository) {
         this.objectMapper = objectMapper;
         this.scoringEngine = scoringEngine;
-        this.labAssessmentAdapter = new LabAssessmentAdapter(scoringEngine);
         this.overrideRepository = overrideRepository;
     }
 
@@ -52,7 +49,7 @@ public class LabScoringSupport {
      * 对填空题合并教师追加的可接受答案 → 委托 {@link ScoringEngine} 计算结果。</p>
      */
     public ScoringResult score(LabStep step, LabStepAnswer answer) {
-        Map<String, Object> snapshot = readJson(firstNonBlank(answer.getQuestionSnapshotJson(), step.getQuestionSnapshotJson()));
+        Map<String, Object> snapshot = readJson(AnswerNormalizationSupport.firstNonBlank(answer.getQuestionSnapshotJson(), step.getQuestionSnapshotJson()));
         Map<String, Object> scoringConfig = resolveScoringConfig(step, snapshot);
         if (scoringConfig.isEmpty()) {
             return new ScoringResult(null, null, null, ScoreSource.TEACHER, "missing rule config", true, false);
@@ -67,7 +64,7 @@ public class LabScoringSupport {
                 ? loadExtraAcceptedAnswers(step, scoringConfig)
                 : Map.of();
 
-        return labAssessmentAdapter.evaluate(new ScoringContext(
+        return scoringEngine.evaluate(new ScoringContext(
                 questionType,
                 resolveQuestionScore(step, snapshot),
                 scoringConfig,
@@ -91,7 +88,7 @@ public class LabScoringSupport {
     }
 
     private QuestionType resolveQuestionType(LabStep step, Map<String, Object> snapshot) {
-        String rawType = firstNonBlank(
+        String rawType = AnswerNormalizationSupport.firstNonBlank(
                 asString(snapshot.get("questionType")),
                 asString(snapshot.get("legacyQuestionType")),
                 step.getQuestionType()
@@ -108,7 +105,7 @@ public class LabScoringSupport {
     }
 
     private Double resolveQuestionScore(LabStep step, Map<String, Object> snapshot) {
-        Double snapshotScore = asDouble(snapshot.get("score"));
+        Double snapshotScore = asDoubleOrNull(snapshot.get("score"));
         if (snapshotScore != null) {
             return snapshotScore;
         }
@@ -120,10 +117,10 @@ public class LabScoringSupport {
             return null;
         }
         return switch (questionType) {
-            case MULTIPLE_CHOICE -> new ArrayList<>(parseAnswerTokens(answerText));
-            case FILL_BLANK -> parseAnswerList(answerText);
+            case MULTIPLE_CHOICE -> new ArrayList<>(AnswerNormalizationSupport.parseTextTokenSet(answerText));
+            case FILL_BLANK -> AnswerNormalizationSupport.parseTextTokenList(answerText);
             case SINGLE_CHOICE, TRUE_FALSE -> {
-                Set<String> tokens = parseAnswerTokens(answerText);
+                Set<String> tokens = AnswerNormalizationSupport.parseTextTokenSet(answerText);
                 yield tokens.isEmpty() ? null : tokens.iterator().next();
             }
             case SUBJECTIVE -> answerText;
@@ -169,33 +166,6 @@ public class LabScoringSupport {
         }
     }
 
-    private Set<String> parseAnswerTokens(String answerText) {
-        Set<String> values = new LinkedHashSet<>();
-        for (String token : splitAnswerTokens(answerText)) {
-            String item = token == null ? "" : token.trim();
-            if (!item.isBlank()) {
-                values.add(item);
-            }
-        }
-        return values;
-    }
-
-    private List<String> parseAnswerList(String answerText) {
-        List<String> values = new ArrayList<>();
-        for (String token : splitAnswerTokens(answerText)) {
-            String item = token == null ? "" : token.trim();
-            if (!item.isBlank()) {
-                values.add(item);
-            }
-        }
-        return values;
-    }
-
-    private String[] splitAnswerTokens(String answerText) {
-        String normalized = answerText.replace('，', ',');
-        return normalized.split("\\s*,\\s*|\\s+");
-    }
-
     private Map<String, Object> readJson(String json) {
         if (json == null || json.isBlank()) {
             return Map.of();
@@ -212,7 +182,11 @@ public class LabScoringSupport {
         return (Map<String, Object>) source;
     }
 
-    private Double asDouble(Object value) {
+    /**
+     * 与 {@link AnswerNormalizationSupport#asDoubleOrZero} 语义不同：解析失败/缺失时返回
+     * {@code null}（供「快照分优先、步分兜底」的判空分支使用），因此不并入公共工具类。
+     */
+    private Double asDoubleOrNull(Object value) {
         if (value instanceof Number number) {
             return number.doubleValue();
         }
@@ -228,14 +202,5 @@ public class LabScoringSupport {
 
     private String asString(Object value) {
         return value == null ? null : String.valueOf(value);
-    }
-
-    private String firstNonBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return null;
     }
 }

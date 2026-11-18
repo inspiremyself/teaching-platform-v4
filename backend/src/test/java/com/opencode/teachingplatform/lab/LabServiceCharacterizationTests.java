@@ -2,17 +2,9 @@ package com.opencode.teachingplatform.lab;
 
 import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.common.util.ActivityStatusParser;
-import com.opencode.teachingplatform.grading.enums.QuestionType;
-import com.opencode.teachingplatform.grading.enums.ScoreSource;
-import com.opencode.teachingplatform.grading.model.ScoringContext;
-import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoreReleaseSupport;
-import com.opencode.teachingplatform.grading.service.ScoringEngine;
-import com.opencode.teachingplatform.grading.strategy.QuestionScoringStrategy;
-import com.opencode.teachingplatform.lab.service.LabAssessmentAdapter;
 import com.opencode.teachingplatform.lab.service.LabService;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -22,9 +14,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Phase 3 FR-7 搬迁前的实验域行为基线。
@@ -62,22 +52,6 @@ class LabServiceCharacterizationTests {
         assertEquals(2, view.size());
         assertEquals(Boolean.TRUE, view.get("released"));
         assertEquals("AFTER_DEADLINE", view.get("scoreVisibilityMode"));
-    }
-
-    @Test
-    void assessmentAdapterDoesNotAlterScoringResult() {
-        ScoringResult expected = new ScoringResult(3.0, 3.0, 3.0,
-                ScoreSource.RECOMMENDED, "ok", false, true);
-        QuestionScoringStrategy strategy = Mockito.mock(QuestionScoringStrategy.class);
-        Mockito.when(strategy.supports(any())).thenReturn(true);
-        Mockito.when(strategy.evaluate(any())).thenReturn(expected);
-
-        ScoringEngine engine = new ScoringEngine(java.util.List.of(strategy));
-        LabAssessmentAdapter adapter = new LabAssessmentAdapter(engine);
-        ScoringContext context = new ScoringContext(QuestionType.SINGLE_CHOICE, 3.0,
-                Map.of(), "A", true);
-
-        assertSame(expected, adapter.evaluate(context));
     }
 
     private static Set<String> publicMethods(Class<?> type) {

@@ -174,7 +174,7 @@
                     <div class="question-grade-item__meta">
                       <span>建议分：{{ question.answer?.suggestedScore ?? '-' }}</span>
                       <span>自动分：{{ question.answer?.autoScore ?? '-' }}</span>
-                      <span>来源：{{ question.answer?.scoreSource || '未标注' }}</span>
+                      <span>来源：{{ scoreSourceLabel(question.answer?.scoreSource) }}</span>
                     </div>
                     <p class="quick-grade-card__muted">{{ question.answer?.judgeDetail || '当前无自动判题说明。' }}</p>
                     <div class="question-grade-item__actions">
@@ -276,6 +276,7 @@ import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { scoreSourceLabel } from './components/scoreDisplay';
 import {
   getHomeworkSubmissionDetail,
   gradeHomeworkAnswer,

@@ -6,6 +6,10 @@ import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.exam.dto.ExamRequests;
+import com.opencode.teachingplatform.grading.enums.QuestionType;
+import com.opencode.teachingplatform.grading.enums.ScoreSource;
+import com.opencode.teachingplatform.grading.model.ScoringContext;
+import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.strategy.MultipleChoiceScoringStrategy;
 import com.opencode.teachingplatform.grading.strategy.SingleChoiceScoringStrategy;
@@ -59,6 +63,12 @@ class ExamServiceTests {
 
     @Autowired
     private ExamService examService;
+
+    @Autowired
+    private ExamScoringService examScoringService;
+
+    @Autowired
+    private ScoringEngine scoringEngine;
 
     @Autowired
     private EntityManager entityManager;
@@ -143,49 +153,56 @@ class ExamServiceTests {
 
     @Test
     void submitExamAutoGradesSingleMultipleAndTrueFalseQuestions() {
-        ExamScoringService scoringService = new ExamScoringService();
-
         // SINGLE: correct answer "A" → full score 5
-        double singleScore = scoringService.scoreObjectiveQuestion("SINGLE", "[\"A\"]", "[\"A\"]", 5.0);
-        assertThat(singleScore).isEqualTo(5.0);
+        ScoringResult single = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.SINGLE_CHOICE, 5.0, Map.of("correctAnswer", "A"), "A", true));
+        assertThat(single.finalScore()).isEqualTo(5.0);
 
         // SINGLE: wrong answer "B" → 0
-        double singleWrong = scoringService.scoreObjectiveQuestion("SINGLE", "[\"A\"]", "[\"B\"]", 5.0);
-        assertThat(singleWrong).isEqualTo(0.0);
+        ScoringResult singleWrong = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.SINGLE_CHOICE, 5.0, Map.of("correctAnswer", "A"), "B", true));
+        assertThat(singleWrong.finalScore()).isEqualTo(0.0);
 
         // JUDGE: correct answer "true" → full score 3
-        double judgeScore = scoringService.scoreObjectiveQuestion("JUDGE", "[\"true\"]", "[\"true\"]", 3.0);
-        assertThat(judgeScore).isEqualTo(3.0);
+        ScoringResult judge = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.TRUE_FALSE, 3.0, Map.of("correctAnswer", "true"), "true", true));
+        assertThat(judge.finalScore()).isEqualTo(3.0);
 
         // JUDGE: wrong answer → 0
-        double judgeWrong = scoringService.scoreObjectiveQuestion("JUDGE", "[\"true\"]", "[\"false\"]", 3.0);
-        assertThat(judgeWrong).isEqualTo(0.0);
+        ScoringResult judgeWrong = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.TRUE_FALSE, 3.0, Map.of("correctAnswer", "true"), "false", true));
+        assertThat(judgeWrong.finalScore()).isEqualTo(0.0);
 
-        // SHORT: always returns 0 (manual grading)
-        double shortScore = scoringService.scoreObjectiveQuestion("SHORT", "[\"统一错误处理与前端解析\"]", "[\"统一错误处理与前端解析\"]", 10.0);
-        assertThat(shortScore).isEqualTo(0.0);
+        // SHORT: suggestion only, final score stays null (manual grading)
+        ScoringResult subjective = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.SUBJECTIVE, 10.0, Map.of(), "统一错误处理与前端解析", false));
+        assertThat(subjective.finalScore()).isNull();
+        assertThat(subjective.recommendedScore()).isEqualTo(0.0);
+        assertThat(subjective.scoreSource()).isEqualTo(ScoreSource.RECOMMENDED);
 
         // Total autoScore = 5 + 3 + 0 = 8
-        double autoScore = singleScore + judgeScore + shortScore;
+        double autoScore = single.finalScore() + judge.finalScore() + subjective.recommendedScore();
         assertThat(autoScore).isEqualTo(8.0);
     }
 
     @Test
     void submitExamStoresShortAnswerForTeacherGrading() {
-        ExamScoringService scoringService = new ExamScoringService();
-
-        // SHORT type → score=0, isObjective=false (means isCorrect should be null)
-        assertThat(scoringService.isObjective("SHORT")).isFalse();
-        assertThat(scoringService.scoreObjectiveQuestion("SHORT", "[\"answer\"]", "[\"student answer\"]", 10.0)).isEqualTo(0.0);
+        // SHORT type → final score stays null, isObjective=false (means isCorrect should be null)
+        assertThat(examScoringService.isObjective("SHORT")).isFalse();
+        ScoringResult subjective = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.SUBJECTIVE, 10.0, Map.of(), "student answer", false));
+        assertThat(subjective.finalScore()).isNull();
+        assertThat(subjective.recommendedScore()).isEqualTo(0.0);
+        assertThat(subjective.scoreSource()).isEqualTo(ScoreSource.RECOMMENDED);
 
         // Objective types are correctly identified
-        assertThat(scoringService.isObjective("SINGLE")).isTrue();
-        assertThat(scoringService.isObjective("SINGLE_CHOICE")).isTrue();
-        assertThat(scoringService.isObjective("MULTIPLE")).isTrue();
-        assertThat(scoringService.isObjective("MULTIPLE_CHOICE")).isTrue();
-        assertThat(scoringService.isObjective("JUDGE")).isTrue();
-        assertThat(scoringService.isObjective("TRUE_FALSE")).isTrue();
-        assertThat(scoringService.isObjective("TEXT")).isFalse();
+        assertThat(examScoringService.isObjective("SINGLE")).isTrue();
+        assertThat(examScoringService.isObjective("SINGLE_CHOICE")).isTrue();
+        assertThat(examScoringService.isObjective("MULTIPLE")).isTrue();
+        assertThat(examScoringService.isObjective("MULTIPLE_CHOICE")).isTrue();
+        assertThat(examScoringService.isObjective("JUDGE")).isTrue();
+        assertThat(examScoringService.isObjective("TRUE_FALSE")).isTrue();
+        assertThat(examScoringService.isObjective("TEXT")).isFalse();
     }
 
     @Test
@@ -361,32 +378,36 @@ class ExamServiceTests {
 
     @Test
     void multipleChoiceScoringRequiresExactMatch() {
-        ExamScoringService scoringService = new ExamScoringService();
-
         // Exact match (order doesn't matter) → full score
-        double correct = scoringService.scoreObjectiveQuestion("MULTIPLE", "[\"A\",\"C\"]", "[\"C\",\"A\"]", 6.0);
-        assertThat(correct).isEqualTo(6.0);
+        ScoringResult correct = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.MULTIPLE_CHOICE, 6.0, Map.of("correctAnswers", List.of("A", "C")),
+                List.of("C", "A"), true));
+        assertThat(correct.finalScore()).isEqualTo(6.0);
 
         // Partial match → 0
-        double partial = scoringService.scoreObjectiveQuestion("MULTIPLE", "[\"A\",\"C\"]", "[\"A\"]", 6.0);
-        assertThat(partial).isEqualTo(0.0);
+        ScoringResult partial = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.MULTIPLE_CHOICE, 6.0, Map.of("correctAnswers", List.of("A", "C")),
+                List.of("A"), true));
+        assertThat(partial.finalScore()).isEqualTo(0.0);
 
         // Extra selection → 0
-        double extra = scoringService.scoreObjectiveQuestion("MULTIPLE", "[\"A\",\"C\"]", "[\"A\",\"B\",\"C\"]", 6.0);
-        assertThat(extra).isEqualTo(0.0);
+        ScoringResult extra = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.MULTIPLE_CHOICE, 6.0, Map.of("correctAnswers", List.of("A", "C")),
+                List.of("A", "B", "C"), true));
+        assertThat(extra.finalScore()).isEqualTo(0.0);
     }
 
     @Test
     void scoringHandlesNullAndEmptyAnswers() {
-        ExamScoringService scoringService = new ExamScoringService();
-
         // Null answer → 0
-        double nullAnswer = scoringService.scoreObjectiveQuestion("SINGLE", "[\"A\"]", null, 5.0);
-        assertThat(nullAnswer).isEqualTo(0.0);
+        ScoringResult nullAnswer = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.SINGLE_CHOICE, 5.0, Map.of("correctAnswer", "A"), null, true));
+        assertThat(nullAnswer.finalScore()).isEqualTo(0.0);
 
         // Empty string answer → 0
-        double emptyAnswer = scoringService.scoreObjectiveQuestion("SINGLE", "[\"A\"]", "", 5.0);
-        assertThat(emptyAnswer).isEqualTo(0.0);
+        ScoringResult emptyAnswer = scoringEngine.evaluate(new ScoringContext(
+                QuestionType.SINGLE_CHOICE, 5.0, Map.of("correctAnswer", "A"), "", true));
+        assertThat(emptyAnswer.finalScore()).isEqualTo(0.0);
     }
 
     @Test

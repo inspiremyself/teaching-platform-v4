@@ -175,6 +175,9 @@
                 <div v-else class="auto-grade-tip auto-grade-tip--stack">
                   <span class="material-symbols-outlined">smart_toy</span>
                   <span>建议分 {{ formatScore(answer.suggestedScore) }}，当前 {{ formatScore(answer.score) }}</span>
+                  <el-tag :type="scoreSourceTagType(answer.scoreSource)" effect="light">
+                    {{ scoreSourceLabel(answer.scoreSource) }}
+                  </el-tag>
                   <span>{{ answer.judgeDetail || '当前无自动判题说明。' }}</span>
                 </div>
               </div>
@@ -245,6 +248,7 @@ import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { scoreSourceLabel, scoreSourceTagType } from '../components/scoreDisplay'
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'

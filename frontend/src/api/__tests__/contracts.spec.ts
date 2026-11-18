@@ -29,6 +29,7 @@ import {
 } from '@/api/admin';
 import { createExam, getExamDetail, listExams, updateExam } from '@/api/exams';
 import { addHomeworkQuestionFromBank, createHomework, listTeacherHomeworks, updateHomework } from '@/api/homeworks';
+import * as labsApi from '@/api/labs';
 import { createTeacherLab, updateTeacherLab } from '@/api/labs';
 import { uploadMaterial } from '@/api/materials';
 import { createQuestion, listQuestions, updateQuestion } from '@/api/questions';
@@ -159,6 +160,10 @@ describe('api 端点契约', () => {
     await updateQuestion(9, {} as SaveQuestionPayload);
     expect(calls.urls).toEqual(['/exams/12', '/teacher/homeworks/3', '/teacher/labs/4', '/questions/9']);
     expect(calls.bodies).toEqual([{}, {}, {}, {}]);
+  });
+
+  it('实验成绩发布前端封装已删除（后端端点保留零改动）', () => {
+    expect(labsApi).not.toHaveProperty('releaseTeacherLabScores');
   });
 
   it('平台学科启用端点路径', async () => {
