@@ -16,7 +16,7 @@
             <span class="material-symbols-outlined">campaign</span>
             {{ scoreReleased ? '重新发布成绩' : '发布成绩' }}
           </button>
-          <button class="header-button header-button--primary" type="button" @click="fetchData" :disabled="loading">
+          <button class="header-button header-button--primary" type="button" @click="refreshResults" :disabled="loading">
             <span class="material-symbols-outlined">refresh</span>
             刷新结果
           </button>
@@ -25,7 +25,7 @@
 
       <div class="workbench-meta grading-meta">
         <span class="workbench-meta__item"><strong>{{ rows.length }}</strong> 总提交数</span>
-        <span class="workbench-meta__item"><strong>{{ pendingCount }}</strong> 待人工处理</span>
+        <span class="workbench-meta__item"><strong>{{ pendingCount }}</strong> 待人工评分</span>
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已评分</span>
         <span class="workbench-meta__item workbench-meta__item--accent">{{ activeStudentLabel }}</span>
       </div>
@@ -66,7 +66,7 @@
             :key="row.submissionId"
             type="button"
             :class="['queue-item', activeSubmissionId === row.submissionId ? 'is-active' : '']"
-            @click="selectSubmission(row)"
+            @click="requestSelectSubmission(row)"
           >
             <div class="queue-item__main">
               <div class="queue-avatar">{{ getAvatarText(row.studentName, row.studentUsername) }}</div>
@@ -79,7 +79,7 @@
                 </div>
                 <div class="queue-item__meta">{{ row.studentUsername }} · {{ submissionTimeLabel(row) }}</div>
                 <div class="queue-item__score">
-                  自动 {{ formatScore(row.autoScore) }} · 人工 {{ formatScore(row.manualScore) }} · 总分 {{ formatScore(row.totalScore) }}
+                  客观 {{ formatScore(row.autoScore) }} · 主观 {{ formatScore(row.manualScore) }} · 总分 {{ formatScore(row.totalScore) }}
                 </div>
               </div>
             </div>
@@ -144,21 +144,32 @@
                   </div>
                   <div class="answer-block answer-block--light">
                     <div class="answer-block__label">当前得分</div>
-                    <div class="answer-block__value">{{ formatScore(answer.score) }} / {{ answer.questionScore }}</div>
+                    <div class="answer-block__value">
+                      {{ isManualQuestion(answer) && !isMarked(gradingSnapshot, answer.questionId) ? '待评分' : `${formatScore(isManualQuestion(answer) ? gradeMap[answer.questionId]?.score : answer.score)} / ${answer.questionScore}` }}
+                    </div>
                   </div>
                 </div>
 
                 <div v-if="isManualQuestion(answer)" class="manual-grade-box">
+                  <p
+                    v-if="answer.suggestedScore !== null && answer.suggestedScore !== undefined"
+                    class="manual-grade-suggestion"
+                  >
+                    系统参考分 {{ formatScore(answer.suggestedScore) }}（仅供参考，不直接计入）
+                  </p>
                   <div class="manual-grade-box__row">
                     <div class="manual-grade-field">
                       <label>分数</label>
                       <el-input-number
-                        v-model="gradeMap[answer.questionId].score"
+                        :model-value="gradeMap[answer.questionId]?.score ?? undefined"
                         :min="0"
                         :max="answer.questionScore"
                         :precision="0"
                         :step="1"
+                        :disabled="isReadOnly"
+                        placeholder="待评分"
                         controls-position="right"
+                        @update:model-value="setQuestionScore(gradingSnapshot, answer.questionId, $event)"
                       />
                     </div>
                     <div class="manual-grade-field manual-grade-field--full">
@@ -167,6 +178,7 @@
                         v-model="gradeMap[answer.questionId].teacherComment"
                         type="textarea"
                         :rows="3"
+                        :disabled="isReadOnly"
                         placeholder="输入针对该题的批改意见"
                       />
                     </div>
@@ -174,11 +186,11 @@
                 </div>
                 <div v-else class="auto-grade-tip auto-grade-tip--stack">
                   <span class="material-symbols-outlined">smart_toy</span>
-                  <span>建议分 {{ formatScore(answer.suggestedScore) }}，当前 {{ formatScore(answer.score) }}</span>
                   <el-tag :type="scoreSourceTagType(answer.scoreSource)" effect="light">
                     {{ scoreSourceLabel(answer.scoreSource) }}
                   </el-tag>
-                  <span>{{ answer.judgeDetail || '当前无自动判题说明。' }}</span>
+                  <span>{{ answer.judgeDetail || '系统自动判定' }}</span>
+                  <span>客观题由系统判分，不支持修改</span>
                 </div>
               </div>
             </article>
@@ -190,13 +202,14 @@
       <aside class="summary-side">
         <section class="score-panel">
           <h2>评分汇总</h2>
+          <p class="score-panel__subtitle">客观题 + 主观题</p>
           <div class="score-summary-list">
             <div class="score-summary-item">
-              <span>自动分</span>
+              <span>客观题自动得分</span>
               <strong>{{ formatScore(detail?.autoScore) }}</strong>
             </div>
             <div class="score-summary-item">
-              <span>人工分</span>
+              <span>主观题人工得分</span>
               <strong>{{ currentManualScore }}</strong>
             </div>
             <div class="score-summary-item score-summary-item--total">
@@ -205,15 +218,20 @@
             </div>
           </div>
 
-          <div class="completion-block">
+          <div v-if="hasManual" class="completion-block">
             <div class="completion-block__row">
-              <span>人工评分完成度</span>
-              <strong>{{ completionPercent }}%</strong>
+              <span>主观题评分进度</span>
+              <strong>{{ progress.completed }}/{{ progress.total }} 题</strong>
             </div>
             <div class="completion-bar">
-              <div class="completion-bar__fill" :style="{ width: `${completionPercent}%` }"></div>
+              <div class="completion-bar__fill" :style="{ width: `${progress.percent}%` }"></div>
             </div>
+            <p class="completion-block__hint">
+              待评 {{ progress.total - progress.completed }} 题；保存后未评题不会按 0 分提交
+            </p>
           </div>
+          <p v-else class="completion-block--empty">本卷无主观题，系统已完成判分</p>
+          <p v-if="hasUnsaved" class="grade-draft-hint">有未保存的评分</p>
         </section>
 
         <section class="action-panel">
@@ -221,20 +239,38 @@
             v-if="detail?.status === SUBMISSION_STATUS.GRADED"
             type="info"
             :closable="false"
-            title="当前答卷已评分完成，如需验证保存链路请切换到待评分答卷。"
+            title="该答卷已完成评分，结果已锁定为只读"
             class="grading-readonly-alert"
           />
-          <button class="action-panel__primary" type="button" :disabled="!detail || detail.status === SUBMISSION_STATUS.GRADED || submitting" @click="submitGrade">
+          <el-alert
+            v-else-if="detail?.status === EXAM_SUBMISSION_STATUS.IN_PROGRESS"
+            type="info"
+            :closable="false"
+            title="学生仍在作答，暂不可评分"
+            class="grading-readonly-alert"
+          />
+          <button
+            v-if="detail?.status !== EXAM_SUBMISSION_STATUS.IN_PROGRESS"
+            class="action-panel__primary"
+            type="button"
+            :disabled="!canSaveGrade"
+            @click="submitGrade"
+          >
             <span class="material-symbols-outlined">save</span>
             保存评分
           </button>
-          <button class="action-panel__secondary" type="button" :disabled="!nextSubmission" @click="selectSubmission(nextSubmission!)">
+          <button
+            type="button"
+            :class="detail?.status === SUBMISSION_STATUS.GRADED ? 'action-panel__primary' : 'action-panel__secondary'"
+            :disabled="!nextSubmission"
+            @click="requestSelectSubmission(nextSubmission!)"
+          >
             切换到下一份
           </button>
           <div class="action-panel__meta">
             <div class="action-panel__tip">
               <span class="material-symbols-outlined">tips_and_updates</span>
-              <p>主观题评分会直接通过 `gradeExamSubmission` 提交，保存后左侧队列立即刷新。</p>
+              <p>评分保存后答卷即结案，客观题由系统判分、不可修改。</p>
             </div>
           </div>
         </section>
@@ -252,11 +288,21 @@ import { scoreSourceLabel, scoreSourceTagType } from '../components/scoreDisplay
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
-
-interface GradeItem {
-  score: number
-  teacherComment: string
-}
+import {
+  buildGradePayload,
+  canSubmitGrade,
+  createGradingState,
+  gradingProgress,
+  hasManualGrading,
+  hasUnsavedChanges,
+  isMarked,
+  isManualQuestion,
+  isReadOnlySubmission,
+  manualScoreOf,
+  setQuestionScore,
+  totalScoreOf,
+  type GradingSnapshot,
+} from './examGradingState'
 
 const route = useRoute()
 const router = useRouter()
@@ -270,7 +316,10 @@ const examTitle = ref('考试批改工作流')
 const searchQuery = ref('')
 const statusFilter = ref('')
 const activeSubmissionId = ref<number | null>(null)
-const gradeMap = reactive<Record<number, GradeItem>>({})
+const gradeMap = reactive<Record<number, { score: number | null; teacherComment: string }>>({})
+const markedQuestionIds = ref<number[]>([])
+const initialComments = ref<Record<number, string>>({})
+let selectionToken = 0
 
 const examId = computed(() => route.params.id as string)
 
@@ -287,7 +336,7 @@ const pendingCount = computed(() => rows.value.filter(row => row.status === SUBM
 const gradedCount = computed(() => rows.value.filter(row => row.status === SUBMISSION_STATUS.GRADED).length)
 const activeRow = computed(() => rows.value.find(row => row.submissionId === activeSubmissionId.value) ?? null)
 const activeStudentLabel = computed(() => activeRow.value?.studentName ?? '尚未选择')
-const examSummary = computed(() => `共 ${rows.value.length} 份提交记录，其中 ${pendingCount.value} 份待处理、${gradedCount.value} 份已评分。`)
+const examSummary = computed(() => `共 ${rows.value.length} 份提交记录，其中 ${pendingCount.value} 份待人工评分、${gradedCount.value} 份已评分。`)
 const activeStudentSubline = computed(() => {
   if (!activeRow.value) {
     return '请选择左侧学生答卷进入批改工作流。'
@@ -308,16 +357,20 @@ const nextSubmission = computed(() => {
   }
   return filteredRows.value[index + 1] ?? null
 })
-const manualAnswers = computed(() => detail.value?.answers.filter(answer => isManualQuestion(answer)) ?? [])
-const currentManualScore = computed(() => manualAnswers.value.reduce((sum, answer) => sum + (gradeMap[answer.questionId]?.score ?? answer.score ?? 0), 0))
-const currentTotalScore = computed(() => (detail.value?.autoScore ?? 0) + currentManualScore.value)
-const completionPercent = computed(() => {
-  if (!manualAnswers.value.length) {
-    return 100
-  }
-  const completed = manualAnswers.value.filter(answer => gradeMap[answer.questionId] && gradeMap[answer.questionId].score >= 0).length
-  return Math.round((completed / manualAnswers.value.length) * 100)
-})
+const gradingSnapshot = computed<GradingSnapshot>(() => ({
+  status: detail.value?.status ?? '',
+  answers: detail.value?.answers ?? [],
+  gradeMap,
+  markedQuestionIds: markedQuestionIds.value,
+  initialComments: initialComments.value,
+}))
+const currentManualScore = computed(() => manualScoreOf(gradingSnapshot.value))
+const currentTotalScore = computed(() => totalScoreOf(gradingSnapshot.value, detail.value?.autoScore ?? null))
+const progress = computed(() => gradingProgress(gradingSnapshot.value))
+const hasManual = computed(() => hasManualGrading(gradingSnapshot.value))
+const isReadOnly = computed(() => isReadOnlySubmission(gradingSnapshot.value.status))
+const hasUnsaved = computed(() => hasUnsavedChanges(gradingSnapshot.value))
+const canSaveGrade = computed(() => canSubmitGrade(gradingSnapshot.value) && !submitting.value)
 
 const resetGradeMap = () => {
   Object.keys(gradeMap).forEach(key => delete gradeMap[Number(key)])
@@ -325,20 +378,34 @@ const resetGradeMap = () => {
 
 const initGradeMap = () => {
   resetGradeMap()
-  if (!detail.value?.answers) {
-    return
-  }
-  detail.value.answers.forEach(answer => {
-    if (isManualQuestion(answer)) {
-      gradeMap[answer.questionId] = {
-        score: answer.score ?? 0,
-        teacherComment: answer.teacherComment || '',
-      }
-    }
-  })
+  const next = createGradingState(detail.value)
+  Object.assign(gradeMap, next.gradeMap)
+  markedQuestionIds.value = next.markedQuestionIds
+  initialComments.value = next.initialComments
 }
 
-const fetchData = async () => {
+const clearGradingState = () => {
+  resetGradeMap()
+  markedQuestionIds.value = []
+  initialComments.value = {}
+}
+
+const confirmDiscardDraft = async (): Promise<boolean> => {
+  if (!hasUnsaved.value) return true
+  try {
+    await ElMessageBox.confirm('当前评分尚未保存，确定切换吗？', '离开当前答卷', {
+      confirmButtonText: '确定切换',
+      cancelButtonText: '继续评分',
+      type: 'warning',
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
+const fetchData = async (skipDraftGuard = false) => {
+  if (!skipDraftGuard && !(await confirmDiscardDraft())) return
   loading.value = true
   try {
     const [resultRows, examDetail] = await Promise.all([getExamResults(examId.value), getExamDetail(examId.value)])
@@ -349,8 +416,10 @@ const fetchData = async () => {
     if (target) {
       await selectSubmission(target)
     } else {
+      selectionToken += 1
       detail.value = null
       activeSubmissionId.value = null
+      clearGradingState()
     }
   } finally {
     loading.value = false
@@ -358,26 +427,42 @@ const fetchData = async () => {
 }
 
 const selectSubmission = async (row: ExamSubmissionListItem) => {
+  const token = ++selectionToken
+  const nextDetail = await getExamSubmissionDetail(row.submissionId)
+  if (token !== selectionToken) return
   activeSubmissionId.value = row.submissionId
-  detail.value = await getExamSubmissionDetail(row.submissionId)
+  detail.value = nextDetail
   initGradeMap()
 }
 
+const requestSelectSubmission = async (row: ExamSubmissionListItem) => {
+  if (!(await confirmDiscardDraft())) return
+  await selectSubmission(row)
+}
+
+const refreshResults = () => {
+  void fetchData()
+}
+
 const submitGrade = async () => {
-  if (!detail.value || submitting.value) {
+  if (!detail.value || submitting.value || !canSaveGrade.value) return
+  try {
+    await ElMessageBox.confirm('保存后答卷即结案且不可修改，确认保存？', '保存评分', {
+      confirmButtonText: '确认保存',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
     return
   }
   submitting.value = true
   try {
-    const subjectiveAnswers = manualAnswers.value.map(answer => ({
-      questionId: answer.questionId,
-      score: gradeMap[answer.questionId]?.score ?? 0,
-      teacherComment: gradeMap[answer.questionId]?.teacherComment || undefined,
-    }))
-    const payload: GradeExamPayload = { answers: subjectiveAnswers }
+    const payload: GradeExamPayload = buildGradePayload(gradingSnapshot.value)
     await gradeExamSubmission(detail.value.submissionId, payload)
-    ElMessage.success('评分保存成功')
-    await fetchData()
+    ElMessage.success('评分已保存，答卷已结案')
+    await fetchData(true)
+  } catch {
+    return
   } finally {
     submitting.value = false
   }
@@ -399,7 +484,7 @@ const releaseScores = async () => {
     await releaseExamScores(examId.value)
     // 文案读取发布前的状态：原值 true 表示本次为「重新发布」
     ElMessage.success(scoreReleased.value ? '考试成绩已重新发布' : '考试成绩已发布')
-    await fetchData()
+    await fetchData(true)
   } catch {
     // 错误提示已由 request.ts 响应拦截器统一弹出，这里只阻止未捕获的 Promise 拒绝
     return
@@ -407,8 +492,6 @@ const releaseScores = async () => {
     releasing.value = false
   }
 }
-
-const isManualQuestion = (answer: ExamAnswerDetail) => answer.isCorrect === null
 
 const submissionStatusLabel = (status: string) => {
   if (status === EXAM_SUBMISSION_STATUS.IN_PROGRESS) return '进行中'
@@ -441,7 +524,11 @@ const questionTypeLabel = (type: string) => {
 
 const questionStatusLabel = (answer: ExamAnswerDetail) => {
   if (isManualQuestion(answer)) {
-    return '人工评分'
+    return detail.value?.status === SUBMISSION_STATUS.GRADED
+      ? '已评分 · 只读'
+      : isMarked(gradingSnapshot.value, answer.questionId)
+        ? '已评分'
+        : '待评分'
   }
   return answer.isCorrect ? '自动判对' : '自动判错'
 }
@@ -1005,6 +1092,13 @@ onMounted(fetchData)
   padding: 16px;
 }
 
+.manual-grade-suggestion {
+  margin: 0 0 12px;
+  color: #0f766e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .manual-grade-box__row {
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr);
@@ -1050,6 +1144,12 @@ onMounted(fetchData)
 .score-panel,
 .action-panel {
   padding: 22px;
+}
+
+.score-panel__subtitle {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13px;
 }
 
 .score-summary-list {
@@ -1105,6 +1205,24 @@ onMounted(fetchData)
   background: linear-gradient(90deg, #0f766e, #14b8a6);
 }
 
+.completion-block__hint,
+.completion-block--empty,
+.grade-draft-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.completion-block__hint,
+.completion-block--empty {
+  color: #64748b;
+}
+
+.grade-draft-hint {
+  color: #b45309;
+  font-weight: 700;
+}
+
 .action-panel {
   background: linear-gradient(180deg, #0f172a, #1e293b);
   color: #fff;
@@ -1134,6 +1252,19 @@ onMounted(fetchData)
   margin-top: 10px;
   background: rgba(255, 255, 255, 0.08);
   color: #e2e8f0;
+}
+
+.action-panel__primary:disabled,
+.action-panel__secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.grading-readonly-alert {
+  margin-bottom: 12px;
+  --el-alert-bg-color: rgba(148, 163, 184, 0.16);
+  --el-alert-title-text-color: #e2e8f0;
+  --el-alert-description-text-color: #cbd5e1;
 }
 
 .action-panel__meta {
