@@ -13,7 +13,7 @@ export type LabQuestionType = BackendQuestionType | 'TEXT' | 'SHORT_ANSWER' | 'C
 
 export type LabQuestionGradingMode = string;
 
-export type LabScoreSource = 'AUTO' | 'SUGGESTED' | 'TEACHER';
+export type LabScoreSource = 'AUTO' | 'AUTO_ACCEPTED' | 'SUGGESTED' | 'TEACHER';
 
 export interface LabStepAutoRuleOption {
   key: string;

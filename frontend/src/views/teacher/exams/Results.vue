@@ -189,7 +189,7 @@
                   <el-tag :type="scoreSourceTagType(answer.scoreSource)" effect="light">
                     {{ scoreSourceLabel(answer.scoreSource) }}
                   </el-tag>
-                  <span>{{ answer.judgeDetail || '系统自动判定' }}</span>
+                  <span>{{ formatJudgeDetail(answer.judgeDetail) }}</span>
                   <span>客观题由系统判分，不支持修改</span>
                 </div>
               </div>
@@ -284,7 +284,7 @@ import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { scoreSourceLabel, scoreSourceTagType } from '../components/scoreDisplay'
+import { formatJudgeDetail, scoreSourceLabel, scoreSourceTagType } from '../components/scoreDisplay'
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
@@ -362,6 +362,7 @@ const gradingSnapshot = computed<GradingSnapshot>(() => ({
   answers: detail.value?.answers ?? [],
   gradeMap,
   markedQuestionIds: markedQuestionIds.value,
+  baselineMarkedQuestionIds: [],
   initialComments: initialComments.value,
 }))
 const currentManualScore = computed(() => manualScoreOf(gradingSnapshot.value))

@@ -130,7 +130,7 @@
       </aside>
     </section>
 
-    <el-dialog v-model="dialogVisible" title="作业批改" width="920px">
+    <el-dialog v-model="dialogVisible" title="作业批改" width="920px" :before-close="handleDialogBeforeClose">
       <template v-if="selectedSubmission">
         <div class="grade-dialog">
           <section class="grade-dialog__main">
@@ -164,7 +164,7 @@
                       <strong>第 {{ question.sortOrder }} 题</strong>
                       <p>{{ question.stem }}</p>
                     </div>
-                    <el-tag effect="light">{{ question.type }} / {{ question.score }} 分</el-tag>
+                    <el-tag effect="light">{{ questionTypeLabel(question.type) }} / {{ question.score }} 分</el-tag>
                   </div>
                   <div class="question-grade-item__body">
                     <div>
@@ -172,41 +172,48 @@
                       <div class="answer-text answer-text--compact">{{ question.answer?.answerText || question.answer?.answerJson || '未作答' }}</div>
                     </div>
                     <div class="question-grade-item__meta">
-                      <span>建议分：{{ question.answer?.suggestedScore ?? '-' }}</span>
-                      <span>自动分：{{ question.answer?.autoScore ?? '-' }}</span>
+                      <span v-if="question.answer?.suggestedScore != null">系统参考分 {{ question.answer.suggestedScore }}（仅供参考，不直接计入）</span>
+                      <span v-else-if="question.answer?.autoScore != null">自动分 {{ question.answer.autoScore }}</span>
                       <span>来源：{{ scoreSourceLabel(question.answer?.scoreSource) }}</span>
                     </div>
-                    <p class="quick-grade-card__muted">{{ question.answer?.judgeDetail || '当前无自动判题说明。' }}</p>
+                    <p class="quick-grade-card__muted">{{ formatJudgeDetail(question.answer?.judgeDetail) }}</p>
+                    <p
+                      v-if="question.answer?.scoreSource === 'AUTO' || question.answer?.scoreSource === 'AUTO_ACCEPTED'"
+                      class="quick-grade-card__muted"
+                    >客观题由系统判分，不支持修改</p>
                     <div class="question-grade-item__actions">
                       <el-input-number
-                        v-model="answerGradeMap[question.answer?.id || 0].score"
+                        :model-value="draftState.scores[String(question.answer?.id || 0)] ?? undefined"
                         :min="0"
                         :max="question.score"
                         :precision="0"
                         :step="1"
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || !canGradeAnswer"
+                        :disabled="!question.answer?.id || !canGradeAnswer"
+                        placeholder="待评分"
+                        @update:model-value="setAnswerScore(question.answer?.id || 0, $event)"
                       />
                       <el-input
-                        v-model="answerGradeMap[question.answer?.id || 0].teacherComment"
+                        :model-value="draftState.comments[String(question.answer?.id || 0)] ?? ''"
                         type="textarea"
                         :rows="2"
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || !canGradeAnswer"
+                        :disabled="!question.answer?.id || !canGradeAnswer"
                         placeholder="输入本题评语"
+                        @update:model-value="setAnswerComment(question.answer?.id || 0, $event)"
                       />
                       <el-button
                         type="primary"
                         plain
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || !canGradeAnswer"
+                        :disabled="!question.answer?.id || !canGradeAnswer"
                         @click="submitAnswerGrade(question.answer?.id || 0, false)"
                       >
                         保存本题
                       </el-button>
                       <el-button
                         plain
-                        :disabled="!question.answer?.id || selectedSubmission.submitStatus === SUBMISSION_STATUS.GRADED || question.answer?.suggestedScore == null || !canGradeAnswer"
+                        :disabled="!question.answer?.id || question.answer?.suggestedScore == null || !canGradeAnswer"
                         @click="submitAnswerGrade(question.answer?.id || 0, true)"
                       >
-                        采纳推荐分
+                        采纳参考分
                       </el-button>
                     </div>
                   </div>
@@ -216,6 +223,21 @@
           </section>
 
           <aside class="grade-dialog__aside">
+            <div class="grade-form-card">
+              <div class="grade-dialog__section-title">评分汇总</div>
+              <p class="quick-grade-card__muted">客观题 + 主观题</p>
+              <div class="submission-row__meta-grid">
+                <div><span class="submission-row__label">客观题自动得分</span><strong>{{ scoringSummary.autoScore }}</strong></div>
+                <div><span class="submission-row__label">主观题人工得分</span><strong>{{ scoringSummary.manualScore }}</strong></div>
+                <div><span class="submission-row__label">总分</span><strong>{{ scoringSummary.totalScore }}</strong></div>
+              </div>
+              <p v-if="scoringSummary.hasManual" class="quick-grade-card__muted">
+                主观题评分进度 {{ scoringSummary.completed }}/{{ scoringSummary.total }} 题
+              </p>
+              <p v-else class="quick-grade-card__muted">{{ scoringSummary.noManualText }}</p>
+              <p v-if="hasDraftChanges(draftState)" class="quick-grade-card__muted">有未保存的评分</p>
+            </div>
+
             <div class="grade-form-card">
               <div class="grade-dialog__section-title">评分与反馈</div>
               <el-alert
@@ -228,17 +250,6 @@
                 class="grade-readonly-alert"
               />
               <el-form label-position="top" class="grade-form">
-                <el-form-item :label="gradeScoreLabel" required>
-                  <el-input-number
-                    v-model="gradeForm.totalScore"
-                    :min="0"
-                    :max="gradeTotalMax"
-                    :precision="0"
-                    :step="1"
-                    :disabled="!canGradeAnswer"
-                    style="width: 100%"
-                  />
-                </el-form-item>
                 <el-form-item label="评语">
                   <el-input v-model="gradeForm.teacherComment" type="textarea" :rows="8" maxlength="500" show-word-limit :disabled="!canGradeAnswer" />
                 </el-form-item>
@@ -257,7 +268,7 @@
         </div>
       </template>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="closeGradeDialog">取消</el-button>
         <el-button
           v-if="canReturnSubmission"
           type="warning"
@@ -276,7 +287,18 @@ import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { scoreSourceLabel } from './components/scoreDisplay';
+import {
+  buildScoringSummary,
+  createGradingDraft,
+  formatJudgeDetail,
+  hasDraftChanges,
+  questionTypeLabel,
+  scoreSourceLabel,
+  scoringStrategyOf,
+  setDraftComment,
+  setDraftScore,
+  type GradingDraftState,
+} from './components/scoreDisplay';
 import {
   getHomeworkSubmissionDetail,
   gradeHomeworkAnswer,
@@ -294,7 +316,7 @@ const returning = ref(false);
 const dialogVisible = ref(false);
 const rows = ref<HomeworkSubmissionItem[]>([]);
 const selectedSubmission = ref<HomeworkSubmissionItem | null>(null);
-const answerGradeMap = reactive<Record<number, { score: number; teacherComment: string }>>({});
+const draftState = reactive<GradingDraftState>(createGradingDraft([]));
 const activeSubmissionId = ref<number | null>(null);
 const searchQuery = ref('');
 const statusFilter = ref<HomeworkSubmissionStatus | ''>('');
@@ -307,8 +329,15 @@ const gradeForm = reactive<GradeHomeworkRequest>({
 const homeworkId = computed(() => route.params.id as string);
 const homeworkTitle = computed(() => rows.value[0]?.homeworkTitle || '');
 
-const canGradeAnswer = computed(() =>
-  ([SUBMISSION_STATUS.SUBMITTED, SUBMISSION_STATUS.GRADED] as string[]).includes(selectedSubmission.value?.submitStatus || ''),
+const homeworkStrategy = scoringStrategyOf('HOMEWORK');
+const isReadOnly = computed(() => homeworkStrategy.isReadOnly(selectedSubmission.value?.submitStatus));
+const canGradeAnswer = computed(() => selectedSubmission.value?.submitStatus === SUBMISSION_STATUS.SUBMITTED);
+
+const scoringItems = computed(() =>
+  (selectedSubmission.value?.questions ?? []).map(question => homeworkStrategy.adapt(question)),
+);
+const scoringSummary = computed(() =>
+  buildScoringSummary('HOMEWORK', scoringItems.value, draftState),
 );
 
 const filteredRows = computed(() => {
@@ -360,26 +389,69 @@ const fetchData = async () => {
   }
 };
 
+const guardDraft = async (action: () => void | Promise<void>) => {
+  if (!hasDraftChanges(draftState)) {
+    await action();
+    return;
+  }
+  try {
+    await ElMessageBox.confirm('当前评分尚未保存，确定切换吗？', '离开当前答卷', {
+      confirmButtonText: '确定切换',
+      cancelButtonText: '继续评分',
+      type: 'warning',
+    });
+    await action();
+  } catch {
+    // 取消则停留在当前答卷
+  }
+};
+
+const handleDialogBeforeClose = (done: () => void) => {
+  void guardDraft(() => done());
+};
+
+const closeGradeDialog = () => {
+  void guardDraft(() => {
+    dialogVisible.value = false;
+  });
+};
+
 const setActiveSubmission = (row: HomeworkSubmissionItem) => {
-  activeSubmissionId.value = row.id;
+  void guardDraft(() => {
+    activeSubmissionId.value = row.id;
+  });
+};
+
+const hydrateDraft = () => {
+  Object.assign(
+    draftState,
+    createGradingDraft(
+      scoringItems.value.map(item => ({
+        key: item.key,
+        score: item.score ?? null,
+        teacherComment: item.teacherComment,
+      })),
+      { markAll: isReadOnly.value },
+    ),
+  );
 };
 
 const openGradeDialog = async (row: HomeworkSubmissionItem | null) => {
   if (!row) return;
-  selectedSubmission.value = await getHomeworkSubmissionDetail(row.id);
-  gradeForm.totalScore = selectedSubmission.value.totalScore ?? 0;
-  gradeForm.teacherComment = selectedSubmission.value.teacherComment || '';
-  Object.keys(answerGradeMap).forEach(key => delete answerGradeMap[Number(key)]);
-  selectedSubmission.value.questions?.forEach(question => {
-    const answer = question.answer;
-    if (answer?.id) {
-      answerGradeMap[answer.id] = {
-        score: answer.score ?? answer.suggestedScore ?? answer.autoScore ?? 0,
-        teacherComment: answer.teacherComment || '',
-      };
-    }
+  await guardDraft(async () => {
+    selectedSubmission.value = await getHomeworkSubmissionDetail(row.id);
+    gradeForm.teacherComment = selectedSubmission.value.teacherComment || '';
+    hydrateDraft();
+    dialogVisible.value = true;
   });
-  dialogVisible.value = true;
+};
+
+const setAnswerScore = (answerId: number, score: number | null) => {
+  setDraftScore(draftState, String(answerId), score);
+};
+
+const setAnswerComment = (answerId: number, comment: string) => {
+  setDraftComment(draftState, String(answerId), comment);
 };
 
 const submitAnswerGrade = async (answerId: number, acceptSuggested: boolean) => {
@@ -387,24 +459,20 @@ const submitAnswerGrade = async (answerId: number, acceptSuggested: boolean) => 
     ElMessage.warning('学生尚未提交作业，不能批改');
     return;
   }
-  const current = answerGradeMap[answerId];
-  if (!selectedSubmission.value || !current) return;
+  const key = String(answerId);
+  if (!selectedSubmission.value || !(key in draftState.scores)) return;
+  if (!acceptSuggested && !draftState.marked.includes(key)) {
+    ElMessage.warning('请先输入本题分数');
+    return;
+  }
   await gradeHomeworkAnswer(answerId, {
-    score: acceptSuggested ? undefined : current.score,
-    teacherComment: current.teacherComment.trim(),
+    score: acceptSuggested ? undefined : draftState.scores[key] ?? 0,
+    teacherComment: draftState.comments[key]?.trim() || '',
     acceptSuggested,
   });
-  ElMessage.success(acceptSuggested ? '已采纳推荐分' : '单题评分已保存');
+  ElMessage.success(acceptSuggested ? '已采纳参考分' : '单题评分已保存');
   selectedSubmission.value = await getHomeworkSubmissionDetail(selectedSubmission.value.id);
-  selectedSubmission.value.questions?.forEach(question => {
-    const answer = question.answer as HomeworkQuestionAnswer | null | undefined;
-    if (answer?.id) {
-      answerGradeMap[answer.id] = {
-        score: answer.score ?? answer.suggestedScore ?? answer.autoScore ?? 0,
-        teacherComment: answer.teacherComment || '',
-      };
-    }
-  });
+  hydrateDraft();
 };
 
 const appendQuickComment = (text: string) => {
@@ -418,16 +486,26 @@ const submitGrade = async () => {
     ElMessage.warning('学生尚未提交作业，不能批改');
     return;
   }
-  if (!selectedSubmission.value) {
+  if (!selectedSubmission.value) return;
+  try {
+    await ElMessageBox.confirm('保存后评分将结案且不可修改，确认保存？', '保存评分', {
+      confirmButtonText: '确认保存',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+  } catch {
     return;
   }
   await gradeHomeworkSubmission(selectedSubmission.value.id, {
-    totalScore: gradeForm.totalScore,
+    totalScore: scoringSummary.value.totalScore,
     teacherComment: gradeForm.teacherComment.trim(),
   });
-  ElMessage.success('作业批改成功');
+  ElMessage.success('评分已保存，答卷已结案');
   dialogVisible.value = false;
   await fetchData();
+  selectedSubmission.value = await getHomeworkSubmissionDetail(selectedSubmission.value.id);
+  gradeForm.teacherComment = selectedSubmission.value.teacherComment || '';
+  hydrateDraft();
 };
 
 /** 仅已提交或已批改的提交支持打回；打回后学生可重新编辑并再次提交。 */
@@ -482,7 +560,7 @@ const submissionStatusTagType = (status: HomeworkSubmissionStatus) => {
 };
 
 const scoreText = (score?: number | null) => {
-  return typeof score === 'number' ? `${score.toFixed(1)} / 100` : '待评分';
+  return typeof score === 'number' ? score.toFixed(1) : '待评分';
 };
 
 const previewText = (text?: string | null) => {
@@ -1035,5 +1113,14 @@ onMounted(fetchData);
   .summary-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.grade-form-card .el-button:disabled,
+.grade-form-card .el-input-number.is-disabled,
+.question-grade-item .el-button:disabled,
+.question-grade-item .el-input-number.is-disabled,
+.quick-comment-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>

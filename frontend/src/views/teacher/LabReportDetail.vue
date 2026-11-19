@@ -84,7 +84,7 @@
                   <span class="sidebar-step__eyebrow">题项 {{ item.stepNo || '-' }}</span>
                   <strong>{{ item.stepTitle || item.title || '未命名题项' }}</strong>
                 </div>
-                <span class="sidebar-step__score">{{ gradeFormMap[gradeKey(item)]?.score ?? resolvedInitialScore(item) }}/{{ maxScoreOf(item) }}</span>
+                <span class="sidebar-step__score">{{ gradeFormMap[gradeKey(item)]?.score ?? '待评分' }}/{{ itemMaxScore(item) }}</span>
               </button>
             </div>
           </article>
@@ -120,7 +120,7 @@
                 <el-tag :type="scoreSourceTagType(item.scoreSource)" effect="light">
                   {{ scoreSourceLabel(item.scoreSource) }}
                 </el-tag>
-                <span class="answer-card__max-score">满分 {{ maxScoreOf(item) }}</span>
+                <span class="answer-card__max-score">满分 {{ itemMaxScore(item) }}</span>
               </div>
             </header>
 
@@ -137,8 +137,13 @@
               <section class="insight-grid">
                 <article class="insight-card">
                   <div class="pane-title">评分参考</div>
-                  <div class="insight-line"><span>系统参考分</span><strong>{{ displaySuggestedScore(item) }}</strong></div>
-                  <div class="insight-detail">{{ item.autoJudgeDetail || '当前暂无系统评分说明。' }}</div>
+                  <div v-if="item.suggestedScore != null" class="insight-line">系统参考分 {{ item.suggestedScore }}（仅供参考，不直接计入）</div>
+                  <div v-else-if="item.autoScore != null" class="insight-line">自动分 {{ item.autoScore }}</div>
+                  <div class="insight-detail">{{ formatJudgeDetail(item.autoJudgeDetail ?? item.judgeDetail) }}</div>
+                  <div
+                    v-if="item.scoreSource === 'AUTO' || item.scoreSource === 'AUTO_ACCEPTED'"
+                    class="insight-detail"
+                  >客观题由系统判分，不支持修改</div>
                 </article>
 
                 <article class="insight-card insight-card--grading">
@@ -146,13 +151,15 @@
                   <el-form label-position="top" class="grading-form">
                     <el-form-item label="本题项得分" class="grading-form__item grading-form__item--score">
                       <el-input-number
-                        v-model="gradeFormMap[gradeKey(item)].score"
+                        :model-value="gradeFormMap[gradeKey(item)]?.score ?? undefined"
                         :min="0"
-                        :max="maxScoreOf(item)"
+                        :max="itemMaxScore(item)"
                         :precision="0"
                         :step="1"
                         style="width: 100%"
-                        :disabled="isSavedPreview"
+                        :disabled="isReadOnly"
+                        placeholder="待评分"
+                        @update:model-value="setItemScore(item, $event)"
                       />
                     </el-form-item>
                     <el-form-item label="本题项评语" class="grading-form__item">
@@ -162,13 +169,13 @@
                         :rows="3"
                         maxlength="500"
                         show-word-limit
-                        :disabled="isSavedPreview"
+                        :disabled="isReadOnly"
                       />
                     </el-form-item>
                   </el-form>
                   <div class="footer-actions footer-actions--inline">
-                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId || isSavedPreview" @click="confirmSingleStep(item, false)">确认本题项</el-button>
-                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId || item.suggestedScore == null || isSavedPreview" @click="confirmSingleStep(item, true)">采纳建议分</el-button>
+                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId || isReadOnly" @click="confirmSingleStep(item, false)">确认本题项</el-button>
+                    <el-button plain :disabled="!gradeFormMap[gradeKey(item)]?.answerId || item.suggestedScore == null || isReadOnly" @click="confirmSingleStep(item, true)">采纳参考分</el-button>
                   </div>
                 </article>
               </section>
@@ -181,16 +188,20 @@
                 <h3>实验报告评语</h3>
                 <p>确认所有题项评分后填写实验报告评语，提交后会刷新当前页面结果与批改状态。</p>
               </div>
-              <div class="final-card__score">当前页内题项评分总和 {{ computedTotalScore }}</div>
+              <div class="final-card__score">
+                客观 {{ scoringSummary.autoScore }} · 主观 {{ scoringSummary.manualScore }} · 总分 {{ computedTotalScore }}
+                <span v-if="scoringSummary.hasManual">（进度 {{ scoringSummary.completed }}/{{ scoringSummary.total }}）</span>
+                <span v-else>（{{ scoringSummary.noManualText }}）</span>
+              </div>
             </div>
             <el-form label-position="top">
               <el-form-item label="实验报告评语">
-                <el-input v-model="reportComment" type="textarea" :rows="4" maxlength="1000" show-word-limit :disabled="isSavedPreview" />
+                <el-input v-model="reportComment" type="textarea" :rows="4" maxlength="1000" show-word-limit :disabled="isReadOnly" />
               </el-form-item>
             </el-form>
             <div class="footer-actions">
               <el-button @click="router.back()">取消</el-button>
-              <el-button type="primary" :loading="submitting" :disabled="isSavedPreview" @click="submitGrade">提交评分</el-button>
+              <el-button type="primary" :loading="submitting" :disabled="isReadOnly" @click="submitGrade">提交评分</el-button>
             </div>
           </article>
         </div>
@@ -208,7 +219,17 @@ import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabR
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
-import { displaySuggestedScore, maxScoreOf, resolvedInitialScore, scoreSourceLabel, scoreSourceTagType } from './components/scoreDisplay';
+import {
+  buildScoringSummary,
+  createGradingDraft,
+  formatJudgeDetail,
+  hasDraftChanges,
+  questionTypeLabel,
+  scoreSourceLabel,
+  scoreSourceTagType,
+  scoringStrategyOf,
+  type GradingDraftState,
+} from './components/scoreDisplay';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import type { StepBrief } from './components/BehaviorSummaryCard.vue';
 
@@ -219,15 +240,40 @@ const submitting = ref(false);
 const detail = ref<LabReportDetail | null>(null);
 const reports = ref<LabReportItem[]>([]);
 const reportComment = ref('');
-const gradeFormMap = reactive<Record<string, { answerId: number; score: number; teacherComment: string }>>({});
+const gradeFormMap = reactive<Record<string, { answerId: number; score: number | null; teacherComment: string }>>({});
+const markedKeys = ref<string[]>([]);
+const baselineKeys = ref<string[]>([]);
+const initialComments = ref<Record<string, string>>({});
 const pendingScrollContext = ref<{ anchorId: string | null; offset: number; scrollTop: number } | null>(null);
 
 const reportId = computed(() => Number(route.params.id));
 
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
-
-/** SAVED 表示学生仅保存未提交，整页降级为只读预览。 */
+const labStrategy = scoringStrategyOf('LAB');
+const isReadOnly = computed(() => labStrategy.isReadOnly(detail.value?.submitStatus));
 const isSavedPreview = computed(() => detail.value?.submitStatus === SUBMISSION_STATUS.SAVED);
+const scoringItems = computed(() => answerItems.value.map(item => labStrategy.adapt(item)));
+const itemMaxScore = (item: LabReportAnswerItem) => labStrategy.adapt(item).maxScore ?? 0;
+
+const currentDraft = (): GradingDraftState => {
+  const state = createGradingDraft(
+    scoringItems.value.map(item => ({
+      key: item.key,
+      score: item.score ?? null,
+      teacherComment: item.teacherComment,
+    })),
+  );
+  for (const item of scoringItems.value) {
+    state.scores[item.key] = gradeFormMap[item.key]?.score ?? null;
+    state.comments[item.key] = gradeFormMap[item.key]?.teacherComment ?? '';
+  }
+  state.marked = [...markedKeys.value];
+  state.baselineMarked = [...baselineKeys.value];
+  state.initialComments = { ...initialComments.value };
+  return state;
+};
+
+const scoringSummary = computed(() => buildScoringSummary('LAB', scoringItems.value, currentDraft()));
 
 /** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
 const stepList = computed<StepBrief[]>(() =>
@@ -242,7 +288,7 @@ const stepList = computed<StepBrief[]>(() =>
 
 const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
 
-const computedTotalScore = computed(() => answerItems.value.reduce((sum, item) => sum + (gradeFormMap[gradeKey(item)]?.score ?? 0), 0));
+const computedTotalScore = computed(() => scoringSummary.value.totalScore);
 const summaryStatusLabel = computed(() => detail.value?.summaryText?.trim() ? '已填写实验小结' : '未填写实验小结');
 const summaryPreview = computed(() => detail.value?.summaryText?.trim() || '学生未填写实验小结。');
 const reportQueue = computed(() => sortReports(reports.value));
@@ -283,32 +329,40 @@ const statusLabel = (status?: LabReportStatus) => {
   return status || '未知';
 };
 
-const questionTypeLabel = (type?: LabQuestionType) => {
-  if (type === 'TEXT') return '文本题';
-  if (type === 'SHORT_ANSWER') return '简答题';
-  if (type === 'SINGLE_CHOICE') return '单选题';
-  if (type === 'MULTIPLE_CHOICE') return '多选题';
-  if (type === 'TRUE_FALSE') return '判断题';
-  if (type === 'FILL_BLANK') return '填空题';
-  if (type === 'CODE') return '代码题';
-  return type || '未标注题型';
-};
-
 const ensureGradeEntry = (item: LabReportAnswerItem) => {
   const key = gradeKey(item);
-  if (!gradeFormMap[key]) {
-    const resolvedId = resolveItemId(item);
-    gradeFormMap[key] = {
-      answerId: isValidItemId(resolvedId) ? resolvedId : 0,
-      score: Number(resolvedInitialScore(item)),
-      teacherComment: item.teacherComment || '',
-    };
+  const adapted = labStrategy.adapt(item);
+  const resolvedId = resolveItemId(item);
+  gradeFormMap[key] = {
+    answerId: isValidItemId(resolvedId) ? resolvedId : 0,
+    score: adapted.score ?? null,
+    teacherComment: adapted.teacherComment,
+  };
+  initialComments.value[key] = adapted.teacherComment;
+  if (isReadOnly.value && adapted.score !== null) {
+    if (!markedKeys.value.includes(key)) markedKeys.value.push(key);
+    if (!baselineKeys.value.includes(key)) baselineKeys.value.push(key);
   }
 };
 
 const hydrateGradeForm = (items: LabReportAnswerItem[]) => {
   Object.keys(gradeFormMap).forEach((key) => delete gradeFormMap[key]);
+  markedKeys.value = [];
+  baselineKeys.value = [];
+  initialComments.value = {};
   items.forEach(ensureGradeEntry);
+};
+
+const setItemScore = (item: LabReportAnswerItem, score: number | null) => {
+  const key = gradeKey(item);
+  if (!gradeFormMap[key]) return;
+  gradeFormMap[key].score = score;
+  const index = markedKeys.value.indexOf(key);
+  if (score === null) {
+    if (index >= 0) markedKeys.value.splice(index, 1);
+  } else if (index < 0) {
+    markedKeys.value.push(key);
+  }
 };
 
 const captureScrollContext = (preferredAnchorId?: string) => {
@@ -438,21 +492,52 @@ const handleReturn = async () => {
   }
 };
 
+const guardDraft = async (action: () => void | Promise<void>) => {
+  if (!hasDraftChanges(currentDraft())) {
+    await action();
+    return;
+  }
+  try {
+    await ElMessageBox.confirm('当前评分尚未保存，确定切换吗？', '离开当前答卷', {
+      confirmButtonText: '确定切换',
+      cancelButtonText: '继续评分',
+      type: 'warning',
+    });
+    await action();
+  } catch {
+    // 取消则停留在当前报告
+  }
+};
+
 const goBatchGrade = () => {
-  router.push(`/teacher/lab-reports/${reportId.value}/batch-grade`);
+  void guardDraft(() => {
+    router.push(`/teacher/lab-reports/${reportId.value}/batch-grade`);
+  });
 };
 
 const goReport = (targetReportId?: number) => {
   if (!targetReportId) return;
-  router.push(`/teacher/lab-reports/${targetReportId}`);
+  void guardDraft(() => {
+    router.push(`/teacher/lab-reports/${targetReportId}`);
+  });
 };
 
 const submitGrade = async () => {
-  if (isSavedPreview.value) {
-    ElMessage.warning('学生尚未提交，当前为只读预览');
+  if (isReadOnly.value) {
+    ElMessage.warning('当前报告不可评分');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm('保存后评分将结案且不可修改，确认保存？', '保存评分', {
+      confirmButtonText: '确认保存',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+  } catch {
     return;
   }
   const items = answerItems.value
+    .filter(item => markedKeys.value.includes(gradeKey(item)))
     .map(item => gradeFormMap[gradeKey(item)])
     .filter(entry => entry && isValidItemId(entry.answerId))
     .map(entry => ({
@@ -462,7 +547,7 @@ const submitGrade = async () => {
     }));
 
   if (!items.length) {
-    ElMessage.warning('当前报告没有可提交的题项评分记录');
+    ElMessage.warning('请先输入至少一道题的分数');
     return;
   }
 
@@ -473,7 +558,7 @@ const submitGrade = async () => {
       items,
       teacherComment: reportComment.value.trim(),
     });
-    ElMessage.success('实验报告评分成功');
+    ElMessage.success('评分已保存，报告已结案');
     await fetchData();
   } catch (error) {
     pendingScrollContext.value = null;
@@ -484,13 +569,17 @@ const submitGrade = async () => {
 };
 
 const confirmSingleStep = async (item: LabReportAnswerItem, acceptSuggested: boolean) => {
-  if (isSavedPreview.value) {
-    ElMessage.warning('学生尚未提交，当前为只读预览');
+  if (isReadOnly.value) {
+    ElMessage.warning('当前报告不可评分');
     return;
   }
   const entry = gradeFormMap[gradeKey(item)];
   if (!entry?.answerId) {
     ElMessage.warning('当前题项没有可确认的答案记录');
+    return;
+  }
+  if (!acceptSuggested && !markedKeys.value.includes(gradeKey(item))) {
+    ElMessage.warning('请先输入本题分数');
     return;
   }
   pendingScrollContext.value = captureScrollContext(`answer-${itemKey(item)}`);
@@ -501,7 +590,7 @@ const confirmSingleStep = async (item: LabReportAnswerItem, acceptSuggested: boo
       teacherComment: entry.teacherComment.trim(),
       acceptSuggested,
     });
-    ElMessage.success(acceptSuggested ? '已采纳题项建议分' : '题项评分已确认');
+    ElMessage.success(acceptSuggested ? '已采纳参考分' : '题项评分已确认');
     await fetchData();
   } catch (error) {
     pendingScrollContext.value = null;
@@ -803,5 +892,12 @@ fetchData();
   .detail-sidebar {
     position: static;
   }
+}
+.insight-card .el-button:disabled,
+.footer-actions .el-button:disabled,
+.grading-form .el-input-number.is-disabled,
+.grading-form .el-input.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>

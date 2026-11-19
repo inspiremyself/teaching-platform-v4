@@ -9,7 +9,7 @@
         <div>
           <div class="batch-grade-eyebrow">教师后台 / 实验批量批改</div>
           <h1>题项快捷批改表</h1>
-          <p>独立批量界面集中展示当前报告全部题项，支持快速改分、填写评语、确认单题或采纳建议分。</p>
+          <p>独立批量界面集中展示当前报告全部题项，支持快速改分、填写评语、确认单题或采纳参考分。</p>
         </div>
         <div class="batch-grade-actions">
           <el-button plain :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</el-button>
@@ -17,17 +17,21 @@
           <el-button plain :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</el-button>
           <el-button plain :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</el-button>
           <el-button plain @click="goDetail()">回到详细批改</el-button>
-          <el-button type="primary" :loading="submitting" :disabled="isSavedPreview" @click="submitGrade">提交全部评分</el-button>
+          <el-button type="primary" :loading="submitting" :disabled="isReadOnly" @click="submitGrade">提交全部评分</el-button>
         </div>
       </div>
-      <div v-if="isSavedPreview" class="preview-banner">
+      <div v-if="isReadOnly" class="preview-banner">
         <span class="material-symbols-outlined">info</span>
         <p>学生尚未提交，当前为只读预览</p>
       </div>
       <div v-if="detail" class="batch-grade-meta">
         <span class="batch-grade-chip"><strong>{{ detail.studentName || '-' }}</strong>{{ detail.studentNo || detail.studentUsername || '未标注学号' }}</span>
         <span class="batch-grade-chip"><strong>{{ answerItems.length }}</strong> 个题项</span>
-        <span class="batch-grade-chip batch-grade-chip--accent">页内合计 {{ computedTotalScore }}</span>
+        <span class="batch-grade-chip">客观 {{ scoringSummary.autoScore }}</span>
+        <span class="batch-grade-chip">主观 {{ scoringSummary.manualScore }}</span>
+        <span class="batch-grade-chip batch-grade-chip--accent">总分 {{ computedTotalScore }}</span>
+        <span v-if="scoringSummary.hasManual" class="batch-grade-chip">进度 {{ scoringSummary.completed }}/{{ scoringSummary.total }}</span>
+        <span v-else class="batch-grade-chip">{{ scoringSummary.noManualText }}</span>
       </div>
     </section>
 
@@ -64,19 +68,29 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="参考" width="120">
-          <template #default="scope">{{ displaySuggestedScore(scope.row) }}</template>
+        <el-table-column label="参考" min-width="200">
+          <template #default="scope">
+            <span v-if="scope.row.suggestedScore != null">系统参考分 {{ scope.row.suggestedScore }}（仅供参考，不直接计入）</span>
+            <span v-else-if="scope.row.autoScore != null">自动分 {{ scope.row.autoScore }}</span>
+            <span v-else>暂无</span>
+            <span
+              v-if="scope.row.scoreSource === 'AUTO' || scope.row.scoreSource === 'AUTO_ACCEPTED'"
+              class="batch-reference-note"
+            >客观题由系统判分，不支持修改</span>
+          </template>
         </el-table-column>
         <el-table-column label="得分" width="150">
           <template #default="scope">
             <el-input-number
-              v-model="gradeFormMap[gradeKey(scope.row)].score"
+              :model-value="gradeFormMap[gradeKey(scope.row)]?.score ?? undefined"
               :min="0"
-              :max="maxScoreOf(scope.row)"
+              :max="itemMaxScore(scope.row)"
               size="small"
               controls-position="right"
               style="width: 120px"
-              :disabled="isSavedPreview"
+              :disabled="isReadOnly"
+              placeholder="待评分"
+              @update:model-value="setItemScore(scope.row, $event)"
             />
           </template>
         </el-table-column>
@@ -88,7 +102,7 @@
               maxlength="500"
               placeholder="本题评语"
               clearable
-              :disabled="isSavedPreview"
+              :disabled="isReadOnly"
             />
           </template>
         </el-table-column>
@@ -96,8 +110,8 @@
           <template #default="scope">
             <div class="batch-row-actions">
               <el-button plain size="small" @click="goDetail(itemKey(scope.row))">详情</el-button>
-              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || isSavedPreview" @click="confirmSingleStep(scope.row, false)">确认</el-button>
-              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || scope.row.suggestedScore == null || isSavedPreview" @click="confirmSingleStep(scope.row, true)">采纳</el-button>
+              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || isReadOnly" @click="confirmSingleStep(scope.row, false)">确认</el-button>
+              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || scope.row.suggestedScore == null || isReadOnly" @click="confirmSingleStep(scope.row, true)">采纳参考分</el-button>
             </div>
           </template>
         </el-table-column>
@@ -111,14 +125,21 @@
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import type { StepBrief } from './components/BehaviorSummaryCard.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
-import { displaySuggestedScore, maxScoreOf, resolvedInitialScore } from './components/scoreDisplay';
+import {
+  buildScoringSummary,
+  createGradingDraft,
+  hasDraftChanges,
+  questionTypeLabel,
+  scoringStrategyOf,
+  type GradingDraftState,
+} from './components/scoreDisplay';
 
 const route = useRoute();
 const router = useRouter();
@@ -128,12 +149,37 @@ const submitting = ref(false);
 const detail = ref<LabReportDetail | null>(null);
 const reports = ref<LabReportItem[]>([]);
 const reportComment = ref('');
-const gradeFormMap = reactive<Record<string, { answerId: number; score: number; teacherComment: string }>>({});
+const gradeFormMap = reactive<Record<string, { answerId: number; score: number | null; teacherComment: string }>>({});
+const markedKeys = ref<string[]>([]);
+const baselineKeys = ref<string[]>([]);
+const initialComments = ref<Record<string, string>>({});
 
 const reportId = computed(() => Number(route.params.id));
 const answerItems = computed(() => detail.value?.answers || detail.value?.items || []);
-/** SAVED 表示学生仅保存未提交，整页降级为只读预览。 */
-const isSavedPreview = computed(() => detail.value?.submitStatus === SUBMISSION_STATUS.SAVED);
+const labStrategy = scoringStrategyOf('LAB');
+const isReadOnly = computed(() => labStrategy.isReadOnly(detail.value?.submitStatus));
+const scoringItems = computed(() => answerItems.value.map(item => labStrategy.adapt(item)));
+const itemMaxScore = (item: LabReportAnswerItem) => labStrategy.adapt(item).maxScore ?? 0;
+
+const currentDraft = (): GradingDraftState => {
+  const state = createGradingDraft(
+    scoringItems.value.map(item => ({
+      key: item.key,
+      score: item.score ?? null,
+      teacherComment: item.teacherComment,
+    })),
+  );
+  for (const item of scoringItems.value) {
+    state.scores[item.key] = gradeFormMap[item.key]?.score ?? null;
+    state.comments[item.key] = gradeFormMap[item.key]?.teacherComment ?? '';
+  }
+  state.marked = [...markedKeys.value];
+  state.baselineMarked = [...baselineKeys.value];
+  state.initialComments = { ...initialComments.value };
+  return state;
+};
+
+const scoringSummary = computed(() => buildScoringSummary('LAB', scoringItems.value, currentDraft()));
 
 /** stepId → stepNo/title 映射（BehaviorSummaryCard Step Dwell 面板用，D2） */
 const stepList = computed<StepBrief[]>(() =>
@@ -146,7 +192,7 @@ const stepList = computed<StepBrief[]>(() =>
     })),
 );
 const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
-const computedTotalScore = computed(() => answerItems.value.reduce((sum, item) => sum + (gradeFormMap[gradeKey(item)]?.score ?? 0), 0));
+const computedTotalScore = computed(() => scoringSummary.value.totalScore);
 const reportQueue = computed(() => sortReports(reports.value));
 const currentReportIndex = computed(() => reportQueue.value.findIndex((row) => row.id === reportId.value));
 const previousStudentReport = computed(() => currentReportIndex.value > 0 ? reportQueue.value[currentReportIndex.value - 1] : null);
@@ -178,30 +224,38 @@ const isValidItemId = (value: unknown): value is number => typeof value === 'num
 const itemKey = (item: LabReportAnswerItem) => String(resolveItemId(item) ?? 0);
 const gradeKey = (item: LabReportAnswerItem) => itemKey(item);
 
-const questionTypeLabel = (type?: LabQuestionType) => {
-  if (type === 'TEXT') return '文本题';
-  if (type === 'SHORT_ANSWER') return '简答题';
-  if (type === 'SINGLE_CHOICE') return '单选题';
-  if (type === 'MULTIPLE_CHOICE') return '多选题';
-  if (type === 'TRUE_FALSE') return '判断题';
-  if (type === 'FILL_BLANK') return '填空题';
-  if (type === 'CODE') return '代码题';
-  return type || '未标注题型';
-};
-
 const hydrateGradeForm = (items: LabReportAnswerItem[]) => {
   Object.keys(gradeFormMap).forEach((key) => delete gradeFormMap[key]);
+  markedKeys.value = [];
+  baselineKeys.value = [];
+  initialComments.value = {};
   items.forEach((item) => {
     const key = gradeKey(item);
-    if (!gradeFormMap[key]) {
-      const resolvedId = resolveItemId(item);
-      gradeFormMap[key] = {
-        answerId: isValidItemId(resolvedId) ? resolvedId : 0,
-        score: Number(resolvedInitialScore(item)),
-        teacherComment: item.teacherComment || '',
-      };
+    const adapted = labStrategy.adapt(item);
+    const resolvedId = resolveItemId(item);
+    gradeFormMap[key] = {
+      answerId: isValidItemId(resolvedId) ? resolvedId : 0,
+      score: adapted.score ?? null,
+      teacherComment: adapted.teacherComment,
+    };
+    initialComments.value[key] = adapted.teacherComment;
+    if (isReadOnly.value && adapted.score !== null) {
+      if (!markedKeys.value.includes(key)) markedKeys.value.push(key);
+      if (!baselineKeys.value.includes(key)) baselineKeys.value.push(key);
     }
   });
+};
+
+const setItemScore = (item: LabReportAnswerItem, score: number | null) => {
+  const key = gradeKey(item);
+  if (!gradeFormMap[key]) return;
+  gradeFormMap[key].score = score;
+  const index = markedKeys.value.indexOf(key);
+  if (score === null) {
+    if (index >= 0) markedKeys.value.splice(index, 1);
+  } else if (index < 0) {
+    markedKeys.value.push(key);
+  }
 };
 
 const fetchData = async () => {
@@ -220,26 +274,51 @@ const fetchData = async () => {
   }
 };
 
+const guardDraft = async (action: () => void | Promise<void>) => {
+  if (!hasDraftChanges(currentDraft())) {
+    await action();
+    return;
+  }
+  try {
+    await ElMessageBox.confirm('当前评分尚未保存，确定切换吗？', '离开当前答卷', {
+      confirmButtonText: '确定切换',
+      cancelButtonText: '继续评分',
+      type: 'warning',
+    });
+    await action();
+  } catch {
+    // 取消则停留在当前批量页
+  }
+};
+
 const goDetail = (answerId?: string) => {
-  router.push({
-    path: `/teacher/lab-reports/${reportId.value}`,
-    query: answerId ? { answerId } : undefined,
+  void guardDraft(() => {
+    router.push({
+      path: `/teacher/lab-reports/${reportId.value}`,
+      query: answerId ? { answerId } : undefined,
+    });
   });
 };
 
 const goReport = (targetReportId?: number) => {
   if (!targetReportId) return;
-  router.push(`/teacher/lab-reports/${targetReportId}/batch-grade`);
+  void guardDraft(() => {
+    router.push(`/teacher/lab-reports/${targetReportId}/batch-grade`);
+  });
 };
 
 const confirmSingleStep = async (item: LabReportAnswerItem, acceptSuggested: boolean) => {
-  if (isSavedPreview.value) {
-    ElMessage.warning('学生尚未提交，当前为只读预览');
+  if (isReadOnly.value) {
+    ElMessage.warning('当前报告不可评分');
     return;
   }
   const entry = gradeFormMap[gradeKey(item)];
   if (!entry?.answerId) {
     ElMessage.warning('当前题项没有可确认的答案记录');
+    return;
+  }
+  if (!acceptSuggested && !markedKeys.value.includes(gradeKey(item))) {
+    ElMessage.warning('请先输入本题分数');
     return;
   }
   await confirmTeacherLabStepScore(reportId.value, {
@@ -248,16 +327,26 @@ const confirmSingleStep = async (item: LabReportAnswerItem, acceptSuggested: boo
     teacherComment: entry.teacherComment.trim(),
     acceptSuggested,
   });
-  ElMessage.success(acceptSuggested ? '已采纳题项建议分' : '题项评分已确认');
+  ElMessage.success(acceptSuggested ? '已采纳参考分' : '题项评分已确认');
   await fetchData();
 };
 
 const submitGrade = async () => {
-  if (isSavedPreview.value) {
-    ElMessage.warning('学生尚未提交，当前为只读预览');
+  if (isReadOnly.value) {
+    ElMessage.warning('当前报告不可评分');
+    return;
+  }
+  try {
+    await ElMessageBox.confirm('保存后评分将结案且不可修改，确认保存？', '保存评分', {
+      confirmButtonText: '确认保存',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+  } catch {
     return;
   }
   const items = answerItems.value
+    .filter(item => markedKeys.value.includes(gradeKey(item)))
     .map(item => gradeFormMap[gradeKey(item)])
     .filter(entry => entry && isValidItemId(entry.answerId))
     .map(entry => ({
@@ -267,7 +356,7 @@ const submitGrade = async () => {
     }));
 
   if (!items.length) {
-    ElMessage.warning('当前报告没有可提交的题项评分记录');
+    ElMessage.warning('请先输入至少一道题的分数');
     return;
   }
 
@@ -277,7 +366,7 @@ const submitGrade = async () => {
       items,
       teacherComment: reportComment.value.trim(),
     });
-    ElMessage.success('实验报告评分成功');
+    ElMessage.success('评分已保存，报告已结案');
     await fetchData();
   } finally {
     submitting.value = false;
@@ -494,5 +583,19 @@ fetchData();
   .batch-grade-actions {
     justify-content: flex-start;
   }
+}
+.batch-reference-note {
+  display: block;
+  margin-top: 4px;
+  color: var(--batch-muted);
+  font-size: 11px;
+}
+
+.batch-grade-table .el-button:disabled,
+.batch-grade-table .el-input-number.is-disabled,
+.batch-grade-table .el-input.is-disabled,
+.batch-grade-actions .el-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>

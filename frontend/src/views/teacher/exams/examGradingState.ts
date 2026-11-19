@@ -1,16 +1,22 @@
 import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums'
 import type { ExamAnswerDetail, ExamSubmissionDetail, GradeExamPayload } from '@/types/exam'
+import {
+  createGradingDraft,
+  hasDraftChanges as hasSharedDraftChanges,
+  setDraftScore as setSharedDraftScore,
+  type GradeItem,
+  type GradingDraftState,
+} from '../components/gradingDraft'
+import { scoringStrategyOf } from '../components/scoringStrategies'
 
-export interface GradeItem {
-  score: number | null
-  teacherComment: string
-}
+export type { GradeItem } from '../components/gradingDraft'
 
 export interface GradingSnapshot {
   status: string
   answers: ExamAnswerDetail[]
   gradeMap: Record<number, GradeItem>
   markedQuestionIds: number[]
+  baselineMarkedQuestionIds: number[]
   initialComments: Record<number, string>
 }
 
@@ -33,7 +39,23 @@ export function hasManualGrading(snapshot: GradingSnapshot): boolean {
 }
 
 export function isReadOnlySubmission(status: string): boolean {
-  return status === SUBMISSION_STATUS.GRADED || status === EXAM_SUBMISSION_STATUS.IN_PROGRESS
+  return scoringStrategyOf('EXAM').isReadOnly(status)
+}
+
+function toSharedDraft(snapshot: GradingSnapshot): GradingDraftState {
+  const scores: Record<string, number | null> = {}
+  const comments: Record<string, string> = {}
+  for (const [key, item] of Object.entries(snapshot.gradeMap)) {
+    scores[key] = item.score
+    comments[key] = item.teacherComment
+  }
+  return {
+    scores,
+    comments,
+    initialComments: { ...snapshot.initialComments },
+    marked: snapshot.markedQuestionIds.map(String),
+    baselineMarked: snapshot.baselineMarkedQuestionIds.map(String),
+  }
 }
 
 export function createGradingState(detail: ExamSubmissionDetail | null): GradingSnapshot {
@@ -42,19 +64,30 @@ export function createGradingState(detail: ExamSubmissionDetail | null): Grading
     answers: detail?.answers ?? [],
     gradeMap: {},
     markedQuestionIds: [],
+    baselineMarkedQuestionIds: [],
     initialComments: {},
   }
   if (!detail) return snapshot
 
+  const shared = createGradingDraft(
+    detail.answers.filter(isManualQuestion).map(answer => ({
+      key: String(answer.questionId),
+      score: answer.score ?? null,
+      teacherComment: answer.teacherComment ?? '',
+    })),
+    { markAll: detail.status === SUBMISSION_STATUS.GRADED },
+  )
   for (const answer of detail.answers) {
     if (!isManualQuestion(answer)) continue
-    const comment = answer.teacherComment ?? ''
-    snapshot.gradeMap[answer.questionId] = { score: answer.score ?? null, teacherComment: comment }
-    snapshot.initialComments[answer.questionId] = comment
-    if (detail.status === SUBMISSION_STATUS.GRADED && answer.score !== null) {
-      snapshot.markedQuestionIds.push(answer.questionId)
+    const key = String(answer.questionId)
+    snapshot.gradeMap[answer.questionId] = {
+      score: shared.scores[key] ?? null,
+      teacherComment: shared.comments[key] ?? '',
     }
+    snapshot.initialComments[answer.questionId] = shared.initialComments[key] ?? ''
   }
+  snapshot.markedQuestionIds = shared.marked.map(Number)
+  snapshot.baselineMarkedQuestionIds = shared.baselineMarked.map(Number)
   return snapshot
 }
 
@@ -65,13 +98,10 @@ export function setQuestionScore(
 ): void {
   const item = snapshot.gradeMap[questionId]
   if (!item) return
-  item.score = score
-  const index = snapshot.markedQuestionIds.indexOf(questionId)
-  if (score === null) {
-    if (index >= 0) snapshot.markedQuestionIds.splice(index, 1)
-  } else if (index < 0) {
-    snapshot.markedQuestionIds.push(questionId)
-  }
+  const shared = toSharedDraft(snapshot)
+  setSharedDraftScore(shared, String(questionId), score)
+  item.score = shared.scores[String(questionId)] ?? null
+  snapshot.markedQuestionIds = shared.marked.map(Number)
 }
 
 export function isMarked(snapshot: GradingSnapshot, questionId: number): boolean {
@@ -99,12 +129,7 @@ export function totalScoreOf(snapshot: GradingSnapshot, autoScore: number | null
 
 export function hasUnsavedChanges(snapshot: GradingSnapshot): boolean {
   if (isReadOnlySubmission(snapshot.status)) return false
-  if (snapshot.markedQuestionIds.length > 0) return true
-  return manualAnswersOf(snapshot.answers).some(answer => {
-    const current = snapshot.gradeMap[answer.questionId]?.teacherComment ?? ''
-    const initial = snapshot.initialComments[answer.questionId] ?? ''
-    return current !== initial
-  })
+  return hasSharedDraftChanges(toSharedDraft(snapshot))
 }
 
 export function canSubmitGrade(snapshot: GradingSnapshot): boolean {
