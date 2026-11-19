@@ -1,167 +1,126 @@
 <template>
-  <div class="page exams-console workbench-page">
-    <section class="workbench-header exams-header">
-      <div class="workbench-header__top">
-        <div class="workbench-header__main">
-          <div class="exams-header__eyebrow">教师控制台 / 考试闭环 / 考试管理</div>
-          <h1>考试管理工作台</h1>
-          <p>围绕发布、进行、收卷和批改入口维护考试闭环。</p>
+  <WorkbenchShell
+    eyebrow="教师控制台 / 考试闭环 / 考试管理"
+    title="考试管理"
+    description="围绕发布、进行、收卷和批改入口维护考试闭环。"
+  >
+    <template #actions>
+      <ActionButton label="刷新列表" tone="ghost" :disabled="loading" @click="fetchExams" />
+      <ActionButton label="创建考试" tone="primary" @click="openCreateDialog" />
+    </template>
+    <template #meta>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.total }}</strong> 任务总数</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.filtered }}</strong> 筛选结果</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.draft }}</strong> 草稿</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.inProgress }}</strong> 进行中</span>
+      <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ workbench.meta.value.submissions }}</strong> 累计提交</span>
+      <span class="workbench-meta__item">{{ workbench.meta.value.hint }}</span>
+    </template>
+
+    <template #toolbar>
+      <div class="workbench-toolbar__main">
+        <div class="workbench-toolbar__search">
+          <el-input v-model="workbench.filters.keyword.value" placeholder="搜索标题、班级或描述" clearable />
         </div>
-        <div class="workbench-header__actions console-actions">
-          <button class="console-button console-button--secondary" type="button" @click="fetchExams" :disabled="loading">
-            <span class="material-symbols-outlined">refresh</span>
-            刷新列表
-          </button>
-          <button class="console-button console-button--primary" type="button" @click="openCreateDialog">
-            <span class="material-symbols-outlined">add_circle</span>
-            创建考试
-          </button>
+        <div class="workbench-toolbar__filters">
+          <div class="workbench-filter">
+            <label>状态</label>
+            <el-select v-model="workbench.filters.status.value" clearable placeholder="全部状态">
+              <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+              <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+              <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
+            </el-select>
+          </div>
+          <div class="workbench-filter">
+            <label>班级</label>
+            <el-select v-model="workbench.filters.classId.value" clearable placeholder="全部班级">
+              <el-option v-for="option in workbench.classOptions.value" :key="option.id" :label="option.label" :value="option.id" />
+            </el-select>
+          </div>
+          <div class="workbench-filter">
+            <label>时效</label>
+            <el-select v-model="workbench.filters.deadlineBucket.value" placeholder="全部时效">
+              <el-option label="全部时效" value="ALL" />
+              <el-option label="即将截止" value="UPCOMING" />
+              <el-option label="已截止" value="OVERDUE" />
+              <el-option label="未设置截止" value="UNDATED" />
+            </el-select>
+          </div>
         </div>
       </div>
-
-      <div class="workbench-meta exams-meta">
-        <span class="workbench-meta__item"><strong>{{ rows.length }}</strong> 考试总数</span>
-        <span class="workbench-meta__item"><strong>{{ filteredRows.length }}</strong> 筛选结果</span>
-        <span class="workbench-meta__item"><strong>{{ draftCount }}</strong> 草稿</span>
-        <span class="workbench-meta__item"><strong>{{ publishedCount }}</strong> 进行中</span>
-        <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ totalSubmissionCount }}</strong> 累计提交</span>
-        <span class="workbench-meta__item">{{ highlightedExamTitle }}</span>
+      <div class="workbench-toolbar__meta">
+        <span>{{ workbench.meta.value.hint }}</span>
+        <span>·</span>
+        <span>{{ workbench.filters.status.value ? '已锁定状态' : '未锁定状态' }}</span>
       </div>
-    </section>
+    </template>
 
-    <div class="toolbar-card">
-        <div class="toolbar-card__main">
-          <div class="toolbar-search">
-            <span class="material-symbols-outlined">search</span>
-            <el-input v-model="searchQuery" placeholder="搜索考试标题、班级或描述" clearable />
-          </div>
-          <div class="toolbar-filters">
-            <div class="toolbar-filter">
-              <label>状态</label>
-              <el-select v-model="statusFilter" clearable placeholder="全部状态">
-                <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
-                <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
-                <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
-              </el-select>
+    <div class="workbench-table-card">
+      <div class="workbench-table-card__header">
+        <div>
+          <h2>考试清单</h2>
+          <p>发布节奏、时间窗、收卷量与批改入口在同一层级维护。</p>
+        </div>
+      </div>
+      <el-table
+        :data="workbench.filteredRows.value"
+        v-loading="loading"
+        empty-text="暂无考试"
+        :header-cell-style="headerCellStyle"
+      >
+        <el-table-column label="任务信息" min-width="340">
+          <template #default="{ row }">
+            <div class="workbench-cell__title-row">
+              <span class="workbench-cell__title">{{ row.title }}</span>
+              <StatusPill :tone="toneOf(row.status)" :label="row.statusLabel" />
             </div>
-            <div class="toolbar-filter">
-              <label>班级</label>
-              <el-select v-model="classFilter" clearable placeholder="全部班级">
-                <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
-              </el-select>
+            <div class="workbench-cell__meta">
+              <span>{{ row.className }}</span>
+              <span>{{ formatWindow(row.startAt, row.endAt) }}</span>
+              <span v-if="row.itemCount !== null">{{ row.itemCount }} 题</span>
             </div>
-          </div>
-        </div>
-        <div class="toolbar-card__meta">
-          <span>当前筛选结果 {{ filteredRows.length }} / {{ rows.length }}</span>
-          <span class="toolbar-card__dot"></span>
-          <span>{{ statusFilter ? `已锁定状态 ${statusLabel(statusFilter)}` : '未锁定状态，可查看全部考试阶段' }}</span>
-          <span class="toolbar-card__dot"></span>
-          <span>{{ classFilter ? `已锁定班级 ${classOptions.find(c => c.id === classFilter)?.name || ''}` : '全部班级' }}</span>
-        </div>
+            <p class="workbench-cell__desc">{{ row.description || '暂无说明' }}</p>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="任务节奏" min-width="260">
+          <template #default="{ row }">
+            <div class="workbench-timeline">
+              <div class="workbench-timeline__item"><span>开始</span><strong>{{ formatDateTime(row.startAt) }}</strong></div>
+              <div class="workbench-timeline__item"><span>结束</span><strong>{{ formatDateTime(row.endAt) }}</strong></div>
+              <div class="workbench-timeline__item"><span>时长</span><strong>{{ row.raw.durationMinutes }} 分钟</strong></div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="提交概览" width="200">
+          <template #default="{ row }">
+            <div class="workbench-submission">
+              <div class="workbench-submission__count">{{ row.submissionCount ?? '—' }}</div>
+              <div class="workbench-submission__label">已提交答卷</div>
+              <div class="workbench-submission__hint">{{ submissionHint(row.raw) }}</div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="260" fixed="right" align="right">
+          <template #default="{ row }">
+            <div class="workbench-actions">
+              <ActionButton
+                v-for="item in workbench.actionsOf(row)"
+                :key="item.key"
+                :label="item.label"
+                :tone="item.tone"
+                @click="item.handler(row)"
+              />
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
     </div>
+    </WorkbenchShell>
 
-    <div class="table-card">
-        <div class="table-card__header">
-          <div>
-            <h2>考试清单</h2>
-            <p>把阶段、时间窗、收卷量和结果入口压进同一层级，避免考试管理页显得过散。</p>
-          </div>
-          <div class="table-card__chips">
-            <span class="table-chip">真实列表接口</span>
-            <span class="table-chip">发布状态保留</span>
-            <span class="table-chip">批改入口保留</span>
-          </div>
-        </div>
-
-        <el-table
-          :data="filteredRows"
-          v-loading="loading"
-          empty-text="暂无考试"
-          class="exams-table"
-          :header-cell-style="headerCellStyle"
-        >
-          <el-table-column label="考试信息" min-width="340">
-            <template #default="{ row }">
-              <div class="exam-cell">
-                <div :class="['exam-cell__icon', `is-${row.status.toLowerCase()}`]">
-                  <span class="material-symbols-outlined">quiz</span>
-                </div>
-                <div class="exam-cell__body">
-                  <div class="exam-cell__title-row">
-                    <span class="exam-cell__title">{{ row.title }}</span>
-                    <span :class="['status-pill', `status-pill--${row.status.toLowerCase()}`]">
-                      <span class="status-pill__dot"></span>
-                      {{ statusLabel(row.status) }}
-                    </span>
-                  </div>
-                  <div class="exam-cell__meta">
-                    <span>
-                      <span class="material-symbols-outlined">school</span>
-                      {{ row.className || '未绑定班级' }}
-                    </span>
-                    <span>
-                      <span class="material-symbols-outlined">schedule</span>
-                      {{ formatWindow(row.startAt, row.endAt) }}
-                    </span>
-                  </div>
-                  <p class="exam-cell__desc">{{ examDescription(row) }}</p>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="考试节奏" min-width="220">
-            <template #default="{ row }">
-              <div class="timeline-cell">
-                <div class="timeline-item">
-                  <span class="timeline-item__label">开始</span>
-                  <strong>{{ formatDateTime(row.startAt) }}</strong>
-                </div>
-                <div class="timeline-item">
-                  <span class="timeline-item__label">结束</span>
-                  <strong>{{ formatDateTime(row.endAt) }}</strong>
-                </div>
-                <div class="timeline-item">
-                  <span class="timeline-item__label">时长</span>
-                  <strong>{{ row.durationMinutes }} 分钟</strong>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="收卷概览" min-width="180">
-            <template #default="{ row }">
-              <div class="submission-cell">
-                <div class="submission-cell__count">{{ row.submissionCount ?? 0 }}</div>
-                <div class="submission-cell__label">已提交答卷</div>
-                <div class="submission-cell__hint">{{ submissionHint(row) }}</div>
-              </div>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="操作" width="260" fixed="right" align="right">
-            <template #default="{ row }">
-              <div class="action-cell">
-                <button v-if="row.status === ACTIVITY_STATUS.DRAFT" class="action-button action-button--ghost" type="button" @click="openEditDialog(row)">
-                  编辑
-                </button>
-                <button v-if="row.status === ACTIVITY_STATUS.DRAFT" class="action-button action-button--success" type="button" @click="publishExam(row)">
-                  发布
-                </button>
-                <button v-if="row.status === ACTIVITY_STATUS.PUBLISHED" class="action-button action-button--warning" type="button" @click="closeExam(row)">
-                  关闭
-                </button>
-                <button class="action-button action-button--primary" type="button" @click="goResults(row.id)">
-                  查看结果
-                </button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-    </div>
-
-    <el-dialog v-model="dialogVisible" width="1040px" destroy-on-close class="exam-dialog">
+    <TaskEditorDialog v-model="dialogVisible" title="考试配置">
       <div class="exam-dialog__shell">
         <header class="exam-dialog__header">
           <div>
@@ -337,7 +296,7 @@
           </div>
         </footer>
       </div>
-    </el-dialog>
+    </TaskEditorDialog>
 
     <QuestionEditorDialog
       v-model:visible="questionDialogVisible"
@@ -356,13 +315,18 @@
       validate-judge-format
       @confirm="applyPickedQuestions"
     />
-  </div>
 </template>
 
 <script setup lang="ts">
 import { inject } from 'vue';
 import { ExamListKey } from '@/composables/useExamList';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint } = inject(ExamListKey)!;
+import WorkbenchShell from './workbench/WorkbenchShell.vue';
+import ActionButton from './workbench/ActionButton.vue';
+import StatusPill from './workbench/StatusPill.vue';
+import TaskEditorDialog from './workbench/TaskEditorDialog.vue';
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint, workbench } = inject(ExamListKey)!;
+const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
+  status === 'DRAFT' ? 'draft' : status === 'PUBLISHED' ? 'published' : status === 'CLOSED' ? 'closed' : 'warning';
 </script>
 
 <style scoped>

@@ -10,6 +10,7 @@ import { changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLa
 import type { TeachingClass } from '@/types/class';
 import type { UploadMaterialPayload } from '@/types/material';
 import { LAB_EXPERIMENT_TYPE_LABELS, type CreateLabPayload, type LabItem, type LabStatus } from '@/types/lab';
+import { useWorkbenchList } from '@/views/teacher/components/workbench/useWorkbench';
 import type { InjectionKey } from 'vue';
 
 export function useLabs() {
@@ -114,7 +115,8 @@ const activeClassLabel = computed(() => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    rows.value = await listTeacherLabs();
+    await workbench.refresh();
+    rows.value = workbench.rows.value.map(row => row.raw as LabItem);
   } finally {
     loading.value = false;
   }
@@ -369,13 +371,25 @@ const updatedLabel = (row: LabItem) => {
   return source ? `更新于 ${source.replace('T', ' ').slice(0, 16)}` : '暂无更新时间';
 };
 
+const workbench = useWorkbenchList<LabItem>({
+  domain: 'LAB',
+  fetchRows: () => listTeacherLabs(),
+  handlers: {
+    steps: row => goSteps(Number(row.id)),
+    viewResult: row => goResult(Number(row.id)),
+    edit: row => openEditDialog(row.raw as LabItem),
+    publish: row => toggleStatus(row.raw as LabItem),
+    close: row => toggleStatus(row.raw as LabItem),
+  },
+});
+
 onMounted(async () => {
   await Promise.allSettled([fetchClasses(), fetchSubjects()]);
   resetCreateForm();
   await fetchData();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel, subjectOptions, fetchSubjects };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel, subjectOptions, fetchSubjects, workbench };
 }
 
 export type LabsState = ReturnType<typeof useLabs>;

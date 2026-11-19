@@ -1,138 +1,125 @@
 <template>
-  <div class="page homeworks-page workbench-page">
-    <section class="workbench-header homeworks-header">
-      <div class="workbench-header__top">
-        <div class="workbench-header__main">
-          <div class="homeworks-header__eyebrow">教师后台 / 作业管理</div>
-          <h1>作业管理台</h1>
-          <p>围绕班级、时间窗、发布状态与提交进度维护作业闭环。</p>
+  <WorkbenchShell
+    eyebrow="教师控制台 / 作业闭环 / 作业管理"
+    title="作业管理"
+    description="围绕班级、时间窗、发布状态与提交进度维护作业闭环。"
+  >
+    <template #actions>
+      <ActionButton label="新建作业" tone="primary" @click="openCreateDialog" />
+    </template>
+    <template #meta>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.total }}</strong> 任务总数</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.filtered }}</strong> 筛选结果</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.draft }}</strong> 草稿</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.inProgress }}</strong> 进行中</span>
+      <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ workbench.meta.value.submissions }}</strong> 累计提交</span>
+      <span class="workbench-meta__item">{{ workbench.meta.value.hint }}</span>
+    </template>
+    <template #toolbar>
+      <div class="workbench-toolbar__main">
+        <div class="workbench-toolbar__search">
+          <el-input v-model="workbench.filters.keyword.value" placeholder="搜索标题、班级或说明" clearable />
         </div>
-        <div class="workbench-header__actions">
-          <el-button type="primary" @click="openCreateDialog">新建作业</el-button>
+        <div class="workbench-toolbar__filters">
+          <div class="workbench-filter">
+            <label>状态</label>
+            <el-select v-model="workbench.filters.status.value" clearable placeholder="全部状态">
+              <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+              <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+              <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
+            </el-select>
+          </div>
+          <div class="workbench-filter">
+            <label>班级</label>
+            <el-select v-model="workbench.filters.classId.value" clearable placeholder="全部班级">
+              <el-option v-for="option in workbench.classOptions.value" :key="option.id" :label="option.label" :value="option.id" />
+            </el-select>
+          </div>
+          <div class="workbench-filter">
+            <label>时效</label>
+            <el-select v-model="workbench.filters.deadlineBucket.value" placeholder="全部时效">
+              <el-option label="全部时效" value="ALL" />
+              <el-option label="即将截止" value="UPCOMING" />
+              <el-option label="已截止" value="OVERDUE" />
+              <el-option label="未设置截止" value="UNDATED" />
+            </el-select>
+          </div>
         </div>
       </div>
-
-      <div class="workbench-meta homeworks-meta">
-        <span class="workbench-meta__item"><strong>{{ filteredRows.length }}</strong> 作业总数</span>
-        <span class="workbench-meta__item"><strong>{{ publishedCount }}</strong> 已发布</span>
-        <span class="workbench-meta__item"><strong>{{ draftCount }}</strong> 草稿/待处理</span>
-        <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ totalSubmissionCount }}</strong> 提交总量</span>
-        <span class="workbench-meta__item">{{ activeStatusLabel }}</span>
-        <span class="workbench-meta__item">{{ classFilterLabel }}</span>
-      </div>
-    </section>
-
-    <section class="toolbar-card">
-      <div class="toolbar-card__main">
-        <div class="toolbar-search">
-          <span class="material-symbols-outlined">search</span>
-          <el-input v-model="searchQuery" placeholder="搜索作业标题、班级或说明" clearable />
-        </div>
-        <div class="toolbar-filters">
-          <el-select v-model="statusFilter" placeholder="全部状态" clearable>
-            <el-option label="全部状态" value="" />
-            <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
-            <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
-            <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
-          </el-select>
-          <el-select v-model="classFilter" placeholder="全部班级" clearable>
-            <el-option label="全部班级" value="0" />
-            <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="String(item.id)" />
-          </el-select>
-          <el-select v-model="dueFilter" placeholder="全部时效" clearable>
-            <el-option label="全部时效" value="" />
-            <el-option label="即将截止" value="upcoming" />
-            <el-option label="已截止" value="overdue" />
-            <el-option label="未设置截止" value="undated" />
-          </el-select>
-        </div>
-      </div>
-      <div class="toolbar-card__meta">
-        <span>共 {{ rows.length }} 条作业</span>
-        <span class="toolbar-divider"></span>
-        <span>当前筛出 {{ filteredRows.length }} 条</span>
+      <div class="workbench-toolbar__meta">
+        <span>{{ workbench.meta.value.hint }}</span>
+        <span>·</span>
         <el-button link type="primary" @click="resetFilters">清空筛选</el-button>
       </div>
-    </section>
+    </template>
 
-    <section class="homeworks-console" v-loading="loading">
-      <header class="homeworks-console__header">
+    <div class="workbench-table-card" v-loading="loading">
+      <div class="workbench-table-card__header">
         <div>
           <h2>作业清单</h2>
-          <p>保留作业摘要、班级归属、提交数、时间窗和状态动作，避免退回成单薄表格页。</p>
+          <p>班级归属、时间窗、提交进度与批改入口在同一层级维护。</p>
         </div>
-      </header>
-
-      <div v-if="filteredRows.length" class="homework-list-shell">
-        <article v-for="row in filteredRows" :key="row.id" class="homework-row">
-          <div class="homework-row__primary">
-            <div class="homework-row__title-line">
-              <div>
-                <h3>{{ row.title }}</h3>
-                <p>{{ row.description || '暂无作业说明，建议补充作答目标、提交格式与评分重点。' }}</p>
-              </div>
-              <el-tag :type="statusTagType(row.status)" effect="light">{{ statusLabel(row.status) }}</el-tag>
-            </div>
-
-            <div class="homework-row__meta-grid">
-              <div>
-                <span class="homework-row__label">所属班级</span>
-                <strong>{{ row.className || '-' }}</strong>
-              </div>
-              <div>
-                <span class="homework-row__label">开始时间</span>
-                <strong>{{ formatDateTime(row.startAt) }}</strong>
-              </div>
-              <div>
-                <span class="homework-row__label">截止时间</span>
-                <strong>{{ formatDateTime(row.dueAt) }}</strong>
-              </div>
-              <div>
-                <span class="homework-row__label">提交数</span>
-                <strong>{{ row.submissionCount ?? 0 }}</strong>
-              </div>
-            </div>
-
-            <div class="homework-row__supporting">
-              <span class="homework-chip">
-                <span class="material-symbols-outlined">timelapse</span>
-                {{ dueHint(row.dueAt) }}
-              </span>
-              <span v-if="row.attachmentPath" class="homework-chip homework-chip--muted">
-                <span class="material-symbols-outlined">attach_file</span>
-                {{ row.attachmentPath }}
-              </span>
-            </div>
-          </div>
-
-          <div class="homework-row__actions">
-            <el-button type="primary" plain @click="goSubmissions(row.id)">提交列表</el-button>
-            <el-button @click="openEditDialog(row)">编辑</el-button>
-            <el-button plain @click="releaseScores(row)">发布成绩</el-button>
-            <el-button
-              v-if="row.status === ACTIVITY_STATUS.DRAFT"
-              type="success"
-              plain
-              @click="toggleStatus(row)"
-            >
-              发布作业
-            </el-button>
-            <el-button
-              v-else-if="row.status === ACTIVITY_STATUS.PUBLISHED"
-              type="warning"
-              plain
-              @click="toggleStatus(row)"
-            >
-              关闭作业
-            </el-button>
-          </div>
-        </article>
       </div>
+      <el-table
+        :data="workbench.filteredRows.value"
+        empty-text="暂无作业"
+        :header-cell-style="headerCellStyle"
+      >
+        <el-table-column label="任务信息" min-width="340">
+          <template #default="{ row }">
+            <div class="workbench-cell__title-row">
+              <span class="workbench-cell__title">{{ row.title }}</span>
+              <StatusPill :tone="toneOf(row.status)" :label="row.statusLabel" />
+            </div>
+            <div class="workbench-cell__meta">
+              <span>{{ row.className }}</span>
+              <span>{{ formatWindow(row.startAt, row.endAt) }}</span>
+              <span v-if="row.raw.attachmentPath">{{ row.raw.attachmentPath }}</span>
+            </div>
+            <p class="workbench-cell__desc">{{ row.description || '暂无作业说明' }}</p>
+          </template>
+        </el-table-column>
 
-      <el-empty v-else description="暂无匹配作业" />
-    </section>
+        <el-table-column label="任务节奏" min-width="260">
+          <template #default="{ row }">
+            <div class="workbench-timeline">
+              <div class="workbench-timeline__item"><span>开始</span><strong>{{ formatDateTime(row.startAt) }}</strong></div>
+              <div class="workbench-timeline__item"><span>截止</span><strong>{{ formatDateTime(row.endAt) }}</strong></div>
+              <div class="workbench-timeline__item"><span>状态</span><strong>{{ row.statusLabel }}</strong></div>
+            </div>
+          </template>
+        </el-table-column>
 
-    <el-dialog v-model="dialogVisible" width="860px" class="homework-dialog" destroy-on-close>
+        <el-table-column label="提交概览" width="200">
+          <template #default="{ row }">
+            <div class="workbench-submission">
+              <div class="workbench-submission__count">{{ row.submissionCount ?? '—' }}</div>
+              <div class="workbench-submission__label">已提交</div>
+              <div class="workbench-submission__hint">
+                {{ row.raw.gradedCount !== undefined ? `已批改 ${row.raw.gradedCount} / 待批改 ${row.raw.pendingCount ?? 0}` : '暂无统计' }}
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="260" fixed="right" align="right">
+          <template #default="{ row }">
+            <div class="workbench-actions">
+              <ActionButton
+                v-for="item in workbench.actionsOf(row)"
+                :key="item.key"
+                :label="item.label"
+                :tone="item.tone"
+                @click="item.handler(row)"
+              />
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    </WorkbenchShell>
+
+    <TaskEditorDialog v-model="dialogVisible" title="作业配置">
       <div class="homework-dialog__shell">
         <header class="homework-dialog__header">
           <div>
@@ -272,7 +259,7 @@
           </div>
         </footer>
       </div>
-    </el-dialog>
+    </TaskEditorDialog>
 
     <QuestionEditorDialog
       v-model:visible="questionDialogVisible"
@@ -285,13 +272,21 @@
     />
 
     <QuestionPickerDialog v-model:visible="pickerVisible" @confirm="applyPickedQuestions" />
-  </div>
 </template>
 
 <script setup lang="ts">
 import { inject } from 'vue';
 import { HomeworksKey } from '@/composables/useHomeworks';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, resetFilters, openCreateDialog, openEditDialog, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime } = inject(HomeworksKey)!;
+import WorkbenchShell from './workbench/WorkbenchShell.vue';
+import ActionButton from './workbench/ActionButton.vue';
+import StatusPill from './workbench/StatusPill.vue';
+import TaskEditorDialog from './workbench/TaskEditorDialog.vue';
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, resetFilters, openCreateDialog, openEditDialog, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime, workbench } = inject(HomeworksKey)!;
+const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
+  status === 'DRAFT' ? 'draft' : status === 'PUBLISHED' ? 'published' : status === 'CLOSED' ? 'closed' : 'warning';
+const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWeight: 700 });
+const formatWindow = (start?: string | null, end?: string | null) =>
+  start && end ? `${formatDateTime(start)} - ${formatDateTime(end)}` : '未设置';
 </script>
 
 <style scoped>

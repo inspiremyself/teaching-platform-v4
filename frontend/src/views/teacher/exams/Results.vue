@@ -1,94 +1,33 @@
 <template>
-  <div class="grading-page workbench-page">
-    <section class="workbench-header grading-header-card grading-header-card--refactored">
-      <div class="workbench-header__top">
-        <div class="workbench-header__main">
-          <div class="grading-header__eyebrow">考试管理 / {{ examTitle }} / 批改工作流</div>
-          <h1>{{ examTitle }}</h1>
-          <p>{{ examSummary }}</p>
-        </div>
-        <div class="workbench-header__actions grading-header-actions">
-          <button class="header-button header-button--secondary" type="button" @click="router.push('/teacher/exams')">
-            <span class="material-symbols-outlined">arrow_back</span>
-            返回考试管理
-          </button>
-          <button class="header-button header-button--secondary" type="button" :disabled="releasing" @click="releaseScores">
-            <span class="material-symbols-outlined">campaign</span>
-            {{ scoreReleased ? '重新发布成绩' : '发布成绩' }}
-          </button>
-          <button class="header-button header-button--primary" type="button" @click="refreshResults" :disabled="loading">
-            <span class="material-symbols-outlined">refresh</span>
-            刷新结果
-          </button>
-        </div>
-      </div>
-
-      <div class="workbench-meta grading-meta">
+  <GradingWorkspace>
+    <template #headerActions>
+      <div class="workbench-meta">
         <span class="workbench-meta__item"><strong>{{ rows.length }}</strong> 总提交数</span>
         <span class="workbench-meta__item"><strong>{{ pendingCount }}</strong> 待人工评分</span>
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已评分</span>
         <span class="workbench-meta__item workbench-meta__item--accent">{{ activeStudentLabel }}</span>
       </div>
-    </section>
+      <button class="action-button action-button--ghost" type="button" @click="router.push('/teacher/exams')">返回考试管理</button>
+      <button class="action-button action-button--warning" type="button" :disabled="releasing" @click="releaseScores">
+        {{ scoreReleased ? '重新发布成绩' : '发布成绩' }}
+      </button>
+      <button class="action-button action-button--primary" type="button" @click="refreshResults" :disabled="loading">刷新结果</button>
+    </template>
 
-    <section class="grading-layout" v-loading="loading">
-      <aside class="queue-panel">
-        <div class="queue-panel__header">
-          <div>
-            <h2>提交队列</h2>
-            <p>按当前收卷结果浏览学生答卷，并保持与原型一致的工作流节奏。</p>
-          </div>
-          <span class="queue-panel__badge">{{ pendingCount }} 待处理</span>
-        </div>
+    <template #queue>
+      <SubmissionQueue
+        :items="workspace.filteredQueue.value"
+        :selected-id="workspace.selectedId.value"
+        :keyword="workspace.keyword.value"
+        :status-filter="workspace.statusFilter.value"
+        @update:keyword="workspace.keyword.value = $event"
+        @update:status-filter="workspace.statusFilter.value = $event"
+        @select="id => workspace.selectSubmission(id)"
+      />
+    </template>
 
-        <div class="queue-search">
-          <span class="material-symbols-outlined">search</span>
-          <el-input v-model="searchQuery" placeholder="搜索学生姓名或账号" clearable />
-        </div>
-
-        <div class="queue-filter-row">
-          <el-select v-model="statusFilter" clearable placeholder="全部状态">
-            <el-option label="进行中" :value="EXAM_SUBMISSION_STATUS.IN_PROGRESS" />
-            <el-option label="待评分" :value="SUBMISSION_STATUS.SUBMITTED" />
-            <el-option label="已评分" :value="SUBMISSION_STATUS.GRADED" />
-            <el-option label="超时提交" :value="EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED" />
-          </el-select>
-        </div>
-
-        <div class="queue-meta-row">
-          <span>{{ filteredRows.length }} / {{ rows.length }} 份答卷</span>
-          <span>{{ statusFilter ? `已筛到 ${submissionStatusLabel(statusFilter)}` : '全部阶段' }}</span>
-        </div>
-
-        <div v-if="filteredRows.length" class="queue-list">
-          <button
-            v-for="row in filteredRows"
-            :key="row.submissionId"
-            type="button"
-            :class="['queue-item', activeSubmissionId === row.submissionId ? 'is-active' : '']"
-            @click="requestSelectSubmission(row)"
-          >
-            <div class="queue-item__main">
-              <div class="queue-avatar">{{ getAvatarText(row.studentName, row.studentUsername) }}</div>
-              <div class="queue-item__body">
-                <div class="queue-item__top">
-                  <strong>{{ row.studentName }}</strong>
-                  <span :class="['queue-status', `queue-status--${submissionStatusTone(row.status)}`]">
-                    {{ submissionStatusLabel(row.status) }}
-                  </span>
-                </div>
-                <div class="queue-item__meta">{{ row.studentUsername }} · {{ submissionTimeLabel(row) }}</div>
-                <div class="queue-item__score">
-                  客观 {{ formatScore(row.autoScore) }} · 主观 {{ formatScore(row.manualScore) }} · 总分 {{ formatScore(row.totalScore) }}
-                </div>
-              </div>
-            </div>
-          </button>
-        </div>
-        <el-empty v-else description="暂无匹配提交记录" />
-      </aside>
-
-      <main class="submission-panel">
+    <template #detail>
+      <main class="submission-panel" v-loading="loading">
         <div v-if="detail" class="submission-panel__inner">
           <section class="submission-context-card">
             <div class="submission-context-card__lead">
@@ -169,17 +108,18 @@
                         :disabled="isReadOnly"
                         placeholder="待评分"
                         controls-position="right"
-                        @update:model-value="setQuestionScore(gradingSnapshot, answer.questionId, $event)"
+                        @update:model-value="workspace.setScore(String(answer.questionId), $event)"
                       />
                     </div>
                     <div class="manual-grade-field manual-grade-field--full">
                       <label>评语</label>
                       <el-input
-                        v-model="gradeMap[answer.questionId].teacherComment"
+                        :model-value="gradeMap[answer.questionId].teacherComment"
                         type="textarea"
                         :rows="3"
                         :disabled="isReadOnly"
                         placeholder="输入针对该题的批改意见"
+                        @update:model-value="workspace.setComment(String(answer.questionId), String($event))"
                       />
                     </div>
                   </div>
@@ -198,7 +138,9 @@
         </div>
         <el-empty v-else description="请选择左侧提交记录查看详情" />
       </main>
+    </template>
 
+    <template #summary>
       <aside class="summary-side">
         <section class="score-panel">
           <h2>评分汇总</h2>
@@ -206,28 +148,28 @@
           <div class="score-summary-list">
             <div class="score-summary-item">
               <span>客观题自动得分</span>
-              <strong>{{ formatScore(detail?.autoScore) }}</strong>
+              <strong>{{ formatScore(workspace.summary.value.autoScore) }}</strong>
             </div>
             <div class="score-summary-item">
               <span>主观题人工得分</span>
-              <strong>{{ currentManualScore }}</strong>
+              <strong>{{ workspace.summary.value.manualScore }}</strong>
             </div>
             <div class="score-summary-item score-summary-item--total">
               <span>总分</span>
-              <strong>{{ currentTotalScore }}</strong>
+              <strong>{{ workspace.summary.value.totalScore }}</strong>
             </div>
           </div>
 
-          <div v-if="hasManual" class="completion-block">
+          <div v-if="workspace.summary.value.hasManual" class="completion-block">
             <div class="completion-block__row">
               <span>主观题评分进度</span>
-              <strong>{{ progress.completed }}/{{ progress.total }} 题</strong>
+              <strong>{{ workspace.summary.value.completed }}/{{ workspace.summary.value.total }} 题</strong>
             </div>
             <div class="completion-bar">
-              <div class="completion-bar__fill" :style="{ width: `${progress.percent}%` }"></div>
+              <div class="completion-bar__fill" :style="{ width: `${workspace.summary.value.percent}%` }"></div>
             </div>
             <p class="completion-block__hint">
-              待评 {{ progress.total - progress.completed }} 题；保存后未评题不会按 0 分提交
+              待评 {{ workspace.summary.value.total - workspace.summary.value.completed }} 题；保存后未评题不会按 0 分提交
             </p>
           </div>
           <p v-else class="completion-block--empty">本卷无主观题，系统已完成判分</p>
@@ -263,7 +205,7 @@
             type="button"
             :class="detail?.status === SUBMISSION_STATUS.GRADED ? 'action-panel__primary' : 'action-panel__secondary'"
             :disabled="!nextSubmission"
-            @click="requestSelectSubmission(nextSubmission!)"
+            @click="workspace.selectSubmission(nextSubmission!.submissionId)"
           >
             切换到下一份
           </button>
@@ -275,8 +217,8 @@
           </div>
         </section>
       </aside>
-    </section>
-  </div>
+    </template>
+  </GradingWorkspace>
 </template>
 
 <script setup lang="ts">
@@ -285,6 +227,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatJudgeDetail, scoreSourceLabel, scoreSourceTagType } from '../components/scoreDisplay'
+import { scoringStrategyOf } from '../components/scoringStrategies'
+import { useGradingWorkspace, type DraftPort } from '../components/workbench/useWorkbench'
+import GradingWorkspace from '../components/workbench/GradingWorkspace.vue'
+import SubmissionQueue from '../components/workbench/SubmissionQueue.vue'
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
@@ -377,9 +323,9 @@ const resetGradeMap = () => {
   Object.keys(gradeMap).forEach(key => delete gradeMap[Number(key)])
 }
 
-const initGradeMap = () => {
+const initGradeMap = (source: ExamSubmissionDetail | null = detail.value) => {
   resetGradeMap()
-  const next = createGradingState(detail.value)
+  const next = createGradingState(source)
   Object.assign(gradeMap, next.gradeMap)
   markedQuestionIds.value = next.markedQuestionIds
   initialComments.value = next.initialComments
@@ -405,23 +351,13 @@ const confirmDiscardDraft = async (): Promise<boolean> => {
   }
 }
 
-const fetchData = async (skipDraftGuard = false) => {
-  if (!skipDraftGuard && !(await confirmDiscardDraft())) return
+const fetchData = async () => {
   loading.value = true
   try {
-    const [resultRows, examDetail] = await Promise.all([getExamResults(examId.value), getExamDetail(examId.value)])
-    rows.value = resultRows
+    const examDetail = await getExamDetail(examId.value)
     examTitle.value = examDetail.title || '考试批改工作流'
     scoreReleased.value = examDetail.scoreReleased === true
-    const target = resultRows.find(row => row.submissionId === activeSubmissionId.value) ?? resultRows[0] ?? null
-    if (target) {
-      await selectSubmission(target)
-    } else {
-      selectionToken += 1
-      detail.value = null
-      activeSubmissionId.value = null
-      clearGradingState()
-    }
+    await workspace.refresh()
   } finally {
     loading.value = false
   }
@@ -461,7 +397,7 @@ const submitGrade = async () => {
     const payload: GradeExamPayload = buildGradePayload(gradingSnapshot.value)
     await gradeExamSubmission(detail.value.submissionId, payload)
     ElMessage.success('评分已保存，答卷已结案')
-    await fetchData(true)
+    await workspace.refresh()
   } catch {
     return
   } finally {
@@ -485,7 +421,7 @@ const releaseScores = async () => {
     await releaseExamScores(examId.value)
     // 文案读取发布前的状态：原值 true 表示本次为「重新发布」
     ElMessage.success(scoreReleased.value ? '考试成绩已重新发布' : '考试成绩已发布')
-    await fetchData(true)
+    await workspace.refresh()
   } catch {
     // 错误提示已由 request.ts 响应拦截器统一弹出，这里只阻止未捕获的 Promise 拒绝
     return
@@ -628,6 +564,48 @@ const getAvatarText = (name: string, fallback: string) => {
   const raw = (name || fallback || '').trim()
   return raw ? raw.slice(0, 2).toUpperCase() : 'ST'
 }
+
+const examDraftPort: DraftPort<ExamSubmissionDetail, GradingSnapshot> = {
+  create: detail => {
+    initGradeMap(detail)
+    return gradingSnapshot.value
+  },
+  setScore: (draft, key, score) => setQuestionScore(draft, Number(key), score),
+  setComment: (draft, key, comment) => {
+    const questionId = Number(key)
+    if (gradeMap[questionId]) gradeMap[questionId].teacherComment = comment
+    draft.initialComments[questionId] = draft.initialComments[questionId] ?? ''
+  },
+  hasChanges: snapshot => hasUnsavedChanges(snapshot),
+  commit: () => {},
+  forSummary: snapshot => ({
+    scores: Object.fromEntries(Object.entries(snapshot.gradeMap).map(([key, item]) => [key, item.score])),
+    marked: snapshot.markedQuestionIds.map(String),
+  }),
+}
+
+const workspace = useGradingWorkspace<ExamSubmissionDetail, GradingSnapshot>({
+  domain: 'EXAM',
+  loadQueue: async () => {
+    const resultRows = await getExamResults(examId.value)
+    rows.value = resultRows
+    return resultRows
+  },
+  loadDetail: async id => {
+    const nextDetail = await getExamSubmissionDetail(id)
+    activeSubmissionId.value = Number(id)
+    detail.value = nextDetail
+    initGradeMap(nextDetail)
+    return nextDetail
+  },
+  scoreLinesOf: detail => detail.answers.map(answer => scoringStrategyOf('EXAM').adapt(answer)),
+  draftPort: examDraftPort,
+  statusOf: detail => detail.status,
+  isReadOnly: status => isReadOnlySubmission(status ?? ''),
+  handlers: {
+    saveGrade: async () => submitGrade(),
+  },
+})
 
 onMounted(fetchData)
 </script>

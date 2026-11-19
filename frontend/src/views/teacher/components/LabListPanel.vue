@@ -1,168 +1,121 @@
 <template>
-  <div class="labs-page">
-    <section class="labs-header">
-      <div class="labs-header__top">
-        <div class="labs-header__main">
-          <div class="labs-header__eyebrow">教师后台 / 实验管理</div>
-          <h1>实验台账</h1>
-          <p>按班级维护实验、题项与发布状态。</p>
+  <WorkbenchShell
+    eyebrow="教师控制台 / 实验闭环 / 实验管理"
+    title="实验台账"
+    description="按班级维护实验、题项与发布状态。"
+  >
+    <template #actions>
+      <ActionButton label="新建实验" tone="primary" @click="openCreateDialog" />
+    </template>
+    <template #meta>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.total }}</strong> 任务总数</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.filtered }}</strong> 筛选结果</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.draft }}</strong> 草稿</span>
+      <span class="workbench-meta__item"><strong>{{ workbench.meta.value.inProgress }}</strong> 进行中</span>
+      <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ workbench.meta.value.submissions }}</strong> 累计提交</span>
+      <span class="workbench-meta__item">{{ workbench.meta.value.hint }}</span>
+    </template>
+    <template #toolbar>
+      <div class="workbench-toolbar__main">
+        <div class="workbench-toolbar__search">
+          <el-input v-model="workbench.filters.keyword.value" placeholder="搜索标题、要求、内容或班级" clearable />
         </div>
-        <div class="labs-header__actions">
-          <el-button type="primary" @click="openCreateDialog">新建实验</el-button>
+        <div class="workbench-toolbar__filters">
+          <div class="workbench-filter">
+            <label>状态</label>
+            <el-select v-model="workbench.filters.status.value" clearable placeholder="全部状态">
+              <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
+              <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
+              <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
+            </el-select>
+          </div>
+          <div class="workbench-filter">
+            <label>班级</label>
+            <el-select v-model="workbench.filters.classId.value" clearable placeholder="全部班级">
+              <el-option v-for="option in workbench.classOptions.value" :key="option.id" :label="option.label" :value="option.id" />
+            </el-select>
+          </div>
+          <div class="workbench-filter">
+            <label>时效</label>
+            <el-select v-model="workbench.filters.deadlineBucket.value" placeholder="全部时效">
+              <el-option label="全部时效" value="ALL" />
+              <el-option label="即将截止" value="UPCOMING" />
+              <el-option label="已截止" value="OVERDUE" />
+              <el-option label="未设置截止" value="UNDATED" />
+            </el-select>
+          </div>
         </div>
       </div>
-
-      <div class="labs-header__meta">
-        <span class="labs-header__meta-item"><strong>{{ rows.length }}</strong> 实验总数</span>
-        <span class="labs-header__meta-item"><strong>{{ publishedCount }}</strong> 已发布</span>
-        <span class="labs-header__meta-item"><strong>{{ draftCount }}</strong> 待完善</span>
-        <span class="labs-header__meta-item"><strong>{{ summaryRequiredCount }}</strong> 要求实验小结</span>
-        <span class="labs-header__meta-item labs-header__meta-item--accent">{{ filteredRows.length }} 条命中 · {{ activeStatusLabel }} · {{ activeClassLabel }}</span>
-      </div>
-    </section>
-
-    <section class="summary-grid labs-summary-grid">
-      <article class="summary-card summary-card--primary">
-        <div class="summary-card__icon">
-          <span class="material-symbols-outlined">inventory_2</span>
-        </div>
-        <div>
-          <div class="summary-card__label">实验总数</div>
-          <div class="summary-card__value">{{ rows.length }}</div>
-           <div class="summary-card__desc">当前实验台账条目。</div>
-        </div>
-      </article>
-      <article class="summary-card summary-card--light">
-        <div class="summary-card__icon summary-card__icon--teal">
-          <span class="material-symbols-outlined">publish</span>
-        </div>
-        <div>
-          <div class="summary-card__label">已发布</div>
-          <div class="summary-card__value">{{ publishedCount }}</div>
-           <div class="summary-card__desc">学生端当前可进入。</div>
-        </div>
-      </article>
-        <article class="summary-card summary-card--light">
-          <div class="summary-card__icon summary-card__icon--amber">
-            <span class="material-symbols-outlined">edit_note</span>
-          </div>
-          <div>
-          <div class="summary-card__label">草稿/待完善</div>
-          <div class="summary-card__value">{{ draftCount }}</div>
-             <div class="summary-card__desc">仍需补步骤或未发布。</div>
-          </div>
-        </article>
-       <article class="summary-card summary-card--light">
-         <div class="summary-card__icon summary-card__icon--violet">
-           <span class="material-symbols-outlined">description</span>
-         </div>
-         <div>
-           <div class="summary-card__label">要求实验小结</div>
-           <div class="summary-card__value">{{ summaryRequiredCount }}</div>
-             <div class="summary-card__desc">提交时需补实验小结。</div>
-         </div>
-       </article>
-       <article class="summary-card summary-card--accent">
-         <div class="summary-card__header-line">
-           <div>
-             <div class="summary-card__label">当前视图</div>
-             <div class="summary-card__value summary-card__value--small">{{ filteredRows.length }} 条命中</div>
-          </div>
-          <span class="summary-chip">{{ activeStatusLabel }}</span>
-        </div>
-        <div class="summary-card__desc summary-card__desc--spaced">
-           {{ searchKeyword ? `关键词“${searchKeyword}”` : '未使用关键词' }}，{{ activeClassLabel }}。
-        </div>
-      </article>
-    </section>
-
-    <section class="toolbar-card">
-      <div class="toolbar-card__main">
-        <div class="toolbar-search">
-          <span class="material-symbols-outlined">search</span>
-          <el-input v-model="searchKeyword" placeholder="搜索实验标题、要求、内容或班级" clearable />
-        </div>
-        <div class="toolbar-filters">
-          <el-select v-model="statusFilter" placeholder="全部状态" clearable>
-            <el-option label="全部状态" value="" />
-            <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
-            <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
-            <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
-          </el-select>
-          <el-select v-model="classFilter" placeholder="全部班级" clearable>
-            <el-option label="全部班级" value="" />
-            <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="String(item.id)" />
-          </el-select>
-        </div>
-      </div>
-      <div class="toolbar-card__meta">
-        <span>共 {{ rows.length }} 个实验</span>
-        <span class="toolbar-divider"></span>
-        <span>当前筛出 {{ filteredRows.length }} 个</span>
+      <div class="workbench-toolbar__meta">
+        <span>{{ workbench.meta.value.hint }}</span>
+        <span>·</span>
         <el-button link type="primary" @click="resetFilters">清空筛选</el-button>
       </div>
-    </section>
+    </template>
 
-    <section class="labs-console">
-      <header class="labs-console__header">
+    <div class="workbench-table-card" v-loading="loading">
+      <div class="workbench-table-card__header">
         <div>
           <h2>实验台账</h2>
-           <p>核对题项数量与发布动作。</p>
+          <p>核对题项数量、时间窗与发布动作。</p>
         </div>
-      </header>
-
-      <div v-loading="loading" class="labs-table-shell">
-        <template v-if="filteredRows.length">
-          <article v-for="row in filteredRows" :key="row.id" class="lab-row">
-            <div class="lab-row__identity">
-              <div>
-                <div class="lab-row__title-line">
-                  <h3>{{ row.title }}</h3>
-                  <span class="lab-class-chip">{{ row.className || '未绑定班级' }}</span>
-                </div>
-                <div class="lab-row__meta-chips">
-                  <span class="lab-meta-chip" :class="row.summaryRequired ? 'lab-meta-chip--violet' : 'lab-meta-chip--muted'">
-                    {{ row.summaryRequired ? '要求实验小结' : '小结非必填' }}
-                  </span>
-                  <span class="lab-meta-chip">{{ experimentTypeLabel(row.experimentType) }}</span>
-                  <span class="lab-meta-chip" :class="row.materialId ? 'lab-meta-chip--success' : 'lab-meta-chip--muted'">
-                    {{ row.materialId ? '已上传实验指导' : '未上传实验指导' }}
-                  </span>
-                  <span class="lab-meta-chip">{{ scoreVisibilityLabel(row.scoreVisibilityMode) }}</span>
-                </div>
-                <p>{{ row.description || '暂无实验要求。' }}</p>
-                <p class="lab-row__subcopy">{{ row.experimentContent || '暂无实验内容。' }}</p>
-              </div>
-            </div>
-
-            <div class="lab-row__type">
-              <span class="meta-label">题项规模</span>
-              <strong>{{ row.stepCount ?? 0 }} 个题项</strong>
-              <small v-if="(row.stepCount ?? 0) === 0">请先配置题项</small>
-            </div>
-
-            <div class="lab-row__status">
-              <span :class="['status-dot', `status-dot--${statusTone(row.status)}`]"></span>
-              <el-tag :type="statusTagType(row.status)" effect="light">{{ statusLabel(row.status) }}</el-tag>
-              <small>{{ updatedLabel(row) }}</small>
-            </div>
-
-            <div class="lab-row__actions">
-              <div class="lab-row__actions-grid">
-                <el-button type="primary" plain @click="goSteps(row.id)">步骤配置</el-button>
-                <el-button plain @click="goResult(row.id)">查看结果</el-button>
-                <el-button plain @click="goBlankRegrade(row.id)">批量重判</el-button>
-                <el-button @click="openEditDialog(row)">编辑</el-button>
-                <el-button class="lab-row__toggle-action" :type="row.status === ACTIVITY_STATUS.PUBLISHED ? 'warning' : 'success'" plain @click="toggleStatus(row)">
-                  {{ row.status === ACTIVITY_STATUS.PUBLISHED ? '关闭实验' : '发布实验' }}
-                </el-button>
-              </div>
-            </div>
-          </article>
-        </template>
-        <el-empty v-else description="暂无匹配实验" />
       </div>
-    </section>
+      <el-table
+        :data="workbench.filteredRows.value"
+        empty-text="暂无实验"
+        :header-cell-style="headerCellStyle"
+      >
+        <el-table-column label="任务信息" min-width="340">
+          <template #default="{ row }">
+            <div class="workbench-cell__title-row">
+              <span class="workbench-cell__title">{{ row.title }}</span>
+              <StatusPill :tone="toneOf(row.status)" :label="row.statusLabel" />
+            </div>
+            <div class="workbench-cell__meta">
+              <span>{{ row.className }}</span>
+              <span>{{ experimentTypeLabel(row.raw.experimentType) }}</span>
+              <span>{{ scoreVisibilityLabel(row.raw.scoreVisibilityMode) }}</span>
+            </div>
+            <p class="workbench-cell__desc">{{ row.description || '暂无实验要求' }}</p>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="任务节奏" min-width="260">
+          <template #default="{ row }">
+            <div class="workbench-timeline">
+              <div class="workbench-timeline__item"><span>开始</span><strong>{{ formatDateTime(row.startAt) }}</strong></div>
+              <div class="workbench-timeline__item"><span>截止</span><strong>{{ formatDateTime(row.endAt) }}</strong></div>
+              <div class="workbench-timeline__item"><span>题项</span><strong>{{ row.itemCount ?? 0 }} 个</strong></div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="提交概览" width="200">
+          <template #default="{ row }">
+            <div class="workbench-submission">
+              <div class="workbench-submission__count">—</div>
+              <div class="workbench-submission__label">实验暂不统计</div>
+              <div class="workbench-submission__hint">{{ updatedLabel(row.raw) }}</div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" width="260" fixed="right" align="right">
+          <template #default="{ row }">
+            <div class="workbench-actions">
+              <ActionButton
+                v-for="item in workbench.actionsOf(row)"
+                :key="item.key"
+                :label="item.label"
+                :tone="item.tone"
+                @click="item.handler(row)"
+              />
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    </WorkbenchShell>
 
      <section class="labs-guidance-strip">
        <article class="side-card side-card--visual">
@@ -174,7 +127,7 @@
        </article>
      </section>
 
-    <el-dialog v-model="createDialogVisible" :title="editingId ? '编辑实验' : '新建实验'" width="600px">
+    <TaskEditorDialog v-model="createDialogVisible" :title="editingId ? '编辑实验' : '新建实验'">
       <el-form label-width="92px">
         <el-form-item v-if="!editingId" label="创建方式">
           <el-radio-group v-model="createMode">
@@ -313,14 +266,21 @@
         <el-button @click="createDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitCreate">保存</el-button>
       </template>
-    </el-dialog>
-  </div>
+    </TaskEditorDialog>
 </template>
 
 <script setup lang="ts">
 import { inject } from 'vue';
 import { LabsKey } from '@/composables/useLabs';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, subjectOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel } = inject(LabsKey)!;
+import WorkbenchShell from './workbench/WorkbenchShell.vue';
+import ActionButton from './workbench/ActionButton.vue';
+import StatusPill from './workbench/StatusPill.vue';
+import TaskEditorDialog from './workbench/TaskEditorDialog.vue';
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, subjectOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel, workbench } = inject(LabsKey)!;
+const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
+  status === 'DRAFT' ? 'draft' : status === 'PUBLISHED' ? 'published' : status === 'CLOSED' ? 'closed' : 'warning';
+const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWeight: 700 });
+const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' ').slice(0, 16) : '-');
 </script>
 
 <style scoped>

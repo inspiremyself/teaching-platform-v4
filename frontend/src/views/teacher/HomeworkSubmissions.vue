@@ -1,138 +1,33 @@
 <template>
-  <div class="page submissions-page workbench-page">
-    <section class="workbench-header submissions-header">
-      <div class="workbench-header__top">
-        <div class="workbench-header__main">
-          <div class="submissions-header__eyebrow">教师后台 / 作业提交与批改</div>
-          <h1>{{ homeworkTitle || '作业提交与批改' }}</h1>
-          <p>围绕学生提交明细、得分区与教师反馈区组织批改工作流。</p>
-        </div>
-        <div class="workbench-header__actions submissions-hero__actions">
-          <el-button @click="router.push('/teacher/homeworks')">返回作业管理</el-button>
-          <el-button type="primary" :disabled="!activeSubmission" @click="openGradeDialog(activeSubmission)">快速批改</el-button>
-        </div>
-      </div>
-
-      <div class="workbench-meta submissions-meta">
-        <span class="workbench-meta__item"><strong>{{ filteredRows.length }}</strong> 总提交数</span>
+  <GradingWorkspace>
+    <template #headerActions>
+      <div class="workbench-meta">
+        <span class="workbench-meta__item"><strong>{{ rows.length }}</strong> 总提交数</span>
         <span class="workbench-meta__item"><strong>{{ pendingCount }}</strong> 待批改</span>
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已批改</span>
         <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ averageScoreText }}</strong> 平均得分</span>
       </div>
-    </section>
+      <button class="action-button action-button--ghost" type="button" @click="router.push('/teacher/homeworks')">返回作业管理</button>
+      <button class="action-button action-button--warning" type="button" @click="releaseScores">发布成绩</button>
+      <button class="action-button action-button--ghost" type="button" @click="resetFilters">清空筛选</button>
+    </template>
 
-    <section class="toolbar-card">
-      <div class="toolbar-card__main">
-        <div class="toolbar-search">
-          <span class="material-symbols-outlined">search</span>
-          <el-input v-model="searchQuery" placeholder="搜索学生姓名或学号" clearable />
-        </div>
-        <div class="toolbar-filters">
-          <el-select v-model="statusFilter" placeholder="全部状态" clearable>
-            <el-option label="全部状态" value="" />
-            <el-option label="已保存" :value="SUBMISSION_STATUS.SAVED" />
-            <el-option label="待批改" :value="SUBMISSION_STATUS.SUBMITTED" />
-            <el-option label="已批改" :value="SUBMISSION_STATUS.GRADED" />
-          </el-select>
-        </div>
-      </div>
-      <div class="toolbar-card__meta">
-        <span>当前作业共 {{ rows.length }} 份提交</span>
-        <span class="toolbar-divider"></span>
-        <span>筛出 {{ filteredRows.length }} 份</span>
-        <el-button link type="primary" @click="resetFilters">清空筛选</el-button>
-      </div>
-    </section>
+    <template #queue>
+      <SubmissionQueue
+        :items="workspace.filteredQueue.value"
+        :selected-id="workspace.selectedId.value"
+        :keyword="workspace.keyword.value"
+        :status-filter="workspace.statusFilter.value"
+        @update:keyword="workspace.keyword.value = $event"
+        @update:status-filter="workspace.statusFilter.value = $event"
+        @select="id => workspace.selectSubmission(id)"
+      />
+    </template>
 
-    <section class="submissions-workspace">
-      <div class="submissions-list-panel" v-loading="loading">
-        <header class="panel-header">
-          <div>
-            <h2>提交队列</h2>
-            <p>保留学生上下文、提交状态与得分表达，支持直接切换当前批改对象。</p>
-          </div>
-        </header>
-
-        <div v-if="filteredRows.length" class="submission-list-shell">
-          <button
-            v-for="row in filteredRows"
-            :key="row.id"
-            type="button"
-            :class="['submission-row', { 'submission-row--active': activeSubmission?.id === row.id }]"
-            @click="setActiveSubmission(row)"
-          >
-            <div class="submission-row__identity">
-              <div class="submission-row__avatar">{{ row.studentName.slice(0, 1) }}</div>
-              <div>
-                <div class="submission-row__name-line">
-                  <strong>{{ row.studentName }}</strong>
-                  <span class="submission-row__username">{{ row.studentUsername }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="submission-row__meta-grid">
-              <div>
-                <span class="submission-row__label">提交状态</span>
-                <el-tag :type="submissionStatusTagType(row.submitStatus)" effect="light">
-                  {{ submissionStatusLabel(row.submitStatus) }}
-                </el-tag>
-              </div>
-              <div>
-                <span class="submission-row__label">总分</span>
-                <strong>{{ scoreText(row.totalScore) }}</strong>
-              </div>
-            </div>
-          </button>
-        </div>
-
-        <el-empty v-else description="暂无匹配提交记录" />
-      </div>
-
-      <aside class="quick-grade-panel">
-        <div v-if="activeSubmission" class="quick-grade-card">
-          <div class="quick-grade-card__header">
-            <div>
-              <span class="quick-grade-card__eyebrow">快速批改</span>
-              <h2>{{ activeSubmission.studentName }}</h2>
-              <p>学号：{{ activeSubmission.studentUsername }}</p>
-            </div>
-            <el-button type="primary" plain @click="openGradeDialog(activeSubmission)">
-              {{ activeSubmission.submitStatus === SUBMISSION_STATUS.SAVED ? '查看' : activeSubmission.submitStatus === SUBMISSION_STATUS.GRADED ? '查看/调整' : '批改' }}
-            </el-button>
-          </div>
-
-          <div class="quick-grade-card__stats">
-            <div>
-              <span class="quick-grade-card__label">提交状态</span>
-              <strong>{{ submissionStatusLabel(activeSubmission.submitStatus) }}</strong>
-            </div>
-            <div>
-              <span class="quick-grade-card__label">当前得分</span>
-              <strong>{{ scoreText(activeSubmission.totalScore) }}</strong>
-            </div>
-          </div>
-
-          <div class="quick-grade-card__section">
-            <div class="quick-grade-card__section-title">提交内容预览</div>
-            <div class="quick-grade-card__preview">{{ previewText(activeSubmission.answerText) }}</div>
-          </div>
-
-          <div class="quick-grade-card__section">
-            <div class="quick-grade-card__section-title">教师反馈摘要</div>
-            <p class="quick-grade-card__muted">
-              {{ activeSubmission.teacherComment || '尚未填写教师评语。' }}
-            </p>
-          </div>
-        </div>
-
-        <el-empty v-else description="请选择一个提交记录进行查看" />
-      </aside>
-    </section>
-
-    <el-dialog v-model="dialogVisible" title="作业批改" width="920px" :before-close="handleDialogBeforeClose">
-      <template v-if="selectedSubmission">
-        <div class="grade-dialog">
+    <template #detail>
+      <main class="submission-panel" v-loading="loading">
+        <el-empty v-if="!selectedSubmission" description="请选择左侧提交记录查看详情" />
+        <div v-else class="grade-dialog">
           <section class="grade-dialog__main">
             <div class="grade-dialog__identity-grid">
               <div class="identity-box identity-box--wide">
@@ -266,20 +161,32 @@
             </div>
           </aside>
         </div>
-      </template>
-      <template #footer>
-        <el-button @click="closeGradeDialog">取消</el-button>
-        <el-button
+      </main>
+    </template>
+
+    <template #summary>
+      <section class="grading-summary">
+        <h2>评分汇总</h2>
+        <div class="grading-summary__row"><span>学生</span><strong>{{ selectedSubmission?.studentName || '未选择' }}</strong></div>
+        <div class="grading-summary__row"><span>客观题自动得分</span><strong>{{ scoringSummary.autoScore }}</strong></div>
+        <div class="grading-summary__row"><span>主观题人工得分</span><strong>{{ scoringSummary.manualScore }}</strong></div>
+        <div class="grading-summary__row grading-summary__row--total"><span>总分</span><strong>{{ scoringSummary.totalScore }}</strong></div>
+        <p class="grading-summary__progress">
+          {{ scoringSummary.hasManual ? `评分进度 ${scoringSummary.completed}/${scoringSummary.total}` : scoringSummary.noManualText }}
+        </p>
+        <p v-if="hasDraftChanges(draftState)" class="grading-summary__progress">有未保存的评分</p>
+        <p class="quick-grade-card__muted">{{ selectedSubmission?.teacherComment || '尚未填写教师评语。' }}</p>
+        <button
           v-if="canReturnSubmission"
-          type="warning"
-          plain
+          class="action-button action-button--warning"
+          type="button"
           :loading="returning"
           @click="confirmReturnSubmission"
-        >打回</el-button>
-          <el-button type="primary" :loading="submitting" :disabled="!canGradeAnswer" @click="submitGrade">{{ selectedSubmission?.submitStatus === SUBMISSION_STATUS.SAVED ? '学生尚未提交' : selectedSubmission?.submitStatus === SUBMISSION_STATUS.GRADED ? '已完成批改' : '保存评分' }}</el-button>
-      </template>
-    </el-dialog>
-  </div>
+        >打回</button>
+        <button class="action-button action-button--primary" type="button" :disabled="!canGradeAnswer" @click="submitGrade">保存评分</button>
+      </section>
+    </template>
+  </GradingWorkspace>
 </template>
 
 <script setup lang="ts">
@@ -307,6 +214,10 @@ import {
   returnHomeworkSubmission,
 } from '@/api/homeworks';
 import type { GradeHomeworkRequest, HomeworkQuestionAnswer, HomeworkSubmissionItem, HomeworkSubmissionStatus } from '@/types/homework';
+import { releaseHomeworkScores } from '@/api/homeworks';
+import { useGradingWorkspace, type DraftPort } from './components/workbench/useWorkbench';
+import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
+import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -380,10 +291,7 @@ const averageScoreText = computed(() => {
 const fetchData = async () => {
   loading.value = true;
   try {
-    rows.value = await listHomeworkSubmissions(homeworkId.value);
-    if (!activeSubmissionId.value || !rows.value.some(item => item.id === activeSubmissionId.value)) {
-      activeSubmissionId.value = rows.value[0]?.id ?? null;
-    }
+    await workspace.refresh();
   } finally {
     loading.value = false;
   }
@@ -501,7 +409,6 @@ const submitGrade = async () => {
     teacherComment: gradeForm.teacherComment.trim(),
   });
   ElMessage.success('评分已保存，答卷已结案');
-  dialogVisible.value = false;
   await fetchData();
   selectedSubmission.value = await getHomeworkSubmissionDetail(selectedSubmission.value.id);
   gradeForm.teacherComment = selectedSubmission.value.teacherComment || '';
@@ -520,7 +427,6 @@ const doReturnSubmission = async () => {
   try {
     await returnHomeworkSubmission(selectedSubmission.value.id);
     ElMessage.success('已打回');
-    dialogVisible.value = false;
     await fetchData();
   } finally {
     returning.value = false;
@@ -567,6 +473,58 @@ const previewText = (text?: string | null) => {
   if (!text?.trim()) return '未提交文本内容';
   return text.length > 220 ? `${text.slice(0, 220)}...` : text;
 };
+
+const releaseScores = async () => {
+  await ElMessageBox.confirm('确认发布本次作业成绩？发布后学生即可查看。', '发布成绩', {
+    confirmButtonText: '确认发布',
+    cancelButtonText: '取消',
+    type: 'warning',
+  });
+  await releaseHomeworkScores(homeworkId.value);
+  ElMessage.success('作业成绩已发布');
+  await fetchData();
+};
+
+const homeworkDraftPort: DraftPort<HomeworkSubmissionItem, GradingDraftState> = {
+  create: detail => {
+    selectedSubmission.value = detail;
+    gradeForm.teacherComment = detail.teacherComment || '';
+    hydrateDraft();
+    return draftState;
+  },
+  setScore: setDraftScore,
+  setComment: setDraftComment,
+  hasChanges: hasDraftChanges,
+  commit: () => {},
+  forSummary: draft => ({ scores: draft.scores, marked: draft.marked }),
+};
+
+const workspace = useGradingWorkspace<HomeworkSubmissionItem, GradingDraftState>({
+  domain: 'HOMEWORK',
+  loadQueue: async () => {
+    const resultRows = await listHomeworkSubmissions(homeworkId.value);
+    rows.value = resultRows;
+    return resultRows;
+  },
+  loadDetail: async id => {
+    const nextDetail = await getHomeworkSubmissionDetail(id);
+    activeSubmissionId.value = Number(id);
+    selectedSubmission.value = nextDetail;
+    gradeForm.teacherComment = nextDetail.teacherComment || '';
+    hydrateDraft();
+    return nextDetail;
+  },
+  scoreLinesOf: detail => (detail.questions ?? []).map(question => homeworkStrategy.adapt(question)),
+  draftPort: homeworkDraftPort,
+  statusOf: detail => detail.submitStatus,
+  isReadOnly: status => homeworkStrategy.isReadOnly(status ?? ''),
+  handlers: {
+    saveGrade: async () => submitGrade(),
+    saveAnswerGrade: async (_detail, key) => submitAnswerGrade(Number(key), false),
+    returnSubmission: async () => doReturnSubmission(),
+    releaseScores,
+  },
+});
 
 watch(filteredRows, value => {
   if (!value.length) {

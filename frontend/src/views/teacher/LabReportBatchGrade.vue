@@ -1,40 +1,29 @@
 <template>
-  <div class="batch-grade-page" v-loading="loading">
-    <section class="batch-grade-header">
-      <button type="button" class="batch-grade-back" @click="goDetail()">
-        <span class="material-symbols-outlined">arrow_back</span>
-        <span>返回报告详情</span>
-      </button>
-      <div class="batch-grade-header__top">
-        <div>
-          <div class="batch-grade-eyebrow">教师后台 / 实验批量批改</div>
-          <h1>题项快捷批改表</h1>
-          <p>独立批量界面集中展示当前报告全部题项，支持快速改分、填写评语、确认单题或采纳参考分。</p>
-        </div>
-        <div class="batch-grade-actions">
-          <el-button plain :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</el-button>
-          <el-button plain :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</el-button>
-          <el-button plain :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</el-button>
-          <el-button plain :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</el-button>
-          <el-button plain @click="goDetail()">回到详细批改</el-button>
-          <el-button type="primary" :loading="submitting" :disabled="isReadOnly" @click="submitGrade">提交全部评分</el-button>
-        </div>
-      </div>
-      <div v-if="isReadOnly" class="preview-banner">
-        <span class="material-symbols-outlined">info</span>
-        <p>学生尚未提交，当前为只读预览</p>
-      </div>
-      <div v-if="detail" class="batch-grade-meta">
-        <span class="batch-grade-chip"><strong>{{ detail.studentName || '-' }}</strong>{{ detail.studentNo || detail.studentUsername || '未标注学号' }}</span>
-        <span class="batch-grade-chip"><strong>{{ answerItems.length }}</strong> 个题项</span>
-        <span class="batch-grade-chip">客观 {{ scoringSummary.autoScore }}</span>
-        <span class="batch-grade-chip">主观 {{ scoringSummary.manualScore }}</span>
-        <span class="batch-grade-chip batch-grade-chip--accent">总分 {{ computedTotalScore }}</span>
-        <span v-if="scoringSummary.hasManual" class="batch-grade-chip">进度 {{ scoringSummary.completed }}/{{ scoringSummary.total }}</span>
-        <span v-else class="batch-grade-chip">{{ scoringSummary.noManualText }}</span>
-      </div>
-    </section>
+  <GradingWorkspace>
+    <template #headerActions>
+      <button class="action-button action-button--ghost" type="button" @click="goDetail()">返回报告详情</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</button>
+      <button class="action-button action-button--ghost" type="button" @click="goDetail()">回到详细批改</button>
+      <button class="action-button action-button--primary" type="button" :loading="submitting" :disabled="isReadOnly" @click="submitGrade">提交全部评分</button>
+    </template>
 
+    <template #queue>
+      <SubmissionQueue
+        :items="queueItems"
+        :selected-id="reportId"
+        :keyword="queueKeyword"
+        :status-filter="queueStatusFilter"
+        @update:keyword="queueKeyword = $event"
+        @update:status-filter="queueStatusFilter = $event"
+        @select="id => goReport(Number(id))"
+      />
+    </template>
+
+    <template #detail>
+    <div class="batch-grade-page" v-loading="loading">
     <el-empty v-if="!loading && !detail" description="未获取到报告详情" />
 
     <template v-else>
@@ -118,7 +107,23 @@
       </el-table>
     </section>
     </template>
-  </div>
+    </div>
+    </template>
+
+    <template #summary>
+      <section class="grading-summary">
+        <h2>评分汇总</h2>
+        <div class="grading-summary__row"><span>学生</span><strong>{{ detail?.studentName || '未选择' }}</strong></div>
+        <div class="grading-summary__row"><span>客观题自动得分</span><strong>{{ scoringSummary.autoScore }}</strong></div>
+        <div class="grading-summary__row"><span>主观题人工得分</span><strong>{{ scoringSummary.manualScore }}</strong></div>
+        <div class="grading-summary__row grading-summary__row--total"><span>总分</span><strong>{{ computedTotalScore }}</strong></div>
+        <p class="grading-summary__progress">
+          {{ scoringSummary.hasManual ? `评分进度 ${scoringSummary.completed}/${scoringSummary.total}` : scoringSummary.noManualText }}
+        </p>
+        <button class="action-button action-button--primary" type="button" :disabled="isReadOnly" @click="submitGrade">提交全部评分</button>
+      </section>
+    </template>
+  </GradingWorkspace>
 </template>
 
 <script setup lang="ts">
@@ -128,6 +133,9 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
+import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
+import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
+import { submissionAdapterOf } from './components/workbench/submissionAdapters';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import type { StepBrief } from './components/BehaviorSummaryCard.vue';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem } from '@/types/lab';
@@ -193,6 +201,20 @@ const stepList = computed<StepBrief[]>(() =>
 );
 const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
 const computedTotalScore = computed(() => scoringSummary.value.totalScore);
+const labQueueAdapter = submissionAdapterOf('LAB');
+const queueKeyword = ref('');
+const queueStatusFilter = ref('');
+const queueItems = computed(() => {
+  const key = queueKeyword.value.trim().toLowerCase();
+  return reports.value
+    .map(row => labQueueAdapter.adapt(row, {
+      draftFlag: String(row.id) === String(reportId.value) && hasDraftChanges(currentDraft()),
+    }))
+    .filter(item =>
+      (!key || item.studentName.toLowerCase().includes(key)) &&
+      (!queueStatusFilter.value || item.status === queueStatusFilter.value),
+    );
+});
 const reportQueue = computed(() => sortReports(reports.value));
 const currentReportIndex = computed(() => reportQueue.value.findIndex((row) => row.id === reportId.value));
 const previousStudentReport = computed(() => currentReportIndex.value > 0 ? reportQueue.value[currentReportIndex.value - 1] : null);

@@ -1,110 +1,82 @@
 <template>
-  <div class="overview-page">
-    <section class="overview-header">
-      <button type="button" class="overview-back" @click="router.back()">
-        <span class="material-symbols-outlined">arrow_back</span>
-        <span>返回实验台账</span>
-      </button>
-      <div class="overview-header__top">
-        <div>
-          <div class="overview-eyebrow">教师后台 / 实验提交总览</div>
-          <h1>{{ overview?.labTitle || '实验提交总览' }}</h1>
-          <p>班级全员 × 子题矩阵。点击学生名查看历次提交，点击题列查看全班答案。</p>
-        </div>
-        <el-button plain :loading="loading" @click="fetchOverview">刷新</el-button>
-      </div>
-    </section>
-
-    <section v-loading="loading" class="overview-matrix-shell">
-      <template v-if="overview">
-        <div class="overview-matrix-wrap">
-          <table class="overview-matrix">
-            <thead>
-              <tr>
-                <th class="overview-matrix__corner">学生</th>
-                <th
-                  v-for="item in overview.items"
-                  :key="item.stepId"
-                  class="overview-matrix__item-head"
-                >
-                  <button type="button" class="overview-item-link" @click="goItemWall(item.stepId)">
-                    <span>第{{ item.stepNo }}题</span>
-                    <strong>{{ item.title }}</strong>
-                  </button>
-                </th>
-                <th class="overview-matrix__status-head">提交状态</th>
-                <th class="overview-matrix__action-head">批改操作</th>
-                <th class="overview-matrix__behavior-head">时长</th>
-                <th class="overview-matrix__behavior-head">粘贴</th>
-                <th class="overview-matrix__behavior-head">风险</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="student in overview.students" :key="student.studentId">
-                <th class="overview-matrix__student">
-                  <button
-                    type="button"
-                    class="overview-student-link"
-                    @click="goStudentSubmissions(student.studentId, student.studentName, student.studentNo)"
-                  >
-                    <strong>{{ student.studentName }}</strong>
-                    <span>{{ student.studentNo }}</span>
-                  </button>
-                </th>
-                <td
-                  v-for="cell in student.cells"
-                  :key="`${student.studentId}-${cell.stepId}`"
-                  class="overview-matrix__cell"
-                  :class="{ 'is-answered': cell.answered }"
-                >
-                  <div class="overview-cell">
-                    <span class="overview-cell__badge">{{ cell.answered ? '已答' : '未答' }}</span>
-                    <span v-if="cell.hasText" class="overview-cell__meta">文字</span>
-                    <span v-if="cell.imageCount > 0" class="overview-cell__meta">图 {{ cell.imageCount }}</span>
-                  </div>
-                </td>
-                <td class="overview-matrix__status">
-                  <el-tag v-if="student.submitStatus" :type="statusTagType(student.submitStatus)" effect="light">
-                    {{ statusLabel(student.submitStatus) }}
-                  </el-tag>
-                  <span v-else class="overview-matrix__muted">未提交</span>
-                </td>
-                <td class="overview-matrix__action">
-                  <div class="overview-actions">
-                    <el-button v-if="student.submissionId != null" type="primary" plain size="small" @click="goReportDetail(student.submissionId!)">批改报告</el-button>
-                    <el-button v-if="student.submissionId != null" plain size="small" @click="openReportView(student)">实验报告</el-button>
-                    <span v-if="student.submissionId == null" class="overview-matrix__muted">未提交</span>
-                  </div>
-                </td>
-                <td class="overview-matrix__behavior">
-                  <template v-if="student.behavior">
-                    <el-tooltip v-if="student.behavior.durationOpen" content="进行中，截至最近事件" placement="top">
-                      <strong>{{ formatTotalDuration(student.behavior) }}</strong>
-                    </el-tooltip>
-                    <strong v-else>{{ formatTotalDuration(student.behavior) }}</strong>
-                    <span class="overview-matrix__muted">活跃 {{ formatActiveDuration(student.behavior) }}</span>
-                  </template>
-                  <span v-else class="overview-matrix__muted">-</span>
-                </td>
-                <td class="overview-matrix__behavior">
-                  <strong v-if="student.behavior">{{ student.behavior.pasteCount }}次 · {{ student.behavior.pastedChars }}字符</strong>
-                  <span v-else class="overview-matrix__muted">-</span>
-                </td>
-                <td class="overview-matrix__behavior">
-                  <el-tooltip :content="riskTagTooltip(student.behavior)" placement="top">
-                    <el-tag :type="riskTagType(student.behavior)" size="small" effect="light" :class="{ 'risk-tag--muted': hasNoBehaviorData(student.behavior) }">
-                      {{ riskTagLabel(student.behavior) }}
-                    </el-tag>
-                  </el-tooltip>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </template>
-      <el-empty v-else-if="!loading" description="暂无总览数据" />
-    </section>
-  </div>
+  <WorkbenchShell
+    eyebrow="教师控制台 / 实验闭环 / 实验结果"
+    title="实验结果"
+    description="班级全员 × 子题矩阵。点击学生名查看历次提交，点击题列查看全班答案。"
+  >
+    <template #actions>
+      <button class="action-button action-button--ghost" type="button" @click="router.back()">返回实验台账</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="loading" @click="fetchOverview">刷新</button>
+      <button class="action-button action-button--ghost" type="button" @click="goBlankRegrade">批量重判</button>
+    </template>
+    <template #meta>
+      <span class="workbench-meta__item"><strong>{{ overview?.students.length ?? 0 }}</strong> 学生</span>
+      <span class="workbench-meta__item"><strong>{{ overview?.items.length ?? 0 }}</strong> 题项</span>
+      <span class="workbench-meta__item workbench-meta__item--accent">{{ overview?.labTitle || '暂无实验' }}</span>
+    </template>
+    <div class="workbench-table-card" v-loading="loading">
+      <el-table :data="overview?.students ?? []" empty-text="暂无总览数据" :header-cell-style="headerCellStyle">
+        <el-table-column label="学生" min-width="160" fixed>
+          <template #default="{ row: student }">
+            <button type="button" class="overview-student-link" @click="goStudentSubmissions(student.studentId, student.studentName, student.studentNo)">
+              <strong>{{ student.studentName }}</strong>
+              <span>{{ student.studentNo }}</span>
+            </button>
+          </template>
+        </el-table-column>
+        <el-table-column
+          v-for="item in overview?.items ?? []"
+          :key="item.stepId"
+          :label="`第${item.stepNo}题`"
+          min-width="140"
+        >
+          <template #header>
+            <button type="button" class="overview-item-link" @click="goItemWall(item.stepId)">{{ item.title }}</button>
+          </template>
+          <template #default="{ row: student }">
+            <div class="overview-cell">
+              <span class="overview-cell__badge">{{ cellOf(student, item.stepId)?.answered ? '已答' : '未答' }}</span>
+              <span v-if="cellOf(student, item.stepId)?.hasText" class="overview-cell__meta">文字</span>
+              <span v-if="(cellOf(student, item.stepId)?.imageCount ?? 0) > 0" class="overview-cell__meta">
+                图 {{ cellOf(student, item.stepId)?.imageCount }}
+              </span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="提交状态" width="120">
+          <template #default="{ row: student }">
+            <el-tag v-if="student.submitStatus" :type="statusTagType(student.submitStatus)" effect="light">{{ statusLabel(student.submitStatus) }}</el-tag>
+            <span v-else class="overview-matrix__muted">未提交</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="批改操作" width="220" fixed="right">
+          <template #default="{ row: student }">
+            <div class="workbench-actions">
+              <button v-if="student.submissionId != null" class="action-button action-button--primary" type="button" @click="goReportDetail(student.submissionId)">批改报告</button>
+              <button v-if="student.submissionId != null" class="action-button action-button--ghost" type="button" @click="openReportView(student)">实验报告</button>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="时长" width="140">
+          <template #default="{ row: student }">
+            <strong v-if="student.behavior">{{ formatTotalDuration(student.behavior) }}</strong>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="粘贴" width="140">
+          <template #default="{ row: student }">
+            <strong v-if="student.behavior">{{ student.behavior.pasteCount }}次 · {{ student.behavior.pastedChars }}字符</strong>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="风险" width="120">
+          <template #default="{ row: student }">
+            <el-tag :type="riskTagType(student.behavior)" size="small" effect="light">{{ riskTagLabel(student.behavior) }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+  </WorkbenchShell>
 </template>
 
 <script setup lang="ts">
@@ -112,7 +84,8 @@ import { SUBMISSION_STATUS } from '@/types/enums';
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getTeacherLabSubmissionOverview } from '@/api/labs';
-import type { LabReportStatus, LabSubmissionOverview, LabSubmissionOverviewStudent } from '@/types/lab';
+import WorkbenchShell from './components/workbench/WorkbenchShell.vue';
+import type { LabReportStatus, LabSubmissionOverview, LabSubmissionOverviewCell, LabSubmissionOverviewStudent } from '@/types/lab';
 import {
   formatActiveDuration,
   formatTotalDuration,
@@ -179,6 +152,11 @@ const statusTagType = (status?: LabReportStatus | null) => {
   if (status === SUBMISSION_STATUS.SAVED) return 'info';
   return 'info';
 };
+
+const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWeight: 700 });
+const cellOf = (row: LabSubmissionOverviewStudent, stepId: number): LabSubmissionOverviewCell | undefined =>
+  row.cells.find(cell => cell.stepId === stepId);
+const goBlankRegrade = () => router.push(`/teacher/labs/${labId()}/blank-regrade/batch`);
 
 onMounted(() => {
   void fetchOverview();

@@ -1,29 +1,34 @@
 <template>
-  <div class="detail-page" v-loading="loading">
-    <div class="page-header">
-      <div class="page-header__main">
-        <div class="detail-eyebrow">教师后台 / 实验报告详情</div>
-        <h2>实验报告评分台</h2>
-        <p>按题项连续查看学生作答、系统参考和教师确认分，主工作区直接面向评分操作。</p>
+  <GradingWorkspace>
+    <template #headerActions>
+      <div class="page-header__meta" v-if="detail">
+        <span class="page-header__meta-item"><strong>{{ detail.studentName || '-' }}</strong>{{ detail.studentNo || detail.studentUsername || '未标注学号' }}</span>
+        <span class="page-header__meta-item">{{ statusLabel(detail.submitStatus) }}</span>
+        <span class="page-header__meta-item page-header__meta-item--accent">当前总分 {{ detail.totalScore ?? '-' }}</span>
       </div>
-      <div class="page-header__actions">
-        <div v-if="detail" class="page-header__meta">
-          <span class="page-header__meta-item"><strong>{{ detail.studentName || '-' }}</strong>{{ detail.studentNo || detail.studentUsername || '未标注学号' }}</span>
-          <span class="page-header__meta-item">{{ statusLabel(detail.submitStatus) }}</span>
-          <span class="page-header__meta-item page-header__meta-item--accent">当前总分 {{ detail.totalScore ?? '-' }}</span>
-        </div>
-        <div class="page-header__button-row">
-          <el-button plain :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</el-button>
-          <el-button plain :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</el-button>
-          <el-button plain :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</el-button>
-          <el-button plain :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</el-button>
-          <el-button plain :disabled="!canReturn" :loading="returning" @click="handleReturn">打回</el-button>
-          <el-button plain @click="goBatchGrade">批量快捷批改</el-button>
-          <el-button @click="router.back()">返回</el-button>
-        </div>
-      </div>
-    </div>
+      <button class="action-button action-button--ghost" type="button" :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</button>
+      <button class="action-button action-button--ghost" type="button" :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</button>
+      <button class="action-button action-button--warning" type="button" :disabled="!canReturn" @click="handleReturn">打回</button>
+      <button class="action-button action-button--ghost" type="button" @click="goBatchGrade">批量快捷批改</button>
+      <el-button plain @click="router.back()">返回</el-button>
+    </template>
 
+    <template #queue>
+      <SubmissionQueue
+        :items="queueItems"
+        :selected-id="reportId"
+        :keyword="queueKeyword"
+        :status-filter="queueStatusFilter"
+        @update:keyword="queueKeyword = $event"
+        @update:status-filter="queueStatusFilter = $event"
+        @select="id => goReport(Number(id))"
+      />
+    </template>
+
+    <template #detail>
+    <div class="detail-page" v-loading="loading">
     <el-empty v-if="!loading && !detail" description="未获取到报告详情" />
 
     <template v-else-if="detail">
@@ -207,7 +212,22 @@
         </div>
       </section>
     </template>
-  </div>
+    </div>
+    </template>
+
+    <template #summary>
+      <section class="grading-summary">
+        <h2>评分汇总</h2>
+        <div class="grading-summary__row"><span>客观题自动得分</span><strong>{{ scoringSummary.autoScore }}</strong></div>
+        <div class="grading-summary__row"><span>主观题人工得分</span><strong>{{ scoringSummary.manualScore }}</strong></div>
+        <div class="grading-summary__row grading-summary__row--total"><span>总分</span><strong>{{ computedTotalScore }}</strong></div>
+        <p class="grading-summary__progress">
+          {{ scoringSummary.hasManual ? `评分进度 ${scoringSummary.completed}/${scoringSummary.total}` : scoringSummary.noManualText }}
+        </p>
+        <button class="action-button action-button--primary" type="button" :disabled="isReadOnly" @click="submitGrade">提交评分</button>
+      </section>
+    </template>
+  </GradingWorkspace>
 </template>
 
 <script setup lang="ts">
@@ -217,6 +237,9 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue, returnTeacherLabReport } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
+import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
+import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
+import { submissionAdapterOf } from './components/workbench/submissionAdapters';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
 import {
@@ -291,6 +314,20 @@ const reportImages = (item: LabReportAnswerItem) => extractReportImages(item);
 const computedTotalScore = computed(() => scoringSummary.value.totalScore);
 const summaryStatusLabel = computed(() => detail.value?.summaryText?.trim() ? '已填写实验小结' : '未填写实验小结');
 const summaryPreview = computed(() => detail.value?.summaryText?.trim() || '学生未填写实验小结。');
+const labQueueAdapter = submissionAdapterOf('LAB');
+const queueKeyword = ref('');
+const queueStatusFilter = ref('');
+const queueItems = computed(() => {
+  const key = queueKeyword.value.trim().toLowerCase();
+  return reports.value
+    .map(row => labQueueAdapter.adapt(row, {
+      draftFlag: String(row.id) === String(reportId.value) && hasDraftChanges(currentDraft()),
+    }))
+    .filter(item =>
+      (!key || item.studentName.toLowerCase().includes(key)) &&
+      (!queueStatusFilter.value || item.status === queueStatusFilter.value),
+    );
+});
 const reportQueue = computed(() => sortReports(reports.value));
 const currentReportIndex = computed(() => reportQueue.value.findIndex((row) => row.id === reportId.value));
 const previousStudentReport = computed(() => currentReportIndex.value > 0 ? reportQueue.value[currentReportIndex.value - 1] : null);
