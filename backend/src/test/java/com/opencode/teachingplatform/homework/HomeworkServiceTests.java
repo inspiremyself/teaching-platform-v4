@@ -58,6 +58,7 @@ import static org.mockito.Mockito.verify;
         com.opencode.teachingplatform.homework.service.HomeworkServiceSupport.class,
         HomeworkServiceTests.JacksonTestConfig.class,
         com.opencode.teachingplatform.assessment.service.QuestionContentValidator.class,
+        com.opencode.teachingplatform.assessment.service.GradingAdapter.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         com.opencode.teachingplatform.common.infra.audit.AuditLogService.class,

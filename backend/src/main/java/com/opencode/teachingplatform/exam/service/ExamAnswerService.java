@@ -2,7 +2,6 @@ package com.opencode.teachingplatform.exam.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.assessment.model.GradingResultView;
 import com.opencode.teachingplatform.assessment.model.QuestionAnswerPayload;
 import com.opencode.teachingplatform.assessment.model.QuestionSnapshot;
@@ -35,9 +34,7 @@ import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
-import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -66,7 +63,6 @@ public class ExamAnswerService {
     private final ScoreRecordWriter scoreRecordWriter;
     private final TransactionTemplate transactionTemplate;
     private final GradingAdapter gradingAdapter;
-    private final ObjectMapper objectMapper;
 
     private final ExamServiceSupport support;
 
@@ -82,10 +78,8 @@ public class ExamAnswerService {
                        SysUserRepository sysUserRepository,
                        ScoreRecordWriter scoreRecordWriter,
                        PlatformTransactionManager transactionManager,
-                       ObjectProvider<GradingAdapter> gradingAdapterProvider,
-                       ObjectProvider<ScoringEngine> scoringEngineProvider,
-                       ObjectProvider<ObjectMapper> objectMapperProvider,
-                      ExamServiceSupport support) {
+                       GradingAdapter gradingAdapter,
+                       ExamServiceSupport support) {
         this.examRepository = examRepository;
         this.examQuestionRepository = examQuestionRepository;
         this.examSubmissionRepository = examSubmissionRepository;
@@ -100,8 +94,7 @@ public class ExamAnswerService {
         // 开始考试需要“创建提交”独立事务：唯一键冲突必须在外层捕获后再重读，
         // 因此这里用事务模板实现，不新增 Bean 与独立类。
         this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
+        this.gradingAdapter = gradingAdapter;
         this.support = support;
     }
 

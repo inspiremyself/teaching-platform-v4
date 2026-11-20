@@ -48,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
         com.opencode.teachingplatform.exam.service.ExamReportService.class,
         com.opencode.teachingplatform.exam.service.ExamServiceSupport.class,
         ExamScoringService.class,
+        com.opencode.teachingplatform.assessment.service.GradingAdapter.class,
         com.opencode.teachingplatform.clazz.service.ClassAccessService.class,
         com.opencode.teachingplatform.grading.service.ScoreRecordWriter.class,
         ScoringEngine.class,

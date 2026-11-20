@@ -16,7 +16,7 @@ import com.opencode.teachingplatform.common.enums.ActivityStatus;
 import com.opencode.teachingplatform.grading.BusinessType;
 import com.opencode.teachingplatform.common.enums.EnumValueParser;
 import com.opencode.teachingplatform.grading.service.ScoreReleaseSupport;
-import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
+import com.opencode.teachingplatform.grading.support.ScoreVisibilityPolicy;
 import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.exam.dto.ExamRequests;
@@ -35,7 +35,6 @@ import com.opencode.teachingplatform.clazz.repository.ClassRoomRepository;
 import com.opencode.teachingplatform.clazz.service.ClassAccessService;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
-import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -81,8 +80,7 @@ public class ExamServiceSupport {
                        SysUserRepository sysUserRepository,
                        ScoreRecordWriter scoreRecordWriter,
                        PlatformTransactionManager transactionManager,
-                       ObjectProvider<GradingAdapter> gradingAdapterProvider,
-                       ObjectProvider<ScoringEngine> scoringEngineProvider,
+                       GradingAdapter gradingAdapter,
                        ObjectProvider<ObjectMapper> objectMapperProvider) {
         this.examRepository = examRepository;
         this.examQuestionRepository = examQuestionRepository;
@@ -99,7 +97,7 @@ public class ExamServiceSupport {
         // 因此这里用事务模板实现，不新增 Bean 与独立类。
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
+        this.gradingAdapter = gradingAdapter;
     }
 
 
@@ -205,26 +203,14 @@ public class ExamServiceSupport {
 
 
 
-    public boolean isFinal(ExamSubmission submission) {
-        return submission != null && submission.getStatus() == ExamSubmissionStatus.GRADED;
-    }
-
-
-
     public boolean canStudentSeeScore(Exam exam, ExamSubmission submission) {
-        // 只有最终成绩（GRADED）才可能对学生公开；未批完一律不可见。
-        if (!isFinal(submission)) {
-            return false;
-        }
-        ScoreVisibilityMode mode = exam.getScoreVisibilityMode() == null
-                ? ScoreVisibilityMode.AFTER_TEACHER_CONFIRM
-                : exam.getScoreVisibilityMode();
-        return switch (mode) {
-            case IMMEDIATE, AFTER_TEACHER_CONFIRM -> true;
-            case AFTER_DEADLINE -> exam.getEndAt() != null
-                    && !OffsetDateTime.now().isBefore(exam.getEndAt());
-            case MANUAL_RELEASE -> exam.isScoreReleased();
-        };
+        return ScoreVisibilityPolicy.EXAM.isVisible(
+                exam.getScoreVisibilityMode(),
+                submission != null,
+                submission != null && submission.getStatus() == ExamSubmissionStatus.GRADED,
+                submission != null && submission.getTotalScore() != null,
+                exam.getEndAt(),
+                exam.isScoreReleased());
     }
 
 

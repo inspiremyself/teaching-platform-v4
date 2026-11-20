@@ -6,20 +6,16 @@ import com.opencode.teachingplatform.assessment.model.GradingResultView;
 import com.opencode.teachingplatform.assessment.model.QuestionAnswerPayload;
 import com.opencode.teachingplatform.assessment.model.QuestionSnapshot;
 import com.opencode.teachingplatform.grading.enums.QuestionType;
-import com.opencode.teachingplatform.grading.enums.ScoreSource;
 import com.opencode.teachingplatform.grading.model.ScoringContext;
 import com.opencode.teachingplatform.grading.model.ScoringResult;
 import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.support.AnswerNormalizationSupport;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -37,18 +33,8 @@ public class GradingAdapter {
     private final ObjectMapper objectMapper;
 
     public GradingAdapter(ScoringEngine scoringEngine) {
-        this(scoringEngine, new ObjectMapper());
-    }
-
-    @Autowired
-    public GradingAdapter(ObjectProvider<ScoringEngine> scoringEngineProvider,
-                          ObjectProvider<ObjectMapper> objectMapperProvider) {
-        this(scoringEngineProvider.getIfAvailable(), objectMapperProvider.getIfAvailable(ObjectMapper::new));
-    }
-
-    public GradingAdapter(ScoringEngine scoringEngine, ObjectMapper objectMapper) {
         this.scoringEngine = scoringEngine;
-        this.objectMapper = objectMapper;
+        this.objectMapper = new ObjectMapper();
     }
 
     /**
@@ -66,10 +52,6 @@ public class GradingAdapter {
         Object studentAnswer = resolveStudentAnswer(payload, questionType);
         String normalizedAnswerJson = normalizeAnswerJson(payload, questionType, studentAnswer);
 
-        if (scoringEngine == null) {
-            return fallbackResult(questionType, normalizedAnswerJson);
-        }
-
         ScoringResult result = scoringEngine.evaluate(new ScoringContext(
                 questionType,
                 snapshot.score(),
@@ -85,29 +67,6 @@ public class GradingAdapter {
                 result.judgeDetail(),
                 result.scoreSource().name(),
                 toCorrectFlag(questionType, result),
-                normalizedAnswerJson
-        );
-    }
-
-    private GradingResultView fallbackResult(QuestionType questionType, String normalizedAnswerJson) {
-        if (questionType == QuestionType.SUBJECTIVE) {
-            return new GradingResultView(
-                    null,
-                    0D,
-                    null,
-                    "scoring engine unavailable",
-                    ScoreSource.RECOMMENDED.name(),
-                    null,
-                    normalizedAnswerJson
-            );
-        }
-        return new GradingResultView(
-                0D,
-                null,
-                0D,
-                "scoring engine unavailable",
-                ScoreSource.AUTO.name(),
-                false,
                 normalizedAnswerJson
         );
     }
@@ -311,17 +270,7 @@ public class GradingAdapter {
     }
 
     private QuestionType toGradingQuestionType(String questionType) {
-        if (questionType == null || questionType.isBlank()) {
-            return null;
-        }
-        return switch (questionType.trim().toUpperCase(Locale.ROOT)) {
-            case "SINGLE", "SINGLE_CHOICE" -> QuestionType.SINGLE_CHOICE;
-            case "MULTI", "MULTIPLE", "MULTIPLE_CHOICE" -> QuestionType.MULTIPLE_CHOICE;
-            case "JUDGE", "TRUE_FALSE" -> QuestionType.TRUE_FALSE;
-            case "FILL", "FILL_BLANK" -> QuestionType.FILL_BLANK;
-            case "SHORT", "TEXT", "SUBJECTIVE" -> QuestionType.SUBJECTIVE;
-            default -> null;
-        };
+        return QuestionType.fromAlias(questionType);
     }
 
     private String firstSelectedOption(List<String> selectedOptions) {

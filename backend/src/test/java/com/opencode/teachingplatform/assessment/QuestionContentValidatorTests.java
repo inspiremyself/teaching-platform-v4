@@ -86,6 +86,15 @@ class QuestionContentValidatorTests {
     }
 
     @Test
+    void codeAliasesAreValidatedAsShortAnswer() {
+        assertEquals("简答题参考答案或评分要点不能为空", assertThrows(BusinessException.class,
+                () -> validator.validate("CODE", "题干", null, "[]", null)).getMessage());
+        assertEquals("简答题参考答案或评分要点不能为空", assertThrows(BusinessException.class,
+                () -> validator.validate("SHORT_ANSWER", "题干", null, "[]", null)).getMessage());
+        assertDoesNotThrow(() -> validator.validate("CODE", "题干", null, "[\"参考\"]", null));
+    }
+
+    @Test
     void commonFieldsAndJsonSyntaxAreValidated() {
         assertEquals("题干不能为空", assertThrows(BusinessException.class,
                 () -> validator.validate("SINGLE", " ", TWO_OPTIONS, "[\"A\"]", null)).getMessage());

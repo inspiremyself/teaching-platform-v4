@@ -27,6 +27,7 @@ import com.opencode.teachingplatform.common.util.ActivityStatusParser;
 import com.opencode.teachingplatform.grading.service.ScoreReleaseSupport;
 import com.opencode.teachingplatform.common.enums.ScoreVisibilityMode;
 import com.opencode.teachingplatform.common.enums.SubmissionStatus;
+import com.opencode.teachingplatform.grading.support.ScoreVisibilityPolicy;
 import com.opencode.teachingplatform.auth.UserRole;
 import com.opencode.teachingplatform.common.exception.BusinessException;
 import com.opencode.teachingplatform.homework.dto.HomeworkRequests;
@@ -42,7 +43,6 @@ import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
-import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -90,8 +90,7 @@ public class HomeworkConfigService {
                            ScoreRecordWriter scoreRecordWriter,
                            AuditLogService auditLogService,
                            QuestionBankRepository questionBankRepository,
-                           ObjectProvider<GradingAdapter> gradingAdapterProvider,
-                           ObjectProvider<ScoringEngine> scoringEngineProvider,
+                           GradingAdapter gradingAdapter,
                            ObjectProvider<ObjectMapper> objectMapperProvider,
                            QuestionContentValidator questionContentValidator,
                            HomeworkSubmissionClaimService homeworkSubmissionClaimService,
@@ -109,7 +108,7 @@ public class HomeworkConfigService {
         this.auditLogService = auditLogService;
         this.questionBankRepository = questionBankRepository;
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
+        this.gradingAdapter = gradingAdapter;
         this.questionContentValidator = questionContentValidator;
         this.homeworkSubmissionClaimService = homeworkSubmissionClaimService;
         this.support = support;
@@ -646,15 +645,13 @@ public class HomeworkConfigService {
 
 
     private boolean isStudentScoreVisible(Homework homework, HomeworkSubmission submission) {
-        if (submission == null) {
-            return false;
-        }
-        return switch (homework.getScoreVisibilityMode()) {
-            case IMMEDIATE -> true;
-            case AFTER_TEACHER_CONFIRM -> submission.getSubmitStatus() == SubmissionStatus.GRADED;
-            case AFTER_DEADLINE -> homework.getDueAt() != null && !OffsetDateTime.now().isBefore(homework.getDueAt());
-            case MANUAL_RELEASE -> homework.isScoreReleased();
-        };
+        return ScoreVisibilityPolicy.HOMEWORK.isVisible(
+                homework.getScoreVisibilityMode(),
+                submission != null,
+                submission != null && submission.getSubmitStatus() == SubmissionStatus.GRADED,
+                submission != null && submission.getTotalScore() != null,
+                homework.getDueAt(),
+                homework.isScoreReleased());
     }
 
 

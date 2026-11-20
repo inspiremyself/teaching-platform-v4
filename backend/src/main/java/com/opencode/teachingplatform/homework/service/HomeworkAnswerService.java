@@ -1,7 +1,6 @@
 package com.opencode.teachingplatform.homework.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.assessment.model.GradingResultView;
 import com.opencode.teachingplatform.assessment.model.QuestionAnswerPayload;
 import com.opencode.teachingplatform.assessment.model.QuestionSnapshot;
@@ -41,9 +40,7 @@ import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
-import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,7 +68,6 @@ public class HomeworkAnswerService {
     private final AuditLogService auditLogService;
     private final QuestionBankRepository questionBankRepository;
     private final GradingAdapter gradingAdapter;
-    private final ObjectMapper objectMapper;
     private final QuestionContentValidator questionContentValidator;
     private final HomeworkSubmissionClaimService homeworkSubmissionClaimService;
 
@@ -89,9 +85,7 @@ public class HomeworkAnswerService {
                            ScoreRecordWriter scoreRecordWriter,
                            AuditLogService auditLogService,
                            QuestionBankRepository questionBankRepository,
-                           ObjectProvider<GradingAdapter> gradingAdapterProvider,
-                           ObjectProvider<ScoringEngine> scoringEngineProvider,
-                           ObjectProvider<ObjectMapper> objectMapperProvider,
+                           GradingAdapter gradingAdapter,
                            QuestionContentValidator questionContentValidator,
                            HomeworkSubmissionClaimService homeworkSubmissionClaimService,
                       HomeworkServiceSupport support) {
@@ -107,8 +101,7 @@ public class HomeworkAnswerService {
         this.scoreRecordWriter = scoreRecordWriter;
         this.auditLogService = auditLogService;
         this.questionBankRepository = questionBankRepository;
-        this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
+        this.gradingAdapter = gradingAdapter;
         this.questionContentValidator = questionContentValidator;
         this.homeworkSubmissionClaimService = homeworkSubmissionClaimService;
         this.support = support;

@@ -3,6 +3,7 @@ package com.opencode.teachingplatform.assessment.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencode.teachingplatform.common.exception.BusinessException;
+import com.opencode.teachingplatform.grading.enums.QuestionType;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -167,17 +168,8 @@ public class QuestionContentValidator {
     }
 
     private String normalizeType(String type) {
-        if (type == null || type.isBlank()) {
-            return null;
-        }
-        return switch (type.trim().toUpperCase(Locale.ROOT)) {
-            case SINGLE, "SINGLE_CHOICE" -> SINGLE;
-            case MULTI, "MULTIPLE", "MULTIPLE_CHOICE" -> MULTI;
-            case JUDGE, "TRUE_FALSE" -> JUDGE;
-            case FILL, "FILL_BLANK" -> FILL;
-            case SHORT, "TEXT", "SUBJECTIVE" -> SHORT;
-            default -> null;
-        };
+        QuestionType resolved = QuestionType.fromAlias(type);
+        return resolved == null ? null : resolved.legacyCode();
     }
 
     private Object readAnswer(String answerJson) {

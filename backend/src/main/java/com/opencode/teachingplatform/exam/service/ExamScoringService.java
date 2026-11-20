@@ -1,5 +1,6 @@
 package com.opencode.teachingplatform.exam.service;
 
+import com.opencode.teachingplatform.grading.enums.QuestionType;
 import org.springframework.stereotype.Service;
 
 /**
@@ -13,11 +14,7 @@ import org.springframework.stereotype.Service;
 public class ExamScoringService {
 
     public boolean isObjective(String questionType) {
-        if (questionType == null) return false;
-        String type = questionType.toUpperCase();
-        return type.equals("SINGLE") || type.equals("SINGLE_CHOICE")
-                || type.equals("MULTI") || type.equals("MULTIPLE") || type.equals("MULTIPLE_CHOICE")
-                || type.equals("JUDGE") || type.equals("TRUE_FALSE")
-                || type.equals("FILL") || type.equals("FILL_BLANK");
+        QuestionType type = QuestionType.fromAlias(questionType);
+        return type != null && type.isObjective();
     }
 }

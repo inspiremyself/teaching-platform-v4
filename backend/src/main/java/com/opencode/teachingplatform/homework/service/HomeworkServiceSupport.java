@@ -42,7 +42,6 @@ import com.opencode.teachingplatform.question.entity.QuestionBank;
 import com.opencode.teachingplatform.question.repository.QuestionBankRepository;
 import com.opencode.teachingplatform.student.entity.ClassMember;
 import com.opencode.teachingplatform.student.repository.ClassMemberRepository;
-import com.opencode.teachingplatform.grading.service.ScoringEngine;
 import com.opencode.teachingplatform.grading.service.ScoreRecordWriter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -89,8 +88,7 @@ public class HomeworkServiceSupport {
                            ScoreRecordWriter scoreRecordWriter,
                            AuditLogService auditLogService,
                            QuestionBankRepository questionBankRepository,
-                           ObjectProvider<GradingAdapter> gradingAdapterProvider,
-                           ObjectProvider<ScoringEngine> scoringEngineProvider,
+                           GradingAdapter gradingAdapter,
                            ObjectProvider<ObjectMapper> objectMapperProvider,
                            QuestionContentValidator questionContentValidator,
                            HomeworkSubmissionClaimService homeworkSubmissionClaimService) {
@@ -107,7 +105,7 @@ public class HomeworkServiceSupport {
         this.auditLogService = auditLogService;
         this.questionBankRepository = questionBankRepository;
         this.objectMapper = objectMapperProvider.getIfAvailable(ObjectMapper::new);
-        this.gradingAdapter = gradingAdapterProvider.getIfAvailable(() -> new GradingAdapter(scoringEngineProvider.getIfAvailable(), this.objectMapper));
+        this.gradingAdapter = gradingAdapter;
         this.questionContentValidator = questionContentValidator;
         this.homeworkSubmissionClaimService = homeworkSubmissionClaimService;
     }

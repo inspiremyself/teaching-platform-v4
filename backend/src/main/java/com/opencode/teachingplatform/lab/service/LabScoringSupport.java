@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -93,15 +92,7 @@ public class LabScoringSupport {
                 asString(snapshot.get("legacyQuestionType")),
                 step.getQuestionType()
         );
-        String normalized = rawType == null ? "" : rawType.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "SINGLE_CHOICE" -> QuestionType.SINGLE_CHOICE;
-            case "MULTIPLE_CHOICE" -> QuestionType.MULTIPLE_CHOICE;
-            case "TRUE_FALSE" -> QuestionType.TRUE_FALSE;
-            case "FILL_BLANK" -> QuestionType.FILL_BLANK;
-            case "TEXT", "SUBJECTIVE", "CODE", "SHORT_ANSWER" -> QuestionType.SUBJECTIVE;
-            default -> null;
-        };
+        return QuestionType.fromAlias(rawType);
     }
 
     private Double resolveQuestionScore(LabStep step, Map<String, Object> snapshot) {
