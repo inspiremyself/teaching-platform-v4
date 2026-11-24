@@ -745,47 +745,10 @@ onMounted(fetchData)
   opacity: 0.76;
 }
 
-.grading-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.38fr) minmax(250px, 0.82fr);
-  gap: 18px;
-  align-items: start;
-}
-
-.queue-panel {
-  padding: 20px;
-  position: sticky;
-  top: 24px;
-}
-
-.queue-panel__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.queue-panel__header h2,
 .score-panel h2 {
   margin: 0;
   font-size: 20px;
   color: #0f172a;
-}
-
-.queue-panel__header p {
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 13px;
-}
-
-.queue-panel__badge {
-  align-self: flex-start;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: #ecfdf5;
-  color: #0f766e;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .queue-search {
@@ -816,37 +779,6 @@ onMounted(fetchData)
   font-size: 12px;
 }
 
-.queue-list {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: calc(100vh - 420px);
-  overflow: auto;
-}
-
-.queue-item {
-  border: none;
-  text-align: left;
-  width: 100%;
-  background: #fff;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  padding: 14px;
-  cursor: pointer;
-}
-
-.queue-item.is-active {
-  background: #ecfeff;
-  border-color: #14b8a6;
-  box-shadow: inset 4px 0 0 #0f766e;
-}
-
-.queue-item__main {
-  display: flex;
-  gap: 12px;
-}
-
 .queue-avatar,
 .submission-context-card__avatar {
   width: 44px;
@@ -859,18 +791,6 @@ onMounted(fetchData)
   justify-content: center;
   font-weight: 800;
   letter-spacing: 0.04em;
-}
-
-.queue-item__body {
-  min-width: 0;
-  flex: 1;
-}
-
-.queue-item__top {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
 }
 
 .queue-status {
@@ -898,13 +818,6 @@ onMounted(fetchData)
 .queue-status--info {
   background: #eff6ff;
   color: #1d4ed8;
-}
-
-.queue-item__meta,
-.queue-item__score {
-  margin-top: 6px;
-  color: #64748b;
-  font-size: 12px;
 }
 
 .submission-panel__inner {
@@ -1116,8 +1029,6 @@ onMounted(fetchData)
   display: flex;
   flex-direction: column;
   gap: 18px;
-  position: sticky;
-  top: 24px;
 }
 
 .score-panel,
@@ -1265,10 +1176,6 @@ onMounted(fetchData)
 }
 
 @media (max-width: 1280px) {
-  .grading-layout {
-    grid-template-columns: minmax(260px, 0.95fr) minmax(0, 1.4fr);
-  }
-
   .summary-side {
     grid-column: 1 / -1;
     position: static;
@@ -1277,23 +1184,16 @@ onMounted(fetchData)
 
 @media (max-width: 1024px) {
   .grading-summary-grid,
-  .grading-layout,
   .answer-grid,
   .manual-grade-box__row {
     grid-template-columns: 1fr;
-  }
-
-  .queue-panel,
-  .summary-side {
-    position: static;
   }
 }
 
 @media (max-width: 768px) {
   .grading-header-card,
   .submission-context-card,
-  .question-card__header,
-  .queue-panel__header {
+  .question-card__header {
     flex-direction: column;
     align-items: stretch;
   }

@@ -10,7 +10,7 @@ defineSlots<{
 </script>
 
 <template>
-  <div class="workbench-page grading-workspace">
+  <div class="workbench-page grading-workspace workbench-page--locked">
     <header class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">

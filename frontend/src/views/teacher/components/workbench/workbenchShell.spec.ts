@@ -47,4 +47,22 @@ describe('workbench shell adoption', () => {
     const global = readFileSync(new URL('../../../../assets/global.css', import.meta.url), 'utf8')
     expect(global).not.toContain('workbench.css')
   })
+
+  it('locks grading workspace height and scrolls each column independently', () => {
+    const shell = source('./GradingWorkspace.vue')
+    expect(shell).toContain('workbench-page--locked')
+    const css = source('./workbench.css')
+    expect(css).toContain('.grading-workspace .grading-layout')
+    expect(css).toContain('align-items: stretch')
+    expect(css).toContain('overflow-y: auto')
+    expect(css).toContain('grid-template-rows: minmax(0, 1fr) auto')
+  })
+
+  it('keeps a single scroll owner in the grading queue and clears sticky cards', () => {
+    const css = source('./workbench.css')
+    expect(css).toContain('.grading-workspace .submission-queue__list')
+    expect(css).toContain('max-height: none')
+    const results = source('../../exams/Results.vue')
+    expect(results).not.toContain('position: sticky')
+  })
 })
