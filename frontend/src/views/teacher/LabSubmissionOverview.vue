@@ -1,11 +1,11 @@
 <template>
   <WorkbenchShell
-    eyebrow="教师控制台 / 实验闭环 / 实验结果"
-    title="实验结果"
+    eyebrow="教师控制台 / 实验闭环 / 班级总览"
+    title="实验班级总览"
     description="班级全员 × 子题矩阵。点击学生名查看历次提交，点击题列查看全班答案。"
   >
     <template #actions>
-      <button class="action-button action-button--ghost" type="button" @click="router.back()">返回实验台账</button>
+      <button class="action-button action-button--ghost" type="button" @click="goBackToGrading">返回批改工作区</button>
       <button class="action-button action-button--ghost" type="button" :disabled="loading" @click="fetchOverview">刷新</button>
       <button class="action-button action-button--ghost" type="button" @click="goBlankRegrade">批量重判</button>
     </template>
@@ -52,7 +52,7 @@
         <el-table-column label="批改操作" width="220" fixed="right">
           <template #default="{ row: student }">
             <div class="workbench-actions">
-              <button v-if="student.submissionId != null" class="action-button action-button--primary" type="button" @click="goReportDetail(student.submissionId)">批改报告</button>
+              <button v-if="student.submissionId != null" class="action-button action-button--primary" type="button" @click="router.push({ name: 'teacher-lab-submission-overview', params: { labId: labId() }, query: { submissionId: student.submissionId } })">批改报告</button>
               <button v-if="student.submissionId != null" class="action-button action-button--ghost" type="button" @click="openReportView(student)">实验报告</button>
             </div>
           </template>
@@ -126,8 +126,8 @@ const goItemWall = (itemId: number) => {
   router.push({ name: 'teacher-lab-item-answers', params: { labId: labId(), itemId } });
 };
 
-const goReportDetail = (submissionId: number) => {
-  router.push('/teacher/lab-reports/' + submissionId);
+const goBackToGrading = () => {
+  router.push({ name: 'teacher-lab-submission-overview', params: { labId: labId() } });
 };
 
 const openReportView = (student: LabSubmissionOverviewStudent) => {

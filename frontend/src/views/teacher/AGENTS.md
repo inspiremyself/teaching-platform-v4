@@ -16,9 +16,9 @@
 | 题库管理 | `Questions.vue` | 题型/难度/编号等显性结构 |
 | 实验管理 | `Labs.vue` | 实验列表与配置入口 |
 | 实验步骤配置 | `LabSteps.vue` | 步骤与题项配置 |
-| 实验报告 | `LabReportDetail.vue` `LabReportBatchGrade.vue` `LabReportViewPage.vue` `LabItemAnswersWall.vue` | 详情、批量评分、纯报告与逐题作答墙 |
+| 实验报告 | `LabGradingWorkspace.vue` `LabReportDetail.vue` `LabReportBatchGrade.vue` `LabReportViewPage.vue` `LabItemAnswersWall.vue` | 三栏结果页、详情、批量评分、纯报告与逐题作答墙 |
 | 实验填空题复评 | `LabBlankRegrade.vue` `LabBlankRegradeBatch.vue` | 单条与批量复评 |
-| 实验提交总览 | `LabSubmissionOverview.vue` `StudentLabSubmissions.vue` `LabReportViewPage.vue` | 提交概览、学生提交与批改/报告入口 |
+| 实验提交总览 | `LabGradingWorkspace.vue` `LabSubmissionOverview.vue` `StudentLabSubmissions.vue` `LabReportViewPage.vue` | 三栏结果页（查看结果主入口）、班级总览矩阵（页头入口）、学生提交与批改/报告入口 |
 | 作业管理 | `Homeworks.vue` | 发布、关闭、提交流 |
 | 作业提交管理 | `HomeworkSubmissions.vue` | 批改、反馈、提交明细 |
 | 考试管理 | `exams/List.vue` | 创建/编辑/发布/结果入口 |

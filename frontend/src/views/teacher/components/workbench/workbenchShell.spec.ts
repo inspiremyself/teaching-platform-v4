@@ -16,6 +16,7 @@ describe('workbench shell adoption', () => {
     '../../HomeworkSubmissions.vue',
     '../../LabReportDetail.vue',
     '../../LabReportBatchGrade.vue',
+    '../../LabGradingWorkspace.vue',
   ]
 
   it.each(shellPages)('%s uses WorkbenchShell', path => {
