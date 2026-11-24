@@ -195,14 +195,12 @@ onMounted(() => {
 
 .overview-eyebrow {
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   margin-bottom: 8px;
 }
 
 .overview-header h1 {
-  margin: 0 0 8px;
-  font-size: 28px;
-}
+  margin: 0 0 8px;}
 
 .overview-header p {
   margin: 0;
@@ -279,13 +277,13 @@ onMounted(() => {
 }
 
 .overview-cell__badge {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: #334155;
 }
 
 .overview-cell__meta {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
   background: #f1f5f9;
   border-radius: 999px;
@@ -324,13 +322,13 @@ onMounted(() => {
 }
 
 .overview-matrix__behavior strong {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #0f172a;
   white-space: nowrap;
 }
 
 .overview-matrix__behavior {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .risk-tag--muted {
@@ -339,6 +337,6 @@ onMounted(() => {
 
 .overview-matrix__muted {
   color: #94a3b8;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 </style>

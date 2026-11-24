@@ -234,15 +234,13 @@ onMounted(loadDashboard);
 
 .student-dashboard h1 {
   margin: 0;
-  font-size: 36px;
-  font-weight: 800;
   color: #191c22;
 }
 
 .student-dashboard p {
   margin: 6px 0 0;
   color: #414753;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .student-grid {
@@ -273,12 +271,12 @@ onMounted(loadDashboard);
 .card-head-row p {
   margin: 4px 0 0;
   color: #727785;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .section-title {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 
@@ -318,7 +316,7 @@ onMounted(loadDashboard);
 .student-task-card h3,
 .student-link strong {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: #191c22;
 }
 
@@ -327,8 +325,8 @@ onMounted(loadDashboard);
 .feedback-item p {
   margin: 0;
   color: #727785;
-  line-height: 1.7;
-  font-size: 13px;
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-base);
 }
 
 .student-task-card__arrow {
@@ -364,7 +362,5 @@ onMounted(loadDashboard);
   }
 }
 
-@media (max-width: 768px) {
-  .student-dashboard h1 { font-size: 28px; }
-}
+@media (max-width: 768px) {}
 </style>

@@ -150,7 +150,7 @@ onMounted(() => {
 <style scoped>
 .audit-json {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   white-space: pre-wrap;
   word-break: break-all;
 }

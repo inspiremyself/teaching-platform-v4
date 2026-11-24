@@ -465,9 +465,9 @@ function resultMapItemClass(question: { questionId: number }): string {
 .intro-card__eyebrow,
 .taking-header__eyebrow,
 .result-header__eyebrow {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   color: #0f766e;
   font-weight: 700;
 }
@@ -476,8 +476,6 @@ function resultMapItemClass(question: { questionId: number }): string {
 .taking-header h1,
 .result-header h1 {
   margin: 8px 0 0;
-  font-size: 22px;
-  font-weight: 800;
   color: #191c22;
 }
 
@@ -488,8 +486,8 @@ function resultMapItemClass(question: { questionId: number }): string {
 .side-card p {
   margin: 4px 0 0;
   color: #414753;
-  line-height: 1.35;
-  font-size: 12px;
+  line-height: var(--line-height-heading);
+  font-size: var(--font-size-sm);
 }
 
 /* 考试未开始提示：与概览指标保持一致的轻量提示条 */
@@ -503,7 +501,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   background: #fff7ed;
   border: 1px solid #fed7aa;
   color: #9a3412;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -540,25 +538,25 @@ function resultMapItemClass(question: { questionId: number }): string {
 .intro-metric span,
 .result-summary-card__label {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #727785;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 .intro-metric strong,
 .result-summary-card__value {
   display: block;
   margin-top: 3px;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: #191c22;
 }
 
 .result-summary-card__desc {
   margin-top: 4px;
   color: #727785;
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
 }
 
 .result-summary-card--status {
@@ -591,7 +589,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   border: none;
   border-radius: 12px;
   padding: 8px 11px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -629,8 +627,8 @@ function resultMapItemClass(question: { questionId: number }): string {
 .side-card__title,
 .map-card h3,
 .submit-card h3 {
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 
@@ -638,8 +636,8 @@ function resultMapItemClass(question: { questionId: number }): string {
   margin: 8px 0 0;
   padding-left: 16px;
   color: #414753;
-  line-height: 1.35;
-  font-size: 11px;
+  line-height: var(--line-height-heading);
+  font-size: var(--font-size-xs);
 }
 
 .taking-layout {
@@ -672,8 +670,8 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .timer-shell__body small {
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
 }
 
 .timer-shell .material-symbols-outlined {
@@ -682,7 +680,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 
 .timer-shell strong {
   display: block;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   color: #0f766e;
   font-variant-numeric: tabular-nums;
 }
@@ -713,7 +711,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 .exam-question-prompt__label {
   margin-bottom: 8px;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -726,14 +724,14 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .exam-code-callout__title {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
 }
 
 .exam-code-callout p {
   margin: 4px 0 0;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .question-column {
@@ -759,7 +757,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   padding: 6px 10px;
   background: #fff7ed;
   color: #c2410c;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -778,7 +776,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 .submit-failure-bar p {
   flex: 1;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 
@@ -797,21 +795,19 @@ function resultMapItemClass(question: { questionId: number }): string {
   padding: 6px 10px;
   background: #ecfeff;
   color: #0f766e;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .question-card h2,
 .result-question-card h2 {
   margin: 8px 0 0;
-  font-size: 14px;
-  line-height: 1.35;
   color: #191c22;
 }
 
 .question-card__score,
 .result-question-card__score {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: #0f766e;
 }
@@ -860,7 +856,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .text-answer-box label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: #334155;
 }
@@ -901,7 +897,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   background: #fff;
   color: #64748b;
   font-weight: 700;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   cursor: pointer;
 }
 
@@ -926,7 +922,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #475569;
 }
 
@@ -1017,9 +1013,9 @@ function resultMapItemClass(question: { questionId: number }): string {
 
 .result-answer-block__label,
 .teacher-comment-box__label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   color: #727785;
   font-weight: 700;
 }
@@ -1028,7 +1024,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 .teacher-comment-box div {
   margin-top: 3px;
   color: #191c22;
-  line-height: 1.3;
+  line-height: var(--line-height-heading);
   white-space: pre-wrap;
 }
 
@@ -1080,7 +1076,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .result-answer-block__icon {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   vertical-align: -3px;
   margin-right: 2px;
 }

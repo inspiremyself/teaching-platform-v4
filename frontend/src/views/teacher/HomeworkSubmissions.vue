@@ -574,15 +574,14 @@ onMounted(fetchData);
 
 .submissions-hero__heading h1 {
   margin: 0;
-  font-size: 36px;
   color: #ffffff;
 }
 
 .submissions-hero__heading p {
   margin: 10px 0 0;
   max-width: 760px;
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-body);
   color: rgba(219, 234, 254, 0.86);
 }
 
@@ -633,7 +632,7 @@ onMounted(fetchData);
 }
 
 .summary-card__label {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: #64748b;
 }
@@ -646,19 +645,19 @@ onMounted(fetchData);
 
 .summary-card__value {
   margin-top: 8px;
-  font-size: 28px;
-  font-weight: 800;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
   color: #0f172a;
 }
 
 .summary-card__value--small {
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 
 .summary-card__desc {
   margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
   color: #64748b;
 }
 
@@ -680,7 +679,7 @@ onMounted(fetchData);
   border-radius: 999px;
   background: #dbeafe;
   color: #1d4ed8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -722,7 +721,7 @@ onMounted(fetchData);
   align-items: center;
   gap: 12px;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .toolbar-divider {
@@ -756,7 +755,7 @@ onMounted(fetchData);
 .quick-grade-card__header p {
   margin: 8px 0 0;
   color: #64748b;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .submission-list-shell {
@@ -801,8 +800,8 @@ onMounted(fetchData);
   border-radius: 16px;
   background: #dbeafe;
   color: #1d4ed8;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   flex-shrink: 0;
 }
 
@@ -815,20 +814,20 @@ onMounted(fetchData);
 
 .submission-row__name-line strong {
   color: #0f172a;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .submission-row__username {
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .submission-row__identity p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
 }
 
 .submission-row__meta-grid {
@@ -849,9 +848,9 @@ onMounted(fetchData);
 .identity-box__label {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #94a3b8;
 }
@@ -860,7 +859,7 @@ onMounted(fetchData);
 .quick-grade-card__stats strong,
 .identity-box strong {
   color: #0f172a;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .quick-grade-panel {
@@ -913,8 +912,8 @@ onMounted(fetchData);
 
 .quick-grade-card__section-title,
 .grade-dialog__section-title {
-  font-size: 14px;
-  font-weight: 800;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
   color: #0f172a;
 }
 
@@ -927,8 +926,8 @@ onMounted(fetchData);
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #334155;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -974,9 +973,9 @@ onMounted(fetchData);
 .quick-comment-block p {
   margin: 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
@@ -992,7 +991,7 @@ onMounted(fetchData);
   border-radius: 999px;
   background: #dbeafe;
   color: #1d4ed8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
 }

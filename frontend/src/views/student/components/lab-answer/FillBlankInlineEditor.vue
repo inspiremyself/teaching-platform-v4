@@ -153,7 +153,7 @@ const updateBlank = (index: number, value: string) => {
 }
 
 .fill-blank-inline-editor__prompt {
-  line-height: 2.4;
+  line-height: var(--line-height-body);
   color: #0f172a;
   white-space: pre-wrap;
 }
@@ -204,7 +204,7 @@ const updateBlank = (index: number, value: string) => {
 
 .fill-blank-inline-editor__fallback-item label {
   color: #334155;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 

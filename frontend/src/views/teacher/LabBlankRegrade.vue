@@ -367,18 +367,18 @@ initialize();
   border: none;
   background: transparent;
   color: var(--color-brand-teacher);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   cursor: pointer;
 }
 
 .blank-regrade-section-kicker,
 .summary-card__label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
@@ -392,16 +392,11 @@ initialize();
   color: var(--color-text-primary);
   font-family: 'DM Sans', sans-serif;
 }
-
-.blank-regrade-header h1 {
-  font-size: 22px;
-}
-
 .blank-regrade-header p,
 .blank-regrade-item-card p,
 .blank-regrade-current-item p {
   color: var(--color-text-muted);
-  line-height: 1.55;
+  line-height: var(--line-height-body);
 }
 
 .blank-regrade-hero__actions,
@@ -457,7 +452,7 @@ initialize();
   border-radius: 999px;
   background: var(--color-brand-teacher-soft);
   color: var(--color-brand-teacher);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -526,7 +521,7 @@ initialize();
   gap: 12px;
   flex-wrap: wrap;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .blank-regrade-item-card strong,
@@ -562,7 +557,7 @@ initialize();
   gap: 8px 14px;
   margin-top: 10px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .blank-regrade-current-item__accepted {
@@ -584,7 +579,7 @@ initialize();
   border-radius: 999px;
   background: #dcfce7;
   color: #166534;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -609,12 +604,12 @@ initialize();
 
 .blank-regrade-empty strong {
   color: var(--color-text-primary);
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .blank-regrade-empty p {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .blank-regrade-empty--compact {

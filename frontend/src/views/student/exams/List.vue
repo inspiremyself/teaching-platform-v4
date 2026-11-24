@@ -224,8 +224,6 @@ onMounted(loadExams)
 
 .student-exams-page h1 {
   margin: 0;
-  font-size: var(--font-size-3xl);
-  font-weight: 800;
   color: #191c22;
 }
 
@@ -323,7 +321,6 @@ onMounted(loadExams)
 
 .exam-card h2 {
   margin: 0;
-  font-size: var(--font-size-lg);
   color: #191c22;
 }
 
@@ -331,7 +328,7 @@ onMounted(loadExams)
   margin: 4px 0 0;
   color: #727785;
   font-size: var(--font-size-sm);
-  line-height: 1.45;
+  line-height: var(--line-height-caption);
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -388,7 +385,7 @@ onMounted(loadExams)
   display: block;
   margin-top: 4px;
   font-size: var(--font-size-sm);
-  line-height: 1.4;
+  line-height: var(--line-height-heading);
   color: #191c22;
 }
 

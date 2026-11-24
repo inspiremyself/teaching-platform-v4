@@ -131,9 +131,7 @@ onMounted(() => {
 }
 
 .student-submissions-header h1 {
-  margin: 0 0 8px;
-  font-size: 28px;
-}
+  margin: 0 0 8px;}
 
 .student-submissions-header p {
   margin: 0;
@@ -164,7 +162,7 @@ onMounted(() => {
 .submission-row p {
   margin: 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .submission-row__meta {
@@ -172,7 +170,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   align-items: flex-start;
 }
 </style>

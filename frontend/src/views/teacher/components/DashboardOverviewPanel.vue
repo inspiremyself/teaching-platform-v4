@@ -247,8 +247,8 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .dashboard-inline-note {
   max-width: 20rem;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
   text-align: right;
 }
 
@@ -294,21 +294,21 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   align-items: center;
   gap: 10px;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .dashboard-kpi-row__body strong {
   margin-top: 6px;
   color: #0f172a;
-  font-size: 22px;
-  font-weight: 800;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
 }
 
 .dashboard-kpi-row__body small {
   margin-top: 4px;
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .dashboard-card {
@@ -340,8 +340,8 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .dashboard-card__header p {
   margin: 4px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .dashboard-card__metrics {
@@ -364,18 +364,18 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 }
 
 .dashboard-card__metric span {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #64748b;
 }
 
 .dashboard-card__metric strong {
   margin-top: 4px;
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
   color: #0f172a;
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: #0f172a;
 }
@@ -397,23 +397,23 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 }
 
 .trend-summary-card__label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-wide);
   color: #64748b;
 }
 
 .trend-summary-card strong {
   display: block;
   margin-top: 8px;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   color: #0f172a;
 }
 
 .trend-summary-card p {
   margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
   color: #64748b;
 }
 
@@ -458,7 +458,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 }
 
 .quick-link-card__title {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: #0f172a;
 }
@@ -473,15 +473,15 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   border-radius: 999px;
   background: rgba(15, 118, 110, 0.12);
   color: #0f766e;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
 .quick-link-card p {
   margin: 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.65;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .quick-link-card__footer {
@@ -490,7 +490,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   align-items: center;
   justify-content: space-between;
   color: #1d4ed8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   gap: 12px;
 }
@@ -523,14 +523,14 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 }
 
 .task-overview-item__label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #64748b;
 }
 
 .task-overview-item strong {
   display: block;
   margin-top: 4px;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: #0f172a;
 }
 
@@ -570,11 +570,11 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 
 .task-item__header strong {
   color: #0f172a;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .task-item__index {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   color: #94a3b8;
 }
@@ -582,8 +582,8 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .task-item__title {
   margin: 6px 0 0;
   color: #334155;
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
 }
 
 .task-item__meta-row {
@@ -592,7 +592,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   align-items: center;
   gap: 10px;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
 }
 
@@ -601,7 +601,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   border: none;
   background: transparent;
   color: #1d4ed8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -624,25 +624,25 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 }
 
 .guidance-item__title {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-wide);
   color: #64748b;
 }
 
 .guidance-item strong {
   display: block;
   margin-top: 6px;
-  font-size: 16px;
-  line-height: 1.35;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-heading);
   color: #0f172a;
 }
 
 .guidance-item p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
 }
 
 .guidance-item--warn {

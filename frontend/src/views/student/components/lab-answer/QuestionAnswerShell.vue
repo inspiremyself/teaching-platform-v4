@@ -47,7 +47,7 @@ defineProps<{
 .question-answer-shell__hint {
   margin: 0;
   color: #64748b;
-  line-height: 1.6;
+  line-height: var(--line-height-body);
 }
 
 .question-answer-shell__chip {
@@ -58,7 +58,7 @@ defineProps<{
   border-radius: 999px;
   background: #e2e8f0;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 

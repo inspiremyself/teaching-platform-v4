@@ -642,7 +642,7 @@ onMounted(fetchData)
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
 }
 
@@ -653,8 +653,6 @@ onMounted(fetchData)
 
 .grading-header-card h1 {
   margin: 8px 0 0;
-  font-size: 36px;
-  font-weight: 800;
   color: #0f172a;
 }
 
@@ -676,7 +674,7 @@ onMounted(fetchData)
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   cursor: pointer;
 }
@@ -723,32 +721,31 @@ onMounted(fetchData)
 }
 
 .summary-card__label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   opacity: 0.82;
 }
 
 .summary-card__value {
   margin-top: 10px;
-  font-size: 36px;
-  font-weight: 800;
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
 }
 
 .summary-card__value--small {
-  font-size: 22px;
-  line-height: 1.3;
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-heading);
 }
 
 .summary-card__desc {
   margin-top: 10px;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   opacity: 0.76;
 }
 
 .score-panel h2 {
   margin: 0;
-  font-size: 22px;
   color: #0f172a;
 }
 
@@ -777,7 +774,7 @@ onMounted(fetchData)
   gap: 12px;
   margin-top: 10px;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .queue-avatar,
@@ -790,14 +787,14 @@ onMounted(fetchData)
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
 }
 
 .queue-status {
   padding: 4px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -842,9 +839,7 @@ onMounted(fetchData)
 }
 
 .submission-context-card h2 {
-  margin: 0;
-  font-size: 22px;
-}
+  margin: 0;}
 
 .submission-context-card p {
   margin: 8px 0 0;
@@ -853,7 +848,7 @@ onMounted(fetchData)
 
 .submission-context-card__nav {
   color: #475569;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 
@@ -897,8 +892,8 @@ onMounted(fetchData)
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
 }
 
 .question-card--auto .question-badge {
@@ -906,21 +901,18 @@ onMounted(fetchData)
 }
 
 .question-card h3 {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.5;
-}
+  margin: 0;}
 
 .question-card p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .question-status {
   padding: 6px 10px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -958,9 +950,9 @@ onMounted(fetchData)
 }
 
 .answer-block__label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   color: #64748b;
   font-weight: 700;
 }
@@ -968,7 +960,7 @@ onMounted(fetchData)
 .answer-block__value {
   margin-top: 10px;
   color: #0f172a;
-  line-height: 1.7;
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
 }
 
@@ -988,7 +980,7 @@ onMounted(fetchData)
 .manual-grade-suggestion {
   margin: 0 0 12px;
   color: #0f766e;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
@@ -1009,7 +1001,7 @@ onMounted(fetchData)
 }
 
 .manual-grade-field label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #475569;
   font-weight: 700;
 }
@@ -1023,7 +1015,7 @@ onMounted(fetchData)
   background: #fff;
   border: 1px solid #e2e8f0;
   color: #475569;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .summary-side {
@@ -1040,7 +1032,7 @@ onMounted(fetchData)
 .score-panel__subtitle {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .score-summary-list {
@@ -1065,7 +1057,7 @@ onMounted(fetchData)
 }
 
 .score-summary-item strong {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
 }
 
 .completion-block {
@@ -1077,7 +1069,7 @@ onMounted(fetchData)
   justify-content: space-between;
   align-items: center;
   color: #475569;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
@@ -1100,8 +1092,8 @@ onMounted(fetchData)
 .completion-block--empty,
 .grade-draft-hint {
   margin: 10px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .completion-block__hint,
@@ -1125,7 +1117,7 @@ onMounted(fetchData)
   border: none;
   border-radius: 16px;
   padding: 14px 16px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   cursor: pointer;
 }
@@ -1168,8 +1160,8 @@ onMounted(fetchData)
   display: flex;
   gap: 10px;
   color: #cbd5e1;
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .action-panel__tip p {

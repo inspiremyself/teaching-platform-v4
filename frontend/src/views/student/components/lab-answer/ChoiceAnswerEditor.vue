@@ -151,7 +151,7 @@ const toggleOption = (key: string) => {
   border-radius: 999px;
   background: #e2e8f0;
   color: #334155;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
 }
 
 .choice-answer-editor__option.is-selected .choice-answer-editor__marker {
@@ -160,13 +160,13 @@ const toggleOption = (key: string) => {
 }
 
 .choice-answer-editor__label {
-  line-height: 1.65;
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
 }
 
 .choice-answer-editor__state {
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -180,7 +180,7 @@ const toggleOption = (key: string) => {
   border-radius: 16px;
   background: #fff7ed;
   color: #9a3412;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 @media (max-width: 900px) {

@@ -253,7 +253,7 @@ watch(
 .assignment-dialog__hint {
   margin: 0;
   color: #909399;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .assignment-dialog__order {

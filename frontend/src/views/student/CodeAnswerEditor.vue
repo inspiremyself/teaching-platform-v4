@@ -249,13 +249,13 @@ const handleKeydown = (event: KeyboardEvent) => {
 .code-editor-shell__title,
 .code-editor-shell__count {
   color: #94a3b8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .code-editor-shell__status {
   padding: 4px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -284,7 +284,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.16);
   color: #cbd5e1;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -293,7 +293,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   border-radius: 999px;
   background: rgba(59, 130, 246, 0.16);
   color: #bfdbfe;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -316,8 +316,8 @@ const handleKeydown = (event: KeyboardEvent) => {
   background: rgba(15, 23, 42, 0.95);
   color: #64748b;
   font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
   text-align: right;
   user-select: none;
   transition: transform 0.05s linear;
@@ -344,8 +344,8 @@ const handleKeydown = (event: KeyboardEvent) => {
   background: transparent;
   color: #e2e8f0;
   font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
   white-space: pre;
   tab-size: 2;
 }
@@ -375,7 +375,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   padding: 10px 14px 12px;
   border-top: 1px solid rgba(148, 163, 184, 0.14);
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   background: rgba(15, 23, 42, 0.92);
 }
 

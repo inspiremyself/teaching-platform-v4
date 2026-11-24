@@ -415,13 +415,13 @@ onMounted(fetchData);
   border-radius: 8px;
   background: var(--primary-light);
   color: var(--primary-color);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .teacher-tag em {
   font-style: normal;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   opacity: 0.8;
 }

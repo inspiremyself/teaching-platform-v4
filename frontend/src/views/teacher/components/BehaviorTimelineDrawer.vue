@@ -171,8 +171,8 @@ const maxDwellMs = computed(() =>
 .timeline-drawer__meta {
   margin: 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .timeline-entry {
@@ -183,14 +183,14 @@ const maxDwellMs = computed(() =>
 
 .timeline-entry strong {
   color: #0f172a;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .timeline-entry p {
   margin: 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 /* ── Step Dwell 面板 ── */
@@ -224,12 +224,12 @@ const maxDwellMs = computed(() =>
 }
 
 .step-dwell-row__label strong {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   color: #0f172a;
 }
 
 .step-dwell-row__title {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
   flex: 1;
   min-width: 0;
@@ -239,12 +239,12 @@ const maxDwellMs = computed(() =>
 }
 
 .step-dwell-row__skip-tag {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 999px;
   background: #fef2f2;
   color: #b91c1c;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-wide);
 }
 </style>

@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
 
 .content-reader__heading {
   margin: 0 0 12px;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .content-reader__card {
@@ -159,7 +159,7 @@ onBeforeUnmount(() => {
 }
 
 .content-reader__section-row {
-  line-height: 2;
+  line-height: var(--line-height-body);
 }
 
 .content-reader__section-active {
@@ -174,16 +174,16 @@ onBeforeUnmount(() => {
 
 .content-reader__title {
   margin: 0 0 16px;
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 
 .content-reader__math {
-  line-height: 1.8;
+  line-height: var(--line-height-body);
 }
 
 .content-reader__paragraph {
   margin: 0 0 12px;
-  line-height: 1.8;
+  line-height: var(--line-height-body);
 }
 
 .content-reader__paragraph--tip {

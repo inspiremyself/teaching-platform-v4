@@ -598,15 +598,13 @@ onMounted(() => {
 
 .materials-console__header h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 800;
   color: #0f172a;
 }
 
 .materials-console__header p {
   margin: 4px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .materials-list-shell {
@@ -644,7 +642,7 @@ onMounted(() => {
 }
 
 .material-row__icon .material-symbols-outlined {
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 
 .material-row__icon--red { background: #fef2f2; color: #dc2626; }
@@ -667,15 +665,13 @@ onMounted(() => {
 
 .material-row__title-line h3 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 800;
   color: #0f172a;
 }
 
 .material-row__description {
   margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
   color: #475569;
 }
 
@@ -690,12 +686,12 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
 }
 
 .material-row__meta .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .material-row__visibility {
@@ -707,8 +703,8 @@ onMounted(() => {
 
 .material-row__visibility small {
   color: #64748b;
-  line-height: 1.4;
-  font-size: 12px;
+  line-height: var(--line-height-heading);
+  font-size: var(--font-size-sm);
 }
 
 .material-row__actions {
@@ -725,9 +721,9 @@ onMounted(() => {
   gap: 6px;
   padding: 6px 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-wide);
 }
 
 .material-chip--category {
@@ -793,25 +789,22 @@ onMounted(() => {
 .materials-dialog__eyebrow,
 .materials-dialog__label {
   color: #2563eb;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .materials-dialog__header h2 {
   margin: 8px 0 0;
-  color: #0f172a;
-  font-size: 28px;
-  font-weight: 800;
-}
+  color: #0f172a;}
 
 .materials-dialog__desc {
   margin: 8px 0 0;
   max-width: 540px;
   color: #475569;
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
 }
 
 .materials-dialog__header-side {
@@ -830,8 +823,8 @@ onMounted(() => {
   border-radius: 999px;
   background: #dbeafe;
   color: #1d4ed8;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
 }
 
 .materials-dialog__badge--muted {
@@ -855,22 +848,22 @@ onMounted(() => {
   display: block;
   margin-top: 8px;
   color: #0f172a;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
 }
 
 .materials-dialog__context-card p {
   margin: 8px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .materials-dialog__group-title {
   margin-bottom: 14px;
   color: #0f172a;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
 }
 
 .materials-dialog__form {
@@ -886,7 +879,7 @@ onMounted(() => {
 .materials-dialog__form :deep(.el-form-item__label) {
   margin-bottom: 8px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -918,8 +911,8 @@ onMounted(() => {
 
 .materials-dialog__footer-note {
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .materials-dialog__footer-actions {

@@ -471,7 +471,7 @@ const onGenerate = async () => {
 
 .admin-platform-content__title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .admin-platform-content__input {

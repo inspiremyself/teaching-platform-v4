@@ -343,9 +343,9 @@ const changePassword = async () => {
 .profile-sidebar-block__label {
   display: inline-flex;
   align-items: center;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #0f766e;
 }
@@ -386,13 +386,13 @@ const changePassword = async () => {
   justify-content: center;
   background: linear-gradient(135deg, #0f766e, #1d4ed8);
   color: #fff;
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
 }
 
 .profile-identity__meta small {
   color: #94a3b8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .profile-identity strong,
@@ -404,7 +404,7 @@ const changePassword = async () => {
 .profile-identity span,
 .profile-sidebar-head p {
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .profile-summary-grid {
@@ -424,22 +424,22 @@ const changePassword = async () => {
 }
 
 .profile-summary-item .material-symbols-outlined {
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
   color: #0f766e;
 }
 
 .profile-summary-item strong {
   display: block;
   color: #0f172a;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 
 .profile-summary-item p {
   margin: 4px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .profile-grid {
@@ -488,8 +488,8 @@ const changePassword = async () => {
 .profile-sidebar-block p {
   margin: 10px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .profile-sidebar-progress {
@@ -501,8 +501,8 @@ const changePassword = async () => {
 
 .profile-sidebar-progress strong {
   color: #0f172a;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
 }
 
 .profile-sidebar-progress__track {
@@ -545,15 +545,15 @@ const changePassword = async () => {
 .profile-overview-item strong {
   display: block;
   color: #0f172a;
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 
 .profile-overview-item p {
   margin: 4px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .profile-content {
@@ -571,16 +571,14 @@ const changePassword = async () => {
 
 .profile-section-intro h2 {
   margin: 6px 0 0;
-  font-size: 22px;
-  font-weight: 800;
   color: #0f172a;
 }
 
 .profile-section-intro p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
 }
 
 .card-header-row {
@@ -598,14 +596,14 @@ const changePassword = async () => {
 .card-header-row p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
 .profile-card__hint {
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
   text-align: right;
 }
 
@@ -629,7 +627,7 @@ const changePassword = async () => {
 }
 
 .security-score {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #0f766e;
   font-weight: 700;
 }

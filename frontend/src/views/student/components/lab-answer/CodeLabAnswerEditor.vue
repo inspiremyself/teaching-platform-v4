@@ -96,7 +96,7 @@ const updateLanguage = (value: string) => {
 
 .code-lab-answer-editor__label {
   color: #334155;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 

@@ -93,19 +93,19 @@ const completionLabel = (value: 'COMPLETED' | 'IN_PROGRESS') =>
 
 .participation-panel__eyebrow {
   color: #909399;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .participation-panel__title {
   margin: 4px 0 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .participation-panel__rates {
   display: flex;
   gap: 12px;
   color: #409eff;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .participation-panel__metrics {
@@ -114,6 +114,6 @@ const completionLabel = (value: 'COMPLETED' | 'IN_PROGRESS') =>
   gap: 16px;
   margin: 12px 0;
   color: #606266;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 </style>

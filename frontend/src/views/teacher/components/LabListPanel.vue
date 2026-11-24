@@ -320,7 +320,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   flex-basis: 100%;
   margin: 2px 0 0;
   color: #d97706;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .lab-guidance-form__meta {
@@ -332,12 +332,12 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .lab-guidance-form__meta strong {
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .lab-guidance-form__meta span {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .lab-guidance-form__actions {
@@ -383,25 +383,23 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 .labs-header__eyebrow {
   margin-bottom: 2px;
   color: var(--color-brand-teacher);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .labs-header h1 {
   margin: 0;
   color: var(--color-text-primary);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 22px;
-}
+  font-family: 'DM Sans', sans-serif;}
 
 .labs-header p {
   margin: 2px 0 0;
   max-width: 520px;
   color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-heading);
 }
 
 .labs-header__actions {
@@ -427,7 +425,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   border-radius: 999px;
   background: #f8fafc;
   color: #475569;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -449,8 +447,8 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 .side-card p {
   margin: 2px 0 0;
   color: var(--color-text-muted);
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
 }
 
 .labs-summary-grid {
@@ -506,29 +504,29 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .summary-card__label {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #64748b;
 }
 
 .summary-card__value {
   margin-top: 2px;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
   font-weight: 700;
   color: inherit;
 }
 
 .summary-card__value--small {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .summary-card__desc {
   margin-top: 2px;
   color: #64748b;
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
 }
 
 .summary-card__desc--spaced {
@@ -583,7 +581,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   align-items: center;
   margin-top: 6px;
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .toolbar-divider {
@@ -606,9 +604,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .labs-console__header h2 {
   margin: 0;
-  color: var(--color-text-primary);
-  font-size: 16px;
-}
+  color: var(--color-text-primary);}
 
 .labs-console__hint {
   text-align: right;
@@ -659,7 +655,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   border-radius: 999px;
   background: #eff6ff;
   color: #1d4ed8;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -675,15 +671,13 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .lab-row h3 {
   margin: 0;
-  color: var(--color-text-primary);
-  font-size: 18px;
-}
+  color: var(--color-text-primary);}
 
 .lab-row p {
   margin: 3px 0 0;
   color: var(--color-text-muted);
-  font-size: 13px;
-  line-height: 1.35;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-heading);
 }
 
 .lab-class-chip {
@@ -691,7 +685,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   border-radius: 999px;
   background: #f1f5f9;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -704,22 +698,22 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .meta-label {
   color: #94a3b8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .lab-row__type strong {
   color: var(--color-text-primary);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .lab-row__type small,
 .lab-row__status small {
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-heading);
 }
 
 .status-dot {

@@ -249,7 +249,7 @@ onUnmounted(() => {
   border: 1px solid rgba(148, 163, 184, 0.22);
   background: #fff;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 .header-meta-chip--warning {
@@ -258,9 +258,9 @@ onUnmounted(() => {
   color: #9a3412;
 }
 .catalog-item__meta {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 .feedback-card,
@@ -277,7 +277,7 @@ onUnmounted(() => {
 }
 .catalog-card__summary {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .lab-info-card {
   padding: 16px 18px;
@@ -298,9 +298,9 @@ onUnmounted(() => {
 .lab-info-section__title {
   margin-bottom: 6px;
   color: var(--color-action-primary);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 .lab-info-block__value {
@@ -313,7 +313,7 @@ onUnmounted(() => {
 .lab-info-section p {
   margin: 0;
   color: var(--color-text-muted);
-  line-height: 1.7;
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
 }
 .feedback-card {
@@ -358,7 +358,7 @@ onUnmounted(() => {
   border-radius: 12px;
   background: rgba(30, 64, 175, 0.08);
   color: var(--color-action-primary);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 .catalog-item__main {
@@ -368,20 +368,20 @@ onUnmounted(() => {
 }
 .catalog-item__title {
   color: var(--color-text-primary);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
 }
 .catalog-item__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 12px;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wide);
 }
 .catalog-item__link {
   align-self: center;
   color: var(--color-action-primary);
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 </style>

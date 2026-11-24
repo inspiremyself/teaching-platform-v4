@@ -41,11 +41,12 @@
   margin-top: var(--space-3);
 }
 
-.page-header h2 {
+.page-header h1 {
   margin: 0;
   font-family: var(--font-family-display);
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
   color: var(--color-text-primary);
 }
 
@@ -54,7 +55,7 @@
   max-width: 680px;
   color: var(--color-text-muted);
   font-size: var(--font-size-base);
-  line-height: 1.5;
+  line-height: var(--line-height-caption);
 }
 
 .page-header__meta-item {
@@ -155,7 +156,7 @@
   margin-bottom: var(--space-1);
   font-weight: var(--font-weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--letter-spacing-wide);
 }
 
 .app-pager-row {
@@ -280,4 +281,94 @@
 
 .app-mt-3 {
   margin-top: var(--space-3);
+}
+
+/* ===== 排版角色类（TD37 / §3.9）：字号 + 字重 + 行高一次到位，页面不得再手写三行组合 ===== */
+.text-display {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-5xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-page-title {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+}
+
+.text-section-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+.text-card-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+.text-item-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+.text-body {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+}
+
+.text-body-sm {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-body);
+}
+
+.text-caption {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-muted);
+}
+
+.text-meta {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-secondary);
+}
+
+/* ===== 全局标题默认规则（TD39 / PRD FR-21C）：h1 页面主标题 28 / h2 区块 18 / h3 卡片 16 / h4 条目 14 =====
+ * 全局选择器：批改台（根为 workbench-page）等非 .page 容器同样命中；
+ * 页面 scoped 内的标题字号声明随 P3.1 删除，由本规则统一供值。 */
+h1 {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  color: var(--color-text-primary);
+}
+
+h2 {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+h3 {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
+}
+
+h4 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-heading);
 }

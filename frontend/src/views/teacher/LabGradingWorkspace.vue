@@ -371,12 +371,12 @@ onMounted(async () => {
 }
 
 .lab-context-card strong {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: #0f172a;
 }
 
 .lab-context-card span {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
 }
 
@@ -402,12 +402,11 @@ onMounted(async () => {
 
 .question-card__header h3 {
   margin: 0;
-  font-size: 14px;
   color: #0f172a;
 }
 
 .question-card__score {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
 }
 
@@ -417,8 +416,8 @@ onMounted(async () => {
   border-radius: 12px;
   background: #f8fafc;
   color: #334155;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
 }
 
@@ -429,8 +428,8 @@ onMounted(async () => {
   border-radius: 12px;
   background: #f8fafc;
   color: #0f172a;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -457,14 +456,13 @@ onMounted(async () => {
 
 .summary-text h4 {
   margin: 0 0 6px;
-  font-size: 13px;
   color: #334155;
 }
 
 .summary-text div {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   color: #0f172a;
-  line-height: 1.6;
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
 }
 
@@ -476,7 +474,6 @@ onMounted(async () => {
 
 .grading-summary h2 {
   margin: 0;
-  font-size: 16px;
   color: #0f172a;
 }
 
@@ -484,7 +481,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   color: #475569;
 }
 
@@ -497,7 +494,7 @@ onMounted(async () => {
 
 .grading-summary__progress {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
 }
 

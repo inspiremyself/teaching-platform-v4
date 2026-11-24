@@ -118,9 +118,7 @@ onMounted(() => {
 }
 
 .answers-wall-header h1 {
-  margin: 0 0 8px;
-  font-size: 28px;
-}
+  margin: 0 0 8px;}
 
 .answers-wall-header p {
   margin: 0;
@@ -133,7 +131,7 @@ onMounted(() => {
   background: #f8fafc;
   border-radius: 12px;
   color: #334155;
-  line-height: 1.6;
+  line-height: var(--line-height-body);
 }
 
 .answers-wall-list {
@@ -164,7 +162,7 @@ onMounted(() => {
 
 .answers-wall-card__header span {
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .answers-wall-card__meta {
@@ -173,19 +171,19 @@ onMounted(() => {
   gap: 6px;
   align-items: flex-end;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .answers-wall-text {
   white-space: pre-wrap;
-  line-height: 1.7;
+  line-height: var(--line-height-body);
   color: #1e293b;
 }
 
 .answers-wall-comment {
   margin: 12px 0 0;
   color: #475569;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .answers-wall-muted {

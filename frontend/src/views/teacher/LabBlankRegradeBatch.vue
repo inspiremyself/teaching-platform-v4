@@ -260,9 +260,9 @@ initialize();
   gap: 6px;
   padding: 0;
   color: var(--color-brand-teacher);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
@@ -277,13 +277,11 @@ initialize();
 .blank-batch-header h1 {
   margin: 0;
   color: var(--color-text-primary);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 22px;
-}
+  font-family: 'DM Sans', sans-serif;}
 
 .blank-batch-header p {
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: var(--line-height-caption);
 }
 
 .blank-batch-actions,
@@ -309,7 +307,7 @@ initialize();
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -349,19 +347,19 @@ initialize();
 
 .blank-batch-question-link span {
   color: var(--color-brand-teacher);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .blank-batch-question-link strong {
   color: var(--color-text-primary);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-heading);
 }
 
 .blank-batch-question-link small {
   color: var(--color-text-muted);
-  line-height: 1.45;
+  line-height: var(--line-height-caption);
 }
 
 .blank-batch-answer-chip {

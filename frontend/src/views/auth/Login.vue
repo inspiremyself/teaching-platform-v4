@@ -11,7 +11,7 @@
     <div class="login-left">
       <div class="hero-panel">
         <p class="hero-eyebrow">教学与学习一体化平台</p>
-        <h1 class="brand-title">用统一教学工作空间串联实验、作业、考试与反馈闭环。</h1>
+        <h1 class="brand-title text-display">用统一教学工作空间串联实验、作业、考试与反馈闭环。</h1>
         <p class="brand-desc">覆盖实验、作业、考试、查重与成绩反馈，服务教师管理台与学生任务流的真实闭环。</p>
 
         <div class="feature-grid">
@@ -269,7 +269,7 @@ onMounted(async () => {
 
 .login-header__brand {
   font-size: var(--font-size-2xl);
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
   color: var(--color-brand-teacher);
 }
 
@@ -314,24 +314,21 @@ onMounted(async () => {
 .hero-eyebrow {
   margin: 0 0 16px;
   color: #99f6e4;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--letter-spacing-caps);
   font-weight: 700;
 }
 
 .brand-title {
   color: var(--color-text-inverse);
-  font-size: 44px;
-  font-weight: 700;
-  line-height: 1.12;
   margin: 0 0 18px;
 }
 
 .brand-desc {
   color: rgba(226, 232, 240, 0.82);
   font-size: var(--font-size-base);
-  line-height: 1.8;
+  line-height: var(--line-height-body);
   margin: 0;
 }
 
@@ -357,15 +354,13 @@ onMounted(async () => {
 }
 
 .feature-card h3 {
-  margin: 0 0 6px;
-  font-size: var(--font-size-base);
-}
+  margin: 0 0 6px;}
 
 .feature-card p {
   margin: 0;
   color: rgba(226, 232, 240, 0.72);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
 }
 
 .login-right {
@@ -391,10 +386,7 @@ onMounted(async () => {
   margin-bottom: 28px;
 }
 
-.login-card-header h2 {
-  font-size: var(--font-size-3xl);
-  font-weight: 700;
-  color: var(--color-text-primary);
+.login-card-header h2 {color: var(--color-text-primary);
   margin: 0 0 6px;
 }
 
@@ -427,7 +419,7 @@ onMounted(async () => {
 }
 
 .school-code-toggle {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .demo-accounts {
@@ -442,7 +434,7 @@ onMounted(async () => {
   color: var(--color-text-primary);
   border-radius: var(--radius-pill);
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -458,7 +450,7 @@ onMounted(async () => {
 .login-footer-tip {
   margin-top: 16px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-align: center;
 }
 
@@ -470,7 +462,7 @@ onMounted(async () => {
   padding: 0 32px 24px;
   margin-top: -24px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .login-footer div {

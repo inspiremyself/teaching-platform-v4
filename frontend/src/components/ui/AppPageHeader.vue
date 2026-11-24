@@ -1,7 +1,7 @@
 <template>
   <div class="page-header">
     <div class="page-header__main">
-      <slot name="title"><h2>{{ title }}</h2></slot>
+      <slot name="title"><h1>{{ title }}</h1></slot>
       <slot name="description"><p v-if="description">{{ description }}</p></slot>
       <div v-if="$slots.meta" class="page-header__meta"><slot name="meta" /></div>
     </div>

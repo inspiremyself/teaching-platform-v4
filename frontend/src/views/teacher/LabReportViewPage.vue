@@ -131,8 +131,6 @@ onMounted(fetchDetail);
 
 .lab-report-header h1 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 800;
   color: #0f172a;
   font-family: 'DM Sans', 'Inter', sans-serif;
 }
@@ -140,7 +138,7 @@ onMounted(fetchDetail);
 .lab-report-header p {
   margin: 8px 0 0;
   color: #64748b;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .lab-report-meta {
@@ -161,8 +159,6 @@ onMounted(fetchDetail);
 
 .lab-report-section h2 {
   margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 800;
   color: #0f172a;
   font-family: 'DM Sans', 'Inter', sans-serif;
 }
@@ -175,8 +171,8 @@ onMounted(fetchDetail);
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #334155;
-  line-height: 1.75;
-  font-size: 14px;
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-md);
   min-height: 24px;
 }
 
@@ -198,11 +194,7 @@ onMounted(fetchDetail);
 
 .lab-report-step h3 {
   margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.5;
-}
+  color: #0f172a;}
 
 .lab-report-step__badge {
   display: inline-block;
@@ -211,7 +203,7 @@ onMounted(fetchDetail);
   border-radius: 6px;
   background: #ecfeff;
   color: #0f766e;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   vertical-align: middle;
 }
@@ -225,16 +217,16 @@ onMounted(fetchDetail);
   color: #334155;
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.65;
-  font-size: 14px;
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-md);
 }
 
 .lab-report-label {
   margin: 0 0 6px;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-wide);
 }
 
 .lab-report-answer-pane {
@@ -246,8 +238,8 @@ onMounted(fetchDetail);
   color: #0f172a;
   white-space: pre-wrap;
   word-break: break-word;
-  line-height: 1.65;
-  font-size: 14px;
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-md);
 }
 
 @media (max-width: 900px) {

@@ -279,15 +279,13 @@ onMounted(loadAnalysis);
 
 .analysis-header h1 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 800;
   color: #0f172a;
 }
 
 .analysis-header p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .analysis-grid {
@@ -327,7 +325,7 @@ onMounted(loadAnalysis);
 .analysis-summary-card__label {
   display: block;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -335,14 +333,14 @@ onMounted(loadAnalysis);
   display: block;
   margin-top: 4px;
   color: #0f172a;
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 
 .analysis-scope-note {
   margin: 0 0 2px;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .analysis-main,
@@ -368,11 +366,11 @@ onMounted(loadAnalysis);
 .card-header-row p {
   margin: 4px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .section-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   color: #0f172a;
 }
@@ -410,21 +408,21 @@ onMounted(loadAnalysis);
 }
 
 .trend-overview-chip span {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .trend-overview-chip strong {
   color: #0f172a;
-  font-size: 22px;
-  line-height: 1.1;
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-tight);
 }
 
 .trend-overview-chip small {
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
 }
 
 .trend-legend {
@@ -439,7 +437,7 @@ onMounted(loadAnalysis);
   align-items: center;
   gap: 8px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
@@ -489,7 +487,7 @@ onMounted(loadAnalysis);
 
 .trend-y-axis span {
   color: #94a3b8;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -539,13 +537,13 @@ onMounted(loadAnalysis);
 
 .trend-bar-meta strong {
   color: #0f172a;
-  font-size: 16px;
-  line-height: 1;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-tight);
 }
 
 .trend-bar-meta span {
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -592,7 +590,7 @@ onMounted(loadAnalysis);
 }
 
 .trend-bar-label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #475569;
   font-weight: 700;
 }
@@ -624,7 +622,7 @@ onMounted(loadAnalysis);
 .comparison-item__score,
 .breakdown-score {
   color: #004d64;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
 }
 
 .comparison-progress-bg {
@@ -646,7 +644,7 @@ onMounted(loadAnalysis);
 .insight-item p {
   margin: 8px 0 0;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .breakdown-item {

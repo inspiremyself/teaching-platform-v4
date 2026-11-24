@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * 设计体系门禁（PRD FR-20 / 技术方案 §5.1）
+ * 设计体系门禁（PRD FR-20 / FR-22 / 技术方案 §5.1）
  *
- * 8 条断言把「token 唯一来源、骨架类去重、断点收敛、图标统一、尺寸阶梯」变成可执行约束。
+ * 11 条断言把「token 唯一来源、骨架类去重、断点收敛、图标统一、尺寸阶梯、排版归一」变成可执行约束。
  * 历史遗留量记录在 designTokenBaseline.json，只允许下降；新增违规会直接让 npm test 失败。
  */
 
@@ -40,7 +40,20 @@ interface Baseline {
   skeletonDuplicatesOutsideAssets: number;
   nonStandardFontSizes: number[];
   nonStandardRadii: number[];
+  /** 排版归一（FR-21D/FR-21E）：P3.1 后目标全 0 */
+  fontSizeLiterals: number;
+  nonStandardFontWeights: number;
+  nonStandardLineHeights: number;
+  nonStandardLetterSpacings: number;
 }
+
+/** 图标规则块选择器：块内 font-size 18/24px 与图标 reset（font-weight: normal、line-height: 1）整体豁免（PRD D17 / §5.1 #9） */
+const ICON_BLOCK_SELECTORS = ['material-symbols-outlined', '.app-icon--sm', '.app-icon--md'];
+
+/** #11 白名单：互斥状态分支导致同文件多个 h1 的显式例外（不写入基线 JSON） */
+const H1_WHITELIST: Record<string, number> = {
+  'views/student/components/ExamAnswerPanel.vue': 3, // 进行中 / 未开始 / 已完成三互斥分支各渲染一个 h1
+};
 
 /** 递归收集目录下所有文件（不跟随目录软链，仓库内无此场景） */
 const walk = (dir: string): string[] =>
@@ -53,6 +66,8 @@ const read = (file: string): string => readFileSync(file, 'utf8');
 
 const viewsFiles = walk(join(SRC, 'views')).filter(file => file.endsWith('.vue'));
 const uiFiles = walk(join(SRC, 'components/ui')).filter(file => file.endsWith('.vue'));
+/** gate #9 / #10 额外纳入 views 下的共享 CSS（workbench.css 等），#7 / #8 维持原口径 */
+const viewsCssFiles = walk(join(SRC, 'views')).filter(file => file.endsWith('.css'));
 /** gate #7 / #8 扫描范围：assets/*.css（除 tokens）+ views/** + components/ui/** */
 const styleScopeFiles = [
   join(SRC, 'assets/global.css'),
@@ -104,6 +119,71 @@ const collectInvalidCustomProps = (source: string): string[] =>
     return match[2].trim().startsWith('var(') ? [] : [`L${index + 1}: ${line.trim()}`];
   });
 
+/** 提取 .vue 文件内全部 <style> 块正文 */
+const extractStyleBlocks = (source: string): string[] =>
+  Array.from(source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)).map(match => match[1]);
+
+interface RuleBlock {
+  selector: string;
+  body: string;
+}
+
+/** 递归展开 CSS 规则块（@media 内层规则块单独返回），供块上下文豁免判断 */
+const splitRules = (css: string): RuleBlock[] => {
+  const blocks: RuleBlock[] = [];
+  let cursor = 0;
+  while (cursor < css.length) {
+    const open = css.indexOf('{', cursor);
+    if (open < 0) break;
+    const selector = css.slice(cursor, open).trim();
+    let depth = 1;
+    let close = open + 1;
+    while (close < css.length && depth > 0) {
+      if (css[close] === '{') depth++;
+      else if (css[close] === '}') depth--;
+      close++;
+    }
+    const body = css.slice(open + 1, close - 1);
+    if (selector.startsWith('@') && !selector.startsWith('@font-face')) {
+      blocks.push(...splitRules(body));
+    } else {
+      blocks.push({ selector, body });
+    }
+    cursor = close;
+  }
+  return blocks;
+};
+
+/** 块级豁免：@font-face（变量字体字重范围声明）与图标规则块（D17 图标尺寸 / reset） */
+const isExemptBlock = (selector: string): boolean =>
+  selector.startsWith('@font-face') || ICON_BLOCK_SELECTORS.some(item => selector.includes(item));
+
+/** 字重 / 行高 / 字距白名单（FR-21E：var() 引用一律合法） */
+const isLegalFontWeight = (value: string): boolean => /^(var\(|[4567]00\b)/.test(value);
+const isLegalLineHeight = (value: string): boolean => /^(var\(|1\.15\b|1\.3\b|1\.5\b|1\.6\b)/.test(value);
+const isLegalLetterSpacing = (value: string): boolean =>
+  /^(var\(|normal\b|-0\.025em\b|0\.04em\b|0\.08em\b)/.test(value);
+
+/** 排版归一测量（gate #9 / #10）：图标与 @font-face 块豁免后统计违规声明 */
+const measureTypography = (source: string, isVue: boolean) => {
+  const css = isVue ? extractStyleBlocks(source).join('\n') : source;
+  let fontSizeLiterals = 0;
+  let nonStandardFontWeights = 0;
+  let nonStandardLineHeights = 0;
+  let nonStandardLetterSpacings = 0;
+  for (const block of splitRules(css)) {
+    if (isExemptBlock(block.selector)) continue;
+    fontSizeLiterals += matchAll(block.body, /font-size:\s*[\d.]+px/g).length;
+    nonStandardFontWeights += matchAll(block.body, /font-weight:\s*([^;}\n]+)/g)
+      .filter(match => !isLegalFontWeight(match[1].trim())).length;
+    nonStandardLineHeights += matchAll(block.body, /line-height:\s*([^;}\n]+)/g)
+      .filter(match => !isLegalLineHeight(match[1].trim())).length;
+    nonStandardLetterSpacings += matchAll(block.body, /letter-spacing:\s*([^;}\n]+)/g)
+      .filter(match => !isLegalLetterSpacing(match[1].trim())).length;
+  }
+  return { fontSizeLiterals, nonStandardFontWeights, nonStandardLineHeights, nonStandardLetterSpacings };
+};
+
 const measure = (): Omit<Baseline, 'version' | 'generatedAt'> => {
   const viewsSource = viewsFiles.map(read).join('\n');
   const styleScopeSource = styleScopeFiles.map(read).join('\n');
@@ -121,6 +201,18 @@ const measure = (): Omit<Baseline, 'version' | 'generatedAt'> => {
     skeletonDuplicatesOutsideAssets: countSkeletonDuplicates(skeletonScanSource),
     nonStandardFontSizes: [...new Set(collectNonStandardFontSizes(styleScopeSource))].sort((a, b) => a - b),
     nonStandardRadii: [...new Set(collectNonStandardRadii(styleScopeSource))].sort((a, b) => a - b),
+    ...[...styleScopeFiles, ...viewsCssFiles].reduce(
+      (totals, file) => {
+        const issues = measureTypography(read(file), file.endsWith('.vue'));
+        return {
+          fontSizeLiterals: totals.fontSizeLiterals + issues.fontSizeLiterals,
+          nonStandardFontWeights: totals.nonStandardFontWeights + issues.nonStandardFontWeights,
+          nonStandardLineHeights: totals.nonStandardLineHeights + issues.nonStandardLineHeights,
+          nonStandardLetterSpacings: totals.nonStandardLetterSpacings + issues.nonStandardLetterSpacings,
+        };
+      },
+      { fontSizeLiterals: 0, nonStandardFontWeights: 0, nonStandardLineHeights: 0, nonStandardLetterSpacings: 0 },
+    ),
   };
 };
 
@@ -131,7 +223,7 @@ const measure = (): Omit<Baseline, 'version' | 'generatedAt'> => {
 if (process.env.DESIGN_TOKEN_BASELINE_WRITE === '1') {
   const measured = measure();
   const payload: Baseline = {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString().slice(0, 10),
     ...measured,
   };
@@ -200,5 +292,33 @@ describe('设计体系门禁', () => {
       value => !RADIUS_LADDER.includes(value) && !baseline.nonStandardRadii.includes(value),
     );
     expect({ extraFontSizes, extraRadii }).toEqual({ extraFontSizes: [], extraRadii: [] });
+  });
+
+  it('#9 font-size 不得出现 px 字面量（图标块 18/24 豁免），不超过基线', () => {
+    expect(measure().fontSizeLiterals).toBeLessThanOrEqual(baseline.fontSizeLiterals);
+  });
+
+  it('#10 字重 / 行高 / 字距取值属于白名单（var() / 400-700 / 4 档行高 / 4 态字距）', () => {
+    const measured = measure();
+    expect(measured.nonStandardFontWeights).toBeLessThanOrEqual(baseline.nonStandardFontWeights);
+    expect(measured.nonStandardLineHeights).toBeLessThanOrEqual(baseline.nonStandardLineHeights);
+    expect(measured.nonStandardLetterSpacings).toBeLessThanOrEqual(baseline.nonStandardLetterSpacings);
+  });
+
+  it('#11 标题层级唯一：无 h5/h6；每文件 h1 数不超过白名单；AppPageHeader 标题节点为 h1', () => {
+    const problems: string[] = [];
+    for (const file of [...viewsFiles, ...uiFiles]) {
+      const source = read(file);
+      const relative = file.replace(SRC, '').replace(/^[\\/]/, '');
+      const h56Count = matchAll(source, /<h[56][\s>]/g).length;
+      if (h56Count > 0) problems.push(`${relative}: h5/h6 x${h56Count}`);
+      const h1Count = matchAll(source, /<h1[\s>]/g).length;
+      const limit = H1_WHITELIST[relative] ?? 1;
+      if (h1Count > limit) problems.push(`${relative}: h1 x${h1Count} > ${limit}`);
+    }
+    const pageHeader = read(join(SRC, 'components/ui/AppPageHeader.vue'));
+    if (!/<h1[\s>]/.test(pageHeader)) problems.push('AppPageHeader.vue: 标题节点不是 h1');
+    if (/<h2[\s>]/.test(pageHeader)) problems.push('AppPageHeader.vue: 仍存在 h2');
+    expect(problems).toEqual([]);
   });
 });

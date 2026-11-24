@@ -432,9 +432,9 @@ fetchData();
   gap: 6px;
   padding: 0;
   color: var(--color-brand-teacher);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
@@ -456,15 +456,10 @@ fetchData();
   color: var(--color-text-primary);
   font-family: 'DM Sans', sans-serif;
 }
-
-.batch-grade-header h1 {
-  font-size: 22px;
-}
-
 .batch-grade-header p,
 .batch-grade-panel p {
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: var(--line-height-caption);
 }
 
 .batch-grade-actions,
@@ -491,7 +486,7 @@ fetchData();
   border: 1px solid #fde68a;
   background: #fffbeb;
   color: #b45309;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 
@@ -507,7 +502,7 @@ fetchData();
   border-radius: 999px;
   background: #f8fafc;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -541,14 +536,14 @@ fetchData();
 
 .batch-question-link span {
   color: var(--color-brand-teacher);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .batch-question-link strong {
   color: var(--color-text-primary);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-heading);
 }
 
 .batch-answer-cell {
@@ -559,8 +554,8 @@ fetchData();
 
 .batch-answer-text {
   color: var(--color-text-primary);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-caption);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -597,7 +592,7 @@ fetchData();
   display: block;
   margin-top: 4px;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .batch-grade-table .el-button:disabled,

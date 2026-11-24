@@ -422,13 +422,13 @@ onBeforeUnmount(() => {
   gap: 12px;
   margin-bottom: 10px;
   color: #334155;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 
 .text-answer-editor__compression-hint {
   color: #0f766e;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
@@ -463,7 +463,7 @@ onBeforeUnmount(() => {
   padding: 2px 8px;
   background: rgba(15, 23, 42, 0.72);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
@@ -471,7 +471,7 @@ onBeforeUnmount(() => {
   display: inline-block;
   margin-top: 6px;
   color: #0f766e;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .text-answer-editor__upload-row {
@@ -493,8 +493,8 @@ onBeforeUnmount(() => {
   border: 1px solid #99f6e4;
   background: #f0fdfa;
   color: #115e59;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
 }
 
 .text-answer-editor__upload-tip strong {
@@ -511,9 +511,9 @@ onBeforeUnmount(() => {
   background: #fff;
   color: #134e4a;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--line-height-heading);
   box-shadow: 0 1px 0 #ccfbf1;
 }
 </style>

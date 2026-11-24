@@ -390,7 +390,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   border-radius: 999px;
   background: #ffffff;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -418,7 +418,6 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .detail-hero h1 {
   margin: 0;
-  font-size: 22px;
   color: #191c22;
 }
 
@@ -426,8 +425,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   margin: 0;
   max-width: 680px;
   color: #475569;
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-heading);
 }
 
 .detail-hero__chips {
@@ -445,7 +444,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   border-radius: 999px;
   background: #ffffff;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -458,9 +457,9 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-card__eyebrow {
   display: block;
   margin-bottom: 6px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #94a3b8;
 }
@@ -519,9 +518,9 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-meta-item span {
   display: block;
   color: #94a3b8;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
@@ -529,7 +528,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   display: block;
   margin-top: 4px;
   color: #191c22;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .detail-meta-item--accent {
@@ -561,14 +560,13 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-card__header h2,
 .detail-card--dark h2 {
   margin: 0;
-  font-size: 18px;
   color: #191c22;
 }
 
 .detail-card__tip {
   color: #64748b;
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
   max-width: 140px;
   text-align: right;
 }
@@ -577,12 +575,12 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-card__muted {
   margin: 0;
   color: #475569;
-  font-size: 11px;
-  line-height: 1.35;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
 }
 
 .detail-card__paragraph--compact {
-  line-height: 1.5;
+  line-height: var(--line-height-caption);
 }
 
 .attachment-note {
@@ -596,13 +594,13 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .attachment-note strong {
   display: block;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .attachment-note p {
   margin: 4px 0 0;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .answer-form :deep(.el-form-item) {
@@ -659,8 +657,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   border-radius: 12px;
   background: #e2e8f0;
   color: #334155;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
 }
 
 .homework-question-wheel__item.is-active .homework-question-wheel__badge {
@@ -682,18 +680,18 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .homework-question-wheel__state {
   color: #2563eb;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .homework-question-wheel__body strong {
   color: #191c22;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .homework-question-wheel__body small {
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .homework-question-prompt {
@@ -706,7 +704,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .homework-question-prompt__label {
   margin-bottom: 8px;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -719,14 +717,14 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .code-callout__title {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
 }
 
 .code-callout p {
   margin: 4px 0 0;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .homework-question-feedback {
@@ -743,15 +741,15 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   gap: 8px;
   margin-bottom: 6px;
   color: #1d4ed8;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .homework-question-feedback p {
   margin: 0;
   color: #475569;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
   white-space: pre-wrap;
 }
 
@@ -773,7 +771,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .check-list__item--done {
@@ -800,15 +798,15 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .feedback-pill span {
   color: #94a3b8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .feedback-pill strong {
   color: #191c22;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .feedback-pill--blue {
@@ -836,7 +834,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   justify-content: space-between;
   gap: 8px;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -858,7 +856,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .progress-panel p {
   margin: 0;
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .result-question-card {
@@ -883,20 +881,18 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   border-radius: 999px;
   background: #eff6ff;
   color: #1d4ed8;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .result-question-card h2 {
   margin: 8px 0 0;
-  font-size: 16px;
-  line-height: 1.5;
   color: #191c22;
 }
 
 .result-question-card__score {
   color: #1d4ed8;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 

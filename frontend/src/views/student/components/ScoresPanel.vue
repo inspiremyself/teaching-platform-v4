@@ -285,7 +285,7 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   background: #f8fafc;
   border: 1px solid #dbe4f0;
   color: #475569;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -303,24 +303,24 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
 }
 .scores-hero__eyebrow {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #0f766e;
 }
 .scores-hero__title {
   margin: 10px 0 0;
-  font-size: 36px;
-  line-height: 1.1;
-  font-weight: 800;
+  font-size: var(--font-size-4xl);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 .scores-hero__subtitle {
   margin: 12px 0 0;
   max-width: 820px;
   color: #475569;
-  line-height: 1.8;
+  line-height: var(--line-height-body);
 }
 .scores-hero__actions {
   display: flex;
@@ -356,22 +356,19 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   gap: 16px;
 }
 .overall-card__label {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
   color: rgba(255, 255, 255, 0.82);
 }
 .overall-card h2 {
-  margin: 10px 0 0;
-  font-size: 28px;
-  font-weight: 800;
-}
+  margin: 10px 0 0;}
 .overall-card__badge {
   align-self: flex-start;
   padding: 8px 14px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(10px);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 .overall-card__metric-row {
@@ -381,15 +378,15 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   align-items: flex-end;
 }
 .overall-card__value {
-  font-size: 58px;
-  line-height: 1;
-  font-weight: 800;
+  font-size: var(--font-size-6xl);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
 }
 .overall-card__desc {
   margin: 14px 0 0;
   max-width: 540px;
   color: rgba(255, 255, 255, 0.84);
-  line-height: 1.8;
+  line-height: var(--line-height-body);
 }
 .overall-card__trend {
   display: inline-flex;
@@ -400,7 +397,7 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   background: rgba(15, 23, 42, 0.14);
   color: rgba(255, 255, 255, 0.88);
   max-width: 240px;
-  line-height: 1.6;
+  line-height: var(--line-height-body);
 }
 .overall-card__stats {
   display: grid;
@@ -415,14 +412,14 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .overall-stat span {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: rgba(255, 255, 255, 0.76);
 }
 .overall-stat strong {
   display: block;
   margin-top: 8px;
-  font-size: 22px;
-  font-weight: 800;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
 }
 .overall-card__halo {
   position: absolute;
@@ -467,21 +464,21 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   color: #b45309;
 }
 .metric-card__label {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   color: #64748b;
 }
 .metric-card__value {
   margin-top: 6px;
-  font-size: 28px;
-  line-height: 1.1;
-  font-weight: 800;
+  font-size: var(--font-size-3xl);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 .metric-card__desc {
   margin-top: 8px;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.8;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 .metric-card--progress {
   display: flex;
@@ -500,7 +497,7 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   border-radius: 999px;
   background: #f1f5f9;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 .metric-card__desc--spacious {
@@ -510,8 +507,8 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   margin: 14px 0 0;
   padding-left: 18px;
   color: #475569;
-  font-size: 12px;
-  line-height: 1.8;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 .workspace-grid {
   display: grid;
@@ -541,16 +538,16 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 .card-header-row p {
   margin: 6px 0 0;
   color: #727785;
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 .section-title {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 .header-meta {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #0f766e;
   font-weight: 700;
 }
@@ -600,14 +597,12 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .group-section h3 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 800;
   color: #191c22;
 }
 .group-section__title-wrap p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .group-section__meta {
   display: flex;
@@ -622,18 +617,18 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   border-radius: 999px;
   background: #f1f5f9;
   color: #475569;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 .group-section__meta strong {
-  font-size: 28px;
-  line-height: 1;
-  font-weight: 800;
+  font-size: var(--font-size-3xl);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 .group-section__meta small {
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .record-table {
   overflow: hidden;
@@ -651,9 +646,9 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   padding: 14px 18px;
   background: #f8fafc;
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 .record-table__row {
@@ -662,15 +657,15 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .record-table__cell {
   color: #475569;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
 }
 .record-table__cell--name strong {
   color: #191c22;
 }
 .record-table__cell--score {
   color: #0f766e;
-  font-weight: 800;
+  font-weight: var(--font-weight-bold);
 }
 .exam-record-grid {
   display: grid;
@@ -691,22 +686,20 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .exam-record-card h4 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 800;
   color: #191c22;
 }
 .exam-record-card p {
   margin: 8px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .score-pill {
   display: inline-flex;
   align-items: center;
   padding: 8px 12px;
   border-radius: 16px;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
   color: #0f766e;
   background: #ccfbf1;
 }
@@ -742,24 +735,22 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   border-radius: 999px;
   background: #e2e8f0;
   color: #475569;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 .recent-record-item h3 {
   margin: 10px 0 0;
-  font-size: 16px;
-  font-weight: 800;
   color: #191c22;
 }
 .recent-record-item p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .recent-record-item__score {
   flex-shrink: 0;
-  font-size: 22px;
-  font-weight: 800;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
   color: #0f766e;
 }
 .feedback-panel {
@@ -787,14 +778,12 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   flex-shrink: 0;
 }
 .feedback-hero__label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: #0f766e;
 }
 .feedback-hero h3 {
   margin: 8px 0 0;
-  font-size: 18px;
-  font-weight: 800;
   color: #191c22;
 }
 .feedback-hero p,
@@ -802,8 +791,8 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 .action-item p {
   margin: 8px 0 0;
   color: #64748b;
-  line-height: 1.8;
-  font-size: 13px;
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-base);
 }
 .feedback-item,
 .action-item {
@@ -813,7 +802,7 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 .feedback-item strong,
 .action-item strong {
   color: #191c22;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 .feedback-item--positive,
 .action-item--positive {
@@ -879,11 +868,11 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   }
 
   .scores-hero__title {
-    font-size: 28px;
+    font-size: var(--font-size-3xl);
   }
 
   .overall-card__value {
-    font-size: 44px;
+    font-size: var(--font-size-5xl);
   }
 }
 /* Student score refactor overrides */
@@ -892,7 +881,7 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .scores-hero__title {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 .scores-hero__subtitle {
   display: none;
@@ -942,11 +931,11 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   align-items: flex-start;
 }
 .overall-card__value {
-  font-size: 44px;
+  font-size: var(--font-size-5xl);
 }
 .overall-card__desc {
   margin-top: 8px;
-  line-height: 1.5;
+  line-height: var(--line-height-caption);
   max-width: none;
 }
 .overall-card__stats {
@@ -960,18 +949,16 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   border-radius: 16px;
 }
 .overall-card h2 {
-  margin: 6px 0 0;
-  font-size: 16px;
-}
+  margin: 6px 0 0;}
 .overall-card__badge {
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .metric-card__value {
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 .metric-card__desc {
-  line-height: 1.55;
+  line-height: var(--line-height-body);
 }
 @media (max-width: 900px) {
   .overall-card__stats--compact {
@@ -1016,12 +1003,10 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   gap: 6px;
 }
 .overall-card--dense .overall-card__value {
-  font-size: 28px;
+  font-size: var(--font-size-3xl);
   color: #191c22;
 }
-.overall-card--dense h2 {
-  font-size: 18px;
-  color: #191c22;
+.overall-card--dense h2 {color: #191c22;
 }
 .overall-card--plain .overall-card__label,
 .overall-card--plain .overall-card__desc {
@@ -1060,13 +1045,13 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .overall-card--dense .overall-stat strong {
   margin-top: 4px;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 .metric-card--compact {
   padding: 10px;
 }
 .metric-card--compact .metric-card__value {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
 }
 .metric-card--compact .metric-card__desc {
   margin-top: 4px;
@@ -1109,14 +1094,14 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   gap: 4px;
 }
 .overall-card__flat-score-label {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #64748b;
   font-weight: 700;
 }
 .overall-card__flat-score strong {
-  font-size: 22px;
-  line-height: 1;
-  font-weight: 800;
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 .overall-card__flat-stats {
@@ -1127,8 +1112,8 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 .overall-card__desc--flat {
   margin-top: 0;
   color: #64748b;
-  line-height: 1.3;
-  font-size: 11px;
+  line-height: var(--line-height-heading);
+  font-size: var(--font-size-xs);
 }
 .metric-stack--flat {
   display: grid;
@@ -1147,23 +1132,23 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   border-radius: 12px;
 }
 .metric-card__label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .metric-card__value {
   margin-top: 4px;
-  font-size: 18px;
+  font-size: var(--font-size-xl);
 }
 .metric-card__desc {
   margin-top: 2px;
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
 }
 .metric-card--progress {
   gap: 8px;
 }
 .metric-card__pill {
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .workspace-main,
 .workspace-side {
@@ -1174,14 +1159,14 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .card-header-row p {
   margin: 4px 0 0;
-  font-size: 11px;
-  line-height: 1.4;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
 }
 .section-title {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 .header-meta {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .group-section-list {
   gap: 10px;
@@ -1201,19 +1186,15 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   width: 30px;
   height: 30px;
   border-radius: 12px;
-}
-.group-section h3 {
-  font-size: 14px;
-}
-.group-section__title-wrap p {
+}.group-section__title-wrap p {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .group-section__badge {
   padding: 4px 8px;
 }
 .group-section__meta strong {
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 .record-table {
   border-radius: 12px;
@@ -1225,8 +1206,8 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   padding: 8px 10px;
 }
 .record-table__cell {
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
 }
 .exam-record-grid {
   gap: 6px;
@@ -1234,18 +1215,14 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 .exam-record-card {
   padding: 10px;
   border-radius: 12px;
-}
-.exam-record-card h4 {
-  font-size: 14px;
-}
-.exam-record-card p {
+}.exam-record-card p {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .score-pill {
   padding: 6px 9px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .exam-record-card__footer {
   margin-top: 8px;
@@ -1256,15 +1233,13 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   border-radius: 12px;
 }
 .recent-record-item h3 {
-  margin: 6px 0 0;
-  font-size: 14px;
-}
+  margin: 6px 0 0;}
 .recent-record-item p {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .recent-record-item__score {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 .feedback-panel {
   gap: 6px;
@@ -1280,15 +1255,13 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
   border-radius: 12px;
 }
 .feedback-hero h3 {
-  margin: 4px 0 0;
-  font-size: 14px;
-}
+  margin: 4px 0 0;}
 .feedback-hero p,
 .feedback-item p,
 .action-item p {
   margin: 4px 0 0;
-  line-height: 1.45;
-  font-size: 11px;
+  line-height: var(--line-height-caption);
+  font-size: var(--font-size-xs);
 }
 .feedback-item,
 .action-item {
@@ -1297,7 +1270,7 @@ const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, 
 }
 .feedback-item strong,
 .action-item strong {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 .metric-stack--flat .metric-card--progress {
   grid-column: 1 / -1;

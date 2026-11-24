@@ -162,9 +162,9 @@ onMounted(() => {
 }
 
 .behavior-summary-card__eyebrow {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #0f766e;
   margin-bottom: 2px;
@@ -172,7 +172,6 @@ onMounted(() => {
 
 .behavior-summary-card__header h3 {
   margin: 0;
-  font-size: 16px;
   color: #0f172a;
 }
 
@@ -204,23 +203,23 @@ onMounted(() => {
 }
 
 .behavior-metric__label {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #64748b;
 }
 
 .behavior-metric strong {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: #0f172a;
 }
 
 .behavior-metric__value--small {
-  font-size: 12px !important;
+  font-size: var(--font-size-sm) !important;
 }
 
 .behavior-metric small {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   color: #94a3b8;
-  line-height: 1.4;
+  line-height: var(--line-height-heading);
 }
 
 .behavior-metric__subtext--warn {

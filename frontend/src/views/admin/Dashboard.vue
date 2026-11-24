@@ -147,14 +147,14 @@ onMounted(loadSummary);
   border-radius: 12px;
   background: var(--primary-light);
   color: var(--primary-color);
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
 }
 
 .summary-card__label {
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
@@ -162,20 +162,20 @@ onMounted(loadSummary);
   display: block;
   margin-top: 4px;
   color: #0f172a;
-  font-size: 28px;
-  font-weight: 800;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
 }
 
 .summary-card p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .summary-card__link {
   align-self: center;
   color: var(--primary-color);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   text-decoration: none;
 }

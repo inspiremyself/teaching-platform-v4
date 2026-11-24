@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "generatedAt": "2026-11-24",
   "views": {
     "hexColorLiterals": 1282,
@@ -9,5 +9,9 @@
   },
   "skeletonDuplicatesOutsideAssets": 0,
   "nonStandardFontSizes": [],
-  "nonStandardRadii": []
+  "nonStandardRadii": [],
+  "fontSizeLiterals": 0,
+  "nonStandardFontWeights": 0,
+  "nonStandardLineHeights": 0,
+  "nonStandardLetterSpacings": 0
 }

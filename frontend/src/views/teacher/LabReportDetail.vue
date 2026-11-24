@@ -655,7 +655,7 @@ fetchData();
   border: 1px solid #fde68a;
   background: #fffbeb;
   color: #b45309;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 .preview-banner p {
@@ -665,9 +665,9 @@ fetchData();
 .summary-tile__label,
 .answer-card__eyebrow,
 .sidebar-step__eyebrow {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 .detail-eyebrow {
@@ -682,9 +682,9 @@ fetchData();
 .detail-summary-text-card__body {
   margin: 8px 0 0;
   color: var(--color-text-muted);
-  line-height: 1.6;
+  line-height: var(--line-height-body);
   white-space: pre-wrap;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 .summary-tile,
 .sidebar-card,
@@ -715,7 +715,7 @@ fetchData();
 .answer-card__max-score,
 .final-card__score {
   color: var(--color-text-primary);
-  font-size: 18px;
+  font-size: var(--font-size-xl);
 }
 .detail-layout {
   display: grid;
@@ -746,17 +746,17 @@ fetchData();
   gap: 8px;
   margin-top: 10px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .sidebar-card__meta-row--top {
   align-items: flex-start;
 }
 .sidebar-card__meta-row strong {
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 .sidebar-card__hint {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .sidebar-card__header .material-symbols-outlined {
   color: var(--color-brand-teacher);
@@ -784,8 +784,8 @@ fetchData();
   display: block;
   margin-top: 2px;
   color: var(--color-text-primary);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-heading);
 }
 .sidebar-step__eyebrow {
   color: var(--color-brand-teacher);
@@ -835,18 +835,18 @@ fetchData();
   margin-bottom: 8px;
   color: var(--color-text-primary);
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 .answer-text,
 .insight-detail {
   white-space: pre-wrap;
-  line-height: 1.6;
-  font-size: 14px;
+  line-height: var(--line-height-body);
+  font-size: var(--font-size-md);
 }
 .pane-file-row {
   margin-top: 8px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 .pane-file-row a {
   color: var(--color-brand-teacher);
@@ -871,7 +871,7 @@ fetchData();
   justify-content: space-between;
   gap: 10px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 .insight-line + .insight-line {
   margin-top: 8px;

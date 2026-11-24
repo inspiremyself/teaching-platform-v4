@@ -460,9 +460,9 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   border: none;
   background: transparent;
   color: #0f766e;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   cursor: pointer;
 }
@@ -470,26 +470,26 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__section-kicker {
   margin: 0 0 8px;
   color: #0f766e;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .lab-steps-console__title {
   margin: 0;
   color: #0f172a;
-  font-size: 28px;
-  line-height: 1.1;
-  font-weight: 800;
+  font-size: var(--font-size-3xl);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-bold);
 }
 
 .lab-steps-console__subtitle {
   margin: 8px 0 0;
   max-width: 780px;
   color: #64748b;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
 }
 
 .lab-steps-console__meta-row,
@@ -513,7 +513,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   min-height: 30px;
   padding: 0 12px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -586,8 +586,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__section-title {
   margin: 0;
   color: #0f172a;
-  font-size: 18px;
-  font-weight: 800;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
 }
 
 .lab-steps-console__panel-body {
@@ -673,8 +673,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   border-radius: 12px;
   background: #e2e8f0;
   color: #0f172a;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   flex-shrink: 0;
 }
 
@@ -694,24 +694,24 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   gap: 6px;
   margin-bottom: 6px;
   color: #0f766e;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
 .lab-steps-console__step-copy strong {
   display: block;
   color: #0f172a;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-caption);
 }
 
 .lab-steps-console__step-copy p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .lab-steps-console__step-state {
@@ -722,7 +722,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   border-radius: 999px;
   background: #fff7ed;
   color: #c2410c;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
@@ -752,7 +752,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   padding: 14px;
   border-style: dashed;
   color: #0f766e;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
@@ -776,9 +776,9 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__check-card span {
   display: block;
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
@@ -786,8 +786,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   display: block;
   margin-top: 6px;
   color: #0f172a;
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-caption);
 }
 
 .lab-steps-console__hint,
@@ -795,8 +795,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__switch-row p {
   margin: 6px 0 0;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .lab-steps-console__switch-row {
@@ -844,7 +844,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   border-radius: 12px;
   background: #f0fdfa;
   color: #0f766e;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;
 }
@@ -855,7 +855,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 }
 
 .lab-steps-console__inline-copy .material-symbols-outlined {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 
 .question-dialog__group,
@@ -901,8 +901,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .question-dialog__group-title {
   margin-bottom: 12px;
   color: #0f172a;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
 }
 
 .question-dialog__group-title--row {
@@ -970,7 +970,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__form :deep(.el-form-item__label) {
   margin-bottom: 8px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -991,9 +991,9 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .question-dialog__validation-title {
   color: #9a3412;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
@@ -1028,24 +1028,21 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-step-copy-dialog__eyebrow {
   margin: 0;
   color: #0f766e;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .lab-step-copy-dialog__header h2 {
   margin: 6px 0 0;
-  color: #0f172a;
-  font-size: 22px;
-  font-weight: 800;
-}
+  color: #0f172a;}
 
 .lab-step-copy-dialog__desc {
   margin: 6px 0 0;
   color: #475569;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .lab-step-copy-dialog__list {
@@ -1074,15 +1071,15 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-step-copy-dialog__list dt {
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .lab-step-copy-dialog__list dd {
   margin: 0;
   color: #0f172a;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
   word-break: break-word;
 }
 
@@ -1093,7 +1090,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   border-radius: 999px;
   background: #f0fdfa;
   color: #0f766e;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -1109,7 +1106,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-step-copy-dialog__code span {
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 

@@ -266,7 +266,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .submit-hint {
   align-self: center;
   color: var(--el-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   margin-right: 8px;
 }
 .header-meta-chip {
@@ -278,16 +278,16 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   border: 1px solid rgba(148, 163, 184, 0.22);
   background: #fff;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 .status-card__eyebrow,
 .workflow-item__eyebrow,
 .question-card__eyebrow,
 .summary-card__eyebrow {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 .steps-layout {
@@ -357,7 +357,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   gap: 8px;
   margin-top: 12px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 .status-card__meta span {
@@ -374,7 +374,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   gap: 12px;
   margin-bottom: 6px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 .progress-track {
@@ -391,7 +391,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .progress-panel p {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .workflow-list {
   display: flex;
@@ -432,12 +432,12 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .workflow-item__body strong {
   display: block;
   margin-top: 2px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 .workflow-item__body small {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
 .workflow-item--active {
@@ -489,19 +489,19 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .question-focus-strip__eyebrow {
   color: var(--color-action-primary);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 .question-focus-strip__main strong {
   color: var(--color-text-primary);
-  font-size: 16px;
+  font-size: var(--font-size-lg);
 }
 .question-focus-strip__main small,
 .question-focus-strip__status {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .question-focus-strip__status {
   display: flex;
@@ -515,7 +515,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   border-radius: 999px;
   background: var(--color-brand-student-soft);
   color: var(--color-action-primary);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 .focus-state-pill--saved {
@@ -546,15 +546,11 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   align-items: flex-start;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border-soft);
-}
-.question-card__header h3 {
-  font-size: 22px;
-}
-.question-card__score {
+}.question-card__score {
   padding: 6px 10px;
   border-radius: 12px;
   background: var(--color-brand-student-soft);
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
 }
 .question-card__body {
@@ -571,7 +567,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   background: #f8fafc;
 }
 .question-card__prompt--embedded {
-  line-height: 1.9;
+  line-height: var(--line-height-body);
 }
 .pane-title {
   margin-bottom: 8px;
@@ -580,7 +576,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .prompt-text {
   white-space: pre-wrap;
-  line-height: 1.65;
+  line-height: var(--line-height-body);
   color: var(--color-text-primary);
 }
 .answer-card__header {
@@ -620,7 +616,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   margin-bottom: 12px;
   padding: 10px 12px;
   border-radius: 16px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 .code-callout {
   background: #eff6ff;

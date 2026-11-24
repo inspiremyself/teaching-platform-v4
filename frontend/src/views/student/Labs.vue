@@ -237,7 +237,7 @@ onMounted(fetchData);
 .meta-label {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
@@ -247,9 +247,7 @@ onMounted(fetchData);
   font-family: var(--font-family-display);
 }
 
-.student-labs-page h1 {
-  font-size: var(--font-size-2xl);
-  color: var(--color-text-primary);
+.student-labs-page h1 {color: var(--color-text-primary);
 }
 
 .labs-header-card p,
@@ -257,7 +255,7 @@ onMounted(fetchData);
 .student-lab-card small,
 .labs-toolbar-meta {
   color: var(--color-text-muted);
-  line-height: 1.6;
+  line-height: var(--line-height-body);
 }
 
 .labs-header-card p {
@@ -328,11 +326,6 @@ onMounted(fetchData);
   gap: 12px;
   align-items: flex-start;
 }
-
-.student-lab-card__title-line h3 {
-  font-size: var(--font-size-xl);
-}
-
 .student-lab-card__title-line p {
   margin: 4px 0 0;
   font-size: var(--font-size-base);

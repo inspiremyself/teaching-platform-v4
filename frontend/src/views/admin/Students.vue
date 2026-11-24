@@ -503,12 +503,12 @@ onMounted(async () => {
 }
 
 .reset-confirm-name strong {
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: var(--el-text-color-primary);
 }
 
 .reset-confirm-username {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   color: var(--el-text-color-secondary);
 }
 
@@ -519,7 +519,7 @@ onMounted(async () => {
 .import-section__title {
   margin-bottom: 8px;
   color: #0f172a;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
@@ -553,7 +553,7 @@ onMounted(async () => {
 
 .import-file-panel__meta strong {
   color: #0f172a;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 700;
   word-break: break-all;
 }
@@ -561,8 +561,8 @@ onMounted(async () => {
 .import-file-panel__meta span,
 .import-file-panel__tips {
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-caption);
 }
 
 .import-file-panel__actions {

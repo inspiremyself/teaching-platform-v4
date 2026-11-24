@@ -233,16 +233,15 @@ onMounted(fetchData);
 }
 
 .student-homeworks-hero__eyebrow {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   color: #2563eb;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
 
 .student-homeworks-hero h1 {
   margin: 10px 0 0;
-  font-size: 28px;
   color: #191c22;
 }
 
@@ -250,8 +249,8 @@ onMounted(fetchData);
   margin: 10px 0 0;
   max-width: 720px;
   color: #475569;
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-body);
 }
 
 .student-homeworks-hero__badge {
@@ -267,12 +266,12 @@ onMounted(fetchData);
 }
 
 .student-homeworks-hero__badge .material-symbols-outlined {
-  font-size: 28px;
+  font-size: var(--font-size-3xl);
 }
 
 .student-homeworks-hero__badge strong {
   margin-top: 8px;
-  font-size: 36px;
+  font-size: var(--font-size-4xl);
 }
 
 .student-homeworks-hero__badge small {
@@ -329,7 +328,7 @@ onMounted(fetchData);
 }
 
 .student-summary-card__label {
-  font-size: 13px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: #64748b;
 }
@@ -342,16 +341,16 @@ onMounted(fetchData);
 
 .student-summary-card__value {
   margin-top: 8px;
-  font-size: 28px;
-  font-weight: 800;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
   color: #191c22;
 }
 
 .student-summary-card__desc {
   margin-top: 8px;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-body);
 }
 
 .student-toolbar-card {
@@ -403,7 +402,7 @@ onMounted(fetchData);
   align-items: center;
   gap: 12px;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .student-toolbar-divider {
@@ -437,24 +436,23 @@ onMounted(fetchData);
 }
 
 .student-homework-card__eyebrow {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #94a3b8;
 }
 
 .student-homework-card__header h2 {
   margin: 8px 0 0;
-  font-size: 22px;
   color: #191c22;
 }
 
 .student-homework-card__desc {
   margin: 0;
   color: #475569;
-  font-size: 14px;
-  line-height: 1.75;
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-body);
 }
 
 .student-homework-card__meta-grid {
@@ -473,16 +471,16 @@ onMounted(fetchData);
 .student-homework-card__label {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
   color: #94a3b8;
 }
 
 .student-homework-card__meta-grid strong {
   color: #191c22;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .student-homework-card__footer {
@@ -500,7 +498,7 @@ onMounted(fetchData);
   border-radius: 999px;
   background: #eff6ff;
   color: #1d4ed8;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -557,20 +555,18 @@ onMounted(fetchData);
   background: #f8fafc;
   border: 1px solid #dbe4f0;
   color: #475569;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   white-space: nowrap;
 }
 
 .student-homeworks-page h1 {
-  margin: 0;
-  font-size: 22px;
-}
+  margin: 0;}
 
 .student-homeworks-page p {
   margin: 2px 0 0;
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-heading);
 }
 
 .student-toolbar-card {
@@ -599,7 +595,7 @@ onMounted(fetchData);
 }
 
 .student-toolbar-card__meta {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   gap: 8px;
 }
 
@@ -642,15 +638,12 @@ onMounted(fetchData);
 }
 
 .student-homework-card__title-row h2 {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.3;
-}
+  margin: 0;}
 
 .student-homework-card__desc {
   margin-top: 2px;
-  font-size: 11px;
-  line-height: 1.25;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-heading);
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
@@ -672,7 +665,7 @@ onMounted(fetchData);
 
 .homework-info-chip strong {
   color: #191c22;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 .homework-info-chip--status {
@@ -694,7 +687,7 @@ onMounted(fetchData);
 
 .student-homework-chip {
   padding: 5px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
 }
 
 @media (max-width: 1024px) {
