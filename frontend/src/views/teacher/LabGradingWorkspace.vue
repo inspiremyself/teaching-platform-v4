@@ -1,7 +1,6 @@
 <template>
   <GradingWorkspace>
     <template #headerActions>
-      <button type="button" class="action-button action-button--ghost" @click="router.push('/teacher/labs')">返回实验台账</button>
       <button type="button" class="action-button action-button--ghost" @click="router.push({ name: 'teacher-lab-matrix', params: { labId } })">班级总览</button>
       <button v-if="workspace.selectedId.value !== null" type="button" class="action-button action-button--ghost" @click="openReportView">实验报告</button>
       <button type="button" class="action-button action-button--ghost" @click="router.push('/teacher/labs/' + labId + '/blank-regrade/batch')">批量重判</button>

@@ -1,10 +1,6 @@
 <template>
   <div class="blank-regrade-page">
     <section class="blank-regrade-header">
-      <button type="button" class="blank-regrade-back" @click="router.back()">
-        <span class="material-symbols-outlined">arrow_back</span>
-        <span>返回教师实验台账</span>
-      </button>
       <div class="blank-regrade-header__top">
         <div class="blank-regrade-header__main">
           <h1>实验填空批量重判台</h1>
@@ -356,22 +352,6 @@ initialize();
   gap: 14px;
   align-items: flex-start;
   margin-top: 10px;
-}
-
-.blank-regrade-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-brand-teacher);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  letter-spacing: var(--letter-spacing-caps);
-  text-transform: uppercase;
-  cursor: pointer;
 }
 
 .blank-regrade-section-kicker,

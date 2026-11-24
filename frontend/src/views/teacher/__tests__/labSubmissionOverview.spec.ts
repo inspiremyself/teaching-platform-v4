@@ -23,11 +23,11 @@ describe('实验班级总览（矩阵页为三栏结果页的下级视图）', (
     expect(overviewSource).toContain('student.submissionId == null');
   });
 
-  it('返回文案为返回批改工作区且改为命名路由跳转', () => {
+  it('不再提供页面级返回按钮，回退由面包屑承担', () => {
     expect(overviewSource).toContain('overview-matrix__action-head');
     expect(overviewSource).toContain('批改操作');
-    expect(overviewSource).toContain('返回批改工作区');
-    expect(overviewSource).toContain('goBackToGrading');
+    expect(overviewSource).not.toContain('返回批改工作区');
+    expect(overviewSource).not.toContain('goBackToGrading');
     expect(overviewSource).not.toContain('返回实验台账');
     expect(overviewSource).not.toContain('router.back()');
   });

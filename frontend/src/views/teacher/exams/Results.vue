@@ -7,7 +7,6 @@
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已评分</span>
         <span class="workbench-meta__item workbench-meta__item--accent">{{ activeStudentLabel }}</span>
       </div>
-      <button class="action-button action-button--ghost" type="button" @click="router.push('/teacher/exams')">返回考试管理</button>
       <button class="action-button action-button--warning" type="button" :disabled="releasing" @click="releaseScores">
         {{ scoreReleased ? '重新发布成绩' : '发布成绩' }}
       </button>
@@ -224,7 +223,7 @@
 <script setup lang="ts">
 import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { formatJudgeDetail, scoreSourceLabel, scoreSourceTagType } from '../components/scoreDisplay'
 import { scoringStrategyOf } from '../components/scoringStrategies'
@@ -252,7 +251,6 @@ import {
 } from './examGradingState'
 
 const route = useRoute()
-const router = useRouter()
 const loading = ref(false)
 const submitting = ref(false)
 const releasing = ref(false)

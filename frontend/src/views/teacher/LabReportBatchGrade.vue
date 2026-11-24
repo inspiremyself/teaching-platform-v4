@@ -1,7 +1,6 @@
 <template>
   <GradingWorkspace>
     <template #headerActions>
-      <button class="action-button action-button--ghost" type="button" @click="goDetail()">返回报告详情</button>
       <button class="action-button action-button--ghost" type="button" :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</button>
       <button class="action-button action-button--ghost" type="button" :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</button>
       <button class="action-button action-button--ghost" type="button" :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</button>

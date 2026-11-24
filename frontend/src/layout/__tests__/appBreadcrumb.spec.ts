@@ -59,12 +59,17 @@ describe('resolveBreadcrumbTrail', () => {
 })
 
 describe('AppBreadcrumb.vue', () => {
-  it('具备可访问性与自适应隐藏规则', () => {
+  it('具备可访问性与移动端紧凑常显规则', () => {
     const source = componentSource()
     expect(source).toContain('aria-label="面包屑导航"')
     expect(source).toContain('aria-current')
     expect(source).toContain('router-link')
     expect(source).toContain('resolveBreadcrumbTrail')
     expect(source).toContain('max-width: 899px')
+    // 紧凑常显：不再对 .app-breadcrumb 使用 display: none
+    expect(source).not.toContain('display: none')
+    // 紧凑标记
+    expect(source).toContain('min-height: 34px')
+    expect(source).toContain('flex-wrap: wrap')
   })
 })

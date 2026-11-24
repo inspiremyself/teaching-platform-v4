@@ -106,13 +106,6 @@ onMounted(fetchDetail);
   max-width: 880px;
 }
 
-@media (max-width: 900px) {
-  /* 该断点下面包屑隐藏，页面不再需要让出 34px */
-  .lab-report-view {
-    min-height: 100vh;
-  }
-}
-
 .lab-report-sheet {
   max-width: 880px;
   margin: 0 auto;

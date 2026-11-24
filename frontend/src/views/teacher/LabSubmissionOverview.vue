@@ -4,7 +4,6 @@
     description="班级全员 × 子题矩阵。点击学生名查看历次提交，点击题列查看全班答案。"
   >
     <template #actions>
-      <button class="action-button action-button--ghost" type="button" @click="goBackToGrading">返回批改工作区</button>
       <button class="action-button action-button--ghost" type="button" :disabled="loading" @click="fetchOverview">刷新</button>
       <button class="action-button action-button--ghost" type="button" @click="goBlankRegrade">批量重判</button>
     </template>
@@ -123,10 +122,6 @@ const goStudentSubmissions = (studentId: number, studentName?: string, studentNo
 
 const goItemWall = (itemId: number) => {
   router.push({ name: 'teacher-lab-item-answers', params: { labId: labId(), itemId } });
-};
-
-const goBackToGrading = () => {
-  router.push({ name: 'teacher-lab-submission-overview', params: { labId: labId() } });
 };
 
 const openReportView = (student: LabSubmissionOverviewStudent) => {

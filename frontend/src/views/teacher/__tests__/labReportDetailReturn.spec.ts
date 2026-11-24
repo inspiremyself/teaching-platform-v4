@@ -26,8 +26,8 @@ describe('评分台（打回能力迁移）', () => {
     expect(detailSource).toContain('已打回，学生可重新编辑提交');
   });
 
-  it('返回按钮文案改为返回，不再称返回批改队列', () => {
-    expect(detailSource).toContain('>返回</el-button>');
+  it('页头不再提供页面级返回按钮', () => {
+    expect(detailSource).not.toContain('>返回</el-button>');
     expect(detailSource).not.toContain('返回批改队列');
   });
 });

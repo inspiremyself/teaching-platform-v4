@@ -6,10 +6,6 @@
       <section class="detail-hero">
         <div class="detail-hero__main">
           <div class="detail-hero__topline">
-            <button type="button" class="back-button" @click="router.back()">
-              <span class="material-symbols-outlined">arrow_back</span>
-              <span>返回</span>
-            </button>
             <div class="detail-hero__actions">
               <el-button
                 round
@@ -348,7 +344,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { HomeworkDetailKey } from '@/composables/useHomeworkDetail';
-const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, loading, submitting, detail, currentQuestionIndex, form, autoSaveStatus, lastSavedDraft, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, submitForm, restoreSavedDraft, submissionStatusLabel, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, showQuestionFeedback, answerHint, questionTypeLabel, formatDateTime } = inject(HomeworkDetailKey)!;
+const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, loading, submitting, detail, currentQuestionIndex, form, autoSaveStatus, lastSavedDraft, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, submitForm, restoreSavedDraft, submissionStatusLabel, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, showQuestionFeedback, answerHint, questionTypeLabel, formatDateTime } = inject(HomeworkDetailKey)!;
 </script>
 
 <style scoped>
@@ -376,23 +372,9 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .detail-hero__topline {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   align-items: center;
-}
-
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 10px;
-  border: none;
-  border-radius: 999px;
-  background: #ffffff;
-  color: #334155;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .detail-hero__actions {

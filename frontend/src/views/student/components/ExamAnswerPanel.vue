@@ -21,7 +21,6 @@
               <span class="material-symbols-outlined">play_circle</span>
               {{ starting ? '正在开始考试' : '开始考试' }}
             </button>
-            <button class="secondary-action" type="button" @click="router.push('/student/exams')">返回考试列表</button>
           </div>
         </div>
 
@@ -246,7 +245,6 @@
           <h1>{{ detail.title }}</h1>
           <p>{{ resultStatusDescription }}</p>
         </div>
-        <button class="secondary-action" type="button" @click="router.push('/student/exams')">返回考试列表</button>
       </header>
 
       <section class="result-summary-grid">
@@ -389,7 +387,7 @@
 import { inject } from 'vue';
 import { ExamDetailKey } from '@/composables/useExamDetail';
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue';
-const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, isTimerUrgent, deadlineText, limitText, isLegacyNoEndAt, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, planTotalScore, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, qType, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
+const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, state, detail, questions, currentIndex, remainingSeconds, starting, submitting, resultAnswerMap, timer, deadlineReached, deadlineSubmitFailed, isTimerUrgent, deadlineText, limitText, isLegacyNoEndAt, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, planTotalScore, resultStatusDescription, updateCurrentQuestionDraft, questionTypeLabel, answerHint, formatTime, statusLabel, formatDisplayAnswer, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, qType, doStart, doSubmit, confirmSubmit } = inject(ExamDetailKey)!;
 
 /** 结果态三态展示映射：tone 由 composable 判定，此处只做图标/文案/导航类名的呈现转换 */
 type ResultTone = 'correct' | 'wrong' | 'manual' | 'none';

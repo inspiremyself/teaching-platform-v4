@@ -1,10 +1,6 @@
 <template>
   <div class="student-submissions-page">
     <section class="student-submissions-header">
-      <button type="button" class="student-submissions-back" @click="router.back()">
-        <span class="material-symbols-outlined">arrow_back</span>
-        <span>返回总览</span>
-      </button>
       <div class="student-submissions-header__top">
         <div>
           <h1>{{ pageTitle }}</h1>
@@ -110,17 +106,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.student-submissions-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  color: #475569;
-  cursor: pointer;
-  padding: 0;
 }
 
 .student-submissions-header__top {

@@ -15,7 +15,6 @@
       </div>
       <div class="page-header__actions">
         <span v-if="submitHint" class="submit-hint">{{ submitHint }}</span>
-        <el-button @click="router.push(`/student/labs/${labId}`)">返回实验详情</el-button>
         <el-button type="success" :loading="submitting" :disabled="!canSubmit" @click="submitAll">
           提交实验
         </el-button>
@@ -251,7 +250,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { StudentLabStepsKey } from '@/composables/useStudentLabSteps';
-const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, router, loading, saving, submitting, detail, currentIndex, summaryDraft, isNotStarted, isOverdue, labId, labItems, currentItem, currentDraft, currentQuestionType, currentItemCodeLanguage, readonly, canSubmit, submitHint, progressPercent, progressText, submissionTagType, currentSaveStateLabel, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, selectItem, hasSavedAnswer, isItemDirty, answerStateLabel, saveCurrent, goPrev, goNext, submitAll, submissionLabel, questionTypeLabel, answerHint, itemFeedback } = inject(StudentLabStepsKey)!;
+const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, loading, saving, submitting, detail, currentIndex, summaryDraft, isNotStarted, isOverdue, labId, labItems, currentItem, currentDraft, currentQuestionType, currentItemCodeLanguage, readonly, canSubmit, submitHint, progressPercent, progressText, submissionTagType, currentSaveStateLabel, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, selectItem, hasSavedAnswer, isItemDirty, answerStateLabel, saveCurrent, goPrev, goNext, submitAll, submissionLabel, questionTypeLabel, answerHint, itemFeedback } = inject(StudentLabStepsKey)!;
 </script>
 
 <style scoped>

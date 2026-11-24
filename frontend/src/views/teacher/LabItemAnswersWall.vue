@@ -1,10 +1,6 @@
 <template>
   <div class="answers-wall-page">
     <section class="answers-wall-header">
-      <button type="button" class="answers-wall-back" @click="router.back()">
-        <span class="material-symbols-outlined">arrow_back</span>
-        <span>返回总览</span>
-      </button>
       <div class="answers-wall-header__top">
         <div>
           <h1>{{ wall?.title || '子题答案墙' }}</h1>
@@ -51,13 +47,12 @@
 <script setup lang="ts">
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { getTeacherLabItemAnswers } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabItemAnswerWall, LabReportStatus } from '@/types/lab';
 
 const route = useRoute();
-const router = useRouter();
 const loading = ref(false);
 const wall = ref<LabItemAnswerWall | null>(null);
 
@@ -97,17 +92,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.answers-wall-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: none;
-  background: transparent;
-  color: #475569;
-  cursor: pointer;
-  padding: 0;
 }
 
 .answers-wall-header__top {

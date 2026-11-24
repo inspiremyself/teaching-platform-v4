@@ -6,9 +6,6 @@
           <h1>个人设置</h1>
           <p>这里集中维护你的真实账户资料、联系信息和密码安全，不再拆成伪标签页或假分区导航。</p>
         </div>
-        <div class="workbench-header__actions profile-hero__actions">
-          <el-button type="primary" plain @click="goHome">返回角色首页</el-button>
-        </div>
       </div>
 
       <div class="profile-summary-panel">
@@ -191,14 +188,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { changePassword as changePasswordApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { user } = storeToRefs(authStore);
-const router = useRouter();
 const roleLabel = computed(() => {
   switch (user.value?.role) {
     case 'TEACHER':
@@ -260,10 +255,6 @@ watch(
 );
 
 const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' });
-
-const goHome = () => {
-  router.push(authStore.homePath);
-};
 
 const saveProfile = async () => {
   if (!profileForm.displayName.trim()) {

@@ -7,7 +7,6 @@
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已批改</span>
         <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ averageScoreText }}</strong> 平均得分</span>
       </div>
-      <button class="action-button action-button--ghost" type="button" @click="router.push('/teacher/homeworks')">返回作业管理</button>
       <button class="action-button action-button--warning" type="button" @click="releaseScores">发布成绩</button>
       <button class="action-button action-button--ghost" type="button" @click="resetFilters">清空筛选</button>
     </template>
@@ -192,7 +191,7 @@
 <script setup lang="ts">
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   buildScoringSummary,
@@ -221,7 +220,6 @@ import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 const route = useRoute();
-const router = useRouter();
 const loading = ref(false);
 const submitting = ref(false);
 const returning = ref(false);

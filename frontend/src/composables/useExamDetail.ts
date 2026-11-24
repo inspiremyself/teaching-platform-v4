@@ -20,7 +20,6 @@ import type { InjectionKey } from 'vue';
 
 export function useExamDetail() {
 const route = useRoute()
-const router = useRouter()
 const authStore = useAuthStore()
 const examId = route.params.id as string
 
@@ -758,7 +757,7 @@ onUnmounted(() => {
   stopTimer()
 })
 
-  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, router, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, lastRemainingSeconds, deadlineAt, deadlineReached,
+  return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, lastRemainingSeconds, deadlineAt, deadlineReached,
   isTimerUrgent, limitMinutes, limitText, deadlineText, isLegacyNoEndAt, windowTruncated, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, planTotalScore, resultStatusDescription, qType, orderedQuestions, normalizeType, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
 }
 

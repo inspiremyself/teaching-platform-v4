@@ -12,7 +12,6 @@
       <button class="action-button action-button--ghost" type="button" :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</button>
       <button class="action-button action-button--warning" type="button" :disabled="!canReturn" @click="handleReturn">打回</button>
       <button class="action-button action-button--ghost" type="button" @click="goBatchGrade">批量快捷批改</button>
-      <el-button plain @click="router.back()">返回</el-button>
     </template>
 
     <template #queue>

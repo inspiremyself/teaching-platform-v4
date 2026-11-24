@@ -75,7 +75,12 @@ const items = computed(() =>
 
 @media (max-width: 899px) {
   .app-breadcrumb {
-    display: none;
+    height: auto;
+    min-height: 34px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+    font-size: 11px;
+    letter-spacing: 0.04em;
   }
 }
 </style>

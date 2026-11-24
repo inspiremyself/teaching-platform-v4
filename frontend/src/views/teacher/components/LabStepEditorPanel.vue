@@ -2,11 +2,6 @@
   <div class="page lab-steps-console workbench-page workbench-page--locked">
     <section class="lab-steps-console__header">
       <div class="lab-steps-console__header-main">
-        <button type="button" class="lab-steps-console__back-link" @click="router.back()">
-          <span class="material-symbols-outlined">arrow_back</span>
-          <span>返回实验列表</span>
-        </button>
-
         <div>
           <h1 class="lab-steps-console__title">实验题项配置台</h1>
           <p class="lab-steps-console__subtitle">
@@ -412,7 +407,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { LabStepsKey } from '@/composables/useLabSteps';
-const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveEditor, TypedEditorShell, getLabQuestionTypeLabel, normalizeLabQuestionType, router, loading, submitting, rows, activeExistingStepId, fillBlankEditorRef, fillBlankEditorPromptRef, typedEditor, form, subjectiveKeywords, subjectiveSettings, fillSettings, codeSettings, pickerVisible, copyDialogVisible, copying, copyCode, copyPreview, labSummaryTitle, sortedRows, totalScore, currentQuestionTypeLabel, allowPasteLabel, typedValidationMessages, contentLength, isReadyToSubmit, completionSummary, currentActionLabel, activeStepHeading, completionHint, summarizeText, openCreatePanel, selectStep, handleQuestionTypeChange, updateObjectiveOptionContent, updateBlankAnswer, removeBlank, triggerBlankInsert, insertBlankToken, addKeyword, removeKeyword, updateSubjectiveAnswer, isStepConfigured, submitForm, openCopyDialog, confirmCopyToBank, openQuestionBankPicker, applyPickedQuestion, remove } = inject(LabStepsKey)!;
+const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveEditor, TypedEditorShell, getLabQuestionTypeLabel, normalizeLabQuestionType, loading, submitting, rows, activeExistingStepId, fillBlankEditorRef, fillBlankEditorPromptRef, typedEditor, form, subjectiveKeywords, subjectiveSettings, fillSettings, codeSettings, pickerVisible, copyDialogVisible, copying, copyCode, copyPreview, labSummaryTitle, sortedRows, totalScore, currentQuestionTypeLabel, allowPasteLabel, typedValidationMessages, contentLength, isReadyToSubmit, completionSummary, currentActionLabel, activeStepHeading, completionHint, summarizeText, openCreatePanel, selectStep, handleQuestionTypeChange, updateObjectiveOptionContent, updateBlankAnswer, removeBlank, triggerBlankInsert, insertBlankToken, addKeyword, removeKeyword, updateSubjectiveAnswer, isStepConfigured, submitForm, openCopyDialog, confirmCopyToBank, openQuestionBankPicker, applyPickedQuestion, remove } = inject(LabStepsKey)!;
 </script>
 
 <style scoped>
@@ -449,22 +444,6 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__header-side {
   align-items: flex-end;
   min-width: 320px;
-}
-
-.lab-steps-console__back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #0f766e;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  letter-spacing: var(--letter-spacing-caps);
-  text-transform: uppercase;
-  cursor: pointer;
 }
 
 .lab-steps-console__section-kicker {

@@ -1,10 +1,6 @@
 <template>
   <div class="blank-batch-page">
     <section class="blank-batch-header">
-      <button type="button" class="blank-batch-back" @click="goDetail()">
-        <span class="material-symbols-outlined">arrow_back</span>
-        <span>返回填空重判详情</span>
-      </button>
       <div class="blank-batch-header__top">
         <div>
           <h1>填空题重判总览</h1>
@@ -247,23 +243,10 @@ initialize();
   background: linear-gradient(180deg, rgba(236, 254, 255, 0.82), rgba(255, 255, 255, 0.98));
 }
 
-.blank-batch-back,
 .blank-batch-question-link {
   border: none;
   background: transparent;
   cursor: pointer;
-}
-
-.blank-batch-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  color: var(--color-brand-teacher);
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  letter-spacing: var(--letter-spacing-caps);
-  text-transform: uppercase;
 }
 
 .blank-batch-header__top {

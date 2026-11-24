@@ -22,7 +22,6 @@
         </template>
       </template>
       <template #actions>
-        <el-button @click="router.push('/student/labs')">返回实验列表</el-button>
         <el-button v-if="detail" type="primary" @click="goSteps()">{{ primaryActionLabel }}</el-button>
       </template>
     </AppPageHeader>
