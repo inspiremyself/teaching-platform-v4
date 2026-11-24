@@ -76,7 +76,7 @@
               :max="itemMaxScore(scope.row)"
               size="small"
               controls-position="right"
-              style="width: 120px"
+              class="app-score-input"
               :disabled="isReadOnly"
               placeholder="待评分"
               @update:model-value="setItemScore(scope.row, $event)"
@@ -95,12 +95,12 @@
             />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="260" align="right" fixed="right">
           <template #default="scope">
             <div class="batch-row-actions">
-              <el-button plain size="small" @click="goDetail(itemKey(scope.row))">详情</el-button>
-              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || isReadOnly" @click="confirmSingleStep(scope.row, false)">确认</el-button>
-              <el-button plain size="small" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || scope.row.suggestedScore == null || isReadOnly" @click="confirmSingleStep(scope.row, true)">采纳参考分</el-button>
+              <el-button link type="primary" @click="goDetail(itemKey(scope.row))">详情</el-button>
+              <el-button link type="primary" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || isReadOnly" @click="confirmSingleStep(scope.row, false)">确认</el-button>
+              <el-button link type="primary" :disabled="!gradeFormMap[gradeKey(scope.row)]?.answerId || scope.row.suggestedScore == null || isReadOnly" @click="confirmSingleStep(scope.row, true)">采纳参考分</el-button>
             </div>
           </template>
         </el-table-column>
@@ -401,11 +401,6 @@ fetchData();
 
 <style scoped>
 .batch-grade-page {
-  --batch-primary: #0f766e;
-  --batch-primary-soft: #ecfeff;
-  --batch-border: #dbe5ef;
-  --batch-text: #0f172a;
-  --batch-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -413,7 +408,7 @@ fetchData();
 
 .batch-grade-header,
 .batch-grade-panel {
-  border: 1px solid var(--batch-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
@@ -436,7 +431,7 @@ fetchData();
   align-items: center;
   gap: 6px;
   padding: 0;
-  color: var(--batch-primary);
+  color: var(--color-brand-teacher);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -458,17 +453,17 @@ fetchData();
 .batch-grade-header h1,
 .batch-grade-panel h2 {
   margin: 0;
-  color: var(--batch-text);
+  color: var(--color-text-primary);
   font-family: 'DM Sans', sans-serif;
 }
 
 .batch-grade-header h1 {
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .batch-grade-header p,
 .batch-grade-panel p {
-  color: var(--batch-muted);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
@@ -518,12 +513,12 @@ fetchData();
 
 .batch-grade-chip strong {
   margin-right: 4px;
-  color: var(--batch-text);
+  color: var(--color-text-primary);
 }
 
 .batch-grade-chip--accent {
-  background: var(--batch-primary-soft);
-  color: var(--batch-primary);
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
 }
 
 .batch-grade-panel {
@@ -540,18 +535,18 @@ fetchData();
   gap: 3px;
   width: 100%;
   padding: 0;
-  color: var(--batch-text);
+  color: var(--color-text-primary);
   text-align: left;
 }
 
 .batch-question-link span {
-  color: var(--batch-primary);
+  color: var(--color-brand-teacher);
   font-size: 12px;
   font-weight: 700;
 }
 
 .batch-question-link strong {
-  color: var(--batch-text);
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -563,7 +558,7 @@ fetchData();
 }
 
 .batch-answer-text {
-  color: var(--batch-text);
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -601,7 +596,7 @@ fetchData();
 .batch-reference-note {
   display: block;
   margin-top: 4px;
-  color: var(--batch-muted);
+  color: var(--color-text-muted);
   font-size: 11px;
 }
 

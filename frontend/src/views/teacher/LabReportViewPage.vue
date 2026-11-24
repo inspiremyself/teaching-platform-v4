@@ -106,7 +106,7 @@ onMounted(fetchDetail);
   max-width: 880px;
 }
 
-@media (max-width: 899px) {
+@media (max-width: 900px) {
   /* 该断点下面包屑隐藏，页面不再需要让出 34px */
   .lab-report-view {
     min-height: 100vh;
@@ -188,7 +188,7 @@ onMounted(fetchDetail);
   padding: 16px 18px;
   margin-bottom: 14px;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
 }
 
@@ -198,7 +198,7 @@ onMounted(fetchDetail);
 
 .lab-report-step h3 {
   margin: 0 0 12px;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #0f172a;
   line-height: 1.5;

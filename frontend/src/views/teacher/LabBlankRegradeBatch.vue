@@ -71,15 +71,14 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="260" fixed="right">
+        <el-table-column label="操作" width="260" align="right" fixed="right">
           <template #default="scope">
             <div class="blank-batch-row-actions">
-              <el-button plain size="small" @click="goDetail(scope.row.id)">详情</el-button>
-              <el-button plain size="small" @click="refreshItemDistribution(scope.row.id)">刷新</el-button>
+              <el-button link type="primary" @click="goDetail(scope.row.id)">详情</el-button>
+              <el-button link type="primary" @click="refreshItemDistribution(scope.row.id)">刷新</el-button>
               <el-button
+                link
                 type="primary"
-                plain
-                size="small"
                 :loading="savingItemId === scope.row.id"
                 :disabled="!blankDistributionMap[scope.row.id]"
                 @click="regradeItemWithExistingAnswers(scope.row.id)"
@@ -230,11 +229,6 @@ initialize();
 
 <style scoped>
 .blank-batch-page {
-  --blank-primary: #0f766e;
-  --blank-primary-soft: #ecfeff;
-  --blank-border: #dbe5ef;
-  --blank-text: #0f172a;
-  --blank-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -242,7 +236,7 @@ initialize();
 
 .blank-batch-header,
 .blank-batch-panel {
-  border: 1px solid var(--blank-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
@@ -265,7 +259,7 @@ initialize();
   align-items: center;
   gap: 6px;
   padding: 0;
-  color: var(--blank-primary);
+  color: var(--color-brand-teacher);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -282,13 +276,13 @@ initialize();
 
 .blank-batch-header h1 {
   margin: 0;
-  color: var(--blank-text);
+  color: var(--color-text-primary);
   font-family: 'DM Sans', sans-serif;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .blank-batch-header p {
-  color: var(--blank-muted);
+  color: var(--color-text-muted);
   line-height: 1.5;
 }
 
@@ -328,12 +322,12 @@ initialize();
 
 .blank-batch-chip strong {
   margin-right: 4px;
-  color: var(--blank-text);
+  color: var(--color-text-primary);
 }
 
 .blank-batch-chip--accent {
-  background: var(--blank-primary-soft);
-  color: var(--blank-primary);
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
 }
 
 .blank-batch-panel {
@@ -354,19 +348,19 @@ initialize();
 }
 
 .blank-batch-question-link span {
-  color: var(--blank-primary);
+  color: var(--color-brand-teacher);
   font-size: 12px;
   font-weight: 700;
 }
 
 .blank-batch-question-link strong {
-  color: var(--blank-text);
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.4;
 }
 
 .blank-batch-question-link small {
-  color: var(--blank-muted);
+  color: var(--color-text-muted);
   line-height: 1.45;
 }
 

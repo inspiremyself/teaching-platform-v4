@@ -206,7 +206,7 @@
               <span>{{ progressPercent }}%</span>
             </div>
             <div class="progress-track">
-              <div class="progress-track__fill" :style="{ width: `${progressPercent}%` }"></div>
+              <div class="progress-track__fill" :style="{ width: `${progressPercent}%` }"></div><!-- 动态值：按作答进度计算宽度 -->
             </div>
             <div class="question-map-grid">
               <button
@@ -550,7 +550,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 .result-summary-card__value {
   display: block;
   margin-top: 3px;
-  font-size: 15px;
+  font-size: 16px;
   color: #191c22;
 }
 
@@ -589,7 +589,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 .primary-action,
 .secondary-action {
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 11px;
   font-size: 12px;
   font-weight: 700;
@@ -682,7 +682,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 
 .timer-shell strong {
   display: block;
-  font-size: 17px;
+  font-size: 18px;
   color: #0f766e;
   font-variant-numeric: tabular-nums;
 }
@@ -841,7 +841,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f1f5f9;
   color: #334155;
   margin-right: 10px;
@@ -855,7 +855,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .text-answer-box :deep(.el-textarea__inner) {
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 12px 14px;
 }
 
@@ -896,7 +896,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 
 .question-map-item {
   aspect-ratio: 1;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #fff;
   color: #64748b;
@@ -1038,49 +1038,49 @@ function resultMapItemClass(question: { questionId: number }): string {
   align-items: center;
   gap: 4px;
   margin-left: 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 4px 9px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   vertical-align: middle;
 }
 
 .result-status-badge .material-symbols-outlined {
-  font-size: 14px;
+  font-size: 18px;
 }
 
 .result-status-badge--correct {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  color: #16a34a;
+  background: var(--color-success-soft);
+  border: 1px solid var(--color-success);
+  color: var(--color-success-strong);
 }
 
 .result-status-badge--wrong {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background: var(--color-danger-soft);
+  border: 1px solid var(--color-danger);
+  color: var(--color-danger-strong);
 }
 
 .result-status-badge--manual {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
 }
 
 .result-question-card--correct {
-  border-left: 3px solid #16a34a;
+  border-left: 3px solid var(--color-success-strong);
 }
 
 .result-question-card--wrong {
-  border-left: 3px solid #dc2626;
+  border-left: 3px solid var(--color-danger-strong);
 }
 
 .result-question-card--manual {
-  border-left: 3px solid #64748b;
+  border-left: 3px solid var(--color-text-muted);
 }
 
 .result-answer-block__icon {
-  font-size: 14px;
+  font-size: 18px;
   vertical-align: -3px;
   margin-right: 2px;
 }
@@ -1145,7 +1145,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   background: #64748b;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .intro-layout,
   .taking-grid,
   .result-grid,

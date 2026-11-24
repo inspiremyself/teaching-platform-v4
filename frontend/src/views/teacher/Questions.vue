@@ -186,7 +186,7 @@
                 <span class="question-row__health-text" :class="getHealthStatus(row).textClass">{{ getHealthStatus(row).label }}</span>
               </div>
               <div class="question-row__health-bar">
-                <span class="question-row__health-bar-fill" :class="getHealthStatus(row).barClass" :style="{ width: `${getHealthStatus(row).progress}%` }"></span>
+                <span class="question-row__health-bar-fill" :class="getHealthStatus(row).barClass" :style="{ width: `${getHealthStatus(row).progress}%` }"></span><!-- 动态值：按题目健康度分值计算宽度 -->
               </div>
             </div>
           </template>
@@ -707,7 +707,7 @@ onMounted(() => {
 .question-console__config-shell,
 .question-console__table-shell {
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
@@ -735,7 +735,7 @@ onMounted(() => {
 
 .question-console__title {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.03em;
@@ -1054,7 +1054,7 @@ onMounted(() => {
   width: 34px;
   height: 34px;
   border: 1px solid #ccfbf1;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f0fdfa;
   color: #0f766e;
   cursor: pointer;
@@ -1078,7 +1078,7 @@ onMounted(() => {
   color: #dc2626;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .question-console__filters-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -448,7 +448,7 @@ onBeforeUnmount(() => {
   width: 112px;
   height: 112px;
   object-fit: cover;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #fff;
   cursor: zoom-in;
@@ -507,7 +507,7 @@ onBeforeUnmount(() => {
   margin: 0 1px;
   padding: 1px 6px;
   border: 1px solid #5eead4;
-  border-radius: 4px;
+  border-radius: 6px;
   background: #fff;
   color: #134e4a;
   font-family: inherit;

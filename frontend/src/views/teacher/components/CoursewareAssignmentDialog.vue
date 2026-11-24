@@ -2,10 +2,10 @@
   <el-dialog
     :model-value="visible"
     title="按小节布置学习任务"
-    width="760px"
+    width="860px"
     @update:model-value="onVisibleChange"
   >
-    <el-form label-width="100px">
+    <el-form label-position="top">
       <el-form-item label="布置班级">
         <el-select v-model="classIds" multiple placeholder="请选择班级" class="assignment-dialog__select">
           <el-option

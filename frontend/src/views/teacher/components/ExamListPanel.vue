@@ -159,12 +159,12 @@
                 <el-input v-model="form.description" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="补充考试说明、注意事项或题型范围" />
               </el-form-item>
               <el-form-item label="班级" required>
-                <el-select v-model="form.classId" style="width: 100%" placeholder="请选择班级">
+                <el-select v-model="form.classId" class="app-control-full" placeholder="请选择班级">
                   <el-option v-for="c in classOptions" :key="c.id" :label="c.name" :value="c.id" />
                 </el-select>
               </el-form-item>
               <el-form-item label="学科" :required="!editingId">
-                <el-select v-model="form.subjectId" style="width: 100%" :placeholder="editingId ? '保持原值' : '请选择学科'">
+                <el-select v-model="form.subjectId" class="app-control-full" :placeholder="editingId ? '保持原值' : '请选择学科'">
                   <el-option v-if="editingId" label="保持原值" :value="0" />
                   <el-option v-for="s in subjectOptions" :key="s.id" :label="s.name" :value="s.id" />
                 </el-select>
@@ -176,7 +176,7 @@
                     type="datetime"
                     value-format="YYYY-MM-DDTHH:mm:ssZ"
                     placeholder="请选择开始时间"
-                    style="width: 100%"
+                    class="app-control-full"
                   />
                 </el-form-item>
                 <el-form-item label="结束时间">
@@ -185,7 +185,7 @@
                     type="datetime"
                     value-format="YYYY-MM-DDTHH:mm:ssZ"
                     placeholder="请选择结束时间"
-                    style="width: 100%"
+                    class="app-control-full"
                   />
                 </el-form-item>
               </div>
@@ -200,7 +200,7 @@
                 <p class="exam-dialog__hint">开启后，题目顺序按学生生成；同一学生刷新后顺序保持不变。</p>
               </el-form-item>
               <el-form-item label="成绩可见性">
-                <el-select v-model="form.scoreVisibilityMode" style="width: 100%">
+                <el-select v-model="form.scoreVisibilityMode" class="app-control-full">
                   <el-option label="交卷后立即可见" :value="SCORE_VISIBILITY_MODE.IMMEDIATE" />
                   <el-option label="教师确认后可见" :value="SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM" />
                   <el-option
@@ -329,12 +329,6 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 </script>
 
 <style scoped>
-.page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
 .exams-console {
   color: #0f172a;
 }
@@ -373,7 +367,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .console-title-row h1 {
   margin: 0;
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 800;
 }
 
@@ -391,7 +385,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .console-button {
   border: none;
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 12px 18px;
   font-size: 14px;
   font-weight: 700;
@@ -418,7 +412,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   gap: 20px;
   border: 1px solid #dbeafe;
   background: linear-gradient(135deg, #eff6ff, #ecfeff 55%, #f8fafc);
-  border-radius: 28px;
+  border-radius: 16px;
   padding: 22px 24px;
 }
 
@@ -431,7 +425,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .context-strip__badge {
   width: 56px;
   height: 56px;
-  border-radius: 20px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #0f766e, #14b8a6);
   color: #fff;
   display: flex;
@@ -450,7 +444,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .context-strip__value {
   margin-top: 4px;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -468,7 +462,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .mini-stat {
   min-width: 120px;
-  border-radius: 20px;
+  border-radius: 16px;
   padding: 14px 16px;
   background: rgba(255, 255, 255, 0.76);
   border: 1px solid rgba(148, 163, 184, 0.18);
@@ -482,7 +476,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .mini-stat__value {
   display: block;
   margin-top: 8px;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .console-grid {
@@ -498,7 +492,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .summary-card {
-  border-radius: 26px;
+  border-radius: 16px;
   padding: 24px;
   color: #fff;
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.09);
@@ -525,7 +519,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .summary-card__value {
   margin-top: 10px;
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 800;
 }
 
@@ -535,20 +529,11 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   opacity: 0.78;
 }
 
-.toolbar-card,
-.table-card,
 .selection-panel {
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #fff;
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
-}
-
-.toolbar-card {
-  padding: 20px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .toolbar-card__main {
@@ -564,7 +549,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   display: flex;
   align-items: center;
   gap: 12px;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #f8fafc;
   padding: 0 16px;
   border: 1px solid #e2e8f0;
@@ -615,10 +600,6 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   background: #14b8a6;
 }
 
-.table-card {
-  padding: 18px;
-}
-
 .table-card__header {
   display: flex;
   justify-content: space-between;
@@ -661,7 +642,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .exam-cell__icon {
   width: 50px;
   height: 50px;
-  border-radius: 18px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -698,38 +679,6 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   font-size: 16px;
   font-weight: 800;
   color: #0f172a;
-}
-
-.status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  padding: 5px 10px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.status-pill__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-.status-pill--draft {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.status-pill--published {
-  background: #ecfdf5;
-  color: #0f766e;
-}
-
-.status-pill--closed {
-  background: #eff6ff;
-  color: #1d4ed8;
 }
 
 .exam-cell__meta,
@@ -777,13 +726,13 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .submission-cell {
   padding: 14px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #f8fafc, #f1f5f9);
   border: 1px solid #e2e8f0;
 }
 
 .submission-cell__count {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
   color: #0f172a;
 }
@@ -813,7 +762,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .action-button {
   border: none;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 700;
@@ -841,7 +790,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .exam-dialog :deep(.el-dialog) {
-  border-radius: 30px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -865,7 +814,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .exam-dialog__summary-card,
 .exam-dialog__footer {
   border: 1px solid #e2e8f0;
-  border-radius: 24px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
 
@@ -940,7 +889,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   display: block;
   margin-top: 8px;
   color: #0f172a;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -978,7 +927,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .dialog-block {
-  border-radius: 24px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
   background: #fff;
 }
@@ -1048,7 +997,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .exam-dialog__form :deep(.el-select__wrapper),
 .exam-dialog__form :deep(.el-textarea__inner),
 .exam-dialog__form :deep(.el-input-number) {
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 0 0 1px #e2e8f0 inset;
   background: #f8fafc;
 }
@@ -1084,7 +1033,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .selection-card {
   padding: 14px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 
@@ -1133,7 +1082,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   flex-wrap: wrap;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .console-summaries,
   .dialog-layout {
     grid-template-columns: 1fr;

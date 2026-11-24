@@ -120,7 +120,7 @@ const toggleOption = (key: string) => {
   width: 100%;
   padding: 14px 16px;
   border: 1px solid #cbd5e1;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   color: #0f172a;
   text-align: left;
@@ -177,7 +177,7 @@ const toggleOption = (key: string) => {
 .choice-answer-editor__empty {
   padding: 12px 14px;
   border: 1px solid #fdba74;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff7ed;
   color: #9a3412;
   font-size: 13px;

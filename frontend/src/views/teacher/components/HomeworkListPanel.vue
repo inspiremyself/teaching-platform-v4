@@ -181,7 +181,7 @@
                   type="datetime"
                   value-format="YYYY-MM-DDTHH:mm:ssZ"
                   placeholder="请选择开始时间"
-                  style="width: 100%"
+                  class="app-control-full"
                 />
               </el-form-item>
               <el-form-item label="截止时间">
@@ -190,7 +190,7 @@
                   type="datetime"
                   value-format="YYYY-MM-DDTHH:mm:ssZ"
                   placeholder="请选择截止时间"
-                  style="width: 100%"
+                  class="app-control-full"
                 />
               </el-form-item>
               <el-form-item label="发布状态">
@@ -298,7 +298,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homeworks-hero {
   position: relative;
   overflow: hidden;
-  border-radius: 32px;
+  border-radius: 16px;
   padding: 30px 32px;
   background:
     radial-gradient(circle at top right, rgba(96, 165, 250, 0.22), transparent 28%),
@@ -332,7 +332,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homeworks-hero__heading h1 {
   margin: 0;
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 800;
   color: #ffffff;
 }
@@ -340,7 +340,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homeworks-hero__heading p {
   max-width: 720px;
   margin: 10px 0 0;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.7;
   color: rgba(219, 234, 254, 0.88);
 }
@@ -355,7 +355,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   display: flex;
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 22px;
+  border-radius: 16px;
   background: rgba(15, 23, 42, 0.2);
   border: 1px solid rgba(191, 219, 254, 0.18);
 }
@@ -381,15 +381,9 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   color: rgba(219, 234, 254, 0.8);
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
 .summary-card {
   padding: 24px;
-  border-radius: 28px;
+  border-radius: 16px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
@@ -412,7 +406,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   justify-content: center;
   width: 54px;
   height: 54px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   flex-shrink: 0;
@@ -442,13 +436,13 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .summary-card__value {
   margin-top: 8px;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
   color: #0f172a;
 }
 
 .summary-card__value--small {
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .summary-card__desc {
@@ -480,17 +474,6 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   font-weight: 700;
 }
 
-.toolbar-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 22px 24px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.06);
-}
-
 .toolbar-card__main {
   display: flex;
   gap: 16px;
@@ -505,7 +488,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   flex: 1;
   padding: 0 16px;
   min-height: 52px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -571,7 +554,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   grid-template-columns: minmax(0, 1fr) 200px;
   gap: 16px;
   padding: 24px;
-  border-radius: 28px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(226, 232, 240, 0.9);
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.05);
@@ -592,7 +575,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homework-row__title-line h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   color: #0f172a;
 }
 
@@ -611,7 +594,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homework-row__meta-grid > div {
   padding: 14px 16px;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -666,7 +649,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 }
 
 .homework-dialog :deep(.el-dialog) {
-  border-radius: 28px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -691,7 +674,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homework-dialog__group,
 .homework-dialog__footer {
   border: 1px solid #e2e8f0;
-  border-radius: 22px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
 
@@ -715,7 +698,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homework-dialog__header h2 {
   margin: 8px 0 0;
   color: #0f172a;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
 }
 
@@ -777,7 +760,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   display: block;
   margin-top: 8px;
   color: #0f172a;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -851,7 +834,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homework-dialog__form :deep(.el-input__wrapper),
 .homework-dialog__form :deep(.el-select__wrapper),
 .homework-dialog__form :deep(.el-textarea__inner) {
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 0 0 1px #e2e8f0 inset;
   background: #f8fafc;
 }
@@ -876,8 +859,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   flex-wrap: wrap;
 }
 
-@media (max-width: 1200px) {
-  .summary-grid,
+@media (max-width: 1280px) {
   .homeworks-context-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -898,10 +880,9 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 @media (max-width: 900px) {
   .homeworks-hero,
   .summary-card,
-  .toolbar-card,
   .homework-row {
     padding: 20px;
-    border-radius: 24px;
+    border-radius: 16px;
   }
 
   .homeworks-hero__heading,
@@ -914,7 +895,6 @@ const formatWindow = (start?: string | null, end?: string | null) =>
     align-items: stretch;
   }
 
-  .summary-grid,
   .homeworks-context-strip,
   .homework-row__meta-grid {
     grid-template-columns: 1fr;

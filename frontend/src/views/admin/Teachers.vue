@@ -8,7 +8,7 @@
         </div>
         <div class="workbench-header__actions">
           <el-button type="primary" @click="openCreateDialog">
-            <span class="material-symbols-outlined" style="font-size: 16px; margin-right: 4px;">person_add</span>
+            <span class="material-symbols-outlined app-icon--sm app-icon--leading">person_add</span>
             新增教师
           </el-button>
         </div>
@@ -21,17 +21,17 @@
       </div>
     </section>
 
-    <section class="toolbar-card">
+    <AppToolbarCard>
       <div class="toolbar-row">
-        <el-input v-model="searchQuery" placeholder="搜索账号或姓名" clearable style="max-width: 280px" />
-        <el-select v-model="statusFilter" clearable placeholder="全部状态" style="width: 140px">
+        <el-input v-model="searchQuery" placeholder="搜索账号或姓名" clearable class="app-search-field" />
+        <el-select v-model="statusFilter" clearable placeholder="全部状态" class="app-filter-field">
           <el-option label="在职" value="ACTIVE" />
           <el-option label="停用" value="DISABLED" />
         </el-select>
       </div>
-    </section>
+    </AppToolbarCard>
 
-    <section class="table-card">
+    <AppTableCard>
       <el-table :data="filteredRows" v-loading="loading" empty-text="暂无教师数据">
         <el-table-column label="教师" min-width="240">
           <template #default="{ row }">
@@ -58,7 +58,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </section>
+    </AppTableCard>
 
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑教师' : '新增教师'" width="480px">
       <el-form label-position="top">
@@ -85,6 +85,8 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { changeTeacherStatus, createTeacher, listTeachers, updateTeacher } from '@/api/admin';
 import type { AdminTeacher, TeacherStatus } from '@/types/admin';
+import AppTableCard from '@/components/ui/AppTableCard.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 
 const loading = ref(false);
 const submitting = ref(false);
@@ -182,44 +184,3 @@ const toggleStatus = async (row: AdminTeacher) => {
 
 onMounted(fetchData);
 </script>
-
-<style scoped>
-.toolbar-card,
-.table-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.toolbar-card {
-  padding: 12px 14px;
-}
-
-.toolbar-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.table-card {
-  padding: 0 0 8px;
-  overflow: hidden;
-}
-
-.identity-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.identity-cell strong {
-  color: #0f172a;
-  font-size: 13px;
-}
-
-.identity-cell span {
-  color: #64748b;
-  font-size: 11px;
-}
-</style>

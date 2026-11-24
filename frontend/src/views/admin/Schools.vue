@@ -25,7 +25,7 @@
         <el-table-column label="创建时间" min-width="180">
           <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="120" align="right" fixed="right">
           <template #default="{ row }">
             <el-button
               link

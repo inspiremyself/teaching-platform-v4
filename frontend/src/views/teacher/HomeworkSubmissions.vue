@@ -26,7 +26,7 @@
 
     <template #detail>
       <main class="submission-panel" v-loading="loading">
-        <el-empty v-if="!selectedSubmission" description="请选择左侧提交记录查看详情" />
+        <AppEmptyState v-if="!selectedSubmission" description="请选择左侧提交记录查看详情" />
         <div v-else class="grade-dialog">
           <section class="grade-dialog__main">
             <div class="grade-dialog__identity-grid">
@@ -218,6 +218,7 @@ import { releaseHomeworkScores } from '@/api/homeworks';
 import { useGradingWorkspace, type DraftPort } from './components/workbench/useWorkbench';
 import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
 import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -549,7 +550,7 @@ onMounted(fetchData);
 
 .submissions-hero {
   overflow: hidden;
-  border-radius: 32px;
+  border-radius: 16px;
   padding: 28px 32px;
   background:
     radial-gradient(circle at right top, rgba(191, 219, 254, 0.18), transparent 32%),
@@ -573,14 +574,14 @@ onMounted(fetchData);
 
 .submissions-hero__heading h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 36px;
   color: #ffffff;
 }
 
 .submissions-hero__heading p {
   margin: 10px 0 0;
   max-width: 760px;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.7;
   color: rgba(219, 234, 254, 0.86);
 }
@@ -590,15 +591,9 @@ onMounted(fetchData);
   gap: 12px;
 }
 
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-}
-
 .summary-card {
   padding: 24px;
-  border-radius: 28px;
+  border-radius: 16px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
 }
 
@@ -621,7 +616,7 @@ onMounted(fetchData);
   justify-content: center;
   width: 54px;
   height: 54px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   flex-shrink: 0;
@@ -651,13 +646,13 @@ onMounted(fetchData);
 
 .summary-card__value {
   margin-top: 8px;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
   color: #0f172a;
 }
 
 .summary-card__value--small {
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .summary-card__desc {
@@ -689,17 +684,6 @@ onMounted(fetchData);
   font-weight: 700;
 }
 
-.toolbar-card {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 22px 24px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.06);
-}
-
 .toolbar-card__main {
   display: flex;
   gap: 16px;
@@ -714,7 +698,7 @@ onMounted(fetchData);
   flex: 1;
   padding: 0 16px;
   min-height: 52px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -756,7 +740,7 @@ onMounted(fetchData);
 .submissions-list-panel,
 .quick-grade-card {
   padding: 24px;
-  border-radius: 28px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(226, 232, 240, 0.9);
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
@@ -788,7 +772,7 @@ onMounted(fetchData);
   gap: 16px;
   width: 100%;
   padding: 18px 20px;
-  border-radius: 22px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   text-align: left;
@@ -906,7 +890,7 @@ onMounted(fetchData);
 .quick-grade-card__stats > div,
 .identity-box {
   padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -939,7 +923,7 @@ onMounted(fetchData);
 .answer-text {
   margin: 0;
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   color: #334155;
@@ -972,7 +956,7 @@ onMounted(fetchData);
 .grade-dialog__content-card,
 .grade-form-card {
   padding: 20px;
-  border-radius: 22px;
+  border-radius: 16px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
 }
@@ -1013,8 +997,7 @@ onMounted(fetchData);
   cursor: pointer;
 }
 
-@media (max-width: 1200px) {
-  .summary-grid,
+@media (max-width: 1280px) {
   .submissions-workspace,
   .grade-dialog {
     grid-template-columns: 1fr;
@@ -1036,11 +1019,10 @@ onMounted(fetchData);
 @media (max-width: 900px) {
   .submissions-hero,
   .summary-card,
-  .toolbar-card,
   .submissions-list-panel,
   .quick-grade-card {
     padding: 20px;
-    border-radius: 24px;
+    border-radius: 16px;
   }
 
   .submissions-hero__heading,
@@ -1050,10 +1032,6 @@ onMounted(fetchData);
     display: flex;
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .summary-grid {
-    grid-template-columns: 1fr;
   }
 }
 

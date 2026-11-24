@@ -232,13 +232,6 @@ onMounted(fetchData);
 
 <style scoped>
 .student-materials-page {
-  --materials-primary: #0f766e;
-  --materials-primary-deep: #115e59;
-  --materials-primary-soft: #ecfdf5;
-  --materials-surface: rgba(255, 255, 255, 0.9);
-  --materials-border: rgba(226, 232, 240, 0.95);
-  --materials-text: #111827;
-  --materials-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -249,8 +242,8 @@ onMounted(fetchData);
 .materials-summary-card,
 .material-row-card,
 .update-card {
-  border: 1px solid var(--materials-border);
-  background: var(--materials-surface);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
 }
 
@@ -259,7 +252,7 @@ onMounted(fetchData);
   grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.55fr);
   gap: 18px;
   padding: 30px 32px;
-  border-radius: 30px;
+  border-radius: 16px;
   background:
     radial-gradient(circle at top right, rgba(45, 212, 191, 0.18), transparent 28%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 253, 250, 0.96));
@@ -275,7 +268,7 @@ onMounted(fetchData);
 }
 
 .student-materials-hero__eyebrow {
-  color: var(--materials-primary);
+  color: var(--color-brand-teacher);
 }
 
 .student-materials-hero h1,
@@ -284,12 +277,12 @@ onMounted(fetchData);
 .material-row-card h3 {
   margin: 0;
   font-family: 'DM Sans', sans-serif;
-  color: var(--materials-text);
+  color: var(--color-text-primary);
 }
 
 .student-materials-hero h1 {
   margin-top: 10px;
-  font-size: 34px;
+  font-size: 28px;
 }
 
 .student-materials-hero p,
@@ -298,14 +291,14 @@ onMounted(fetchData);
 .material-row-card p,
 .materials-summary-card__desc,
 .student-materials-section-head__hint {
-  color: var(--materials-muted);
+  color: var(--color-text-muted);
   line-height: 1.7;
 }
 
 .student-materials-hero p {
   margin: 12px 0 0;
   max-width: 760px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .student-materials-hero__meta {
@@ -320,9 +313,9 @@ onMounted(fetchData);
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: 20px;
+  border-radius: 16px;
   background: rgba(15, 118, 110, 0.08);
-  color: var(--materials-primary-deep);
+  color: var(--color-brand-teacher);
 }
 
 .student-materials-hero__meta-item--soft {
@@ -348,7 +341,7 @@ onMounted(fetchData);
   gap: 14px;
   align-items: flex-start;
   padding: 20px;
-  border-radius: 24px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #0f766e, #115e59);
   color: #fff;
 }
@@ -408,7 +401,7 @@ onMounted(fetchData);
   padding: 0 10px;
   border-radius: 999px;
   background: #ecfdf5;
-  color: var(--materials-primary-deep);
+  color: var(--color-brand-teacher);
   font-size: 12px;
   font-weight: 800;
 }
@@ -416,7 +409,7 @@ onMounted(fetchData);
 .student-materials-section-head__desc {
   margin: 6px 0 0;
   font-size: 13px;
-  color: var(--materials-muted);
+  color: var(--color-text-muted);
 }
 
 .student-materials-section-head__hint {
@@ -437,7 +430,7 @@ onMounted(fetchData);
   gap: 14px;
   min-height: 0;
   padding: 16px 18px;
-  border-radius: 22px;
+  border-radius: 16px;
 }
 
 .update-card__badge {
@@ -448,7 +441,7 @@ onMounted(fetchData);
   border-radius: 999px;
   background: #d1fae5;
   color: #047857;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
 }
@@ -465,7 +458,7 @@ onMounted(fetchData);
 
 .update-card__icon .material-symbols-outlined,
 .material-row-card__icon .material-symbols-outlined {
-  font-size: 26px;
+  font-size: 28px;
 }
 
 .update-card__leading {
@@ -489,7 +482,7 @@ onMounted(fetchData);
 }
 
 .update-card h3 {
-  font-size: 17px;
+  font-size: 18px;
   line-height: 1.35;
 }
 
@@ -528,7 +521,7 @@ onMounted(fetchData);
   min-height: 38px;
   padding-inline: 14px;
   border-radius: 999px;
-  color: var(--materials-primary-deep);
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
@@ -541,7 +534,7 @@ onMounted(fetchData);
   flex-direction: column;
   gap: 14px;
   padding: 22px 24px;
-  border-radius: 28px;
+  border-radius: 16px;
 }
 
 .student-materials-toolbar__main {
@@ -559,7 +552,7 @@ onMounted(fetchData);
   min-height: 52px;
   padding: 0 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 
@@ -586,7 +579,7 @@ onMounted(fetchData);
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  color: var(--materials-muted);
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
@@ -606,7 +599,7 @@ onMounted(fetchData);
   display: flex;
   gap: 16px;
   padding: 22px;
-  border-radius: 24px;
+  border-radius: 16px;
 }
 
 .materials-summary-card--primary {
@@ -631,7 +624,7 @@ onMounted(fetchData);
   height: 50px;
   border-radius: 16px;
   background: rgba(15, 118, 110, 0.14);
-  color: var(--materials-primary-deep);
+  color: var(--color-brand-teacher);
   flex-shrink: 0;
 }
 
@@ -651,13 +644,13 @@ onMounted(fetchData);
 
 .materials-summary-card__value {
   margin-top: 8px;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
-  color: var(--materials-text);
+  color: var(--color-text-primary);
 }
 
 .materials-summary-card__value--small {
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .materials-summary-card__desc {
@@ -679,7 +672,7 @@ onMounted(fetchData);
   padding: 6px 12px;
   border-radius: 999px;
   background: #ecfdf5;
-  color: var(--materials-primary-deep);
+  color: var(--color-brand-teacher);
   font-size: 12px;
   font-weight: 700;
 }
@@ -700,7 +693,7 @@ onMounted(fetchData);
   gap: 18px;
   align-items: center;
   padding: 20px 22px;
-  border-radius: 24px;
+  border-radius: 16px;
 }
 
 .material-row-card__main {
@@ -763,7 +756,7 @@ onMounted(fetchData);
   justify-content: space-between;
   gap: 14px;
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 
@@ -774,12 +767,12 @@ onMounted(fetchData);
 }
 
 .material-row-card__action-text strong {
-  color: var(--materials-text);
+  color: var(--color-text-primary);
   font-size: 14px;
 }
 
 .material-row-card__action-text small {
-  color: var(--materials-muted);
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
@@ -787,8 +780,8 @@ onMounted(fetchData);
   min-height: 40px;
   padding-inline: 18px;
   border-radius: 999px;
-  background: var(--materials-primary);
-  border-color: var(--materials-primary);
+  background: var(--color-brand-teacher);
+  border-color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
@@ -833,7 +826,7 @@ onMounted(fetchData);
   color: #0f766e;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .student-materials-hero,
   .student-materials-updates__grid,
   .student-materials-summary-grid,
@@ -864,7 +857,7 @@ onMounted(fetchData);
   .material-row-card,
   .update-card {
     padding: 18px;
-    border-radius: 22px;
+    border-radius: 16px;
   }
 
   .student-materials-hero__meta {

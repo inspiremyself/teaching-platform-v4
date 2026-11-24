@@ -21,8 +21,8 @@
       </div>
     </section>
 
-    <section class="toolbar-card">
-      <div class="toolbar-card__main">
+    <section class="materials-toolbar-card">
+      <div class="materials-toolbar-card__main">
         <div class="toolbar-search">
           <span class="material-symbols-outlined">search</span>
           <el-input v-model="searchQuery" placeholder="搜索标题、文件名、类别或说明" clearable />
@@ -39,7 +39,7 @@
           </el-select>
         </div>
       </div>
-        <div class="toolbar-card__meta">
+        <div class="materials-toolbar-card__meta">
           <span>共 {{ rows.length }} 条资料</span>
           <span class="toolbar-divider"></span>
           <span>当前筛出 {{ filteredRows.length }} 条</span>
@@ -99,11 +99,11 @@
             </div>
           </article>
         </template>
-        <el-empty v-else description="暂无匹配资料" />
+        <AppEmptyState v-else description="暂无匹配资料" />
       </div>
     </section>
 
-    <el-dialog v-model="uploadDialogVisible" width="760px" class="materials-dialog" destroy-on-close>
+    <el-dialog v-model="uploadDialogVisible" width="860px" class="materials-dialog" destroy-on-close>
       <div class="materials-dialog__shell">
         <header class="materials-dialog__header">
           <div>
@@ -175,7 +175,7 @@
       </div>
     </el-dialog>
 
-    <el-dialog v-model="editDialogVisible" width="760px" class="materials-dialog" destroy-on-close>
+    <el-dialog v-model="editDialogVisible" width="860px" class="materials-dialog" destroy-on-close>
       <div class="materials-dialog__shell">
         <header class="materials-dialog__header">
           <div>
@@ -248,6 +248,7 @@ import { deleteMaterial, downloadMaterial, listMaterials, updateMaterial, upload
 import { listSubjects } from '@/api/admin';
 import type { AdminSubject } from '@/types/admin';
 import type { MaterialItem, MaterialVisibility } from '@/types/material';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 const loading = ref(false);
 const uploading = ref(false);
@@ -494,22 +495,28 @@ onMounted(() => {
   row-gap: 10px;
 }
 
-.toolbar-card,
-.materials-console {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+.materials-toolbar-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
 }
 
-.toolbar-card {
+.materials-console {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.materials-toolbar-card {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 18px 20px;
 }
 
-.toolbar-card__main {
+.materials-toolbar-card__main {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -531,17 +538,17 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: #eff6ff;
-  color: #2563eb;
+  border-radius: var(--radius-lg);
+  background: var(--color-info-soft);
+  color: var(--color-brand-student-border);
   flex-shrink: 0;
 }
 
 .toolbar-search :deep(.el-input__wrapper) {
   min-height: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: none;
-  background: #f8fafc;
+  background: var(--color-surface-muted);
 }
 
 .toolbar-filters {
@@ -556,23 +563,23 @@ onMounted(() => {
 
 .toolbar-filters :deep(.el-select__wrapper) {
   min-height: 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: none;
-  background: #f8fafc;
+  background: var(--color-surface-muted);
 }
 
-.toolbar-card__meta {
+.materials-toolbar-card__meta {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #64748b;
-  font-size: 12px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .toolbar-divider {
   width: 1px;
   height: 12px;
-  background: #cbd5e1;
+  background: var(--color-border-strong);
 }
 
 .materials-console {
@@ -615,7 +622,7 @@ onMounted(() => {
   gap: 14px;
   align-items: center;
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
   border: 1px solid #e5edf7;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -633,7 +640,7 @@ onMounted(() => {
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  border-radius: 16px;
 }
 
 .material-row__icon .material-symbols-outlined {
@@ -746,7 +753,7 @@ onMounted(() => {
 }
 
 .materials-dialog :deep(.el-dialog) {
-  border-radius: 28px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -771,7 +778,7 @@ onMounted(() => {
 .materials-dialog__group,
 .materials-dialog__footer {
   border: 1px solid #e2e8f0;
-  border-radius: 22px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
 
@@ -795,7 +802,7 @@ onMounted(() => {
 .materials-dialog__header h2 {
   margin: 8px 0 0;
   color: #0f172a;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
 }
 
@@ -848,7 +855,7 @@ onMounted(() => {
   display: block;
   margin-top: 8px;
   color: #0f172a;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -886,7 +893,7 @@ onMounted(() => {
 .materials-dialog__form :deep(.el-input__wrapper),
 .materials-dialog__form :deep(.el-select__wrapper),
 .materials-dialog__form :deep(.el-textarea__inner) {
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 0 0 1px #e2e8f0 inset;
   background: #f8fafc;
 }
@@ -896,7 +903,7 @@ onMounted(() => {
   min-height: 42px;
   padding: 10px 12px;
   border: 1px dashed #bfdbfe;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #eff6ff;
   color: #334155;
 }
@@ -936,8 +943,8 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 960px) {
-  .toolbar-card__main,
+@media (max-width: 900px) {
+  .materials-toolbar-card__main,
   .materials-console__header {
     flex-direction: column;
     align-items: flex-start;
@@ -954,10 +961,10 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .toolbar-card,
+  .materials-toolbar-card,
   .materials-console {
     padding: 18px;
-    border-radius: 22px;
+    border-radius: var(--radius-xl);
   }
 
   .material-row {

@@ -77,6 +77,8 @@ teaching-platform-v4/
 | 前端统一请求 | `frontend/src/utils/request.ts` | `/api/v1`、响应解包、401 处理 |
 | 前端接口契约 | `frontend/src/api/` | 真实 API 调用入口，不要绕过 |
 | 前端契约类型 | `frontend/src/types/` | 与后端 DTO/枚举同步 |
+| 设计体系分层 | `frontend/src/assets/tokens.css`、`frontend/src/assets/layout.css`、`frontend/src/components/ui/` | L0 token → L1 骨架类 → L2 共享组件 → L3 页面，单向依赖 |
+| 设计门禁与基线 | `frontend/src/assets/__tests__/designTokens.spec.ts`、`designTokenBaseline.json` | 8 条断言约束 token/断点/图标/尺寸；基线只降不升 |
 | 教师端页面 | `frontend/src/views/teacher/` | 管理型、高密度；考试页在 `exams/` |
 | 学生端页面 | `frontend/src/views/student/` | 任务型；考试页在 `exams/` |
 | 校管端页面 | `frontend/src/views/admin/` | 学校、教师、学科、班级、学生、审计日志 |
@@ -147,6 +149,7 @@ teaching-platform-v4/
 - 若需要并行跑多套前后端实例，后端优先改 `SERVER_PORT`，前端通过 `VITE_API_TARGET` 定向代理到该后端，不要硬绑定唯一的 `8080/5173` 组合。
 - 统一响应仍是 `code`、`message`、`data`、`timestamp`；后端分页 `PagedResult<T>`，前端在 `api/` 层映射为 `{ list, total }`。细则见 `backend-code-style.mdc` §3 / §5 与 `frontend-api-contract.mdc` §4。
 - 前端统一通过 `frontend/src/utils/request.ts` 访问后端，URL 唯一来源与解包见 `frontend-api-contract.mdc`；页面与组件纪律见 `frontend-code-style.mdc` §3。
+- 前端设计体系四层单向依赖 `assets/tokens.css → assets/layout.css → components/ui/ → views/**`；`npm test` 含 `src/assets/__tests__/designTokens.spec.ts`，历史遗留量只写入 `designTokenBaseline.json` 且只降不升（`DESIGN_TOKEN_BASELINE_WRITE=1` 重测）。
 - 前端页面与原型对齐时，先保信息架构/任务路径，再追求像素复刻。
 - 教师端优先高密度管理台模式；学生端优先任务导向模式；校管端优先组织与治理视角。不要把三种信息节奏混成同一套模板。
 - 后端 `CurrentUser + service` 与 `@PreAuthorize` 写法见 `backend-code-style.mdc` §3；共享层依赖方向见 `backend-package-layout.mdc` §4。

@@ -371,7 +371,7 @@ onMounted(async () => {
 }
 
 .lab-context-card strong {
-  font-size: 15px;
+  font-size: 16px;
   color: #0f172a;
 }
 
@@ -389,7 +389,7 @@ onMounted(async () => {
 .question-card {
   padding: 14px 16px;
   border: 1px solid #dbe5ef;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
 }
 
@@ -414,7 +414,7 @@ onMounted(async () => {
 .question-card__prompt {
   margin: 8px 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   color: #334155;
   font-size: 13px;
@@ -426,7 +426,7 @@ onMounted(async () => {
   min-height: 40px;
   padding: 10px 12px;
   border: 1px solid #dbe4f0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   color: #0f172a;
   font-size: 13px;
@@ -476,7 +476,7 @@ onMounted(async () => {
 
 .grading-summary h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   color: #0f172a;
 }
 
@@ -501,7 +501,7 @@ onMounted(async () => {
   color: #64748b;
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1280px) {
   .question-card__grade {
     grid-template-columns: 1fr;
   }

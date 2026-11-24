@@ -115,7 +115,7 @@
       </el-card>
     </section>
 
-    <el-dialog v-model="previewVisible" title="课件小节" width="720px">
+    <el-dialog v-model="previewVisible" title="课件小节" width="640px">
       <el-alert
         v-if="teacherContent.visibility.value && !teacherContent.visibility.value.visible"
         title="该课件当前不可见，请联系平台管理员授权"

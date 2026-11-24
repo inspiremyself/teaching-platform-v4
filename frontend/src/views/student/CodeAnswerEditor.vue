@@ -130,7 +130,7 @@ const footerStatus = computed(() => {
   return `第 ${currentLine.value} 行 · Tab 插入 2 个空格`;
 });
 
-const lineNumberStyle = computed(() => ({ transform: `translateY(-${scrollTop.value}px)` }));
+const lineNumberStyle = computed(() => ({ transform: `translateY(-${scrollTop.value}px)` })); // 动态值：行号列随代码区滚动偏移
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLTextAreaElement;
@@ -188,7 +188,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 .code-editor-shell {
   overflow: hidden;
   border: 1px solid #1e293b;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #0f172a;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;

@@ -1,10 +1,10 @@
 <template>
   <div class="lab-detail-page" v-loading="loading">
-    <div class="page-header">
-      <div class="page-header__main">
-        <h2>{{ detail?.title || '实验详情' }}</h2>
-        <p>{{ detail?.description || '先查看实验要求，再进入对应题目作答。' }}</p>
-        <div v-if="detail" class="page-header__meta">
+    <AppPageHeader>
+      <template #title><h2>{{ detail?.title || '实验详情' }}</h2></template>
+      <template #description><p>{{ detail?.description || '先查看实验要求，再进入对应题目作答。' }}</p></template>
+      <template #meta>
+        <template v-if="detail">
           <span class="header-meta-chip">{{ submissionLabel(detail.submissionStatus) }}</span>
           <span class="header-meta-chip">{{ experimentTypeLabel(detail.experimentType) }}</span>
           <span class="header-meta-chip">进度：{{ answeredCount }}/{{ labItems.length }}</span>
@@ -19,13 +19,13 @@
           <span class="header-meta-chip" :class="detail.summaryRequired ? 'header-meta-chip--warning' : ''">
             {{ detail.summaryRequired ? '实验小结必填' : '实验小结选填' }}
           </span>
-        </div>
-      </div>
-      <div class="page-header__actions">
+        </template>
+      </template>
+      <template #actions>
         <el-button @click="router.push('/student/labs')">返回实验列表</el-button>
         <el-button v-if="detail" type="primary" @click="goSteps()">{{ primaryActionLabel }}</el-button>
-      </div>
-    </div>
+      </template>
+    </AppPageHeader>
 
     <el-empty v-if="!loading && !detail" description="未获取到实验详情" />
 
@@ -109,6 +109,7 @@ import { ElMessage } from 'element-plus';
 import { downloadMaterial } from '@/api/materials';
 import { getStudentLabDetail } from '@/api/labs';
 import { LAB_EXPERIMENT_TYPE_LABELS, type LabQuestionType, type LabReportStatus, type StudentLabDetail } from '@/types/lab';
+import AppPageHeader from '@/components/ui/AppPageHeader.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -235,11 +236,6 @@ onUnmounted(() => {
 
 <style scoped>
 .lab-detail-page {
-  --detail-primary: #1e40af;
-  --detail-primary-soft: #eff6ff;
-  --detail-border: #dbe5ef;
-  --detail-text: #0f172a;
-  --detail-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -269,7 +265,7 @@ onUnmounted(() => {
 }
 .feedback-card,
 .catalog-card {
-  border: 1px solid var(--detail-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
@@ -294,21 +290,21 @@ onUnmounted(() => {
 }
 .lab-info-block {
   padding: 12px 14px;
-  border: 1px solid var(--detail-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 12px;
   background: #f8fafc;
 }
 .lab-info-block__label,
 .lab-info-section__title {
   margin-bottom: 6px;
-  color: var(--detail-primary);
+  color: var(--color-action-primary);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 .lab-info-block__value {
-  color: var(--detail-text);
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 .lab-info-section {
@@ -316,7 +312,7 @@ onUnmounted(() => {
 }
 .lab-info-section p {
   margin: 0;
-  color: var(--detail-muted);
+  color: var(--color-text-muted);
   line-height: 1.7;
   white-space: pre-wrap;
 }
@@ -361,8 +357,8 @@ onUnmounted(() => {
   place-items: center;
   border-radius: 12px;
   background: rgba(30, 64, 175, 0.08);
-  color: var(--detail-primary);
-  font-size: 15px;
+  color: var(--color-action-primary);
+  font-size: 16px;
   font-weight: 700;
 }
 .catalog-item__main {
@@ -371,8 +367,8 @@ onUnmounted(() => {
   gap: 2px;
 }
 .catalog-item__title {
-  color: var(--detail-text);
-  font-size: 15px;
+  color: var(--color-text-primary);
+  font-size: 16px;
   font-weight: 700;
 }
 .catalog-item__meta {
@@ -384,7 +380,7 @@ onUnmounted(() => {
 }
 .catalog-item__link {
   align-self: center;
-  color: var(--detail-primary);
+  color: var(--color-action-primary);
   font-size: 13px;
   font-weight: 700;
 }

@@ -1,6 +1,5 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { DataLine, List, Opportunity, Warning } from '@element-plus/icons-vue';
 import { getTeacherDashboard } from '@/api/teacher';
 import type { InjectionKey } from 'vue';
 
@@ -39,7 +38,7 @@ const summaryCards = ref<SummaryCard[]>([]);
 const trend = ref<TrendItem[]>([]);
 const recentTasks = ref<RecentTask[]>([]);
 const quickLinks = ref<QuickLink[]>([]);
-const summaryIcons = [Opportunity, Warning, DataLine, List];
+const summaryIcons = ['lightbulb', 'warning', 'monitoring', 'list'];
 const summaryCardPills = ['总览', '提醒', '进度', '入口'];
 
 const textLooksChinese = (text: string) => /[\u4e00-\u9fff]/.test(text);
@@ -320,7 +319,7 @@ const localizedActorText = (actor: string) => translateDashboardText(actor);
 
 onMounted(loadDashboard);
 
-  return { computed, onMounted, ref, useRouter, DataLine, List, Opportunity, Warning, getTeacherDashboard, router, loading, loaded, loadError, summaryCards, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, textLooksChinese, normalizeEnglishText, translateDashboardText, localizedSummaryCards, trendTotalCount, trendAverageValue, trendAverageText, trendPulseShortText, peakTrendItem, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, workbenchSubline, heroStatusText, trendInsightText, trendPulseTitle, trendPulseDescription, trendFocusTitle, trendFocusDescription, quickLinkSummary, quickLinkLoadText, riskAlertSummary, riskAlertDetail, actorCoverageText, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText };
+  return { computed, onMounted, ref, useRouter, getTeacherDashboard, router, loading, loaded, loadError, summaryCards, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, textLooksChinese, normalizeEnglishText, translateDashboardText, localizedSummaryCards, trendTotalCount, trendAverageValue, trendAverageText, trendPulseShortText, peakTrendItem, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, workbenchSubline, heroStatusText, trendInsightText, trendPulseTitle, trendPulseDescription, trendFocusTitle, trendFocusDescription, quickLinkSummary, quickLinkLoadText, riskAlertSummary, riskAlertDetail, actorCoverageText, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText };
 }
 
 export type DashboardState = ReturnType<typeof useDashboard>;

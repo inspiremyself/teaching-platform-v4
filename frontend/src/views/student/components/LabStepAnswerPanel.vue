@@ -44,7 +44,7 @@
                 <span>已保存进度</span>
                 <span>{{ progressPercent }}%</span>
               </div>
-              <div class="progress-track"><span class="progress-fill" :style="{ width: `${progressPercent}%` }"></span></div>
+              <div class="progress-track"><span class="progress-fill" :style="{ width: `${progressPercent}%` }"></span></div><!-- 动态值：按分步作答进度计算宽度 -->
               <p>{{ progressText }}</p>
             </div>
           </article>
@@ -256,11 +256,6 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 
 <style scoped>
 .lab-steps-page {
-  --steps-primary: #1e40af;
-  --steps-primary-soft: #eff6ff;
-  --steps-border: #dbe5ef;
-  --steps-text: #0f172a;
-  --steps-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -329,7 +324,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .question-card,
 .summary-card,
 .sticky-footer {
-  border: 1px solid var(--steps-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
@@ -349,12 +344,12 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .workflow-item__eyebrow,
 .question-card__eyebrow,
 .summary-card__eyebrow {
-  color: var(--steps-primary);
+  color: var(--color-action-primary);
 }
 .status-card strong,
 .workflow-item strong,
 .question-card__score {
-  color: var(--steps-text);
+  color: var(--color-text-primary);
 }
 .status-card__meta {
   display: flex;
@@ -415,7 +410,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   gap: 10px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--steps-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 12px;
   background: #f8fafc;
   text-align: left;
@@ -426,7 +421,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   height: 32px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #e2e8f0;
   color: #475569;
   font-weight: 700;
@@ -443,14 +438,14 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   display: block;
   margin-top: 4px;
   font-size: 12px;
-  color: var(--steps-muted);
+  color: var(--color-text-muted);
 }
 .workflow-item--active {
   border-color: #93c5fd;
-  background: var(--steps-primary-soft);
+  background: var(--color-brand-student-soft);
 }
 .workflow-item--active .workflow-item__badge {
-  background: var(--steps-primary);
+  background: var(--color-action-primary);
   color: #fff;
 }
 .workflow-item--done .workflow-item__badge {
@@ -493,19 +488,19 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   min-width: 0;
 }
 .question-focus-strip__eyebrow {
-  color: var(--steps-primary);
+  color: var(--color-action-primary);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .question-focus-strip__main strong {
-  color: var(--steps-text);
+  color: var(--color-text-primary);
   font-size: 16px;
 }
 .question-focus-strip__main small,
 .question-focus-strip__status {
-  color: var(--steps-muted);
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 .question-focus-strip__status {
@@ -518,8 +513,8 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
-  background: var(--steps-primary-soft);
-  color: var(--steps-primary);
+  background: var(--color-brand-student-soft);
+  color: var(--color-action-primary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -550,7 +545,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   gap: 14px;
   align-items: flex-start;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--steps-border);
+  border-bottom: 1px solid var(--color-border-soft);
 }
 .question-card__header h3 {
   font-size: 22px;
@@ -558,7 +553,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .question-card__score {
   padding: 6px 10px;
   border-radius: 12px;
-  background: var(--steps-primary-soft);
+  background: var(--color-brand-student-soft);
   font-size: 14px;
   font-weight: 700;
 }
@@ -572,7 +567,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .feedback-card,
 .answer-card {
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 .question-card__prompt--embedded {
@@ -580,13 +575,13 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .pane-title {
   margin-bottom: 8px;
-  color: var(--steps-text);
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 .prompt-text {
   white-space: pre-wrap;
   line-height: 1.65;
-  color: var(--steps-text);
+  color: var(--color-text-primary);
 }
 .answer-card__header {
   display: flex;
@@ -624,7 +619,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .summary-required-tip {
   margin-bottom: 12px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 16px;
   font-size: 12px;
 }
 .code-callout {
@@ -665,7 +660,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   gap: 10px;
   justify-content: flex-end;
 }
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .lab-steps-page {
     height: auto;
     overflow: visible;

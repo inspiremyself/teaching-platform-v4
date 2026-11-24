@@ -24,11 +24,11 @@
 
     <template v-else>
       <div v-if="loadError" class="state-card">
-        <el-result icon="error" title="成绩总览加载失败" :sub-title="loadError">
-          <template #extra>
+        <AppEmptyState tone="error" title="成绩总览加载失败" :description="loadError">
+          <template #actions>
             <el-button type="primary" @click="loadScores">重新加载</el-button>
           </template>
-        </el-result>
+        </AppEmptyState>
       </div>
 
       <template v-else>
@@ -70,7 +70,7 @@
           <div class="metric-stack metric-stack--flat">
             <article v-for="(card, index) in secondarySummaryCards" :key="card.key" class="metric-card metric-card--compact">
               <div :class="['metric-card__icon', `metric-card__icon--${index}`]">
-                <el-icon :size="18"><component :is="secondaryMetricIcon(index)" /></el-icon>
+                <span class="material-symbols-outlined app-icon--sm">{{ secondaryMetricIcon(index) }}</span>
               </div>
               <div>
                 <div class="metric-card__label">{{ card.title }}</div>
@@ -110,7 +110,7 @@
                   <div class="group-section__header">
                     <div class="group-section__title-wrap">
                       <div :class="['group-section__icon', `group-section__icon--${section.businessType.toLowerCase()}`]">
-                        <el-icon :size="18"><component :is="section.icon" /></el-icon>
+                        <span class="material-symbols-outlined app-icon--sm">{{ section.icon }}</span>
                       </div>
                       <div>
                         <h3>{{ section.label }}</h3>
@@ -135,8 +135,8 @@
                           <span class="score-pill score-pill--exam">{{ formatScore(record.score) }}</span>
                         </div>
                         <div class="exam-record-card__footer">
-                          <span class="exam-chip">{{ typeLabel(record.businessType) }}</span>
-                          <span class="exam-chip exam-chip--success">已评分</span>
+                          <AppStatusTag tone="warning" :label="typeLabel(record.businessType)" size="small" />
+                          <AppStatusTag tone="success" label="已评分" size="small" />
                         </div>
                       </article>
                     </div>
@@ -157,7 +157,7 @@
                         <div class="record-table__cell">{{ formatDate(record.gradedAt) }}</div>
                         <div class="record-table__cell record-table__cell--score">{{ formatScore(record.score) }}</div>
                         <div class="record-table__cell">
-                          <span class="status-chip">已评分</span>
+                          <AppStatusTag tone="success" label="已评分" size="small" />
                         </div>
                       </div>
                     </div>
@@ -209,7 +209,7 @@
               <div v-if="feedbackNotes.length" class="feedback-panel">
                 <div class="feedback-hero">
                   <div class="feedback-hero__avatar">
-                    <el-icon :size="20"><ChatLineRound /></el-icon>
+                    <span class="material-symbols-outlined app-icon--md">chat</span>
                   </div>
                   <div>
                     <div class="feedback-hero__label">重点反馈</div>
@@ -256,7 +256,9 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { ScoresKey } from '@/composables/useScores';
-const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, recentRecords, feedbackNotes, primarySummaryCard, secondarySummaryCards, completionRateNumeric, completionRateDisplay, completedItemsDisplay, strongestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel, formatScore, formatDate } = inject(ScoresKey)!;
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, feedbackNotes, primarySummaryCard, secondarySummaryCards, completionRateNumeric, completionRateDisplay, completedItemsDisplay, strongestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel, formatScore, formatDate } = inject(ScoresKey)!;
 </script>
 
 <style scoped>
@@ -293,7 +295,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   align-items: flex-start;
   gap: 20px;
   padding: 30px 32px;
-  border-radius: 32px;
+  border-radius: 16px;
   background:
     radial-gradient(circle at top right, rgba(45, 212, 191, 0.16), transparent 30%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 253, 250, 0.92));
@@ -336,7 +338,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   overflow: hidden;
   min-height: 320px;
   padding: 30px;
-  border-radius: 32px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #0d9488, #14b8a6 58%, #5eead4);
   color: #fff;
   box-shadow: 0 24px 54px rgba(13, 148, 136, 0.28);
@@ -394,7 +396,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(15, 23, 42, 0.14);
   color: rgba(255, 255, 255, 0.88);
   max-width: 240px;
@@ -407,7 +409,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .overall-stat {
   padding: 16px 18px;
-  border-radius: 22px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
 }
@@ -440,7 +442,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   display: flex;
   gap: 16px;
   padding: 22px;
-  border-radius: 28px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(193, 198, 214, 0.42);
   box-shadow: 0 18px 40px rgba(25, 28, 34, 0.06);
@@ -522,10 +524,9 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   flex-direction: column;
   gap: 24px;
 }
-.scores-card,
-.state-card {
+.scores-card {
   border: 1px solid rgba(193, 198, 214, 0.45);
-  border-radius: 32px;
+  border-radius: 16px;
   box-shadow: 0 18px 40px rgba(25, 28, 34, 0.06);
 }
 .card-header-row {
@@ -560,7 +561,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .group-section {
   padding: 20px;
-  border-radius: 28px;
+  border-radius: 16px;
   background: #fbfdff;
   border: 1px solid #e2e8f0;
 }
@@ -636,7 +637,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .record-table {
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
 }
 .record-table__head,
@@ -678,7 +679,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .exam-record-card {
   padding: 18px;
-  border-radius: 24px;
+  border-radius: 16px;
   border: 1px solid #fed7aa;
   background: linear-gradient(180deg, #fff, #fff7ed);
 }
@@ -718,14 +719,6 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   gap: 8px;
   margin-top: 18px;
 }
-.exam-chip {
-  background: #ffedd5;
-  color: #c2410c;
-}
-.exam-chip--success {
-  background: #dcfce7;
-  color: #166534;
-}
 .recent-record-list,
 .feedback-list,
 .action-list {
@@ -739,7 +732,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   gap: 14px;
   align-items: center;
   padding: 18px 20px;
-  border-radius: 24px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 .recent-record-item__type {
@@ -765,7 +758,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .recent-record-item__score {
   flex-shrink: 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   color: #0f766e;
 }
@@ -779,7 +772,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   gap: 14px;
   align-items: flex-start;
   padding: 18px;
-  border-radius: 24px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #f0fdfa, #ecfeff);
 }
 .feedback-hero__avatar {
@@ -815,7 +808,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 .feedback-item,
 .action-item {
   padding: 16px 18px;
-  border-radius: 20px;
+  border-radius: 16px;
 }
 .feedback-item strong,
 .action-item strong {
@@ -834,7 +827,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 .action-item--warning {
   background: #fff7ed;
 }
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .overview-grid,
   .workspace-grid {
     grid-template-columns: 1fr;
@@ -844,7 +837,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .scores-hero {
     flex-direction: column;
   }
@@ -882,11 +875,11 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   .metric-card,
   .group-section {
     padding: 20px;
-    border-radius: 24px;
+    border-radius: 16px;
   }
 
   .scores-hero__title {
-    font-size: 30px;
+    font-size: 28px;
   }
 
   .overall-card__value {
@@ -921,7 +914,6 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 .overall-card,
 .metric-card,
 .scores-card,
-.state-card,
 .group-section,
 .recent-record-item,
 .feedback-item,
@@ -950,7 +942,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   align-items: flex-start;
 }
 .overall-card__value {
-  font-size: 42px;
+  font-size: 44px;
 }
 .overall-card__desc {
   margin-top: 8px;
@@ -965,7 +957,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .overall-stat {
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 16px;
 }
 .overall-card h2 {
   margin: 6px 0 0;
@@ -973,15 +965,15 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .overall-card__badge {
   padding: 5px 8px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .metric-card__value {
-  font-size: 24px;
+  font-size: 22px;
 }
 .metric-card__desc {
   line-height: 1.55;
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .overall-card__stats--compact {
     grid-template-columns: 1fr;
   }
@@ -1024,7 +1016,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   gap: 6px;
 }
 .overall-card--dense .overall-card__value {
-  font-size: 34px;
+  font-size: 28px;
   color: #191c22;
 }
 .overall-card--dense h2 {
@@ -1079,7 +1071,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 .metric-card--compact .metric-card__desc {
   margin-top: 4px;
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .overview-grid--dense,
   .overall-card--dense .overall-card__stats--dense,
   .metric-stack--grid {
@@ -1122,7 +1114,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
   font-weight: 700;
 }
 .overall-card__flat-score strong {
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
   font-weight: 800;
   color: #191c22;
@@ -1152,7 +1144,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 .metric-card__icon {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 .metric-card__label {
   font-size: 11px;
@@ -1163,7 +1155,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .metric-card__desc {
   margin-top: 2px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.3;
 }
 .metric-card--progress {
@@ -1171,23 +1163,22 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 }
 .metric-card__pill {
   padding: 4px 8px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .workspace-main,
 .workspace-side {
   gap: 10px;
 }
-.scores-card,
-.state-card {
+.scores-card {
   border-radius: 12px;
 }
 .card-header-row p {
   margin: 4px 0 0;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.4;
 }
 .section-title {
-  font-size: 15px;
+  font-size: 16px;
 }
 .header-meta {
   font-size: 11px;
@@ -1311,7 +1302,7 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 .metric-stack--flat .metric-card--progress {
   grid-column: 1 / -1;
 }
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .overview-grid--flat,
   .overall-card__flat-main,
   .overall-card__flat-stats,

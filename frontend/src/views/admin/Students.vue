@@ -19,20 +19,20 @@
       </div>
     </section>
 
-    <section class="toolbar-card">
+    <AppToolbarCard>
       <div class="toolbar-row">
-        <el-input v-model="searchQuery" placeholder="按账号、姓名或班级搜索" clearable style="max-width: 280px" />
-        <el-select v-model="selectedClassId" clearable placeholder="全部班级" style="width: 200px" @change="fetchStudents">
+        <el-input v-model="searchQuery" placeholder="按账号、姓名或班级搜索" clearable class="app-search-field" />
+        <el-select v-model="selectedClassId" clearable placeholder="全部班级" class="app-filter-field--md" @change="fetchStudents">
           <el-option v-for="item in classes" :key="item.id" :label="`${item.name} (${item.code})`" :value="item.id" />
         </el-select>
-        <el-select v-model="statusFilter" clearable placeholder="全部状态" style="width: 140px">
+        <el-select v-model="statusFilter" clearable placeholder="全部状态" class="app-filter-field">
           <el-option label="启用" value="ACTIVE" />
           <el-option label="停用" value="DISABLED" />
         </el-select>
       </div>
-    </section>
+    </AppToolbarCard>
 
-    <section class="table-card">
+    <AppTableCard>
       <el-table :data="filteredRows" v-loading="loading" empty-text="暂无学生数据">
         <el-table-column label="学生" min-width="240">
           <template #default="{ row }">
@@ -67,9 +67,9 @@
           </template>
         </el-table-column>
       </el-table>
-    </section>
+    </AppTableCard>
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑学生' : '新增学生'" width="520px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑学生' : '新增学生'" width="480px" destroy-on-close>
       <el-form label-position="top">
         <el-form-item v-if="!editingId" label="账号" for="admin-student-username">
           <el-input id="admin-student-username" v-model="form.username" placeholder="例如：20260011" />
@@ -81,7 +81,7 @@
           <el-input id="admin-student-password" v-model="form.password" show-password placeholder="默认可用 123456" />
         </el-form-item>
         <el-form-item label="所属班级" for="admin-student-class-id">
-          <el-select id="admin-student-class-id" v-model="form.classId" placeholder="请选择班级" style="width: 100%">
+          <el-select id="admin-student-class-id" v-model="form.classId" placeholder="请选择班级" class="app-control-full">
             <el-option v-for="item in classes" :key="item.id" :label="`${item.name} (${item.code})`" :value="item.id" />
           </el-select>
         </el-form-item>
@@ -92,7 +92,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="resetDialogVisible" title="重置密码" width="420px" destroy-on-close>
+    <el-dialog v-model="resetDialogVisible" title="重置密码" width="480px" destroy-on-close>
       <el-alert
         v-if="resetTarget"
         type="error"
@@ -105,7 +105,7 @@
           <span class="reset-confirm-username">账号 {{ resetTarget.username }}</span>
         </div>
       </el-alert>
-      <el-form label-position="top" style="margin-top: 12px">
+      <el-form label-position="top" class="app-mt-3">
         <el-form-item label="新密码" for="admin-student-reset-password" required>
           <el-input
             id="admin-student-reset-password"
@@ -131,7 +131,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="importDialogVisible" title="批量导入学生" width="720px" destroy-on-close>
+    <el-dialog v-model="importDialogVisible" title="批量导入学生" width="640px" destroy-on-close>
       <el-alert
         type="info"
         :closable="false"
@@ -177,7 +177,7 @@
 
       <section v-if="importResult" class="import-result">
         <strong>成功 {{ importResult.successCount }} 条，失败 {{ importResult.failureCount }} 条</strong>
-        <el-table :data="importResult.failures" size="small" empty-text="无失败记录" style="margin-top: 8px">
+        <el-table :data="importResult.failures" size="small" empty-text="无失败记录" class="app-mt-2">
           <el-table-column prop="row" label="行号" width="100" />
           <el-table-column prop="reason" label="失败原因" />
         </el-table>
@@ -206,6 +206,8 @@ import {
 } from '@/api/admin';
 import type { AdminClass, AdminStudent, ImportStudentsResult } from '@/types/admin';
 import type { ImportStudentRow, StudentStatus } from '@/types/student';
+import AppTableCard from '@/components/ui/AppTableCard.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 import {
   downloadStudentImportTemplate,
   parseStudentExcelFile,
@@ -510,45 +512,6 @@ onMounted(async () => {
   color: var(--el-text-color-secondary);
 }
 
-.toolbar-card,
-.table-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.toolbar-card {
-  padding: 12px 14px;
-}
-
-.toolbar-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.table-card {
-  padding: 0 0 8px;
-  overflow: hidden;
-}
-
-.identity-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.identity-cell strong {
-  color: #0f172a;
-  font-size: 13px;
-}
-
-.identity-cell span {
-  color: #64748b;
-  font-size: 11px;
-}
-
 .import-section {
   margin-top: 16px;
 }
@@ -619,7 +582,7 @@ onMounted(async () => {
 .import-result {
   margin-top: 16px;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }

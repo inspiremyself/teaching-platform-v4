@@ -127,7 +127,7 @@
      </section>
 
     <TaskEditorDialog v-model="createDialogVisible" :title="editingId ? '编辑实验' : '新建实验'">
-      <el-form label-width="92px">
+      <el-form label-position="top">
         <el-form-item v-if="!editingId" label="创建方式">
           <el-radio-group v-model="createMode">
             <el-radio-button value="blank">空白创建</el-radio-button>
@@ -137,12 +137,12 @@
 
         <template v-if="createMode === 'copy' && !editingId">
           <el-form-item label="源实验" required>
-            <el-select v-model="sourceLabId" style="width: 100%" placeholder="请选择源实验" @change="handleSourceLabChange">
+            <el-select v-model="sourceLabId" class="app-control-full" placeholder="请选择源实验" @change="handleSourceLabChange">
               <el-option v-for="item in rows" :key="item.id" :label="sourceLabLabel(item)" :value="item.id" />
             </el-select>
           </el-form-item>
           <el-form-item label="目标班级" required>
-            <el-select v-model="createForm.classId" style="width: 100%" placeholder="请选择目标班级">
+            <el-select v-model="createForm.classId" class="app-control-full" placeholder="请选择目标班级">
               <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="item.id" />
             </el-select>
           </el-form-item>
@@ -150,7 +150,7 @@
             <el-input v-model="createForm.title" maxlength="30" show-word-limit />
           </el-form-item>
           <el-form-item label="发布状态">
-            <el-select v-model="createForm.status" style="width: 100%">
+            <el-select v-model="createForm.status" class="app-control-full">
               <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
               <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" :disabled="(sourceLab?.stepCount ?? 0) === 0" />
               <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
@@ -176,18 +176,18 @@
           <el-input v-model="createForm.title" maxlength="100" show-word-limit />
         </el-form-item>
         <el-form-item label="所属班级" required>
-          <el-select v-model="createForm.classId" style="width: 100%" placeholder="请选择班级">
+          <el-select v-model="createForm.classId" class="app-control-full" placeholder="请选择班级">
             <el-option v-for="item in classOptions" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="学科" :required="!editingId">
-          <el-select v-model="createForm.subjectId" style="width: 100%" :placeholder="editingId ? '保持原值' : '请选择学科'">
+          <el-select v-model="createForm.subjectId" class="app-control-full" :placeholder="editingId ? '保持原值' : '请选择学科'">
             <el-option v-if="editingId" label="保持原值" :value="0" />
             <el-option v-for="item in subjectOptions" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="实验类型" required>
-          <el-select v-model="createForm.experimentType" style="width: 100%">
+          <el-select v-model="createForm.experimentType" class="app-control-full">
             <el-option v-for="item in experimentTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -217,7 +217,7 @@
           </div>
         </el-form-item>
         <el-form-item label="发布状态">
-          <el-select v-model="createForm.status" style="width: 100%">
+          <el-select v-model="createForm.status" class="app-control-full">
             <el-option label="草稿" :value="ACTIVITY_STATUS.DRAFT" />
             <el-option label="已发布" :value="ACTIVITY_STATUS.PUBLISHED" />
             <el-option label="已关闭" :value="ACTIVITY_STATUS.CLOSED" />
@@ -238,7 +238,7 @@
             value-format="YYYY-MM-DDTHH:mm:ssZ"
             clearable
             placeholder="留空表示不限开始时间"
-            style="width: 100%"
+            class="app-control-full"
           />
         </el-form-item>
         <el-form-item label="结束时间">
@@ -248,11 +248,11 @@
             value-format="YYYY-MM-DDTHH:mm:ssZ"
             clearable
             placeholder="留空表示不限截止时间"
-            style="width: 100%"
+            class="app-control-full"
           />
         </el-form-item>
         <el-form-item label="成绩可见">
-          <el-select v-model="createForm.scoreVisibilityMode" style="width: 100%">
+          <el-select v-model="createForm.scoreVisibilityMode" class="app-control-full">
             <el-option label="即时出分" :value="SCORE_VISIBILITY_MODE.IMMEDIATE" />
             <el-option label="教师确认后可见" :value="SCORE_VISIBILITY_MODE.AFTER_TEACHER_CONFIRM" />
             <el-option label="截止后可见" :value="SCORE_VISIBILITY_MODE.AFTER_DEADLINE" />
@@ -299,7 +299,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   gap: 12px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px dashed var(--labs-border);
+  border: 1px dashed var(--color-border-soft);
   border-radius: 12px;
   background: #f8fafc;
 }
@@ -311,7 +311,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   gap: 6px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px dashed var(--labs-border);
+  border: 1px dashed var(--color-border-soft);
   border-radius: 12px;
   background: #f8fafc;
 }
@@ -331,12 +331,12 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 }
 
 .lab-guidance-form__meta strong {
-  color: var(--labs-text);
+  color: var(--color-text-primary);
   font-size: 13px;
 }
 
 .lab-guidance-form__meta span {
-  color: var(--labs-muted);
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 
@@ -346,33 +346,25 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   gap: 10px;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1024px) {
   .lab-guidance-form {
     flex-direction: column;
     align-items: flex-start;
   }
 }
 .labs-page {
-  --labs-primary: #0f766e;
-  --labs-primary-soft: #ecfeff;
-  --labs-accent: #0369a1;
-  --labs-surface: #ffffff;
-  --labs-border: #dbe5ef;
-  --labs-text: #0f172a;
-  --labs-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .labs-header,
-.toolbar-card,
 .labs-console,
 .side-card,
 .summary-card {
-  border: 1px solid var(--labs-border);
-  border-radius: 14px;
-  background: var(--labs-surface);
+  border: 1px solid var(--color-border-soft);
+  border-radius: 16px;
+  background: var(--color-surface);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
@@ -390,7 +382,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .labs-header__eyebrow {
   margin-bottom: 2px;
-  color: var(--labs-primary);
+  color: var(--color-brand-teacher);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -399,15 +391,15 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .labs-header h1 {
   margin: 0;
-  color: var(--labs-text);
+  color: var(--color-text-primary);
   font-family: 'DM Sans', sans-serif;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .labs-header p {
   margin: 2px 0 0;
   max-width: 520px;
-  color: var(--labs-muted);
+  color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.35;
 }
@@ -435,18 +427,18 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   border-radius: 999px;
   background: #f8fafc;
   color: #475569;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .labs-header__meta-item strong {
   margin-right: 4px;
-  color: var(--labs-text);
+  color: var(--color-text-primary);
 }
 
 .labs-header__meta-item--accent {
-  background: var(--labs-primary-soft);
-  color: var(--labs-primary);
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
 }
 
 .labs-console__header h2 {
@@ -456,7 +448,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 .labs-console__header p,
 .side-card p {
   margin: 2px 0 0;
-  color: var(--labs-muted);
+  color: var(--color-text-muted);
   font-size: 11px;
   line-height: 1.35;
 }
@@ -493,8 +485,8 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .summary-card--light .summary-card__icon,
 .summary-card--accent .summary-chip {
-  background: var(--labs-primary-soft);
-  color: var(--labs-primary);
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
 }
 
 .summary-card__icon--amber {
@@ -503,8 +495,8 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 }
 
 .summary-card__icon--teal {
-  background: var(--labs-primary-soft) !important;
-  color: var(--labs-primary) !important;
+  background: var(--color-brand-teacher-soft) !important;
+  color: var(--color-brand-teacher) !important;
 }
 
 .summary-card__icon--violet {
@@ -514,7 +506,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .summary-card__label {
   margin-top: 6px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -529,13 +521,13 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 }
 
 .summary-card__value--small {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .summary-card__desc {
   margin-top: 2px;
   color: #64748b;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.3;
 }
 
@@ -548,10 +540,6 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   justify-content: space-between;
   gap: 10px;
   align-items: flex-start;
-}
-
-.toolbar-card {
-  padding: 10px 12px;
 }
 
 .toolbar-card__main {
@@ -601,7 +589,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 .toolbar-divider {
   width: 1px;
   height: 14px;
-  background: var(--labs-border);
+  background: var(--color-border-soft);
 }
 
 .labs-console {
@@ -618,7 +606,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .labs-console__header h2 {
   margin: 0;
-  color: var(--labs-text);
+  color: var(--color-text-primary);
   font-size: 16px;
 }
 
@@ -638,7 +626,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   gap: 10px;
   align-items: center;
   padding: 10px 12px;
-  border: 1px solid var(--labs-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 12px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
@@ -671,7 +659,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   border-radius: 999px;
   background: #eff6ff;
   color: #1d4ed8;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -687,13 +675,13 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 
 .lab-row h3 {
   margin: 0;
-  color: var(--labs-text);
+  color: var(--color-text-primary);
   font-size: 18px;
 }
 
 .lab-row p {
   margin: 3px 0 0;
-  color: var(--labs-muted);
+  color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.35;
 }
@@ -723,7 +711,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
 }
 
 .lab-row__type strong {
-  color: var(--labs-text);
+  color: var(--color-text-primary);
   font-size: 16px;
 }
 
@@ -790,14 +778,14 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--labs-text);
+  color: var(--color-text-primary);
 }
 
 .side-card__header .material-symbols-outlined {
-  color: var(--labs-primary);
+  color: var(--color-brand-teacher);
 }
 
-@media (max-width: 1440px) {
+@media (max-width: 1280px) {
   .labs-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -812,7 +800,7 @@ const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' 
   }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1024px) {
   .labs-summary-grid,
   .lab-row {
     grid-template-columns: 1fr;

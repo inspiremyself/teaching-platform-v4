@@ -1,15 +1,15 @@
 :root {
-  --wb-primary: #0f766e;
-  --wb-primary-soft: #ecfdf5;
-  --wb-accent: #14b8a6;
-  --wb-text: #0f172a;
-  --wb-muted: #64748b;
-  --wb-border: #dbe4f0;
-  --wb-surface: #f8fafc;
-  --wb-warning: #c2410c;
-  --wb-warning-soft: #fff7ed;
-  --wb-blue: #1d4ed8;
-  --wb-blue-soft: #eff6ff;
+  --wb-primary: var(--color-brand-teacher);
+  --wb-primary-soft: var(--color-status-active-soft);
+  --wb-accent: var(--color-brand-teacher-accent);
+  --wb-text: var(--color-text-primary);
+  --wb-muted: var(--color-text-muted);
+  --wb-border: var(--color-border-soft);
+  --wb-surface: var(--color-surface-muted);
+  --wb-warning: var(--color-status-warning);
+  --wb-warning-soft: var(--color-status-warning-soft);
+  --wb-blue: var(--color-status-closed);
+  --wb-blue-soft: var(--color-status-closed-soft);
 }
 
 .workbench-toolbar__main {
@@ -89,19 +89,6 @@
   gap: 8px;
 }
 
-.workbench-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--wb-border);
-  border-radius: 999px;
-  background: var(--wb-surface);
-  color: var(--wb-muted);
-  font-size: 11px;
-  font-weight: 600;
-}
-
 .workbench-cell__title-row {
   display: flex;
   flex-wrap: wrap;
@@ -156,7 +143,7 @@
 
 .workbench-submission__count {
   color: var(--wb-primary);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -230,7 +217,7 @@
   min-width: 0;
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1280px) {
   .grading-layout {
     grid-template-columns: 280px minmax(0, 1fr);
   }
@@ -250,7 +237,7 @@
 
 .submission-queue__header h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .submission-queue__header p {
@@ -278,7 +265,7 @@
   width: 100%;
   padding: 10px;
   border: 1px solid var(--wb-border);
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fff;
   text-align: left;
   cursor: pointer;
@@ -328,7 +315,7 @@
 
 .grading-summary h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .grading-summary__row {
@@ -366,7 +353,7 @@
 
 .task-editor-dialog__header h2 {
   margin: 6px 0;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .task-editor-dialog__body {
@@ -411,7 +398,7 @@
   }
 }
 
-@media (min-width: 900px) and (max-width: 1279px) {
+@media (min-width: 900px) and (max-width: 1280px) {
   .grading-workspace .grading-layout {
     grid-template-rows: minmax(0, 1fr) auto;
   }

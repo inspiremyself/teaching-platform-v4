@@ -224,7 +224,7 @@ onMounted(fetchData);
   gap: 20px;
   align-items: stretch;
   padding: 30px 32px;
-  border-radius: 32px;
+  border-radius: 16px;
   background:
     radial-gradient(circle at top right, rgba(191, 219, 254, 0.4), transparent 28%),
     linear-gradient(135deg, rgba(255,255,255,0.95), rgba(219,234,254,0.9));
@@ -242,7 +242,7 @@ onMounted(fetchData);
 
 .student-homeworks-hero h1 {
   margin: 10px 0 0;
-  font-size: 34px;
+  font-size: 28px;
   color: #191c22;
 }
 
@@ -250,7 +250,7 @@ onMounted(fetchData);
   margin: 10px 0 0;
   max-width: 720px;
   color: #475569;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.75;
 }
 
@@ -261,7 +261,7 @@ onMounted(fetchData);
   justify-content: center;
   min-width: 150px;
   padding: 18px;
-  border-radius: 28px;
+  border-radius: 16px;
   background: #0f172a;
   color: #ffffff;
 }
@@ -272,7 +272,7 @@ onMounted(fetchData);
 
 .student-homeworks-hero__badge strong {
   margin-top: 8px;
-  font-size: 32px;
+  font-size: 36px;
 }
 
 .student-homeworks-hero__badge small {
@@ -290,7 +290,7 @@ onMounted(fetchData);
   display: flex;
   gap: 16px;
   padding: 24px;
-  border-radius: 30px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(226, 232, 240, 0.9);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
@@ -307,7 +307,7 @@ onMounted(fetchData);
   justify-content: center;
   width: 54px;
   height: 54px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(37, 99, 235, 0.12);
   color: #2563eb;
   flex-shrink: 0;
@@ -342,7 +342,7 @@ onMounted(fetchData);
 
 .student-summary-card__value {
   margin-top: 8px;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 800;
   color: #191c22;
 }
@@ -359,7 +359,7 @@ onMounted(fetchData);
   flex-direction: column;
   gap: 14px;
   padding: 22px 24px;
-  border-radius: 28px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(226, 232, 240, 0.9);
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.05);
@@ -379,7 +379,7 @@ onMounted(fetchData);
   flex: 1;
   padding: 0 16px;
   min-height: 52px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -423,7 +423,7 @@ onMounted(fetchData);
   flex-direction: column;
   gap: 18px;
   padding: 24px;
-  border-radius: 30px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(226, 232, 240, 0.9);
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.05);
@@ -465,7 +465,7 @@ onMounted(fetchData);
 
 .student-homework-card__meta-grid > div {
   padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -504,7 +504,7 @@ onMounted(fetchData);
   font-weight: 700;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .student-homework-list,
   .student-summary-grid {
     grid-template-columns: 1fr;
@@ -517,7 +517,7 @@ onMounted(fetchData);
   .student-homework-card,
   .student-summary-card {
     padding: 20px;
-    border-radius: 24px;
+    border-radius: 16px;
   }
 
   .student-homeworks-hero,
@@ -586,7 +586,7 @@ onMounted(fetchData);
 
 .student-toolbar-search {
   min-height: 36px;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0 9px;
 }
 
@@ -643,7 +643,7 @@ onMounted(fetchData);
 
 .student-homework-card__title-row h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.3;
 }
 
@@ -665,7 +665,7 @@ onMounted(fetchData);
 
 .homework-info-chip {
   padding: 7px 9px;
-  border-radius: 9px;
+  border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -703,7 +703,7 @@ onMounted(fetchData);
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 640px) {
   .student-homeworks-header__title-row,
   .student-homework-card__head,
   .student-homework-card__title-row,

@@ -66,7 +66,7 @@
                 <span>{{ homeworkProgressPercent }}%</span>
               </div>
               <div class="progress-track">
-                <span class="progress-fill" :style="{ width: `${homeworkProgressPercent}%` }"></span>
+                <span class="progress-fill" :style="{ width: `${homeworkProgressPercent}%` }"></span><!-- 动态值：按作业作答进度计算宽度 -->
               </div>
               <p>{{ answeredQuestionCount }}/{{ detail.questions?.length || 0 }} 题已填写</p>
             </div>
@@ -511,7 +511,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .detail-meta-item {
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -561,7 +561,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-card__header h2,
 .detail-card--dark h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 18px;
   color: #191c22;
 }
 
@@ -808,7 +808,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .feedback-pill strong {
   color: #191c22;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .feedback-pill--blue {
@@ -863,7 +863,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .result-question-card {
   padding: 10px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -889,7 +889,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .result-question-card h2 {
   margin: 8px 0 0;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
   color: #191c22;
 }
@@ -900,7 +900,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   font-weight: 700;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .detail-workspace {
     grid-template-columns: 1fr;
   }

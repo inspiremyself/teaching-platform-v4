@@ -174,7 +174,7 @@ onBeforeUnmount(() => {
 
 .content-reader__title {
   margin: 0 0 16px;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .content-reader__math {

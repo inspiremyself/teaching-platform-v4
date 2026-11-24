@@ -6,14 +6,14 @@
         <p>查看实验状态、题项数量、截止时间和实验小结要求后，直接进入作答。</p>
       </div>
       <div class="labs-header-card__stats">
-        <span class="header-stat-chip"><strong>{{ rows.length }}</strong> 全部实验</span>
-        <span class="header-stat-chip header-stat-chip--primary"><strong>{{ activeCount }}</strong> 进行中</span>
-        <span class="header-stat-chip header-stat-chip--muted">{{ activeFilterLabel }} · {{ filteredRows.length }} 项</span>
+        <AppMetaChip :value="String(rows.length)" label="全部实验" />
+        <AppMetaChip :value="String(activeCount)" label="进行中" tone="accent" />
+        <AppMetaChip :label="`${activeFilterLabel} · ${filteredRows.length} 项`" />
       </div>
     </section>
 
-    <section class="toolbar-card">
-      <div class="toolbar-card__main">
+    <AppToolbarCard>
+      <div class="toolbar-row">
         <div class="toolbar-search">
           <span class="material-symbols-outlined">search</span>
           <el-input v-model="searchKeyword" placeholder="搜索实验名称、说明或班级" clearable />
@@ -28,11 +28,11 @@
           </el-select>
         </div>
       </div>
-      <div class="toolbar-card__meta">
+      <div class="labs-toolbar-meta">
         <span>{{ keywordLabel }}</span>
         <span>当前聚焦：{{ activeFilterDescription }}</span>
       </div>
-    </section>
+    </AppToolbarCard>
 
     <section class="lab-list-shell" v-loading="loading">
       <template v-if="filteredRows.length">
@@ -79,7 +79,7 @@
                   <span>{{ progressPercent(row) }}%</span>
                 </div>
                 <div class="progress-track">
-                  <span class="progress-fill" :style="{ width: `${progressPercent(row)}%` }"></span>
+                  <span class="progress-fill" :style="{ width: `${progressPercent(row)}%` }"></span><!-- 动态值：按实验作答进度计算宽度 -->
                 </div>
               </div>
             </div>
@@ -92,7 +92,7 @@
           </div>
         </article>
       </template>
-      <el-empty v-else description="暂无匹配实验任务" />
+      <AppEmptyState v-else description="暂无匹配实验任务" />
     </section>
   </div>
 </template>
@@ -104,6 +104,9 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listStudentLabs } from '@/api/labs';
 import type { StudentLabListItem } from '@/types/lab';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppMetaChip from '@/components/ui/AppMetaChip.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 
 type TaskFilter = '' | 'TODO' | 'ACTIVE' | SubmissionStatus;
 
@@ -209,22 +212,16 @@ onMounted(fetchData);
 
 <style scoped>
 .student-labs-page {
-  --labs-primary: #1e40af;
-  --labs-primary-soft: #eff6ff;
-  --labs-border: #dbe5ef;
-  --labs-text: #0f172a;
-  --labs-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
 .labs-header-card,
-.toolbar-card,
 .student-lab-card {
-  border: 1px solid var(--labs-border);
-  border-radius: 16px;
-  background: #fff;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
 
@@ -238,8 +235,8 @@ onMounted(fetchData);
 }
 
 .meta-label {
-  font-size: 11px;
-  font-weight: 700;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -247,26 +244,26 @@ onMounted(fetchData);
 .student-labs-page h1,
 .student-lab-card h3 {
   margin: 0;
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-family-display);
 }
 
 .student-labs-page h1 {
-  font-size: 24px;
-  color: var(--labs-text);
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
 }
 
 .labs-header-card p,
 .student-lab-card p,
 .student-lab-card small,
-.toolbar-card__meta {
-  color: var(--labs-muted);
+.labs-toolbar-meta {
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
 .labs-header-card p {
   margin: 6px 0 0;
   max-width: 720px;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .labs-header-card__stats {
@@ -277,59 +274,12 @@ onMounted(fetchData);
   max-width: 460px;
 }
 
-.header-stat-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: #fff;
-  color: #334155;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.header-stat-chip strong {
-  color: var(--labs-text);
-  font-size: 14px;
-}
-
-.header-stat-chip--primary {
-  background: var(--labs-primary-soft);
-  border-color: #bfdbfe;
-  color: var(--labs-primary);
-}
-
-.header-stat-chip--violet {
-  background: rgba(124, 58, 237, 0.08);
-  border-color: rgba(124, 58, 237, 0.18);
-  color: #6d28d9;
-}
-
-.header-stat-chip--muted {
-  background: #f8fafc;
-  color: var(--labs-muted);
-}
-
-.toolbar-card {
-  padding: 12px 14px;
-}
-
-.toolbar-card__main {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-}
-
-.toolbar-card__meta {
+.labs-toolbar-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 14px;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .toolbar-search {
@@ -339,13 +289,13 @@ onMounted(fetchData);
   align-items: center;
   gap: 10px;
   padding: 0 12px;
-  border: 1px solid var(--labs-border);
-  border-radius: 12px;
-  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-muted);
 }
 
 .toolbar-search .material-symbols-outlined {
-  color: var(--labs-muted);
+  color: var(--color-text-muted);
 }
 
 .toolbar-search :deep(.el-input__wrapper) {
@@ -380,12 +330,12 @@ onMounted(fetchData);
 }
 
 .student-lab-card__title-line h3 {
-  font-size: 18px;
+  font-size: var(--font-size-xl);
 }
 
 .student-lab-card__title-line p {
   margin: 4px 0 0;
-  font-size: 13px;
+  font-size: var(--font-size-base);
 }
 
 .student-lab-card__chips {
@@ -400,21 +350,21 @@ onMounted(fetchData);
   gap: 6px;
   min-height: 28px;
   padding: 0 10px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.05);
-  color: var(--labs-text);
-  font-size: 12px;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .lab-meta-chip--violet {
-  background: rgba(124, 58, 237, 0.12);
-  color: #7c3aed;
+  background: var(--color-brand-admin-soft);
+  color: var(--color-brand-admin);
 }
 
 .lab-meta-chip--muted {
-  background: rgba(100, 116, 139, 0.12);
-  color: var(--labs-muted);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-muted);
 }
 
 .student-lab-card__meta-grid {
@@ -426,16 +376,16 @@ onMounted(fetchData);
 
 .student-lab-card__meta-grid > div {
   padding: 10px 12px;
-  border-radius: 12px;
-  background: #f8fafc;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-muted);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .student-lab-card__meta-grid strong {
-  color: var(--labs-text);
-  font-size: 13px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
 }
 
 .student-lab-card__footer-line {
@@ -454,15 +404,15 @@ onMounted(fetchData);
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  font-size: 12px;
-  color: var(--labs-muted);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 .progress-track {
   margin-top: 6px;
   width: 100%;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(148, 163, 184, 0.18);
   overflow: hidden;
 }
@@ -471,7 +421,7 @@ onMounted(fetchData);
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--labs-primary), #60a5fa);
+  background: linear-gradient(90deg, var(--color-brand-student), var(--color-brand-student-accent));
 }
 
 .student-lab-card__side {
@@ -485,7 +435,7 @@ onMounted(fetchData);
   width: 100%;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
   .student-lab-card__meta-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

@@ -46,12 +46,12 @@
             <div class="dashboard-summary-strip">
               <article v-for="(card, index) in localizedSummaryCards" :key="card.key" class="dashboard-kpi-row">
                 <div class="dashboard-kpi-row__icon">
-                  <el-icon :size="18"><component :is="summaryIcons[index]" /></el-icon>
+                  <span class="material-symbols-outlined app-icon--sm">{{ summaryIcons[index] }}</span>
                 </div>
                 <div class="dashboard-kpi-row__body">
                   <div class="dashboard-kpi-row__topline">
                     <span>{{ card.title }}</span>
-                    <span class="workbench-chip">{{ summaryCardPills[index] }}</span>
+                    <AppMetaChip :label="summaryCardPills[index]" />
                   </div>
                   <strong>{{ card.value }}</strong>
                   <small>{{ localizedSummarySignal(card.key) }}</small>
@@ -212,6 +212,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { DashboardKey } from '@/composables/useDashboard';
+import AppMetaChip from '@/components/ui/AppMetaChip.vue';
 const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, localizedSummaryCards, trendTotalCount, trendAverageText, trendPulseShortText, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, heroStatusText, trendFocusTitle, trendFocusDescription, riskAlertSummary, riskAlertDetail, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText } = inject(DashboardKey)!;
 </script>
 
@@ -264,7 +265,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   gap: 12px;
   padding: 12px 14px;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 
@@ -310,8 +311,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   font-size: 11px;
 }
 
-.dashboard-card,
-.state-card {
+.dashboard-card {
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
@@ -370,7 +370,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 
 .dashboard-card__metric strong {
   margin-top: 4px;
-  font-size: 20px;
+  font-size: 22px;
   color: #0f172a;
 }
 
@@ -391,7 +391,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 
 .trend-summary-card {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #f8fafc, #ffffff);
   border: 1px solid #e2e8f0;
 }
@@ -406,7 +406,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .trend-summary-card strong {
   display: block;
   margin-top: 8px;
-  font-size: 17px;
+  font-size: 18px;
   color: #0f172a;
 }
 
@@ -434,7 +434,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   min-height: 112px;
   border: 1px solid #e2e8f0;
   background: linear-gradient(135deg, #ffffff, #f8fafc);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 14px;
   text-align: left;
   cursor: pointer;
@@ -649,16 +649,11 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   background: linear-gradient(180deg, #fff7ed, #fffbeb);
 }
 
-.state-card {
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
 .dashboard-side--refactored {
   align-self: start;
 }
 
-@media (max-width: 1240px) {
+@media (max-width: 1280px) {
   .dashboard-summary-strip,
   .trend-summary-grid--compact,
   .dashboard-grid--refactored {

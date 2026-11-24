@@ -145,7 +145,7 @@ onMounted(() => {
 .answers-wall-card {
   padding: 18px 20px;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
 }
 

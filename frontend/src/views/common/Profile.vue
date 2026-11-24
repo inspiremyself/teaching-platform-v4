@@ -59,7 +59,7 @@
           <span class="profile-sidebar-block__label">当前资料状态</span>
           <div class="profile-sidebar-progress">
             <div class="profile-sidebar-progress__track">
-              <span :style="{ width: `${profileCompletion}%` }"></span>
+              <span :style="{ width: `${profileCompletion}%` }"></span><!-- 动态值：按资料完整度计算宽度 -->
             </div>
             <strong>{{ profileCompletion }}%</strong>
           </div>
@@ -366,7 +366,7 @@ const changePassword = async () => {
   padding: 18px 20px;
   min-height: 148px;
   border: 1px solid #dbe4f0;
-  border-radius: 18px;
+  border-radius: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
@@ -380,13 +380,13 @@ const changePassword = async () => {
 .sidebar-avatar {
   width: 52px;
   height: 52px;
-  border-radius: 18px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #0f766e, #1d4ed8);
   color: #fff;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
 }
 
@@ -419,12 +419,12 @@ const changePassword = async () => {
   gap: 12px;
   padding: 16px;
   border: 1px solid #dbe4f0;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 
 .profile-summary-item .material-symbols-outlined {
-  font-size: 20px;
+  font-size: 22px;
   color: #0f766e;
 }
 
@@ -450,7 +450,7 @@ const changePassword = async () => {
 
 .profile-sidebar-card,
 .profile-card {
-  border-radius: 24px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
@@ -531,7 +531,7 @@ const changePassword = async () => {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -571,7 +571,7 @@ const changePassword = async () => {
 
 .profile-section-intro h2 {
   margin: 6px 0 0;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 800;
   color: #0f172a;
 }
@@ -655,7 +655,7 @@ const changePassword = async () => {
   background: linear-gradient(90deg, #14b8a6, #0f766e);
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1024px) {
   .profile-summary-panel,
   .profile-summary-grid,
   .profile-grid {

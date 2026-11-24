@@ -124,7 +124,7 @@
               <el-form label-position="top" class="lab-steps-console__form">
                 <div class="question-dialog__grid question-dialog__grid--step-base">
                   <el-form-item label="题项序号">
-                    <el-input-number v-model="form.stepNo" :min="1" :step="1" style="width: 100%" />
+                    <el-input-number v-model="form.stepNo" :min="1" :step="1" class="app-control-full" />
                   </el-form-item>
                   <el-form-item label="题项标题">
                     <el-input
@@ -268,7 +268,7 @@
                   </el-form-item>
 
                   <el-form-item label="题项分值">
-                    <el-input-number v-model="form.stepScore" :min="0" :max="100" :precision="0" :step="1" style="width: 100%" />
+                    <el-input-number v-model="form.stepScore" :min="0" :max="100" :precision="0" :step="1" class="app-control-full" />
                   </el-form-item>
                 </div>
               </el-form>
@@ -298,7 +298,7 @@
               <el-form label-position="top" class="lab-steps-console__form">
                 <div class="question-dialog__grid question-dialog__grid--rail">
                   <el-form-item label="最小字数">
-                    <el-input-number v-model="subjectiveSettings.minLength" :min="0" style="width: 100%" />
+                    <el-input-number v-model="subjectiveSettings.minLength" :min="0" class="app-control-full" />
                   </el-form-item>
                   <el-form-item label="讲评模板">
                     <el-input
@@ -433,7 +433,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   gap: 20px;
   padding: 18px 20px;
   border: 1px solid #dbe4f0;
-  border-radius: 24px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
   flex-shrink: 0;
@@ -557,7 +557,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__panel {
   border: 1px solid #dbe4f0;
-  border-radius: 24px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
 }
@@ -630,7 +630,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__add-step {
   width: 100%;
   border: 1px solid #dbe4f0;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #fff;
   cursor: pointer;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -738,7 +738,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   width: 30px;
   height: 30px;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
   color: #ef4444;
   cursor: pointer;
@@ -841,7 +841,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   min-height: 30px;
   padding: 0 10px;
   border: 1px solid #ccfbf1;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f0fdfa;
   color: #0f766e;
   font-size: 11px;
@@ -861,7 +861,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .question-dialog__group,
 .question-dialog__validation {
   border: 1px solid #e2e8f0;
-  border-radius: 22px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
 
@@ -978,7 +978,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__form :deep(.el-select__wrapper),
 .lab-steps-console__form :deep(.el-textarea__inner),
 .lab-steps-console__form :deep(.el-input-number) {
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 0 0 1px #e2e8f0 inset;
   background: #f8fafc;
 }
@@ -998,7 +998,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 }
 
 .lab-step-copy-dialog :deep(.el-dialog) {
-  border-radius: 26px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -1021,7 +1021,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-step-copy-dialog__header {
   padding: 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
+  border-radius: 16px;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(240, 253, 250, 0.95));
 }
 
@@ -1037,7 +1037,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-step-copy-dialog__header h2 {
   margin: 6px 0 0;
   color: #0f172a;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -1055,7 +1055,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   margin: 0;
   padding: 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #fff;
 }
 
@@ -1103,7 +1103,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   gap: 8px;
   padding: 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
+  border-radius: 16px;
   background: #fff;
 }
 
@@ -1114,7 +1114,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 }
 
 .lab-step-copy-dialog__code :deep(.el-input__wrapper) {
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 0 0 1px #e2e8f0 inset;
   background: #f8fafc;
 }
@@ -1131,13 +1131,13 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .lab-steps-console__header-side {
     min-width: 0;
   }
 }
 
-@media (max-width: 820px) {
+@media (max-width: 768px) {
   .lab-steps-console__workspace {
     grid-template-columns: 180px minmax(0, 1fr);
     gap: 12px;
@@ -1162,7 +1162,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
   .lab-steps-console,
   .lab-steps-console__workspace {
     overflow: visible;

@@ -25,7 +25,7 @@
         <el-table-column prop="participatedCount" label="已参与" width="90" />
         <el-table-column prop="completedCount" label="已完成" width="90" />
         <el-table-column prop="notStartedCount" label="未开始" width="90" />
-        <el-table-column label="操作" width="110">
+        <el-table-column label="操作" width="110" align="right" fixed="right">
           <template #default="scope">
             <el-button link type="primary" @click="openDetail(row.businessType, scope.row.businessId)">
               查看名单
@@ -36,7 +36,7 @@
       <el-empty v-else description="暂无活动数据" :image-size="48" />
     </article>
 
-    <el-dialog v-model="dialogVisible" title="未开始名单" width="760px" @closed="closeDetail">
+    <el-dialog v-model="dialogVisible" title="未开始名单" width="860px" @closed="closeDetail">
       <el-alert v-if="error" :title="error" type="error" show-icon />
       <el-table v-if="detail" :data="detail.students" size="small" border v-loading="loading">
         <el-table-column prop="studentNo" label="学号" width="140" />

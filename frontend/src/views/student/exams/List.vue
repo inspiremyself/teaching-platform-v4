@@ -19,7 +19,7 @@
       </div>
     </section>
 
-    <section class="toolbar-card">
+    <section class="exams-toolbar-card">
       <div class="toolbar-search">
         <span class="material-symbols-outlined">search</span>
         <el-input v-model="searchQuery" placeholder="搜索考试标题或班级" clearable />
@@ -78,7 +78,7 @@
         </div>
       </article>
 
-      <el-empty v-if="!filteredRows.length" description="暂无匹配考试" class="empty-state" />
+      <AppEmptyState v-if="!filteredRows.length" description="暂无匹配考试" class="empty-state" />
     </section>
   </div>
 </template>
@@ -89,6 +89,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listExams } from '@/api/exams'
 import type { ExamListItem } from '@/types/exam'
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 
 const router = useRouter()
 const rows = ref<ExamListItem[]>([])
@@ -223,7 +224,7 @@ onMounted(loadExams)
 
 .student-exams-page h1 {
   margin: 0;
-  font-size: 30px;
+  font-size: var(--font-size-3xl);
   font-weight: 800;
   color: #191c22;
 }
@@ -234,15 +235,15 @@ onMounted(loadExams)
   max-width: 760px;
 }
 
-.toolbar-card,
+.exams-toolbar-card,
 .exam-card {
-  border-radius: 16px;
+  border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(193, 198, 214, 0.45);
   box-shadow: 0 8px 24px rgba(25, 28, 34, 0.05);
 }
 
-.toolbar-card {
+.exams-toolbar-card {
   padding: 14px 16px;
   display: flex;
   gap: 14px;
@@ -254,8 +255,8 @@ onMounted(loadExams)
   display: flex;
   align-items: center;
   gap: 10px;
-  border-radius: 12px;
-  background: #f8fafc;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-muted);
   padding: 0 14px;
 }
 
@@ -297,8 +298,8 @@ onMounted(loadExams)
 }
 
 .exam-class {
-  font-size: 12px;
-  color: #64748b;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
   font-weight: 600;
 }
 
@@ -312,24 +313,24 @@ onMounted(loadExams)
 .exam-card__badge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 6px 10px;
-  background: #ecfeff;
-  color: #0f766e;
-  font-size: 12px;
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .exam-card h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-lg);
   color: #191c22;
 }
 
 .exam-card p {
   margin: 4px 0 0;
   color: #727785;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -338,30 +339,30 @@ onMounted(loadExams)
 }
 
 .exam-card__status {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 6px 10px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .exam-card__status--start {
-  background: #ecfdf5;
-  color: #0f766e;
+  background: var(--color-status-active-soft);
+  color: var(--color-brand-teacher);
 }
 
 .exam-card__status--resume {
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--color-status-warning-soft);
+  color: var(--color-status-warning);
 }
 
 .exam-card__status--result {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-brand-student-soft);
+  color: var(--color-brand-student);
 }
 
 .exam-card__status--locked {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--color-status-draft-soft);
+  color: var(--color-text-muted);
 }
 
 .exam-card__info-row {
@@ -371,22 +372,22 @@ onMounted(loadExams)
 }
 
 .exam-info-chip {
-  border-radius: 12px;
-  background: #f8fafc;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-muted);
   padding: 7px 9px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 .exam-info-chip span {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: #727785;
 }
 
 .exam-info-chip strong {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
   color: #191c22;
 }
@@ -403,21 +404,21 @@ onMounted(loadExams)
 }
 
 .exam-inline-hint {
-  color: #64748b;
-  font-size: 11px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
 }
 
 .exam-action {
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: #191c22;
-  color: #fff;
+  color: var(--color-text-inverse);
   padding: 8px 11px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
 }
@@ -430,14 +431,14 @@ onMounted(loadExams)
   grid-column: 1 / -1;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .exam-card__info-row {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .toolbar-card,
+  .exams-toolbar-card,
   .exam-card__head,
   .exam-card__footer--compact {
     flex-direction: column;

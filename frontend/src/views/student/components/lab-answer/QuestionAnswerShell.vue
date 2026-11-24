@@ -26,7 +26,7 @@ defineProps<{
 <style scoped>
 .question-answer-shell {
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 

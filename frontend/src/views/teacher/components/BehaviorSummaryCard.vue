@@ -145,7 +145,7 @@ onMounted(() => {
 <style scoped>
 .behavior-summary-card {
   border: 1px solid #dbe5ef;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   padding: 12px 14px;
@@ -172,7 +172,7 @@ onMounted(() => {
 
 .behavior-summary-card__header h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   color: #0f172a;
 }
 
@@ -199,7 +199,7 @@ onMounted(() => {
   gap: 3px;
   padding: 8px 10px;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
 
@@ -209,7 +209,7 @@ onMounted(() => {
 }
 
 .behavior-metric strong {
-  font-size: 15px;
+  font-size: 16px;
   color: #0f172a;
 }
 
@@ -228,7 +228,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1280px) {
   .behavior-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

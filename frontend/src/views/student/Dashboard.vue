@@ -22,11 +22,11 @@
 
     <template v-else>
       <div v-if="loadError" class="state-card">
-        <el-result icon="error" title="学生工作台加载失败" :sub-title="loadError">
-          <template #extra>
+        <AppEmptyState tone="error" title="学生工作台加载失败" :description="loadError">
+          <template #actions>
             <el-button type="primary" @click="loadDashboard">重新加载</el-button>
           </template>
-        </el-result>
+        </AppEmptyState>
       </div>
 
       <div v-else class="student-grid">
@@ -117,9 +117,9 @@
 import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
-import { Collection, DataAnalysis, Finished } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/auth';
 import { getStudentDashboard } from '@/api/student';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 type SummaryCard = {
   key: string;
@@ -165,7 +165,6 @@ const upcomingTasks = ref<UpcomingTask[]>([]);
 const recentFeedback = ref<FeedbackItem[]>([]);
 const recentMaterials = ref<MaterialPreview[]>([]);
 const quickLinks = ref<QuickLink[]>([]);
-const summaryIcons = [Finished, Collection, DataAnalysis];
 const displayNameSuffix = computed(() => (user.value?.displayName ? `，${user.value.displayName}` : ''));
 
 const translateStudentText = (text: string) => {
@@ -235,7 +234,7 @@ onMounted(loadDashboard);
 
 .student-dashboard h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 800;
   color: #191c22;
 }
@@ -300,7 +299,7 @@ onMounted(loadDashboard);
   gap: 16px;
   width: 100%;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f9f9ff;
   cursor: pointer;
 }
@@ -308,7 +307,7 @@ onMounted(loadDashboard);
 .student-task-card__icon {
   width: 48px;
   height: 48px;
-  border-radius: 18px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -359,13 +358,7 @@ onMounted(loadDashboard);
   background: #f9f9ff;
 }
 
-.state-card {
-  border: 1px solid rgba(193, 198, 214, 0.45);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-}
-
-@media (max-width: 1100px) {
+@media (max-width: 1024px) {
   .student-grid {
     grid-template-columns: 1fr;
   }

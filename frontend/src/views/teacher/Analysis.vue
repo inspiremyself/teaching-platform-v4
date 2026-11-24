@@ -16,18 +16,18 @@
 
     <template v-else>
       <div v-if="loadError" class="state-card">
-        <el-result icon="error" title="分析页加载失败" :sub-title="loadError">
-          <template #extra>
+        <AppEmptyState tone="error" title="分析页加载失败" :description="loadError">
+          <template #actions>
             <el-button type="primary" @click="loadAnalysis">重新加载</el-button>
           </template>
-        </el-result>
+        </AppEmptyState>
       </div>
 
       <template v-else>
         <section v-if="summaryCards.length" class="analysis-summary-grid">
           <article v-for="(card, index) in summaryCards" :key="card.key" class="analysis-summary-card">
             <div class="analysis-summary-card__icon">
-              <el-icon :size="16"><component :is="summaryIcons[index % summaryIcons.length]" /></el-icon>
+              <span class="material-symbols-outlined app-icon--sm">{{ summaryIcons[index % summaryIcons.length] }}</span>
             </div>
             <div>
               <span class="analysis-summary-card__label">{{ card.title }}</span>
@@ -113,7 +113,7 @@
                         <span>均分 {{ point.avgScore.toFixed(1) }}</span>
                       </div>
                       <div class="trend-bar-track">
-                        <div class="trend-bar-fill" :style="{ height: `${Math.max((point.scoreCount / maxTrendCount) * 100, 8)}%` }"></div>
+                        <div class="trend-bar-fill" :style="{ height: `${Math.max((point.scoreCount / maxTrendCount) * 100, 8)}%` }"></div><!-- 动态值：按题量占比计算高度 -->
                       </div>
                       <span class="trend-bar-label">{{ point.date.slice(5) }}</span>
                     </div>
@@ -139,7 +139,7 @@
                     <span class="comparison-item__score">{{ item.avgScore.toFixed(1) }}</span>
                   </div>
                   <div class="comparison-progress-bg">
-                    <div class="comparison-progress-fill" :style="{ width: `${Math.min(item.avgScore, 100)}%` }"></div>
+                    <div class="comparison-progress-fill" :style="{ width: `${Math.min(item.avgScore, 100)}%` }"></div><!-- 动态值：按平均分占比计算宽度 -->
                   </div>
                   <p>{{ item.gradedCount }} 条评分记录</p>
                 </div>
@@ -192,16 +192,16 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { DataLine, List, Opportunity, Warning } from '@element-plus/icons-vue';
 import { getAnalysis } from '@/api/teacher';
 import ParticipationPanel from '@/views/teacher/components/ParticipationPanel.vue';
 import type { AnalysisInsight, AnalysisSummaryCard, TeacherAnalysisOverview, TeacherBusinessBreakdownItem, TeacherComparisonItem, TeacherTrendItem } from '@/types/analysis';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 const loading = ref(false);
 const loaded = ref(false);
 const loadError = ref('');
 const analysis = ref<TeacherAnalysisOverview | null>(null);
-const summaryIcons = [Opportunity, Warning, DataLine, List];
+const summaryIcons = ['lightbulb', 'warning', 'monitoring', 'list'];
 
 const summaryCards = computed<AnalysisSummaryCard[]>(() => analysis.value?.summaryCards ?? []);
 const trend = computed<TeacherTrendItem[]>(() => analysis.value?.trend ?? []);
@@ -335,7 +335,7 @@ onMounted(loadAnalysis);
   display: block;
   margin-top: 4px;
   color: #0f172a;
-  font-size: 20px;
+  font-size: 22px;
 }
 
 .analysis-scope-note {
@@ -352,8 +352,7 @@ onMounted(loadAnalysis);
   gap: 16px;
 }
 
-.analysis-card,
-.state-card {
+.analysis-card {
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
@@ -472,7 +471,7 @@ onMounted(loadAnalysis);
   height: 240px;
   padding: 16px 18px 14px 14px;
   border: 1px solid #dbe4f0;
-  border-radius: 20px;
+  border-radius: 16px;
   background:
     linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98)),
     radial-gradient(circle at top left, rgba(20, 184, 166, 0.08), transparent 42%);
@@ -610,7 +609,7 @@ onMounted(loadAnalysis);
 .breakdown-item,
 .insight-item {
   padding: 16px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 
@@ -661,8 +660,7 @@ onMounted(loadAnalysis);
 .insight-item--highlight { background: #eff6ff; }
 .insight-item--warning { background: #fff7ed; }
 
-@media (max-width: 1100px) {
-  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1024px) {
   .analysis-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .analysis-grid { grid-template-columns: 1fr; }
   .trend-card-panel__overview { grid-template-columns: 1fr; }
@@ -670,7 +668,6 @@ onMounted(loadAnalysis);
 
 @media (max-width: 768px) {
   .analysis-header { flex-direction: column; align-items: flex-start; }
-  .summary-grid { grid-template-columns: 1fr; }
   .analysis-summary-grid { grid-template-columns: 1fr; }
   .trend-chart-shell {
     grid-template-columns: 1fr;

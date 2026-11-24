@@ -20,7 +20,7 @@
       </div>
     </section>
 
-    <div class="summary-grid" v-loading="loading">
+    <div class="admin-summary-grid" v-loading="loading">
       <article class="summary-card">
         <span class="material-symbols-outlined summary-card__icon">badge</span>
         <div>
@@ -120,10 +120,10 @@ onMounted(loadSummary);
 </script>
 
 <style scoped>
-.summary-grid {
+.admin-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .summary-card {
@@ -131,11 +131,11 @@ onMounted(loadSummary);
   grid-template-columns: auto 1fr auto;
   gap: 14px;
   align-items: start;
-  padding: 20px;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
 }
 
 .summary-card__icon {
@@ -181,7 +181,7 @@ onMounted(loadSummary);
 }
 
 @media (max-width: 900px) {
-  .summary-grid {
+  .admin-summary-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -24,7 +24,7 @@
           <span class="material-symbols-outlined user-profile__arrow">chevron_right</span>
         </button>
         <el-button type="danger" text @click="logout" class="logout-btn">
-          <span class="material-symbols-outlined" style="font-size: 18px; margin-right: 4px;">logout</span>退出
+          <span class="material-symbols-outlined app-icon--sm app-icon--leading">logout</span>退出
         </el-button>
       </div>
     </header>
@@ -177,19 +177,19 @@ const logout = async () => {
 
 /* Theme Colors */
 .theme-teacher {
-  --primary-color: #0f766e;
-  --primary-light: #f0fdfa;
-  --primary-border: #0d9488;
+  --primary-color: var(--color-brand-teacher);
+  --primary-light: var(--color-brand-teacher-soft);
+  --primary-border: var(--color-brand-teacher-border);
 }
 .theme-admin {
-  --primary-color: #7c3aed;
-  --primary-light: #f5f3ff;
-  --primary-border: #8b5cf6;
+  --primary-color: var(--color-brand-admin);
+  --primary-light: var(--color-brand-admin-soft);
+  --primary-border: var(--color-brand-admin-border);
 }
 .theme-student {
-  --primary-color: #1d4ed8;
-  --primary-light: #eff6ff;
-  --primary-border: #2563eb;
+  --primary-color: var(--color-brand-student);
+  --primary-light: var(--color-brand-student-soft);
+  --primary-border: var(--color-brand-student-border);
 }
 
 /* Top Navbar */

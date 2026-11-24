@@ -136,7 +136,7 @@
             </article>
           </section>
         </div>
-        <el-empty v-else description="请选择左侧提交记录查看详情" />
+        <AppEmptyState v-else description="请选择左侧提交记录查看详情" />
       </main>
     </template>
 
@@ -166,7 +166,7 @@
               <strong>{{ workspace.summary.value.completed }}/{{ workspace.summary.value.total }} 题</strong>
             </div>
             <div class="completion-bar">
-              <div class="completion-bar__fill" :style="{ width: `${workspace.summary.value.percent}%` }"></div>
+              <div class="completion-bar__fill" :style="{ width: `${workspace.summary.value.percent}%` }"></div><!-- 动态值：按批改进度计算宽度 -->
             </div>
             <p class="completion-block__hint">
               待评 {{ workspace.summary.value.total - workspace.summary.value.completed }} 题；保存后未评题不会按 0 分提交
@@ -234,6 +234,7 @@ import SubmissionQueue from '../components/workbench/SubmissionQueue.vue'
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import {
   buildGradePayload,
   canSubmitGrade,
@@ -625,7 +626,7 @@ onMounted(fetchData)
 .action-panel {
   border: 1px solid #e2e8f0;
   background: #fff;
-  border-radius: 28px;
+  border-radius: 16px;
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
 }
 
@@ -652,7 +653,7 @@ onMounted(fetchData)
 
 .grading-header-card h1 {
   margin: 8px 0 0;
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 800;
   color: #0f172a;
 }
@@ -670,7 +671,7 @@ onMounted(fetchData)
 
 .header-button {
   border: none;
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 12px 16px;
   display: inline-flex;
   align-items: center;
@@ -697,7 +698,7 @@ onMounted(fetchData)
 }
 
 .summary-card {
-  border-radius: 24px;
+  border-radius: 16px;
   padding: 22px;
 }
 
@@ -730,7 +731,7 @@ onMounted(fetchData)
 
 .summary-card__value {
   margin-top: 10px;
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 800;
 }
 
@@ -747,7 +748,7 @@ onMounted(fetchData)
 
 .score-panel h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   color: #0f172a;
 }
 
@@ -755,7 +756,7 @@ onMounted(fetchData)
   display: flex;
   align-items: center;
   gap: 10px;
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   padding: 0 14px;
@@ -842,7 +843,7 @@ onMounted(fetchData)
 
 .submission-context-card h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .submission-context-card p {
@@ -946,7 +947,7 @@ onMounted(fetchData)
 }
 
 .answer-block {
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
   padding: 16px;
 }
@@ -978,7 +979,7 @@ onMounted(fetchData)
 }
 
 .manual-grade-box {
-  border-radius: 20px;
+  border-radius: 16px;
   border: 1px solid #ccfbf1;
   background: #f0fdfa;
   padding: 16px;
@@ -1054,7 +1055,7 @@ onMounted(fetchData)
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 
@@ -1122,7 +1123,7 @@ onMounted(fetchData)
 .action-panel__secondary {
   width: 100%;
   border: none;
-  border-radius: 18px;
+  border-radius: 16px;
   padding: 14px 16px;
   font-size: 14px;
   font-weight: 700;

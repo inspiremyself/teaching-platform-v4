@@ -10,7 +10,7 @@
             :disabled="disabled"
             :style="blankInputStyle(answerOf(segment.index))"
             @input="updateBlank(segment.index, ($event.target as HTMLInputElement).value)"
-          />
+          /><!-- 动态值：输入框宽度按答案文本长度估算 -->
         </span>
       </template>
     </div>
@@ -29,7 +29,7 @@
           :disabled="disabled"
           :style="blankInputStyle(blank.answer)"
           @input="updateBlank(blank.index, ($event.target as HTMLInputElement).value)"
-        />
+        /><!-- 动态值：输入框宽度按答案文本长度估算 -->
       </div>
     </div>
   </div>

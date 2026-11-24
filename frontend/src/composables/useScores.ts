@@ -1,12 +1,11 @@
 import { computed, onMounted, ref } from 'vue';
-import { ChatLineRound, Collection, DataAnalysis, Document, Finished, Medal, Reading } from '@element-plus/icons-vue';
 import { getScores } from '@/api/student';
 import type { AnalysisInsight, AnalysisSummaryCard, StudentGroupedScore, StudentScoreOverview, StudentScoreRecord } from '@/types/analysis';
 import type { InjectionKey } from 'vue';
 
 export function useScores() {
 type ScoreGroupSection = StudentGroupedScore & {
-  icon: typeof Collection;
+  icon: string;
   performanceLabel: string;
   records: StudentScoreRecord[];
 };
@@ -15,7 +14,7 @@ const loading = ref(false);
 const loaded = ref(false);
 const loadError = ref('');
 const scoreOverview = ref<StudentScoreOverview | null>(null);
-const metricIcons = [Finished, DataAnalysis, Collection, Reading];
+const metricIcons = ['task_alt', 'analytics', 'collections_bookmark', 'auto_stories'];
 const typeOrder: StudentScoreRecord['businessType'][] = ['LAB', 'HOMEWORK', 'EXAM'];
 
 const summaryCards = computed<AnalysisSummaryCard[]>(() => scoreOverview.value?.summaryCards ?? []);
@@ -124,9 +123,9 @@ const performanceLabel = (avgScore: number) => {
 };
 
 const sectionIcon = (type: StudentScoreRecord['businessType']) => {
-  if (type === 'LAB') return Collection;
-  if (type === 'HOMEWORK') return Document;
-  return Reading;
+  if (type === 'LAB') return 'collections_bookmark';
+  if (type === 'HOMEWORK') return 'description';
+  return 'auto_stories';
 };
 
 const groupSections = computed<ScoreGroupSection[]>(() => {
@@ -219,7 +218,7 @@ const scrollToFeedback = () => {
 
 onMounted(loadScores);
 
-  return { computed, onMounted, ref, ChatLineRound, Collection, DataAnalysis, Document, Finished, Medal, Reading, getScores, loading, loaded, loadError, scoreOverview, metricIcons, typeOrder, summaryCards, groupedScores, recentRecords, feedbackNotes, numberValue, primarySummaryCard, secondarySummaryCards, completionCard, completedCard, completionRateNumeric, completionRateDisplay, completedItemsDisplay, progressDetail, strongestGroup, weakestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, sectionIcon, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel, formatScore, formatDate, scrollToFeedback };
+  return { computed, onMounted, ref, getScores, loading, loaded, loadError, scoreOverview, metricIcons, typeOrder, summaryCards, groupedScores, recentRecords, feedbackNotes, numberValue, primarySummaryCard, secondarySummaryCards, completionCard, completedCard, completionRateNumeric, completionRateDisplay, completedItemsDisplay, progressDetail, strongestGroup, weakestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, sectionIcon, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel, formatScore, formatDate, scrollToFeedback };
 }
 
 export type ScoresState = ReturnType<typeof useScores>;

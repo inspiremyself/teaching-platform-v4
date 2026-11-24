@@ -153,7 +153,7 @@ onMounted(() => {
   align-items: center;
   padding: 16px 20px;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #fff;
 }
 

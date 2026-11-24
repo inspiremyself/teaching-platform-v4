@@ -8,7 +8,7 @@
         </div>
         <div class="workbench-header__actions">
           <el-button type="primary" @click="openCreateDialog">
-            <span class="material-symbols-outlined" style="font-size: 16px; margin-right: 4px;">add</span>
+            <span class="material-symbols-outlined app-icon--sm app-icon--leading">add</span>
             新建班级
           </el-button>
         </div>
@@ -21,17 +21,17 @@
       </div>
     </section>
 
-    <section class="toolbar-card">
+    <AppToolbarCard>
       <div class="toolbar-row">
-        <el-input v-model="searchQuery" placeholder="搜索班级名称或代码" clearable style="max-width: 280px" />
-        <el-select v-model="statusFilter" clearable placeholder="全部状态" style="width: 140px">
+        <el-input v-model="searchQuery" placeholder="搜索班级名称或代码" clearable class="app-search-field" />
+        <el-select v-model="statusFilter" clearable placeholder="全部状态" class="app-filter-field">
           <el-option label="启用中" value="ACTIVE" />
           <el-option label="已归档" value="ARCHIVED" />
         </el-select>
       </div>
-    </section>
+    </AppToolbarCard>
 
-    <section class="table-card">
+    <AppTableCard>
       <el-table :data="filteredRows" v-loading="loading" empty-text="暂无班级数据">
         <el-table-column label="班级" min-width="220">
           <template #default="{ row }">
@@ -69,9 +69,9 @@
           </template>
         </el-table-column>
       </el-table>
-    </section>
+    </AppTableCard>
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑班级' : '新建班级'" width="720px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑班级' : '新建班级'" width="640px" destroy-on-close>
       <el-form label-position="top">
         <div class="form-grid">
           <el-form-item label="班级名称">
@@ -81,7 +81,7 @@
             <el-input v-model="form.code" maxlength="64" placeholder="例如：SE2026-1" />
           </el-form-item>
           <el-form-item v-if="editingId" label="状态">
-            <el-select v-model="form.status" style="width: 100%">
+            <el-select v-model="form.status" class="app-control-full">
               <el-option label="启用中" value="ACTIVE" />
               <el-option label="已归档" value="ARCHIVED" />
             </el-select>
@@ -96,7 +96,7 @@
           <el-table :data="form.teachers" size="small" empty-text="请至少添加一名教师">
             <el-table-column label="教师" min-width="180">
               <template #default="{ row }">
-                <el-select v-model="row.teacherUserId" placeholder="选择教师" filterable style="width: 100%">
+                <el-select v-model="row.teacherUserId" placeholder="选择教师" filterable class="app-control-full">
                   <el-option
                     v-for="t in activeTeachers"
                     :key="t.id"
@@ -108,7 +108,7 @@
             </el-table-column>
             <el-table-column label="角色" width="140">
               <template #default="{ row }">
-                <el-select v-model="row.role" style="width: 100%" @change="onRoleChange(row)">
+                <el-select v-model="row.role" class="app-control-full" @change="onRoleChange(row)">
                   <el-option label="班主任" value="HEAD" />
                   <el-option label="学科教师" value="SUBJECT" />
                 </el-select>
@@ -121,7 +121,7 @@
                   :disabled="row.role === 'HEAD'"
                   placeholder="选择学科"
                   filterable
-                  style="width: 100%"
+                  class="app-control-full"
                 >
                   <el-option
                     v-for="subject in subjectSelectOptions"
@@ -163,6 +163,8 @@ import {
 } from '@/api/admin';
 import type { AdminClass, AdminSubject, AdminTeacher, ClassTeacherInput, ClassTeacherRole } from '@/types/admin';
 import type { ClassStatus } from '@/types/class';
+import AppTableCard from '@/components/ui/AppTableCard.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 
 interface TeacherFormRow {
   teacherUserId: number | undefined;
@@ -399,45 +401,6 @@ onMounted(fetchData);
 </script>
 
 <style scoped>
-.toolbar-card,
-.table-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.toolbar-card {
-  padding: 12px 14px;
-}
-
-.toolbar-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.table-card {
-  padding: 0 0 8px;
-  overflow: hidden;
-}
-
-.identity-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.identity-cell strong {
-  color: #0f172a;
-  font-size: 13px;
-}
-
-.identity-cell span {
-  color: #64748b;
-  font-size: 11px;
-}
-
 .teacher-tags {
   display: flex;
   flex-wrap: wrap;
@@ -458,7 +421,7 @@ onMounted(fetchData);
 
 .teacher-tag em {
   font-style: normal;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   opacity: 0.8;
 }

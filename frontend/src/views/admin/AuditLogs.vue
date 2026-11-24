@@ -12,9 +12,9 @@
       </div>
     </section>
 
-    <section class="toolbar-card">
+    <AppToolbarCard>
       <div class="toolbar-row">
-        <el-select v-model="actionFilter" clearable placeholder="操作类型" style="width: 220px" @change="onFilterChange">
+        <el-select v-model="actionFilter" clearable placeholder="操作类型" class="app-filter-field--wide" @change="onFilterChange">
           <el-option v-for="item in actionOptions" :key="item" :label="item" :value="item" />
         </el-select>
         <el-date-picker
@@ -27,9 +27,9 @@
           @change="onFilterChange"
         />
       </div>
-    </section>
+    </AppToolbarCard>
 
-    <section class="table-card">
+    <AppTableCard>
       <el-table :data="rows" v-loading="loading" empty-text="暂无操作日志">
         <el-table-column label="时间" width="180">
           <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
@@ -59,18 +59,18 @@
         <el-table-column prop="traceId" label="Trace" min-width="120" show-overflow-tooltip />
       </el-table>
 
-      <div class="pager-row">
+      <div class="app-pager-row">
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="pageSize"
           :total="total"
-          :page-sizes="[20, 50, 100]"
-          layout="total, sizes, prev, pager, next"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
           @current-change="loadLogs"
           @size-change="onPageSizeChange"
         />
       </div>
-    </section>
+    </AppTableCard>
   </div>
 </template>
 
@@ -78,6 +78,8 @@
 import { onMounted, ref } from 'vue';
 import { listAuditLogs } from '@/api/admin';
 import type { AuditLogListItem } from '@/types/admin';
+import AppTableCard from '@/components/ui/AppTableCard.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 
 const loading = ref(false);
 const rows = ref<AuditLogListItem[]>([]);
@@ -146,24 +148,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.pager-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
 .audit-json {
   margin: 0;
   font-size: 12px;
   white-space: pre-wrap;
   word-break: break-all;
-}
-.identity-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.identity-cell span {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
 }
 </style>

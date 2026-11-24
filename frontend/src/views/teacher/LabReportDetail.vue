@@ -161,7 +161,7 @@
                         :max="itemMaxScore(item)"
                         :precision="0"
                         :step="1"
-                        style="width: 100%"
+                        class="app-control-full"
                         :disabled="isReadOnly"
                         placeholder="待评分"
                         @update:model-value="setItemScore(item, $event)"
@@ -641,11 +641,6 @@ fetchData();
 
 <style scoped>
 .detail-page {
-  --detail-primary: #0f766e;
-  --detail-primary-soft: #ecfeff;
-  --detail-border: #dbe5ef;
-  --detail-text: #0f172a;
-  --detail-muted: #64748b;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -677,7 +672,7 @@ fetchData();
 }
 .detail-eyebrow {
   margin-bottom: 4px;
-  color: var(--detail-primary);
+  color: var(--color-brand-teacher);
 }
 .detail-summary-grid {
   display: grid;
@@ -686,7 +681,7 @@ fetchData();
 }
 .detail-summary-text-card__body {
   margin: 8px 0 0;
-  color: var(--detail-muted);
+  color: var(--color-text-muted);
   line-height: 1.6;
   white-space: pre-wrap;
   font-size: 13px;
@@ -695,7 +690,7 @@ fetchData();
 .sidebar-card,
 .answer-card,
 .final-card {
-  border: 1px solid var(--detail-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
@@ -719,7 +714,7 @@ fetchData();
 .summary-tile strong,
 .answer-card__max-score,
 .final-card__score {
-  color: var(--detail-text);
+  color: var(--color-text-primary);
   font-size: 18px;
 }
 .detail-layout {
@@ -742,7 +737,7 @@ fetchData();
   display: flex;
   gap: 8px;
   align-items: center;
-  color: var(--detail-text);
+  color: var(--color-text-primary);
 }
 .sidebar-card__meta-row {
   display: flex;
@@ -750,21 +745,21 @@ fetchData();
   justify-content: space-between;
   gap: 8px;
   margin-top: 10px;
-  color: var(--detail-muted);
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 .sidebar-card__meta-row--top {
   align-items: flex-start;
 }
 .sidebar-card__meta-row strong {
-  color: var(--detail-text);
+  color: var(--color-text-primary);
   font-size: 13px;
 }
 .sidebar-card__hint {
   font-size: 12px;
 }
 .sidebar-card__header .material-symbols-outlined {
-  color: var(--detail-primary);
+  color: var(--color-brand-teacher);
 }
 .sidebar-step-list {
   display: flex;
@@ -779,7 +774,7 @@ fetchData();
   align-items: center;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--detail-border);
+  border: 1px solid var(--color-border-soft);
   border-radius: 12px;
   background: #f8fafc;
   text-align: left;
@@ -788,12 +783,12 @@ fetchData();
 .sidebar-step strong {
   display: block;
   margin-top: 2px;
-  color: var(--detail-text);
+  color: var(--color-text-primary);
   font-size: 13px;
   line-height: 1.4;
 }
 .sidebar-step__eyebrow {
-  color: var(--detail-primary);
+  color: var(--color-brand-teacher);
 }
 .sidebar-step__score {
   color: #0f766e;
@@ -813,11 +808,11 @@ fetchData();
   gap: 12px;
   align-items: flex-start;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--detail-border);
+  border-bottom: 1px solid var(--color-border-soft);
 }
 .answer-card__eyebrow {
   margin-bottom: 4px;
-  color: var(--detail-primary);
+  color: var(--color-brand-teacher);
 }
 .answer-card__header-meta {
   display: flex;
@@ -833,12 +828,12 @@ fetchData();
 }
 .answer-pane {
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #f8fafc;
 }
 .pane-title {
   margin-bottom: 8px;
-  color: var(--detail-text);
+  color: var(--color-text-primary);
   font-weight: 700;
   font-size: 13px;
 }
@@ -850,11 +845,11 @@ fetchData();
 }
 .pane-file-row {
   margin-top: 8px;
-  color: var(--detail-muted);
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 .pane-file-row a {
-  color: var(--detail-primary);
+  color: var(--color-brand-teacher);
   text-decoration: none;
 }
 .insight-grid {
@@ -864,8 +859,8 @@ fetchData();
 }
 .insight-card {
   padding: 14px;
-  border-radius: 14px;
-  border: 1px solid var(--detail-border);
+  border-radius: 16px;
+  border: 1px solid var(--color-border-soft);
   background: #fff;
 }
 .insight-card--grading {
@@ -875,14 +870,14 @@ fetchData();
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  color: var(--detail-muted);
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 .insight-line + .insight-line {
   margin-top: 8px;
 }
 .insight-line strong {
-  color: var(--detail-text);
+  color: var(--color-text-primary);
 }
 .insight-detail {
   margin-top: 10px;
@@ -919,7 +914,7 @@ fetchData();
 .footer-actions--inline {
   margin-top: 12px;
 }
-@media (max-width: 1220px) {
+@media (max-width: 1280px) {
   .detail-summary-grid,
   .detail-layout,
   .insight-grid {

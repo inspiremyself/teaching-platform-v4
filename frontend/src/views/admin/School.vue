@@ -80,6 +80,6 @@ onMounted(fetchSchool);
 }
 
 .school-form :deep(.el-input__wrapper) {
-  border-radius: 10px;
+  border-radius: 12px;
 }
 </style>

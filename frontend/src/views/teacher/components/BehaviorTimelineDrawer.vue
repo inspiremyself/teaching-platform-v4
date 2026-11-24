@@ -207,7 +207,7 @@ const maxDwellMs = computed(() =>
   gap: 4px;
   padding: 8px 10px;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: linear-gradient(180deg, #ffffff, #fbfdff);
 }
 
@@ -239,7 +239,7 @@ const maxDwellMs = computed(() =>
 }
 
 .step-dwell-row__skip-tag {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 999px;

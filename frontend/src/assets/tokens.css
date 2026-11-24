@@ -1,0 +1,164 @@
+/**
+ * L0 设计 token：全站颜色 / 字号 / 间距 / 圆角 / 阴影 / 层级 / 动效的唯一来源。
+ * 页面与组件不得再写颜色字面量，一律引用本文件的语义变量。
+ * Element Plus 等价映射只允许在本文件出现。
+ */
+:root {
+  /* 字体 */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family-display: 'DM Sans', 'Inter', sans-serif;
+
+  /* 字号：11 档 */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 28px;
+  --font-size-4xl: 36px;
+  --font-size-5xl: 44px;
+  --font-size-6xl: 58px;
+
+  /* 字重 */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* 背景 / 表面 / 文字 / 描边 */
+  --color-bg-app: #F8FAFC;
+  --color-bg-subtle: #F1F5F9;
+  --color-surface: #FFFFFF;
+  --color-surface-muted: #F8FAFC;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-text-placeholder: #94A3B8;
+  --color-text-inverse: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-border-soft: #DBE4F0;
+  --color-border-strong: #CBD5E1;
+
+  /* 品牌：base / soft / border / accent */
+  --color-brand-teacher: #0F766E;
+  --color-brand-teacher-soft: #F0FDFA;
+  --color-brand-teacher-border: #0D9488;
+  --color-brand-teacher-accent: #14B8A6;
+  --color-brand-admin: #7C3AED;
+  --color-brand-admin-soft: #F5F3FF;
+  --color-brand-admin-border: #8B5CF6;
+  --color-brand-admin-accent: #A855F7;
+  --color-brand-student: #1D4ED8;
+  --color-brand-student-soft: #EFF6FF;
+  --color-brand-student-border: #2563EB;
+  --color-brand-student-accent: #3B82F6;
+
+  /* 反馈 */
+  --color-success: #22C55E;
+  --color-success-soft: #DCFCE7;
+  --color-success-strong: #16A34A;
+  --color-warning: #F59E0B;
+  --color-warning-soft: #FFF7ED;
+  --color-warning-strong: #C2410C;
+  --color-danger: #EF4444;
+  --color-danger-soft: #FEF2F2;
+  --color-danger-strong: #DC2626;
+  --color-info: #1D4ED8;
+  --color-info-soft: #EFF6FF;
+
+  /* 状态：text / soft */
+  --color-status-draft: #475569;
+  --color-status-draft-soft: #F1F5F9;
+  --color-status-active: #0F766E;
+  --color-status-active-soft: #ECFDF5;
+  --color-status-closed: #1D4ED8;
+  --color-status-closed-soft: #EFF6FF;
+  --color-status-warning: #C2410C;
+  --color-status-warning-soft: #FFF7ED;
+
+  /* 操作 */
+  --color-action-primary: #1E40AF;
+  --color-action-hover: #1E3A8A;
+  --color-fill-light: #F0F4F8; /* EP 兼容值，P3 后可删除 */
+
+  /* 渐变 */
+  --gradient-kpi-blue: linear-gradient(135deg, #1E40AF, #3B82F6);
+  --gradient-kpi-orange: linear-gradient(135deg, #F59E0B, #F97316);
+  --gradient-kpi-green: linear-gradient(135deg, #22C55E, #10B981);
+  --gradient-kpi-red: linear-gradient(135deg, #EF4444, #F97316);
+  --gradient-kpi-purple: linear-gradient(135deg, #7C3AED, #A855F7);
+
+  /* 圆角 / 间距 / 阴影 */
+  --radius-pill: 999px;
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, .08);
+  --shadow-md: 0 6px 18px rgba(15, 23, 42, .04);
+  --shadow-lg: 0 10px 24px rgba(15, 23, 42, .06);
+
+  /* 层级 / 动效 */
+  --z-sidebar: 40;
+  --z-mobile-nav: 45;
+  --z-topbar: 50;
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --ease-standard: ease;
+
+  /* Element Plus 等价映射（P0） */
+  --el-color-primary: var(--color-action-primary);
+  --el-color-primary-light-3: #3B82F6;
+  --el-color-primary-light-5: #60A5FA;
+  --el-color-primary-light-7: #93C5FD;
+  --el-color-primary-light-8: #BFDBFE;
+  --el-color-primary-light-9: #DBEAFE;
+  --el-color-primary-dark-2: var(--color-action-hover);
+  --el-color-success: var(--color-success);
+  --el-color-success-light-3: #4ADE80;
+  --el-color-success-light-5: #B3E19D;
+  --el-color-success-light-7: #D1EDC4;
+  --el-color-success-light-8: #E1F3D8;
+  --el-color-success-light-9: #F0F9EB;
+  --el-color-warning: var(--color-warning);
+  --el-color-warning-light-3: #EEBE77;
+  --el-color-warning-light-5: #F3D19E;
+  --el-color-warning-light-7: #F8E3C5;
+  --el-color-warning-light-8: #FAECD8;
+  --el-color-warning-light-9: #FDF6EC;
+  --el-color-danger: var(--color-danger);
+  --el-color-danger-light-3: #F89898;
+  --el-color-danger-light-5: #FAB6B6;
+  --el-color-danger-light-7: #FCD3D3;
+  --el-color-danger-light-8: #FDE2E2;
+  --el-color-danger-light-9: #FEF0F0;
+  --el-color-info: #909399;
+  --el-color-info-light-3: #B1B3B8;
+  --el-color-info-light-5: #C8C9CC;
+  --el-color-info-light-7: #DEDFE0;
+  --el-color-info-light-8: #E9E9EB;
+  --el-color-info-light-9: #F4F4F5;
+  --el-border-radius-base: var(--radius-md);
+  --el-border-radius-small: var(--radius-sm);
+  --el-border-radius-round: var(--radius-lg);
+  --el-font-family: var(--font-family-base);
+  --el-fill-color-light: var(--color-fill-light);
+  --el-text-color-primary: var(--color-text-primary);
+  --el-text-color-regular: var(--color-text-secondary);
+  --el-text-color-secondary: var(--color-text-muted);
+  --el-text-color-placeholder: var(--color-text-placeholder);
+  --el-text-color-disabled: var(--color-text-placeholder);
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-border-soft);
+  --el-border-color-lighter: var(--color-border-soft);
+  --el-border-color-dark: var(--color-border-strong);
+}

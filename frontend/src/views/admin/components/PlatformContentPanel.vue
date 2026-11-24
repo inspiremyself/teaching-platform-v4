@@ -19,7 +19,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="110" fixed="right">
+        <el-table-column label="操作" width="110" align="right" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onToggleSubject(row)">
               {{ row.status === 'ACTIVE' ? '停用' : '启用' }}
@@ -53,7 +53,7 @@
         <el-table-column label="小节数" width="100">
           <template #default="{ row }">{{ row.sectionCount }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="120" align="right" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="onPickTextbook(row.id)">小节</el-button>
           </template>
@@ -78,7 +78,7 @@
         <el-table-column label="小节数" width="90">
           <template #default="{ row }">{{ row.sectionCount }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="300" fixed="right">
+        <el-table-column label="操作" width="300" align="right" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :disabled="row.status !== 'DRAFT'" @click="onEdit(row.id)">
               编辑
@@ -92,23 +92,20 @@
             >
               发布
             </el-button>
-            <el-button
-              link
-              type="primary"
-              :disabled="row.status !== 'PUBLISHED'"
-              @click="onUnpublish(row.id)"
-            >
-              下架
-            </el-button>
-            <el-button
-              link
-              type="primary"
-              :disabled="row.status !== 'PUBLISHED'"
-              @click="onOpenGrant(row.id)"
-            >
-              授权
-            </el-button>
-            <el-button link type="danger" @click="onRemove(row.id)">删除</el-button>
+            <el-dropdown trigger="click">
+              <el-button link type="primary">更多</el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item :disabled="row.status !== 'PUBLISHED'" @click="onUnpublish(row.id)">
+                    下架
+                  </el-dropdown-item>
+                  <el-dropdown-item :disabled="row.status !== 'PUBLISHED'" @click="onOpenGrant(row.id)">
+                    授权
+                  </el-dropdown-item>
+                  <el-dropdown-item divided @click="onRemove(row.id)">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -129,7 +126,7 @@
       </el-table>
     </el-dialog>
 
-    <el-dialog v-model="editVisible" title="编辑课件" width="900px">
+    <el-dialog v-model="editVisible" title="编辑课件" width="860px">
       <el-form label-position="top">
         <el-form-item label="标题">
           <el-input v-model="editForm.title" />
@@ -200,7 +197,7 @@
         <el-table-column label="学校 id" width="120">
           <template #default="{ row }">{{ row.schoolId }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="100">
+        <el-table-column label="操作" width="100" align="right" fixed="right">
           <template #default="{ row }">
             <el-button link type="danger" @click="onRevoke(row.schoolId)">取消授权</el-button>
           </template>
@@ -254,7 +251,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="previewVisible" title="课件预览" width="900px">
+    <el-dialog v-model="previewVisible" title="课件预览" width="860px">
       <div v-for="section in platformContent.current.value?.sections ?? []" :key="section.id">
         <h4 class="admin-platform-content__section-title">{{ section.heading }}</h4>
         <ContentPreview :content-json="section.contentJson" :read-asset="platformContent.readAsset" />

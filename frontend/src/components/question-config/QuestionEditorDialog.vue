@@ -50,10 +50,10 @@
 
             <template v-else-if="showConfigFields">
               <el-form-item label="排序">
-                <el-input-number v-model="form.sortOrder" :min="1" :max="999" style="width: 100%" />
+                <el-input-number v-model="form.sortOrder" :min="1" :max="999" class="app-control-full" />
               </el-form-item>
               <el-form-item label="分值">
-                <el-input-number v-model="form.score" :min="1" :max="100" style="width: 100%" />
+                <el-input-number v-model="form.score" :min="1" :max="100" class="app-control-full" />
               </el-form-item>
             </template>
 

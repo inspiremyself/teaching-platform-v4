@@ -3,8 +3,8 @@
     <header class="login-header">
       <div class="login-header__brand">教学一体化平台</div>
       <div class="login-header__actions">
-        <button type="button" class="text-link" @click="showPlaceholder('帮助中心功能暂未开放')">帮助中心</button>
-        <button type="button" class="ghost-button" @click="showPlaceholder('机构账号登录功能暂未开放')">机构账号登录</button>
+        <el-button text @click="showPlaceholder('帮助中心功能暂未开放')">帮助中心</el-button>
+        <el-button type="primary" round class="login-cta" @click="showPlaceholder('机构账号登录功能暂未开放')">机构账号登录</el-button>
       </div>
     </header>
 
@@ -61,7 +61,7 @@
           </el-form-item>
 
           <div class="school-code-entry">
-            <button type="button" class="text-link school-code-toggle" @click="schoolCodeVisible = true">跨校同名账号？填写学校编码</button>
+            <el-button text class="school-code-toggle" @click="schoolCodeVisible = true">跨校同名账号？填写学校编码</el-button>
           </div>
 
           <el-form-item v-if="schoolCodeVisible" label="学校编码">
@@ -248,7 +248,7 @@ onMounted(async () => {
   min-height: 100vh;
   display: flex;
   flex-wrap: wrap;
-  background: #f8fafc;
+  background: var(--color-surface-muted);
 }
 
 .login-header {
@@ -268,33 +268,27 @@ onMounted(async () => {
 }
 
 .login-header__brand {
-  font-size: 20px;
+  font-size: var(--font-size-2xl);
   font-weight: 800;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .login-header__actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-.text-link {
-  border: none;
-  background: transparent;
-  color: #475569;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.ghost-button {
-  border: none;
-  background: #0f766e;
-  color: #fff;
-  border-radius: 999px;
-  padding: 10px 16px;
-  font-weight: 700;
-  cursor: pointer;
+.login-cta {
+  --el-button-bg-color: var(--color-brand-teacher);
+  --el-button-border-color: var(--color-brand-teacher);
+  --el-button-hover-bg-color: var(--color-brand-teacher-border);
+  --el-button-hover-border-color: var(--color-brand-teacher-border);
+  --el-button-active-bg-color: var(--color-brand-teacher-border);
+  --el-button-active-border-color: var(--color-brand-teacher-border);
+  --el-button-text-color: var(--color-text-inverse);
+  --el-button-hover-text-color: var(--color-text-inverse);
+  --el-border-radius-round: var(--radius-pill);
 }
 
 .login-left {
@@ -310,7 +304,7 @@ onMounted(async () => {
 .hero-panel {
   max-width: 540px;
   padding: 40px;
-  border-radius: 32px;
+  border-radius: var(--radius-xl);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.32);
@@ -327,7 +321,7 @@ onMounted(async () => {
 }
 
 .brand-title {
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 44px;
   font-weight: 700;
   line-height: 1.12;
@@ -336,7 +330,7 @@ onMounted(async () => {
 
 .brand-desc {
   color: rgba(226, 232, 240, 0.82);
-  font-size: 15px;
+  font-size: var(--font-size-base);
   line-height: 1.8;
   margin: 0;
 }
@@ -352,10 +346,10 @@ onMounted(async () => {
   display: flex;
   gap: 12px;
   padding: 18px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .feature-card span {
@@ -364,7 +358,7 @@ onMounted(async () => {
 
 .feature-card h3 {
   margin: 0 0 6px;
-  font-size: 15px;
+  font-size: var(--font-size-base);
 }
 
 .feature-card p {
@@ -381,16 +375,16 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 120px 48px 80px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .login-card {
   width: 100%;
-  background: #fff;
-  border-radius: 24px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
   padding: 40px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 .login-card-header {
@@ -398,15 +392,15 @@ onMounted(async () => {
 }
 
 .login-card-header h2 {
-  font-size: 30px;
+  font-size: var(--font-size-3xl);
   font-weight: 700;
-  color: #1e293b;
+  color: var(--color-text-primary);
   margin: 0 0 6px;
 }
 
 .login-card-header p {
-  color: #64748b;
-  font-size: 14px;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
   margin: 0;
 }
 
@@ -443,10 +437,10 @@ onMounted(async () => {
 }
 
 .demo-chip {
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  color: #0f172a;
-  border-radius: 999px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-pill);
   padding: 8px 12px;
   font-size: 12px;
   font-weight: 700;
@@ -456,14 +450,14 @@ onMounted(async () => {
 .login-btn {
   width: 100%;
   height: 48px;
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 600;
-  border-radius: 14px !important;
+  border-radius: var(--radius-xl);
 }
 
 .login-footer-tip {
   margin-top: 16px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 12px;
   text-align: center;
 }
@@ -475,7 +469,7 @@ onMounted(async () => {
   align-items: center;
   padding: 0 32px 24px;
   margin-top: -24px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 

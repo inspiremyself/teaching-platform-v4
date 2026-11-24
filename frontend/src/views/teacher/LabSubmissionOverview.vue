@@ -48,7 +48,7 @@
             <span v-else class="overview-matrix__muted">未提交</span>
           </template>
         </el-table-column>
-        <el-table-column label="批改操作" width="220" fixed="right">
+        <el-table-column label="批改操作" width="220" align="right" fixed="right">
           <template #default="{ row: student }">
             <div class="workbench-actions">
               <button v-if="student.submissionId != null" class="action-button action-button--primary" type="button" @click="router.push({ name: 'teacher-lab-submission-overview', params: { labId: labId() }, query: { submissionId: student.submissionId } })">批改报告</button>
