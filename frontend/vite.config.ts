@@ -31,6 +31,17 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    host: '0.0.0.0',
+    port: 5173,
+    allowedHosts: ['.cpolar.top', '.cpolar.cn'],
+    proxy: {
+      '/api': {
+        target: apiTarget,
+        changeOrigin: true,
+      },
+    },
+  },
   build: {
     rollupOptions: {
       output: {
