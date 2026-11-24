@@ -83,60 +83,20 @@
                   </div>
                 </div>
               </div>
+              <el-button link type="primary" @click="router.push('/teacher/analysis')">查看分析</el-button>
             </template>
 
-            <div v-if="trend.length" class="trend-panel">
-              <div class="trend-chart-shell">
-                <div class="trend-y-axis">
-                  <span v-for="tick in trendAxisTicks" :key="tick">{{ tick }}</span>
-                </div>
-
-                <div class="trend-chart">
-                  <div class="trend-chart__grid">
-                    <span v-for="tick in trendAxisTicks" :key="`grid-${tick}`" class="trend-chart__grid-line"></span>
-                  </div>
-
-                  <svg
-                    v-if="trendChartPoints.length"
-                    class="trend-chart__line"
-                    viewBox="0 0 100 100"
-                    preserveAspectRatio="none"
-                    aria-hidden="true"
-                  >
-                    <path v-if="trendLinePath" :d="trendLinePath" class="trend-chart__line-path" />
-                    <circle
-                      v-for="point in trendChartPoints"
-                      :key="`${point.date}-dot`"
-                      :cx="point.x"
-                      :cy="point.y"
-                      r="1.8"
-                      class="trend-chart__line-dot"
-                    />
-                  </svg>
-
-                  <div v-for="point in trendChartPoints" :key="point.date" class="trend-bar-item">
-                    <strong class="trend-bar-value">{{ point.scoreCount }}</strong>
-                    <div class="trend-bar-track">
-                      <div class="trend-bar-fill" :style="{ height: `${Math.max((point.scoreCount / maxTrendCount) * 100, 8)}%` }"></div>
-                    </div>
-                    <span class="trend-bar-label">{{ point.date.slice(5) }}</span>
-                    <small class="trend-bar-meta">均分 {{ point.avgScore.toFixed(1) }}</small>
-                  </div>
-                </div>
-              </div>
-
-              <div class="trend-summary-grid trend-summary-grid--compact">
-                <article class="trend-summary-card">
-                  <span class="trend-summary-card__label">高峰日</span>
-                  <strong>{{ peakTrendDate }}</strong>
-                  <p>{{ peakTrendHint }}</p>
-                </article>
-                <article class="trend-summary-card">
-                  <span class="trend-summary-card__label">近期关注</span>
-                  <strong>{{ trendFocusTitle }}</strong>
-                  <p>{{ trendFocusDescription }}</p>
-                </article>
-              </div>
+            <div v-if="trend.length" class="trend-summary-grid trend-summary-grid--compact">
+              <article class="trend-summary-card">
+                <span class="trend-summary-card__label">高峰日</span>
+                <strong>{{ peakTrendDate }}</strong>
+                <p>{{ peakTrendHint }}</p>
+              </article>
+              <article class="trend-summary-card">
+                <span class="trend-summary-card__label">近期关注</span>
+                <strong>{{ trendFocusTitle }}</strong>
+                <p>{{ trendFocusDescription }}</p>
+              </article>
             </div>
             <el-empty v-else description="暂无趋势数据" />
           </el-card>
@@ -253,7 +213,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { DashboardKey } from '@/composables/useDashboard';
-const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, localizedSummaryCards, maxTrendCount, trendTotalCount, trendAverageText, trendChartPoints, trendLinePath, trendAxisTicks, trendPulseShortText, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, heroStatusText, trendFocusTitle, trendFocusDescription, riskAlertSummary, riskAlertDetail, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText } = inject(DashboardKey)!;
+const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, localizedSummaryCards, trendTotalCount, trendAverageText, trendPulseShortText, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, heroStatusText, trendFocusTitle, trendFocusDescription, riskAlertSummary, riskAlertDetail, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText } = inject(DashboardKey)!;
 </script>
 
 <style scoped>
@@ -428,130 +388,6 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
-}
-
-.trend-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.trend-chart-shell {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 12px;
-  height: 220px;
-  padding: 12px 10px 10px 0;
-  border-radius: 18px;
-  border: 1px solid #dbe4f0;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98));
-  overflow: hidden;
-}
-
-.trend-y-axis {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-end;
-  height: 100%;
-  padding: 2px 0 24px;
-}
-
-.trend-y-axis span {
-  color: #94a3b8;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.trend-chart {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  height: 100%;
-  min-height: 0;
-  padding-top: 2px;
-}
-
-.trend-chart__grid {
-  position: absolute;
-  inset: 0 0 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  pointer-events: none;
-}
-
-.trend-chart__grid-line {
-  display: block;
-  width: 100%;
-  border-top: 1px dashed rgba(148, 163, 184, 0.34);
-}
-
-.trend-bar-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  z-index: 1;
-}
-
-.trend-bar-value {
-  font-size: 16px;
-  color: #0f172a;
-}
-
-.trend-bar-track {
-  width: 22px;
-  height: 148px;
-  display: flex;
-  align-items: flex-end;
-  border-radius: 999px;
-  border: 1px solid rgba(203, 213, 225, 0.7);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(241, 245, 249, 0.45));
-  padding: 0 0 6px;
-}
-
-.trend-bar-fill {
-  width: 100%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(20, 184, 166, 0.5), rgba(15, 118, 110, 0.86));
-  box-shadow: 0 10px 18px rgba(15, 118, 110, 0.14);
-}
-
-.trend-chart__line {
-  position: absolute;
-  inset: 0 0 24px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.trend-chart__line-path {
-  fill: none;
-  stroke: rgba(15, 118, 110, 0.88);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.trend-chart__line-dot {
-  fill: #ffffff;
-  stroke: #0f766e;
-  stroke-width: 1.5;
-  filter: drop-shadow(0 2px 5px rgba(15, 118, 110, 0.18));
-}
-
-.trend-bar-label {
-  font-size: 12px;
-  color: #334155;
-  font-weight: 700;
-}
-
-.trend-bar-meta {
-  font-size: 11px;
-  color: #64748b;
 }
 
 .trend-summary-grid {
@@ -865,19 +701,6 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
     display: grid;
   }
 
-  .trend-chart-shell {
-    grid-template-columns: 1fr;
-    height: auto;
-    padding-left: 14px;
-  }
-
-  .trend-y-axis {
-    display: none;
-  }
-
-  .trend-chart {
-    height: 220px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -892,16 +715,6 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   .dashboard-card :deep(.el-card__body) {
     padding-left: 18px;
     padding-right: 18px;
-  }
-
-  .trend-chart {
-    gap: 10px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-
-  .trend-bar-item {
-    min-width: 66px;
   }
 }
 </style>

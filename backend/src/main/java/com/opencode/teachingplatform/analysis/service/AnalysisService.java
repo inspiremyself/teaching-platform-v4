@@ -179,7 +179,9 @@ public class AnalysisService {
             participationOverview.add(toParticipationOverviewRow(businessType, typeSnapshots));
         }
 
-        Map<String, Object> result = new LinkedHashMap<>(dashboard);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("summaryCards", dashboard.get("summaryCards"));
+        result.put("trend", dashboard.get("trend"));
         result.put("sectionComparison", sectionComparison);
         result.put("businessBreakdown", businessBreakdown);
         result.put("insights", insights);

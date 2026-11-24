@@ -91,7 +91,6 @@ const localizedSummaryCards = computed(() => summaryCards.value.map(card => ({
   description: translateDashboardText(card.description)
 })));
 
-const maxTrendCount = computed(() => Math.max(...trend.value.map(item => item.scoreCount), 1));
 const trendTotalCount = computed(() => trend.value.reduce((sum, item) => sum + item.scoreCount, 0));
 const trendAverageValue = computed(() => {
   if (!trend.value.length) {
@@ -100,30 +99,6 @@ const trendAverageValue = computed(() => {
   return trendTotalCount.value / trend.value.length;
 });
 const trendAverageText = computed(() => trend.value.length ? trendAverageValue.value.toFixed(1) : '0');
-const trendChartPoints = computed(() => {
-  const items = trend.value;
-  if (!items.length) {
-    return [];
-  }
-
-  return items.map((item, index) => {
-    const avgScore = Math.min(Math.max(item.avgScore, 0), 100);
-    const x = items.length === 1 ? 50 : 4 + (index / (items.length - 1)) * 92;
-    const y = 94 - (avgScore / 100) * 88;
-
-    return {
-      ...item,
-      avgScore,
-      x,
-      y
-    };
-  });
-});
-const trendLinePath = computed(() => trendChartPoints.value.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' '));
-const trendAxisTicks = computed(() => {
-  const maxValue = maxTrendCount.value;
-  return [maxValue, Math.ceil(maxValue * 0.66), Math.ceil(maxValue * 0.33), 0];
-});
 const trendPulseShortText = computed(() => {
   if (trendPulseTitle.value === '存在明显评分高峰') return '有高峰';
   if (trendPulseTitle.value === '评分节奏总体平稳') return '平稳';
@@ -305,10 +280,10 @@ const riskActionDescription = computed(() => {
 });
 
 const localizedSummarySignal = (key: string) => {
-  if (/student|class|member/i.test(key)) return '在册概览';
-  if (/grade|score|trend/i.test(key)) return '教学节奏';
-  if (/submission|task|todo/i.test(key)) return '等待处理';
-  if (/alert|risk|warn/i.test(key)) return '风险关注';
+  if (key === 'activityCount') return '我创建的全时段活动（含草稿）';
+  if (key === 'pendingGradeCount') return '已提交待批改，不含草稿';
+  if (key === 'averageScore') return '任教班级全时段评分均值';
+  if (key === 'notStartedCount') return '已发布/关闭活动，尚无提交行';
   return '工作摘要';
 };
 
@@ -345,7 +320,7 @@ const localizedActorText = (actor: string) => translateDashboardText(actor);
 
 onMounted(loadDashboard);
 
-  return { computed, onMounted, ref, useRouter, DataLine, List, Opportunity, Warning, getTeacherDashboard, router, loading, loaded, loadError, summaryCards, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, textLooksChinese, normalizeEnglishText, translateDashboardText, localizedSummaryCards, maxTrendCount, trendTotalCount, trendAverageValue, trendAverageText, trendChartPoints, trendLinePath, trendAxisTicks, trendPulseShortText, peakTrendItem, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, workbenchSubline, heroStatusText, trendInsightText, trendPulseTitle, trendPulseDescription, trendFocusTitle, trendFocusDescription, quickLinkSummary, quickLinkLoadText, riskAlertSummary, riskAlertDetail, actorCoverageText, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText };
+  return { computed, onMounted, ref, useRouter, DataLine, List, Opportunity, Warning, getTeacherDashboard, router, loading, loaded, loadError, summaryCards, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, textLooksChinese, normalizeEnglishText, translateDashboardText, localizedSummaryCards, trendTotalCount, trendAverageValue, trendAverageText, trendPulseShortText, peakTrendItem, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, workbenchSubline, heroStatusText, trendInsightText, trendPulseTitle, trendPulseDescription, trendFocusTitle, trendFocusDescription, quickLinkSummary, quickLinkLoadText, riskAlertSummary, riskAlertDetail, actorCoverageText, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText };
 }
 
 export type DashboardState = ReturnType<typeof useDashboard>;

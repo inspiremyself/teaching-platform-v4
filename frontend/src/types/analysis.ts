@@ -89,18 +89,6 @@ export interface TeacherParticipationDetail {
 export interface TeacherAnalysisOverview {
   summaryCards: AnalysisSummaryCard[];
   trend: TeacherTrendItem[];
-  recentTasks: Array<{
-    label: string;
-    title: string;
-    actor: string;
-    eventTime: string | null;
-    route: string;
-  }>;
-  quickLinks: Array<{
-    label: string;
-    route: string;
-    badge: number;
-  }>;
   sectionComparison: TeacherComparisonItem[];
   businessBreakdown: TeacherBusinessBreakdownItem[];
   insights: AnalysisInsight[];

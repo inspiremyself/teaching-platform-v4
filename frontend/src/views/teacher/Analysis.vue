@@ -11,12 +11,6 @@
           <el-button type="primary" @click="loadAnalysis" :loading="loading">刷新分析</el-button>
         </div>
       </div>
-
-      <div v-if="summaryCards.length" class="workbench-meta analysis-meta">
-        <span v-for="card in summaryCards" :key="card.key" class="workbench-meta__item">
-          <strong>{{ card.value }}</strong> {{ card.title }}
-        </span>
-      </div>
     </section>
 
     <el-skeleton v-if="loading && !loaded" :rows="8" animated />
@@ -42,6 +36,8 @@
             </div>
           </article>
         </section>
+
+        <p class="analysis-scope-note">口径说明：汇总卡、班级对比与类型分布为全时段；趋势为近 7 日已评分记录；参与 / 完成仅统计已发布 / 关闭活动</p>
 
         <div class="analysis-grid">
           <section class="analysis-main">
@@ -350,6 +346,13 @@ onMounted(loadAnalysis);
   margin-top: 4px;
   color: #0f172a;
   font-size: 20px;
+}
+
+.analysis-scope-note {
+  margin: 0 0 2px;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .analysis-main,
