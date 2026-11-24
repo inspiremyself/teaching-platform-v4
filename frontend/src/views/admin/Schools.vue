@@ -3,7 +3,6 @@
     <section class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="admin-eyebrow">平台管理台 / 学校管理</div>
           <h1>学校管理</h1>
           <p>开通学校并创建首位校管；停用后该校账号将无法登录。</p>
         </div>
@@ -168,15 +167,6 @@ onMounted(loadSchools);
 </script>
 
 <style scoped>
-.admin-eyebrow {
-  margin-bottom: 2px;
-  color: var(--primary-color);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .schools-card {
   padding: 20px;
   border: 1px solid #e2e8f0;

@@ -8,7 +8,6 @@
         </button>
 
         <div>
-          <p class="lab-steps-console__eyebrow">教师实验工作台 / 步骤配置</p>
           <h1 class="lab-steps-console__title">实验题项配置台</h1>
           <p class="lab-steps-console__subtitle">
             左侧切换实验题项，中间集中维护题干与结构化答案，右侧压缩展示分值、约束与质量检查。
@@ -468,7 +467,6 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   cursor: pointer;
 }
 
-.lab-steps-console__eyebrow,
 .lab-steps-console__section-kicker {
   margin: 0 0 8px;
   color: #0f766e;

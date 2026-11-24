@@ -7,7 +7,6 @@
       </button>
       <div class="blank-regrade-header__top">
         <div class="blank-regrade-header__main">
-          <div class="blank-regrade-hero__eyebrow">教师后台 / 填空重判</div>
           <h1>实验填空批量重判台</h1>
           <p>维护当前实验填空题的可接受答案，保存后立即回刷分布并触发重评分。</p>
         </div>
@@ -380,7 +379,6 @@ initialize();
   cursor: pointer;
 }
 
-.blank-regrade-hero__eyebrow,
 .blank-regrade-section-kicker,
 .summary-card__label {
   font-size: 12px;
@@ -389,7 +387,6 @@ initialize();
   text-transform: uppercase;
 }
 
-.blank-regrade-hero__eyebrow,
 .blank-regrade-section-kicker {
   color: var(--blank-primary);
 }

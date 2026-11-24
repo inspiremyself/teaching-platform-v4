@@ -3,7 +3,6 @@
     <section class="workbench-header scores-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="scores-header__eyebrow">学生端 / 成绩总览</div>
           <div class="scores-header__title-row">
             <h1 class="scores-hero__title">我的成绩</h1>
             <span class="scores-header__summary">{{ recentRecords.length }} 条记录</span>
@@ -897,14 +896,6 @@ const { ChatLineRound, loading, loaded, loadError, summaryCards, groupedScores, 
 /* Student score refactor overrides */
 .scores-page {
   gap: 16px;
-}
-.scores-header__eyebrow {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #0f766e;
-  margin-bottom: 6px;
 }
 .scores-hero__title {
   margin: 0;

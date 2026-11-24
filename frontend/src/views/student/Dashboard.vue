@@ -3,7 +3,6 @@
     <section class="workbench-header student-dashboard__header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="student-dashboard__eyebrow">学生空间 / 今日学习</div>
           <h1>欢迎回来{{ displayNameSuffix }}。</h1>
           <p>优先看待完成任务、最近反馈和常用入口。</p>
         </div>
@@ -232,15 +231,6 @@ onMounted(loadDashboard);
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.student-dashboard__eyebrow {
-  margin-bottom: 6px;
-  color: #0f766e;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .student-dashboard h1 {

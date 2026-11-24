@@ -2,7 +2,6 @@
   <div class="student-labs-page">
     <section class="labs-header-card">
       <div class="labs-header-card__main">
-        <div class="student-labs-hero__eyebrow">学生端 / 我的实验</div>
         <h1>实验任务</h1>
         <p>查看实验状态、题项数量、截止时间和实验小结要求后，直接进入作答。</p>
       </div>
@@ -238,17 +237,11 @@ onMounted(fetchData);
   background: linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(255, 255, 255, 1));
 }
 
-.student-labs-hero__eyebrow,
 .meta-label {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.student-labs-hero__eyebrow {
-  color: var(--labs-primary);
-  margin-bottom: 10px;
 }
 
 .student-labs-page h1,

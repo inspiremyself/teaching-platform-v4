@@ -2,7 +2,6 @@
   <div class="lab-steps-page workbench-page workbench-page--locked" v-loading="loading">
     <div class="page-header">
       <div class="page-header__main">
-        <div class="steps-eyebrow">学生端 / 实验题项作答</div>
         <h2>{{ detail?.title || '实验作答' }}</h2>
         <p>{{ detail?.description || '按题目顺序作答。' }}</p>
         <div v-if="detail" class="page-header__meta">
@@ -287,7 +286,6 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   font-size: 12px;
   font-weight: 600;
 }
-.steps-eyebrow,
 .status-card__eyebrow,
 .workflow-item__eyebrow,
 .question-card__eyebrow,
@@ -296,10 +294,6 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-.steps-eyebrow {
-  margin-bottom: 8px;
-  color: var(--steps-primary);
 }
 .steps-layout {
   display: grid;

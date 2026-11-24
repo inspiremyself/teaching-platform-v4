@@ -1,6 +1,5 @@
 <template>
   <WorkbenchShell
-    eyebrow="教师控制台 / 考试闭环 / 考试管理"
     title="考试管理"
     description="围绕发布、进行、收卷和批改入口维护考试闭环。"
   >

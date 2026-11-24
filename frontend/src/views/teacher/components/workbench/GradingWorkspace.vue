@@ -13,9 +13,7 @@ defineSlots<{
   <div class="workbench-page grading-workspace workbench-page--locked">
     <header class="workbench-header">
       <div class="workbench-header__top">
-        <div class="workbench-header__main">
-          <div class="workbench-eyebrow">教师控制台 / 批改工作区</div>
-        </div>
+        <div class="workbench-header__main"></div>
         <div class="workbench-header__actions">
           <slot name="headerActions" />
         </div>

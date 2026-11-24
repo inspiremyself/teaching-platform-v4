@@ -15,7 +15,7 @@ describe('教师总览与分析报表边界', () => {
     expect(navigationSource).toContain("{ to: '/teacher/dashboard', label: '总览'");
     expect(navigationSource).toContain("{ to: '/teacher/analysis', label: '分析报表'");
     expect(routerSource).toContain("path: 'dashboard', name: 'teacher-dashboard'");
-    expect(routerSource).toContain("path: 'analysis', component: () => import('@/views/teacher/Analysis.vue')");
+    expect(routerSource).toContain("path: 'analysis', name: 'teacher-analysis', component: () => import('@/views/teacher/Analysis.vue')");
   });
 
   it('总览趋势区只保留摘要与下钻入口', () => {

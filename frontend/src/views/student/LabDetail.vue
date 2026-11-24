@@ -2,7 +2,6 @@
   <div class="lab-detail-page" v-loading="loading">
     <div class="page-header">
       <div class="page-header__main">
-        <div class="detail-eyebrow">学生端 / 实验题目索引</div>
         <h2>{{ detail?.title || '实验详情' }}</h2>
         <p>{{ detail?.description || '先查看实验要求，再进入对应题目作答。' }}</p>
         <div v-if="detail" class="page-header__meta">
@@ -262,16 +261,11 @@ onUnmounted(() => {
   background: #fff7ed;
   color: #9a3412;
 }
-.detail-eyebrow,
 .catalog-item__meta {
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-.detail-eyebrow {
-  margin-bottom: 8px;
-  color: var(--detail-primary);
 }
 .feedback-card,
 .catalog-card {

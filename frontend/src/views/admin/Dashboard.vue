@@ -3,7 +3,6 @@
     <section class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="admin-eyebrow">学校管理台 / 总览</div>
           <h1>校管工作台</h1>
           <p>{{ schoolName }} — 本校组织数据摘要</p>
         </div>
@@ -121,15 +120,6 @@ onMounted(loadSummary);
 </script>
 
 <style scoped>
-.admin-eyebrow {
-  margin-bottom: 2px;
-  color: var(--primary-color);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

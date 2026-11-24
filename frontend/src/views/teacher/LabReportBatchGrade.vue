@@ -455,14 +455,6 @@ fetchData();
   margin-top: 10px;
 }
 
-.batch-grade-eyebrow {
-  color: var(--batch-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .batch-grade-header h1,
 .batch-grade-panel h2 {
   margin: 0;

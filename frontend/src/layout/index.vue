@@ -96,6 +96,7 @@
 
       <!-- Main Content -->
       <main class="main-content" id="main-content" tabindex="-1">
+        <AppBreadcrumb />
         <div class="main-content__shell">
           <router-view />
         </div>
@@ -125,6 +126,7 @@ import { logoutRequest } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
 import { MOBILE_NAV, PROFILE_NAV_ITEM, SIDEBAR_NAV } from '@/layout/navigation';
 import { resolveRoleView } from '@/layout/roleView';
+import AppBreadcrumb from './AppBreadcrumb.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -489,7 +491,7 @@ const logout = async () => {
     display: flex;
     flex: 1;
     min-height: 0;
-    height: 100%;
+    height: auto;
     overflow: hidden;
   }
 }

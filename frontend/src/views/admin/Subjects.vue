@@ -3,7 +3,6 @@
     <section class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="admin-eyebrow">学校管理台 / 学科管理</div>
           <h1>学科管理</h1>
           <p>维护本校学科字典，供班级指派学科教师时使用。</p>
         </div>
@@ -249,15 +248,6 @@ onMounted(fetchData);
 </script>
 
 <style scoped>
-.admin-eyebrow {
-  margin-bottom: 2px;
-  color: var(--primary-color);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .toolbar-card,
 .table-card {
   border: 1px solid #e2e8f0;

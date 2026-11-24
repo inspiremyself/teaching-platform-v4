@@ -3,7 +3,6 @@
     <section class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="admin-eyebrow">学校管理台 / 学生管理</div>
           <h1>学生管理</h1>
           <p>按班级维护学生名册，支持新建、调班、导入与启停。</p>
         </div>
@@ -509,15 +508,6 @@ onMounted(async () => {
 .reset-confirm-username {
   font-size: 13px;
   color: var(--el-text-color-secondary);
-}
-
-.admin-eyebrow {
-  margin-bottom: 2px;
-  color: var(--primary-color);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .toolbar-card,

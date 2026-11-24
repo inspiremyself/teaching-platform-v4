@@ -7,7 +7,6 @@
       </button>
       <div class="answers-wall-header__top">
         <div>
-          <div class="answers-wall-eyebrow">教师后台 / 子题答案墙</div>
           <h1>{{ wall?.title || '子题答案墙' }}</h1>
           <p>
             {{ wall?.labTitle || '' }}
@@ -116,12 +115,6 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
-}
-
-.answers-wall-eyebrow {
-  color: #64748b;
-  font-size: 13px;
-  margin-bottom: 8px;
 }
 
 .answers-wall-header h1 {

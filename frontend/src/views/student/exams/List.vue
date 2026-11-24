@@ -3,7 +3,6 @@
     <section class="workbench-header student-exams-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="student-exams-header__eyebrow">学生空间 / 考试任务</div>
           <h1>考试任务流</h1>
           <p>将可参加、进行中和已出结果的考试按任务节奏收拢到同一页面。</p>
         </div>
@@ -220,15 +219,6 @@ onMounted(loadExams)
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.student-exams-header__eyebrow {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #0f766e;
-  font-weight: 700;
-  margin-bottom: 6px;
 }
 
 .student-exams-page h1 {

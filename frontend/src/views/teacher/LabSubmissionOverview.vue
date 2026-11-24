@@ -1,6 +1,5 @@
 <template>
   <WorkbenchShell
-    eyebrow="教师控制台 / 实验闭环 / 班级总览"
     title="实验班级总览"
     description="班级全员 × 子题矩阵。点击学生名查看历次提交，点击题列查看全班答案。"
   >

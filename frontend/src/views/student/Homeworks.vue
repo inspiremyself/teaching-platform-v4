@@ -3,7 +3,6 @@
     <section class="workbench-header student-homeworks-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="student-homeworks-header__eyebrow">学生端 / 我的作业</div>
           <div class="student-homeworks-header__title-row">
             <h1>我的作业</h1>
             <span class="student-homeworks-header__summary">{{ filteredRows.length }} 条任务</span>
@@ -540,15 +539,6 @@ onMounted(fetchData);
 
 .student-homeworks-header {
   padding: 10px 12px 6px;
-}
-
-.student-homeworks-header__eyebrow {
-  font-size: 11px;
-  font-weight: 800;
-  color: #2563eb;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
 }
 
 .student-homeworks-header__title-row {

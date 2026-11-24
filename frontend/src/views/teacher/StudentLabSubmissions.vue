@@ -7,7 +7,6 @@
       </button>
       <div class="student-submissions-header__top">
         <div>
-          <div class="student-submissions-eyebrow">教师后台 / 学生实验提交</div>
           <h1>{{ pageTitle }}</h1>
           <p>查看该学生在可见实验中的提交记录，点击进入报告详情。</p>
         </div>
@@ -129,12 +128,6 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
   align-items: flex-start;
-}
-
-.student-submissions-eyebrow {
-  color: #64748b;
-  font-size: 13px;
-  margin-bottom: 8px;
 }
 
 .student-submissions-header h1 {

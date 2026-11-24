@@ -3,7 +3,6 @@
     <section class="workbench-header profile-hero">
       <div class="workbench-header__top profile-hero__top">
         <div class="workbench-header__main profile-hero__main">
-          <div class="profile-hero__eyebrow">账户中心 / 个人资料与安全</div>
           <h1>个人设置</h1>
           <p>这里集中维护你的真实账户资料、联系信息和密码安全，不再拆成伪标签页或假分区导航。</p>
         </div>
@@ -340,7 +339,6 @@ const changePassword = async () => {
   align-items: flex-start;
 }
 
-.profile-hero__eyebrow,
 .profile-section-intro__label,
 .profile-sidebar-block__label {
   display: inline-flex;

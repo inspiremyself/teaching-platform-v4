@@ -7,7 +7,6 @@
       </button>
       <div class="blank-batch-header__top">
         <div>
-          <div class="blank-batch-eyebrow">教师后台 / 填空批量重判</div>
           <h1>填空题重判总览</h1>
           <p>独立批量界面集中展示当前实验全部填空题的答案分布与可接受答案，便于逐题刷新、重判和跳转到详细重判。</p>
         </div>
@@ -279,14 +278,6 @@ initialize();
   gap: 14px;
   align-items: flex-start;
   margin-top: 10px;
-}
-
-.blank-batch-eyebrow {
-  color: var(--blank-primary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .blank-batch-header h1 {

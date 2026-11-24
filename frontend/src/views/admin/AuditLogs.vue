@@ -3,7 +3,6 @@
     <section class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="admin-eyebrow">学校管理台 / 操作日志</div>
           <h1>操作日志</h1>
           <p>本校组织与账号相关操作审计记录（只读）。</p>
         </div>

@@ -564,14 +564,6 @@ onMounted(fetchData);
   color: #eff6ff;
 }
 
-.submissions-hero__eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(219, 234, 254, 0.78);
-}
-
 .submissions-hero__heading {
   display: flex;
   justify-content: space-between;
@@ -896,14 +888,6 @@ onMounted(fetchData);
   display: flex;
   flex-direction: column;
   gap: 18px;
-}
-
-.quick-grade-card__eyebrow {
-  font-size: 12px;
-  font-weight: 700;
-  color: #2563eb;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .quick-grade-card__header {

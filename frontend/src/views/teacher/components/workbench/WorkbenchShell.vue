@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import './workbench.css'
 
-defineProps<{ eyebrow: string; title: string; description: string }>()
+defineProps<{ title: string; description: string }>()
 defineSlots<{
   actions(): any
   meta(): any
@@ -15,7 +15,6 @@ defineSlots<{
     <header class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="workbench-eyebrow">{{ eyebrow }}</div>
           <h1>{{ title }}</h1>
           <p>{{ description }}</p>
         </div>

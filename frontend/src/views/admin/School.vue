@@ -3,7 +3,6 @@
     <section class="workbench-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="admin-eyebrow">学校管理台 / 学校信息</div>
           <h1>学校信息</h1>
           <p>维护本校名称等基础信息（编码第一期只读）。</p>
         </div>
@@ -71,15 +70,6 @@ onMounted(fetchSchool);
 </script>
 
 <style scoped>
-.admin-eyebrow {
-  margin-bottom: 2px;
-  color: var(--primary-color);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .school-card {
   max-width: 520px;
   padding: 24px;

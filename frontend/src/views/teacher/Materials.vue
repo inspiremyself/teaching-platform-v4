@@ -3,7 +3,6 @@
     <section class="workbench-header materials-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="materials-header__eyebrow">教师后台 / 资料管理</div>
           <h1>教学资料</h1>
           <p>集中管理上传、可见范围、下载和资料信息维护。</p>
         </div>
@@ -493,15 +492,6 @@ onMounted(() => {
 
 .materials-meta {
   row-gap: 10px;
-}
-
-.materials-header__eyebrow {
-  margin-bottom: 6px;
-  color: #2563eb;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .toolbar-card,

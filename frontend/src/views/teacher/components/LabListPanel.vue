@@ -1,6 +1,5 @@
 <template>
   <WorkbenchShell
-    eyebrow="教师控制台 / 实验闭环 / 实验管理"
     title="实验台账"
     description="按班级维护实验、题项与发布状态。"
   >

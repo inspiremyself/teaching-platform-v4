@@ -1,5 +1,6 @@
 <template>
   <div class="lab-report-view" v-loading="loading">
+    <AppBreadcrumb />
     <el-empty v-if="!loading && !detail" description="未获取到实验报告" />
 
     <article v-else-if="detail" class="lab-report-sheet workbench-panel">
@@ -66,6 +67,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { getTeacherLabReportView } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
+import AppBreadcrumb from '@/layout/AppBreadcrumb.vue';
 import type { TeacherLabReportView } from '@/types/lab';
 
 const route = useRoute();
@@ -95,9 +97,20 @@ onMounted(fetchDetail);
 
 <style scoped>
 .lab-report-view {
-  min-height: 100vh;
+  min-height: calc(100vh - 34px);
   background: #f0f4f8;
   padding: 24px 20px 40px;
+}
+
+.lab-report-view :deep(.app-breadcrumb) {
+  max-width: 880px;
+}
+
+@media (max-width: 899px) {
+  /* 该断点下面包屑隐藏，页面不再需要让出 34px */
+  .lab-report-view {
+    min-height: 100vh;
+  }
 }
 
 .lab-report-sheet {

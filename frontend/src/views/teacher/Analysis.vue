@@ -3,7 +3,6 @@
     <section class="workbench-header analysis-header analysis-header--refactored">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="analysis-header__eyebrow">教师控制台 / 分析报表</div>
           <h1>成绩分析与统计</h1>
           <p>查看当前教学活动在班级、任务类型与趋势维度的真实分析数据。</p>
         </div>
@@ -283,15 +282,6 @@ onMounted(loadAnalysis);
   font-size: 28px;
   font-weight: 800;
   color: #0f172a;
-}
-
-.analysis-header__eyebrow {
-  margin-bottom: 6px;
-  color: #0f766e;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .analysis-header p {

@@ -3,7 +3,6 @@
     <section class="workbench-header question-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="question-header__eyebrow">教学控制台 / 题库资产</div>
           <h1 class="question-console__title">题库管理台</h1>
           <p class="question-console__subtitle">统一检索、维护和校验题库资产。</p>
         </div>

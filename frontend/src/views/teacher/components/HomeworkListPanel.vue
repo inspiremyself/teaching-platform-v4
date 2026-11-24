@@ -1,6 +1,5 @@
 <template>
   <WorkbenchShell
-    eyebrow="教师控制台 / 作业闭环 / 作业管理"
     title="作业管理"
     description="围绕班级、时间窗、发布状态与提交进度维护作业闭环。"
   >

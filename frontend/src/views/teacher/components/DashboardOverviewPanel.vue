@@ -3,7 +3,6 @@
     <section class="workbench-header dashboard-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="dashboard-header__eyebrow">教师控制台 / 工作台总览</div>
           <h1>教师工作台</h1>
           <p>{{ workbenchHeadline }}</p>
         </div>
@@ -221,15 +220,6 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-
-.dashboard-header__eyebrow {
-  margin-bottom: 6px;
-  color: #0f766e;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .dashboard-grid--refactored {

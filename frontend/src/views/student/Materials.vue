@@ -3,7 +3,6 @@
     <section class="workbench-header student-materials-header">
       <div class="workbench-header__top">
         <div class="workbench-header__main">
-          <div class="student-materials-header__eyebrow">学生端 / 教学资料</div>
           <h1>课程资料工作区</h1>
           <p>优先查看最新更新、按类别快速筛选，并在同一页面完成资料判断与下载。</p>
         </div>
