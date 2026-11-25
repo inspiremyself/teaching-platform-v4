@@ -14,6 +14,7 @@
 | [2026-10-08-路径B-一键启动前后端dev脚本.md](./2026-10-08-路径B-一键启动前后端dev脚本.md) | **单终端一键后台启停前后端**（MySQL 或 H2） | `scripts/path-b/dev.sh` |
 | [2026-11-12-AI网关配置注入与故障排查.md](./2026-11-12-AI网关配置注入与故障排查.md) | 「AI 生成」4 个环境变量注入、生效判定与故障排查（路径 A / B / C） | `scripts/path-b/dev.sh`、`scripts/common/healthcheck-login.sh` |
 | [2026-11-12-frp-dev演示链路性能配置.md](./2026-11-12-frp-dev演示链路性能配置.md) | frp dev 演示链路首屏性能配置与验收 | `scripts/path-b/dev.sh` |
+| [2026-11-25-研发工作流自动化脚本说明.md](./2026-11-25-研发工作流自动化脚本说明.md) | 研发工作流三脚本（门禁/环境验收/交付报告）用法、参数与自检命令 | `scripts/dev/gate.sh`、`env-up.sh`、`delivery.sh` |
 
 ## MySQL 口令口径
 
