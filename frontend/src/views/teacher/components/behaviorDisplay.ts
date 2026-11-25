@@ -45,32 +45,9 @@ export const RISK_FLAG_LABELS: Record<string, string> = {
 export const hasNoBehaviorData = (behavior?: LabReportBehavior | null): boolean =>
   !behavior || behavior.riskFlags.includes('NO_BEHAVIOR_DATA');
 
-/** 风险列 tag 类型：HIGH=danger / MEDIUM=warning / LOW=info / 无数据=info 灰显（D14） */
-export const riskTagType = (behavior?: LabReportBehavior | null): 'danger' | 'warning' | 'info' => {
-  if (!behavior || hasNoBehaviorData(behavior)) {
-    return 'info';
-  }
-  if (behavior.riskLevel === 'HIGH') {
-    return 'danger';
-  }
-  if (behavior.riskLevel === 'MEDIUM') {
-    return 'warning';
-  }
-  return 'info';
-};
-
-export const riskTagLabel = (behavior?: LabReportBehavior | null): string => {
-  if (!behavior || hasNoBehaviorData(behavior)) {
-    return '无数据';
-  }
-  if (behavior.riskLevel === 'HIGH') {
-    return '高风险';
-  }
-  if (behavior.riskLevel === 'MEDIUM') {
-    return '中风险';
-  }
-  return '低风险';
-};
+/** 风险列状态键：无行为数据落 NO_BEHAVIOR_DATA，其余按 riskLevel（缺省 LOW） */
+export const riskKeyOf = (behavior?: LabReportBehavior | null): string =>
+  !behavior || hasNoBehaviorData(behavior) ? 'NO_BEHAVIOR_DATA' : (behavior.riskLevel ?? 'LOW');
 
 /** 风险 tag tooltip：riskFlags 中文逐条展示 */
 export const riskTagTooltip = (behavior?: LabReportBehavior | null): string => {

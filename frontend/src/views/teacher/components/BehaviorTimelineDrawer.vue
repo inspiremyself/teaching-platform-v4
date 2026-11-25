@@ -11,7 +11,7 @@
           <p class="timeline-drawer__meta">
             共 {{ total }} 条行为事件<template v-if="total > timeline.length">，当前显示最近 {{ timeline.length }} 条</template>；按时间倒序排列。
           </p>
-          <el-empty v-if="!timeline.length" description="暂无行为事件" />
+          <AppEmptyState v-if="!timeline.length" description="暂无行为事件" />
           <el-timeline v-else class="timeline-drawer__list">
             <el-timeline-item
               v-for="(item, index) in reversedTimeline"
@@ -32,7 +32,7 @@
           <p class="timeline-drawer__meta">
             学生在每道题上的停留时长（STEP_VIEW / LAB_LEAVE 事件聚合）；跳过标记表示停留 ≤ 1s。
           </p>
-          <el-empty v-if="stepDwellItems.length === 0" description="无逐题停留数据" />
+          <AppEmptyState v-if="stepDwellItems.length === 0" description="无逐题停留数据" />
           <div v-else class="step-dwell-list">
             <div
               v-for="item in stepDwellItems"
@@ -60,6 +60,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import type { LabBehaviorTimelineItem } from '@/types/lab';
 import {
   behaviorEventPayloadSummary,
@@ -170,7 +171,7 @@ const maxDwellMs = computed(() =>
 
 .timeline-drawer__meta {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -182,13 +183,13 @@ const maxDwellMs = computed(() =>
 }
 
 .timeline-entry strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
 }
 
 .timeline-entry p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -206,14 +207,14 @@ const maxDwellMs = computed(() =>
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  background: linear-gradient(180deg, var(--color-surface), #fbfdff);
 }
 
 .step-dwell-row--skip {
   border-color: #fecaca;
-  background: linear-gradient(180deg, #fff, #fef2f2);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-danger-soft));
 }
 
 .step-dwell-row__label {
@@ -225,12 +226,12 @@ const maxDwellMs = computed(() =>
 
 .step-dwell-row__label strong {
   font-size: var(--font-size-base);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .step-dwell-row__title {
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -243,7 +244,7 @@ const maxDwellMs = computed(() =>
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 999px;
-  background: #fef2f2;
+  background: var(--color-danger-soft);
   color: #b91c1c;
   letter-spacing: var(--letter-spacing-wide);
 }

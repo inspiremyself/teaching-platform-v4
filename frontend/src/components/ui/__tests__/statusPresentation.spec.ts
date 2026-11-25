@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation'
+import { resolveStatusOf, resolveStatusPresentation } from '@/components/ui/statusPresentation'
 
 const resolve = (
   module: 'lab' | 'homework' | 'exam' | 'workbench',
@@ -88,14 +88,37 @@ describe('resolveStatusPresentation 未命中', () => {
   })
 })
 
-describe('toElTagType', () => {
-  it('neutral 按调用页默认落 info 或 primary', () => {
-    expect(toElTagType('neutral', 'info')).toBe('info')
-    expect(toElTagType('neutral', 'primary')).toBe('primary')
+describe('resolveStatusOf 直接登记表', () => {
+  const rows: Array<[Parameters<typeof resolveStatusOf>[0], string, string, string]> = [
+    ['orgSchoolStatus', 'ACTIVE', '启用', 'success'],
+    ['orgTeacherStatus', 'ACTIVE', '在职', 'success'],
+    ['orgStudentStatus', 'DISABLED', '停用', 'info'],
+    ['orgClassStatus', 'ARCHIVED', '已归档', 'info'],
+    ['orgSubjectStatus', 'DISABLED', '已停用', 'info'],
+    ['platformSubjectStatus', 'ACTIVE', '启用', 'success'],
+    ['coursewareStatus', 'DRAFT', '草稿', 'info'],
+    ['scoreSource', 'AUTO', '自动评分', 'success'],
+    ['behaviorRisk', 'HIGH', '高风险', 'danger'],
+    ['labTimeGate', 'OVERDUE', '已截止', 'warning'],
+    ['labEditMode', 'READONLY', '只读', 'info'],
+    ['labSummaryRequirement', 'REQUIRED', '必填', 'warning'],
+    ['regradeDecision', 'ACCEPTED', '是', 'success'],
+  ]
+
+  it.each(rows)('%s 的 %s 命中 %s', (group, value, label, tone) => {
+    expect(resolveStatusOf(group, value)).toEqual({ label, tone })
   })
 
-  it('非 neutral 原样返回', () => {
-    expect(toElTagType('warning', 'info')).toBe('warning')
-    expect(toElTagType('success', 'primary')).toBe('success')
+  it('未命中回退原值并落 neutral', () => {
+    expect(resolveStatusOf('orgSchoolStatus', 'UNKNOWN')).toEqual({ label: 'UNKNOWN', tone: 'neutral' })
+  })
+
+  it('未命中且提供 unknownLabel 时返回兜底文案', () => {
+    expect(resolveStatusOf('scoreSource', 'UNKNOWN', '未标注')).toEqual({ label: '未标注', tone: 'neutral' })
+  })
+
+  it('null / 空输入落 neutral', () => {
+    expect(resolveStatusOf('scoreSource', null, '未标注')).toEqual({ label: '未标注', tone: 'neutral' })
+    expect(resolveStatusOf('scoreSource', undefined)).toEqual({ label: '', tone: 'neutral' })
   })
 })

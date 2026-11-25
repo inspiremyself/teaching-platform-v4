@@ -4,15 +4,15 @@
     description="班级全员 × 子题矩阵。点击学生名查看历次提交，点击题列查看全班答案。"
   >
     <template #actions>
-      <button class="action-button action-button--ghost" type="button" :disabled="loading" @click="fetchOverview">刷新</button>
-      <button class="action-button action-button--ghost" type="button" @click="goBlankRegrade">批量重判</button>
+      <ActionButton label="刷新" tone="ghost" :disabled="loading" @click="fetchOverview" />
+      <ActionButton label="批量重判" tone="ghost" @click="goBlankRegrade" />
     </template>
     <template #meta>
       <span class="workbench-meta__item"><strong>{{ overview?.students.length ?? 0 }}</strong> 学生</span>
       <span class="workbench-meta__item"><strong>{{ overview?.items.length ?? 0 }}</strong> 题项</span>
       <span class="workbench-meta__item workbench-meta__item--accent">{{ overview?.labTitle || '暂无实验' }}</span>
     </template>
-    <div class="workbench-table-card" v-loading="loading">
+    <AppTableCard v-loading="loading">
       <el-table :data="overview?.students ?? []" empty-text="暂无总览数据" :header-cell-style="headerCellStyle">
         <el-table-column label="学生" min-width="160" fixed>
           <template #default="{ row: student }">
@@ -43,15 +43,15 @@
         </el-table-column>
         <el-table-column label="提交状态" width="120">
           <template #default="{ row: student }">
-            <el-tag v-if="student.submitStatus" :type="statusTagType(student.submitStatus)" effect="light">{{ statusLabel(student.submitStatus) }}</el-tag>
+            <AppStatusTag v-if="student.submitStatus" :tone="statusTone(student.submitStatus)" :label="statusLabel(student.submitStatus)" />
             <span v-else class="overview-matrix__muted">未提交</span>
           </template>
         </el-table-column>
         <el-table-column label="批改操作" width="220" align="right" fixed="right">
           <template #default="{ row: student }">
             <div class="workbench-actions">
-              <button v-if="student.submissionId != null" class="action-button action-button--primary" type="button" @click="router.push({ name: 'teacher-lab-submission-overview', params: { labId: labId() }, query: { submissionId: student.submissionId } })">批改报告</button>
-              <button v-if="student.submissionId != null" class="action-button action-button--ghost" type="button" @click="openReportView(student)">实验报告</button>
+              <ActionButton v-if="student.submissionId != null" label="批改报告" tone="primary" @click="router.push({ name: 'teacher-lab-submission-overview', params: { labId: labId() }, query: { submissionId: student.submissionId } })" />
+              <ActionButton v-if="student.submissionId != null" label="实验报告" tone="ghost" @click="openReportView(student)" />
             </div>
           </template>
         </el-table-column>
@@ -69,11 +69,11 @@
         </el-table-column>
         <el-table-column label="风险" width="120">
           <template #default="{ row: student }">
-            <el-tag :type="riskTagType(student.behavior)" size="small" effect="light">{{ riskTagLabel(student.behavior) }}</el-tag>
+            <AppStatusTag v-bind="resolveStatusOf('behaviorRisk', riskKeyOf(student.behavior))" size="small" />
           </template>
         </el-table-column>
       </el-table>
-    </div>
+    </AppTableCard>
   </WorkbenchShell>
 </template>
 
@@ -83,15 +83,17 @@ import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getTeacherLabSubmissionOverview } from '@/api/labs';
 import WorkbenchShell from './components/workbench/WorkbenchShell.vue';
+import ActionButton from './components/workbench/ActionButton.vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import AppTableCard from '@/components/ui/AppTableCard.vue';
 import type { LabReportStatus, LabSubmissionOverview, LabSubmissionOverviewCell, LabSubmissionOverviewStudent } from '@/types/lab';
-import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
+import { resolveStatusPresentation, resolveStatusOf } from '@/components/ui/statusPresentation';
 import {
   formatActiveDuration,
   formatTotalDuration,
   hasNoBehaviorData,
-  riskTagLabel,
+  riskKeyOf,
   riskTagTooltip,
-  riskTagType,
 } from './components/behaviorDisplay';
 
 const route = useRoute();
@@ -138,7 +140,7 @@ const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', 
 
 const statusLabel = (status?: LabReportStatus | null) => (status ? statusOf(status).label : '未知');
 
-const statusTagType = (status?: LabReportStatus | null) => (status ? toElTagType(statusOf(status).tone, 'info') : 'info');
+const statusTone = (status?: LabReportStatus | null) => (status ? statusOf(status).tone : 'neutral');
 
 const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWeight: 700 });
 const cellOf = (row: LabSubmissionOverviewStudent, stepId: number): LabSubmissionOverviewCell | undefined =>
@@ -169,7 +171,7 @@ onMounted(() => {
   gap: 6px;
   border: none;
   background: transparent;
-  color: #475569;
+  color: var(--color-text-secondary);
   cursor: pointer;
   padding: 0;
 }
@@ -182,7 +184,7 @@ onMounted(() => {
 }
 
 .overview-eyebrow {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
   margin-bottom: 8px;
 }
@@ -192,12 +194,12 @@ onMounted(() => {
 
 .overview-header p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .overview-matrix-shell {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 16px;
 }
@@ -214,7 +216,7 @@ onMounted(() => {
 
 .overview-matrix th,
 .overview-matrix td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   padding: 12px;
   vertical-align: middle;
 }
@@ -223,7 +225,7 @@ onMounted(() => {
 .overview-matrix__student {
   position: sticky;
   left: 0;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   z-index: 1;
   min-width: 180px;
   text-align: left;
@@ -231,7 +233,7 @@ onMounted(() => {
 
 .overview-matrix__item-head {
   min-width: 140px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .overview-item-link,
@@ -250,11 +252,11 @@ onMounted(() => {
 
 .overview-item-link strong,
 .overview-student-link strong {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .overview-matrix__cell.is-answered {
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
 }
 
 .overview-cell {
@@ -272,8 +274,8 @@ onMounted(() => {
 
 .overview-cell__meta {
   font-size: var(--font-size-sm);
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--color-text-muted);
+  background: var(--color-bg-subtle);
   border-radius: 999px;
   padding: 2px 8px;
 }
@@ -289,7 +291,7 @@ onMounted(() => {
 }
 
 .overview-matrix__action-head {
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .overview-actions {
@@ -306,12 +308,12 @@ onMounted(() => {
 }
 
 .overview-matrix__behavior-head {
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .overview-matrix__behavior strong {
   font-size: var(--font-size-sm);
-  color: #0f172a;
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
 
@@ -324,7 +326,7 @@ onMounted(() => {
 }
 
 .overview-matrix__muted {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-base);
 }
 </style>

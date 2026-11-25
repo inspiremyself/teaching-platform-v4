@@ -26,11 +26,11 @@
 
     <template v-else>
       <div v-if="loadError" class="state-card">
-        <el-result icon="error" title="教师工作台加载失败" :sub-title="loadError">
-          <template #extra>
+        <AppEmptyState tone="error" title="教师工作台加载失败" :description="loadError">
+          <template #actions>
             <el-button type="primary" @click="loadDashboard">重新加载</el-button>
           </template>
-        </el-result>
+        </AppEmptyState>
       </div>
 
       <div v-else class="dashboard-grid dashboard-grid--refactored">
@@ -97,7 +97,7 @@
                 <p>{{ trendFocusDescription }}</p>
               </article>
             </div>
-            <el-empty v-else description="暂无趋势数据" />
+            <AppEmptyState v-else description="暂无趋势数据" />
           </el-card>
         </section>
 
@@ -145,7 +145,7 @@
                   </div>
                 </div>
               </div>
-              <el-empty v-else description="当前没有待处理任务" />
+              <AppEmptyState v-else description="当前没有待处理任务" />
             </div>
           </el-card>
 
@@ -172,7 +172,7 @@
                 </div>
               </button>
             </div>
-            <el-empty v-else description="暂无可用快捷入口" />
+            <AppEmptyState v-else description="暂无可用快捷入口" />
           </el-card>
 
           <el-card class="dashboard-card" shadow="never">
@@ -211,6 +211,7 @@
 
 <script setup lang="ts">
 import { inject } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { DashboardKey } from '@/composables/useDashboard';
 import AppMetaChip from '@/components/ui/AppMetaChip.vue';
 const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summaryIcons, summaryCardPills, localizedSummaryCards, trendTotalCount, trendAverageText, trendPulseShortText, peakTrendValue, peakTrendDate, peakTrendHint, urgentTaskCount, distinctActorsCount, riskAlertCount, taskPressureLevel, taskPressureText, workbenchHeadline, heroStatusText, trendFocusTitle, trendFocusDescription, riskAlertSummary, riskAlertDetail, recommendedActionTitle, recommendedActionDescription, riskActionTitle, riskActionDescription, localizedSummarySignal, loadDashboard, padIndex, quickLinkDescription, localizedQuickLinkLabel, localizedTaskLabel, localizedTaskTitle, localizedActorText } = inject(DashboardKey)!;
@@ -237,16 +238,16 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 }
 
 .dashboard-panel {
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--color-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
 
 .dashboard-inline-note {
   max-width: 20rem;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
   text-align: right;
@@ -264,9 +265,9 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .dashboard-kpi-row__icon {
@@ -276,8 +277,8 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  background: #e2e8f0;
-  color: #0f766e;
+  background: var(--color-border);
+  color: var(--color-brand-teacher);
   flex-shrink: 0;
 }
 
@@ -293,32 +294,32 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .dashboard-kpi-row__body strong {
   margin-top: 6px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
 }
 
 .dashboard-kpi-row__body small {
   margin-top: 4px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
 
 .dashboard-card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
 .dashboard-card :deep(.el-card__header) {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
   padding: 14px 16px;
 }
 
@@ -339,7 +340,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 
 .dashboard-card__header p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -356,7 +357,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   min-width: 82px;
   padding: 9px 11px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .dashboard-card__metric--accent {
@@ -365,19 +366,19 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 
 .dashboard-card__metric span {
   font-size: var(--font-size-xs);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .dashboard-card__metric strong {
   margin-top: 4px;
   font-size: var(--font-size-2xl);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .section-title {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .trend-summary-grid {
@@ -392,29 +393,29 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .trend-summary-card {
   padding: 14px;
   border-radius: 16px;
-  background: linear-gradient(180deg, #f8fafc, #ffffff);
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, var(--color-bg-app), var(--color-surface));
+  border: 1px solid var(--color-border);
 }
 
 .trend-summary-card__label {
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-wide);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .trend-summary-card strong {
   display: block;
   margin-top: 8px;
   font-size: var(--font-size-xl);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .trend-summary-card p {
   margin: 6px 0 0;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-caption);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .quick-link-grid {
@@ -432,8 +433,8 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   flex-direction: column;
   gap: 8px;
   min-height: 112px;
-  border: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #ffffff, #f8fafc);
+  border: 1px solid var(--color-border);
+  background: linear-gradient(135deg, var(--color-surface), var(--color-bg-app));
   border-radius: 16px;
   padding: 14px;
   text-align: left;
@@ -460,7 +461,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .quick-link-card__title {
   font-size: var(--font-size-md);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .quick-link-card__badge {
@@ -472,14 +473,14 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   padding: 0 10px;
   border-radius: 999px;
   background: rgba(15, 118, 110, 0.12);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-base);
   font-weight: 700;
 }
 
 .quick-link-card p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -489,7 +490,7 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-sm);
   font-weight: 700;
   gap: 12px;
@@ -518,20 +519,20 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .task-overview-item {
   padding: 10px 12px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .task-overview-item__label {
   font-size: var(--font-size-xs);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .task-overview-item strong {
   display: block;
   margin-top: 4px;
   font-size: var(--font-size-lg);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .task-list {
@@ -545,14 +546,14 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   gap: 12px;
   padding: 12px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .task-item__badge {
   width: 10px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #ef4444, #f97316);
+  background: linear-gradient(180deg, var(--color-danger), #f97316);
   flex-shrink: 0;
 }
 
@@ -569,14 +570,14 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 }
 
 .task-item__header strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
 }
 
 .task-item__index {
   font-size: var(--font-size-xs);
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .task-item__title {
@@ -593,14 +594,14 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   gap: 10px;
   margin-top: 10px;
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .task-item__link {
   padding: 0;
   border: none;
   background: transparent;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;
@@ -619,15 +620,15 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
 .guidance-item {
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-app);
 }
 
 .guidance-item__title {
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-wide);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .guidance-item strong {
@@ -635,18 +636,18 @@ const { router, loading, loaded, loadError, trend, recentTasks, quickLinks, summ
   margin-top: 6px;
   font-size: var(--font-size-lg);
   line-height: var(--line-height-heading);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .guidance-item p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-caption);
 }
 
 .guidance-item--warn {
-  background: linear-gradient(180deg, #fff7ed, #fffbeb);
+  background: linear-gradient(180deg, var(--color-warning-soft), #fffbeb);
 }
 
 .dashboard-side--refactored {

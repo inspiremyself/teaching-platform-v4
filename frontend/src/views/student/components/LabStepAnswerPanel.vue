@@ -1,33 +1,35 @@
 <template>
   <div class="lab-steps-page workbench-page workbench-page--locked" v-loading="loading">
-    <div class="page-header">
-      <div class="page-header__main">
-        <h2>{{ detail?.title || '实验作答' }}</h2>
-        <p>{{ detail?.description || '按题目顺序作答。' }}</p>
-        <div v-if="detail" class="page-header__meta">
-          <span class="header-meta-chip">{{ submissionLabel(detail.submissionStatus) }}</span>
-          <span class="header-meta-chip">{{ experimentTypeLabel(detail.experimentType) }}</span>
-          <span v-if="showLabScore" class="header-meta-chip">
-            总分 {{ detail.totalScore }}<template v-if="planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template>
-          </span>
-          <span class="header-meta-chip">开始：{{ detail.startAt ? formatDateTime(detail.startAt) : '不限' }}</span>
-          <span class="header-meta-chip">截止：{{ detail.dueAt ? formatDateTime(detail.dueAt) : '不限' }}</span>
-          <span class="header-meta-chip">{{ currentIndex + 1 }}/{{ labItems.length }}</span>
-          <span class="header-meta-chip">{{ detail.summaryRequired ? '实验小结必填' : '实验小结选填' }}</span>
-          <span class="header-meta-chip">{{ readonly ? '只读' : '可编辑' }}</span>
-          <el-tag v-if="isNotStarted" type="warning" effect="light" size="small">实验尚未开始</el-tag>
-          <el-tag v-else-if="isOverdue" type="warning" effect="light" size="small">实验已截止</el-tag>
+    <div class="workbench-header">
+      <div class="workbench-header__top">
+        <div class="workbench-header__main">
+          <h2>{{ detail?.title || '实验作答' }}</h2>
+          <p>{{ detail?.description || '按题目顺序作答。' }}</p>
+          <div v-if="detail" class="workbench-meta">
+            <span class="header-meta-chip">{{ submissionLabel(detail.submissionStatus) }}</span>
+            <span class="header-meta-chip">{{ experimentTypeLabel(detail.experimentType) }}</span>
+            <span v-if="showLabScore" class="header-meta-chip">
+              总分 {{ detail.totalScore }}<template v-if="planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template>
+            </span>
+            <span class="header-meta-chip">开始：{{ detail.startAt ? formatDateTime(detail.startAt) : '不限' }}</span>
+            <span class="header-meta-chip">截止：{{ detail.dueAt ? formatDateTime(detail.dueAt) : '不限' }}</span>
+            <span class="header-meta-chip">{{ currentIndex + 1 }}/{{ labItems.length }}</span>
+            <span class="header-meta-chip">{{ detail.summaryRequired ? '实验小结必填' : '实验小结选填' }}</span>
+            <span class="header-meta-chip">{{ readonly ? '只读' : '可编辑' }}</span>
+            <AppStatusTag v-if="isNotStarted" size="small" v-bind="resolveStatusOf('labTimeGate', 'NOT_STARTED')" />
+            <AppStatusTag v-else-if="isOverdue" size="small" v-bind="resolveStatusOf('labTimeGate', 'OVERDUE')" />
+          </div>
         </div>
-      </div>
-      <div class="page-header__actions">
-        <span v-if="submitHint" class="submit-hint">{{ submitHint }}</span>
-        <el-button type="success" :loading="submitting" :disabled="!canSubmit" @click="submitAll">
-          提交实验
-        </el-button>
+        <div class="workbench-header__actions">
+          <span v-if="submitHint" class="submit-hint">{{ submitHint }}</span>
+          <el-button type="success" :loading="submitting" :disabled="!canSubmit" @click="submitAll">
+            提交实验
+          </el-button>
+        </div>
       </div>
     </div>
 
-    <el-empty v-if="!loading && !detail" description="未获取到实验题项数据" />
+    <AppEmptyState v-if="!loading && !detail" description="未获取到实验题项数据" />
 
     <template v-else-if="detail">
       <section class="lab-info-card">
@@ -70,7 +72,7 @@
                 <span class="status-card__eyebrow">当前状态</span>
                 <strong>{{ submissionLabel(detail.submissionStatus) }}</strong>
               </div>
-              <el-tag :type="submissionTagType" effect="light">{{ readonly ? '只读' : '可编辑' }}</el-tag>
+              <AppStatusTag v-bind="resolveStatusOf('labEditMode', readonly ? 'READONLY' : 'EDITABLE')" />
             </div>
             <div class="status-card__meta">
               <span>{{ labItems.length }} 个题项</span>
@@ -251,9 +253,7 @@
                   <div class="summary-card__eyebrow">实验小结</div>
                   <h3>实验小结</h3>
                 </div>
-                <el-tag :type="detail.summaryRequired ? 'warning' : 'info'" effect="light">
-                  {{ detail.summaryRequired ? '必填' : '选填' }}
-                </el-tag>
+                <AppStatusTag v-bind="resolveStatusOf('labSummaryRequirement', detail.summaryRequired ? 'REQUIRED' : 'OPTIONAL')" />
               </div>
               <p class="summary-card__desc">
                 {{ detail.summaryRequired ? '提交前需填写实验小结。' : '可在提交前补充实验小结。' }}
@@ -292,9 +292,12 @@
 
 <script setup lang="ts">
 import { inject } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { StudentLabStepsKey } from '@/composables/useStudentLabSteps';
 import { formatDateTime } from '@/utils/format';
-const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, loading, saving, submitting, detail, currentIndex, summaryDraft, isNotStarted, isOverdue, labId, labItems, currentItem, currentDraft, currentQuestionType, currentItemCodeLanguage, readonly, canSubmit, submitHint, progressPercent, progressText, submissionTagType, currentSaveStateLabel, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, selectItem, hasSavedAnswer, isItemDirty, answerStateLabel, saveCurrent, goPrev, goNext, submitAll, submissionLabel, questionTypeLabel, answerHint, itemFeedback, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, downloadGuidance } = inject(StudentLabStepsKey)!;
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
+const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, loading, saving, submitting, detail, currentIndex, summaryDraft, isNotStarted, isOverdue, labId, labItems, currentItem, currentDraft, currentQuestionType, currentItemCodeLanguage, readonly, canSubmit, submitHint, progressPercent, progressText, currentSaveStateLabel, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, selectItem, hasSavedAnswer, isItemDirty, answerStateLabel, saveCurrent, goPrev, goNext, submitAll, submissionLabel, questionTypeLabel, answerHint, itemFeedback, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, downloadGuidance } = inject(StudentLabStepsKey)!;
 </script>
 
 <style scoped>
@@ -319,7 +322,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   padding: 0 10px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.22);
-  background: #fff;
+  background: var(--color-surface);
   color: #334155;
   font-size: var(--font-size-sm);
   font-weight: 600;
@@ -428,7 +431,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .sticky-footer {
   border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
 .sidebar-card,
@@ -458,14 +461,14 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
 .status-card__meta span {
   padding: 5px 10px;
   border-radius: 999px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 .progress-panel {
   margin-top: 14px;
@@ -475,7 +478,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 6px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -483,13 +486,13 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--color-border);
 }
 .progress-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #1e40af, #60a5fa);
+  background: linear-gradient(90deg, var(--color-action-primary), #60a5fa);
 }
 .progress-panel p {
   margin: 8px 0 0;
@@ -514,7 +517,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   padding: 10px 12px;
   border: 1px solid var(--color-border-soft);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   text-align: left;
   cursor: pointer;
 }
@@ -524,8 +527,8 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
   font-weight: 700;
 }
 .workflow-item__body {
@@ -548,10 +551,10 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .workflow-item--active .workflow-item__badge {
   background: var(--color-action-primary);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 .workflow-item--done .workflow-item__badge {
-  background: #dcfce7;
+  background: var(--color-success-soft);
   color: #15803d;
 }
 .workflow-item--dirty {
@@ -621,7 +624,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   font-weight: 700;
 }
 .focus-state-pill--saved {
-  background: #dcfce7;
+  background: var(--color-success-soft);
   color: #15803d;
 }
 .focus-state-pill--saving,
@@ -630,13 +633,13 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   color: #b45309;
 }
 .focus-state-pill--error {
-  background: #fef2f2;
+  background: var(--color-danger-soft);
   color: #b91c1c;
 }
 .focus-state-pill--readonly,
 .focus-state-pill--idle {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 .question-card {
   padding: 18px 20px;
@@ -666,7 +669,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 .answer-card {
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 .question-card__prompt--embedded {
   line-height: var(--line-height-body);
@@ -704,14 +707,14 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .save-state-banner--error {
   border-color: #fca5a5;
-  background: #fef2f2;
+  background: var(--color-danger-soft);
   color: #b91c1c;
 }
 .save-state-banner--readonly,
 .save-state-banner--idle {
-  border-color: #cbd5e1;
-  background: #f8fafc;
-  color: #475569;
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
 }
 .code-callout,
 .summary-required-tip {
@@ -721,16 +724,16 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   font-size: var(--font-size-sm);
 }
 .code-callout {
-  background: #eff6ff;
+  background: var(--color-brand-student-soft);
   border: 1px solid #bfdbfe;
 }
 .code-callout__title {
   margin-bottom: 6px;
-  color: #1d4ed8;
+  color: var(--color-brand-student);
   font-weight: 700;
 }
 .summary-required-tip {
-  background: #fef2f2;
+  background: var(--color-danger-soft);
   border: 1px solid #fecaca;
   color: #b91c1c;
 }
@@ -750,7 +753,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   align-items: center;
 }
 .sticky-footer__status .material-symbols-outlined {
-  color: #22c55e;
+  color: var(--color-success);
 }
 .sticky-footer__actions {
   display: flex;

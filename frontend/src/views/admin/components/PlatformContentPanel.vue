@@ -14,9 +14,7 @@
         <el-table-column prop="name" label="名称" min-width="160" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
-              {{ row.status === 'ACTIVE' ? '启用' : '停用' }}
-            </el-tag>
+            <AppStatusTag v-bind="resolveStatusOf('platformSubjectStatus', row.status)" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="110" align="right" fixed="right">
@@ -70,9 +68,7 @@
         <el-table-column prop="title" label="标题" min-width="180" />
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'PUBLISHED' ? 'success' : 'info'">
-              {{ row.status === 'PUBLISHED' ? '已发布' : '草稿' }}
-            </el-tag>
+            <AppStatusTag v-bind="resolveStatusOf('coursewareStatus', row.status)" />
           </template>
         </el-table-column>
         <el-table-column label="小节数" width="90">
@@ -263,6 +259,8 @@
 <script setup lang="ts">
 import { inject, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import ContentPreview from '@/components/content-preview/ContentPreview.vue';
 import { platformContentKey } from '@/composables/usePlatformContent';
 import type { MountPayload, PlatformSubjectItem, SectionPayload, TextbookSectionItem } from '@/types/platformContent';

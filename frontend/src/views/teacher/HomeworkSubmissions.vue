@@ -7,8 +7,8 @@
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已批改</span>
         <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ averageScoreText }}</strong> 平均得分</span>
       </div>
-      <button class="action-button action-button--warning" type="button" @click="releaseScores">发布成绩</button>
-      <button class="action-button action-button--ghost" type="button" @click="resetFilters">清空筛选</button>
+      <ActionButton label="发布成绩" tone="warning" @click="releaseScores" />
+      <ActionButton label="清空筛选" tone="ghost" @click="resetFilters" />
     </template>
 
     <template #queue>
@@ -68,7 +68,7 @@
                     <div class="question-grade-item__meta">
                       <span v-if="question.answer?.suggestedScore != null">系统参考分 {{ question.answer.suggestedScore }}（仅供参考，不直接计入）</span>
                       <span v-else-if="question.answer?.autoScore != null">自动分 {{ question.answer.autoScore }}</span>
-                      <span>来源：{{ scoreSourceLabel(question.answer?.scoreSource) }}</span>
+                      <span>来源：{{ resolveStatusOf('scoreSource', question.answer?.scoreSource, '未标注').label }}</span>
                     </div>
                     <p class="quick-grade-card__muted">{{ formatJudgeDetail(question.answer?.judgeDetail) }}</p>
                     <p
@@ -175,14 +175,13 @@
         </p>
         <p v-if="hasDraftChanges(draftState)" class="grading-summary__progress">有未保存的评分</p>
         <p class="quick-grade-card__muted">{{ selectedSubmission?.teacherComment || '尚未填写教师评语。' }}</p>
-        <button
+        <ActionButton
           v-if="canReturnSubmission"
-          class="action-button action-button--warning"
-          type="button"
-          :loading="returning"
+          label="打回"
+          tone="warning"
           @click="confirmReturnSubmission"
-        >打回</button>
-        <button class="action-button action-button--primary" type="button" :disabled="!canGradeAnswer" @click="submitGrade">保存评分</button>
+        />
+        <ActionButton label="保存评分" tone="primary" :disabled="!canGradeAnswer" @click="submitGrade" />
       </section>
     </template>
   </GradingWorkspace>
@@ -193,13 +192,14 @@ import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import ActionButton from './components/workbench/ActionButton.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import {
   buildScoringSummary,
   createGradingDraft,
   formatJudgeDetail,
   hasDraftChanges,
   questionTypeLabel,
-  scoreSourceLabel,
   scoringStrategyOf,
   setDraftComment,
   setDraftScore,
@@ -223,8 +223,6 @@ import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 const route = useRoute();
 const loading = ref(false);
-const submitting = ref(false);
-const returning = ref(false);
 const dialogVisible = ref(false);
 const rows = ref<HomeworkSubmissionItem[]>([]);
 const selectedSubmission = ref<HomeworkSubmissionItem | null>(null);
@@ -424,14 +422,9 @@ const canReturnSubmission = computed(() => {
 
 const doReturnSubmission = async () => {
   if (!selectedSubmission.value) return;
-  returning.value = true;
-  try {
-    await returnHomeworkSubmission(selectedSubmission.value.id);
-    ElMessage.success('已打回');
-    await fetchData();
-  } finally {
-    returning.value = false;
-  }
+  await returnHomeworkSubmission(selectedSubmission.value.id);
+  ElMessage.success('已打回');
+  await fetchData();
 };
 
 const confirmReturnSubmission = () => {
@@ -543,9 +536,8 @@ onMounted(fetchData);
   overflow: hidden;
   border-radius: 16px;
   padding: 28px 32px;
-  background:
-    radial-gradient(circle at right top, rgba(191, 219, 254, 0.18), transparent 32%),
-    linear-gradient(135deg, #0f172a, #1e3a8a 58%, #2563eb);
+  background: radial-gradient(circle at right top, rgba(191, 219, 254, 0.18), transparent 32%),
+    linear-gradient(135deg, var(--color-text-primary), #1e3a8a 58%, var(--color-brand-student-border));
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
 }
 
@@ -553,7 +545,7 @@ onMounted(fetchData);
   display: flex;
   flex-direction: column;
   gap: 18px;
-  color: #eff6ff;
+  color: var(--color-info-soft);
 }
 
 .submissions-hero__heading {
@@ -565,7 +557,7 @@ onMounted(fetchData);
 
 .submissions-hero__heading h1 {
   margin: 0;
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .submissions-hero__heading p {
@@ -590,8 +582,8 @@ onMounted(fetchData);
 .summary-card--primary {
   display: flex;
   gap: 16px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: var(--color-text-inverse);
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
 }
 
 .summary-card--light,
@@ -608,7 +600,7 @@ onMounted(fetchData);
   height: 54px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  color: var(--color-text-inverse);
   flex-shrink: 0;
 }
 
@@ -625,20 +617,20 @@ onMounted(fetchData);
 .summary-card__label {
   font-size: var(--font-size-base);
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .summary-card--primary .summary-card__label,
 .summary-card--primary .summary-card__desc,
 .summary-card--primary .summary-card__value {
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .summary-card__value {
   margin-top: 8px;
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .summary-card__value--small {
@@ -649,7 +641,7 @@ onMounted(fetchData);
   margin-top: 8px;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .summary-card__desc--spaced {
@@ -669,7 +661,7 @@ onMounted(fetchData);
   padding: 6px 12px;
   border-radius: 999px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -689,8 +681,8 @@ onMounted(fetchData);
   padding: 0 16px;
   min-height: 52px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .toolbar-search :deep(.el-input__wrapper) {
@@ -711,14 +703,14 @@ onMounted(fetchData);
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
 .toolbar-divider {
   width: 1px;
   height: 14px;
-  background: #cbd5e1;
+  background: var(--color-border-strong);
 }
 
 .submissions-workspace {
@@ -739,13 +731,13 @@ onMounted(fetchData);
 .panel-header h2,
 .quick-grade-card__header h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .panel-header p,
 .quick-grade-card__header p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-md);
 }
 
@@ -763,8 +755,8 @@ onMounted(fetchData);
   width: 100%;
   padding: 18px 20px;
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-app);
   text-align: left;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -773,7 +765,7 @@ onMounted(fetchData);
 .submission-row:hover,
 .submission-row--active {
   border-color: #93c5fd;
-  background: #eff6ff;
+  background: var(--color-info-soft);
   box-shadow: 0 12px 24px rgba(59, 130, 246, 0.12);
 }
 
@@ -790,7 +782,7 @@ onMounted(fetchData);
   height: 44px;
   border-radius: 16px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   flex-shrink: 0;
@@ -804,19 +796,19 @@ onMounted(fetchData);
 }
 
 .submission-row__name-line strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
 }
 
 .submission-row__username {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .submission-row__identity p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -831,7 +823,7 @@ onMounted(fetchData);
   padding: 12px 14px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.85);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 .submission-row__label,
@@ -843,13 +835,13 @@ onMounted(fetchData);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .submission-row__meta-grid strong,
 .quick-grade-card__stats strong,
 .identity-box strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-md);
 }
 
@@ -881,8 +873,8 @@ onMounted(fetchData);
 .identity-box {
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .identity-box--wide {
@@ -892,7 +884,7 @@ onMounted(fetchData);
 .identity-box small {
   display: block;
   margin-top: 6px;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .quick-grade-card__section {
@@ -905,7 +897,7 @@ onMounted(fetchData);
 .grade-dialog__section-title {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .quick-grade-card__preview,
@@ -914,8 +906,8 @@ onMounted(fetchData);
   margin: 0;
   padding: 16px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
   color: #334155;
   font-size: var(--font-size-md);
   line-height: var(--line-height-body);
@@ -947,8 +939,8 @@ onMounted(fetchData);
 .grade-form-card {
   padding: 20px;
   border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 .grade-form {
@@ -963,7 +955,7 @@ onMounted(fetchData);
 
 .quick-comment-block p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
@@ -981,7 +973,7 @@ onMounted(fetchData);
   border: none;
   border-radius: 999px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-sm);
   font-weight: 700;
   cursor: pointer;

@@ -338,7 +338,7 @@ const changePassword = async () => {
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .profile-summary-panel {
@@ -356,9 +356,9 @@ const changePassword = async () => {
   gap: 14px;
   padding: 18px 20px;
   min-height: 148px;
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: linear-gradient(180deg, var(--color-surface) 0%, #f8fbff 100%);
 }
 
 .profile-identity__meta {
@@ -375,26 +375,26 @@ const changePassword = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0f766e, #1d4ed8);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-info));
+  color: var(--color-text-inverse);
   font-size: var(--font-size-2xl);
   font-weight: 700;
 }
 
 .profile-identity__meta small {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-sm);
 }
 
 .profile-identity strong,
 .profile-sidebar-head h3 {
   display: block;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .profile-identity span,
 .profile-sidebar-head p {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -409,26 +409,26 @@ const changePassword = async () => {
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .profile-summary-item .material-symbols-outlined {
   font-size: var(--font-size-2xl);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .profile-summary-item strong {
   display: block;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-md);
   font-weight: 700;
 }
 
 .profile-summary-item p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -442,7 +442,7 @@ const changePassword = async () => {
 .profile-sidebar-card,
 .profile-card {
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.05);
 }
@@ -472,13 +472,13 @@ const changePassword = async () => {
 .profile-sidebar-block {
   padding: 14px 16px;
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-app);
 }
 
 .profile-sidebar-block p {
   margin: 10px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -491,7 +491,7 @@ const changePassword = async () => {
 }
 
 .profile-sidebar-progress strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-bold);
 }
@@ -501,14 +501,14 @@ const changePassword = async () => {
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: #dbe4f0;
+  background: var(--color-border-soft);
 }
 
 .profile-sidebar-progress__track span {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #14b8a6, #0f766e);
+  background: linear-gradient(90deg, var(--color-brand-teacher-accent), var(--color-brand-teacher));
 }
 
 .profile-overview-list {
@@ -523,26 +523,26 @@ const changePassword = async () => {
   gap: 10px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .profile-overview-item .material-symbols-outlined {
   margin-top: 2px;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: 18px;
 }
 
 .profile-overview-item strong {
   display: block;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-md);
   font-weight: 700;
 }
 
 .profile-overview-item p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -562,12 +562,12 @@ const changePassword = async () => {
 
 .profile-section-intro h2 {
   margin: 6px 0 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .profile-section-intro p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -586,13 +586,13 @@ const changePassword = async () => {
 
 .card-header-row p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
 .profile-card__hint {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
   text-align: right;
@@ -619,7 +619,7 @@ const changePassword = async () => {
 
 .security-score {
   font-size: var(--font-size-sm);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
@@ -637,11 +637,11 @@ const changePassword = async () => {
   flex: 1;
   height: 6px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--color-border);
 }
 
 .strength-bar--active {
-  background: linear-gradient(90deg, #14b8a6, #0f766e);
+  background: linear-gradient(90deg, var(--color-brand-teacher-accent), var(--color-brand-teacher));
 }
 
 @media (max-width: 1024px) {

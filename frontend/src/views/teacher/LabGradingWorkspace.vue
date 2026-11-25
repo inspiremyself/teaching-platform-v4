@@ -1,12 +1,12 @@
 <template>
   <GradingWorkspace>
     <template #headerActions>
-      <button type="button" class="action-button action-button--ghost" @click="router.push({ name: 'teacher-lab-matrix', params: { labId } })">班级总览</button>
-      <button v-if="workspace.selectedId.value !== null" type="button" class="action-button action-button--ghost" @click="openReportView">实验报告</button>
-      <button type="button" class="action-button action-button--ghost" @click="router.push('/teacher/labs/' + labId + '/blank-regrade/batch')">批量重判</button>
-      <button v-if="workspace.selectedId.value !== null" type="button" class="action-button action-button--ghost" @click="goBatchGrade">批量快捷批改</button>
-      <button v-if="workspace.selectedId.value !== null" type="button" class="action-button action-button--warning" :disabled="!canReturn" @click="handleReturn">打回</button>
-      <button type="button" class="action-button action-button--ghost" :disabled="loading" @click="refreshWithLoading">刷新</button>
+      <ActionButton label="班级总览" tone="ghost" @click="router.push({ name: 'teacher-lab-matrix', params: { labId } })" />
+      <ActionButton v-if="workspace.selectedId.value !== null" label="实验报告" tone="ghost" @click="openReportView" />
+      <ActionButton label="批量重判" tone="ghost" @click="router.push('/teacher/labs/' + labId + '/blank-regrade/batch')" />
+      <ActionButton v-if="workspace.selectedId.value !== null" label="批量快捷批改" tone="ghost" @click="goBatchGrade" />
+      <ActionButton v-if="workspace.selectedId.value !== null" label="打回" tone="warning" :disabled="!canReturn" @click="handleReturn" />
+      <ActionButton label="刷新" tone="ghost" :disabled="loading" @click="refreshWithLoading" />
     </template>
 
     <template #queue>
@@ -22,7 +22,7 @@
     </template>
 
     <template #detail>
-      <el-empty
+      <AppEmptyState
         v-if="workspace.queue.value.length === 0 && !loading"
         description="本实验暂无提交，可到班级总览查看未提交学生"
       />
@@ -69,18 +69,18 @@
               />
             </div>
             <div class="question-card__actions">
-              <button
-                type="button"
-                class="action-button action-button--ghost"
+              <ActionButton
+                :label="`采纳参考分 ${item.suggestedScore ?? '—'}`"
+                tone="ghost"
                 :disabled="workspace.readOnly.value || item.suggestedScore == null"
                 @click="acceptSuggested(item)"
-              >采纳参考分 {{ item.suggestedScore ?? '—' }}</button>
-              <button
-                type="button"
-                class="action-button action-button--primary"
+              />
+              <ActionButton
+                label="确认单题"
+                tone="primary"
                 :disabled="workspace.readOnly.value"
                 @click="confirmStep(item)"
-              >确认单题</button>
+              />
             </div>
           </section>
 
@@ -116,12 +116,12 @@
         <p class="grading-summary__progress">
           {{ workspace.summary.value.hasManual ? `评分进度 ${workspace.summary.value.completed}/${workspace.summary.value.total}` : workspace.summary.value.noManualText }}
         </p>
-        <button
-          type="button"
-          class="action-button action-button--primary"
+        <ActionButton
+          label="提交评分"
+          tone="primary"
           :disabled="workspace.readOnly.value"
           @click="submitWithConfirm"
-        >提交评分</button>
+        />
       </section>
     </template>
   </GradingWorkspace>
@@ -129,6 +129,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { SUBMISSION_STATUS } from '@/types/enums';
@@ -140,6 +141,7 @@ import {
   returnTeacherLabReport,
 } from '@/api/labs';
 import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
+import ActionButton from './components/workbench/ActionButton.vue';
 import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
@@ -364,22 +366,22 @@ onMounted(async () => {
   padding: 12px 14px;
   border: 1px solid #dbe5ef;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .lab-context-card strong {
   font-size: var(--font-size-lg);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .lab-context-card span {
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .lab-context-card__title {
   margin-left: auto;
-  color: #0f766e !important;
+  color: var(--color-brand-teacher) !important;
   font-weight: 700;
 }
 
@@ -387,7 +389,7 @@ onMounted(async () => {
   padding: 14px 16px;
   border: 1px solid #dbe5ef;
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .question-card__header {
@@ -399,19 +401,19 @@ onMounted(async () => {
 
 .question-card__header h3 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .question-card__score {
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .question-card__prompt {
   margin: 8px 0;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   color: #334155;
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
@@ -421,10 +423,10 @@ onMounted(async () => {
 .answer-pane {
   min-height: 40px;
   padding: 10px 12px;
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 12px;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--color-bg-app);
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
   white-space: pre-wrap;
@@ -448,7 +450,7 @@ onMounted(async () => {
   padding: 12px 14px;
   border: 1px solid #dbe5ef;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .summary-text h4 {
@@ -458,7 +460,7 @@ onMounted(async () => {
 
 .summary-text div {
   font-size: var(--font-size-base);
-  color: #0f172a;
+  color: var(--color-text-primary);
   line-height: var(--line-height-body);
   white-space: pre-wrap;
 }
@@ -471,7 +473,7 @@ onMounted(async () => {
 
 .grading-summary h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .grading-summary__row {
@@ -479,20 +481,20 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 10px;
   font-size: var(--font-size-base);
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .grading-summary__row--total {
   padding-top: 10px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-border);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .grading-summary__progress {
   margin: 0;
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 1280px) {

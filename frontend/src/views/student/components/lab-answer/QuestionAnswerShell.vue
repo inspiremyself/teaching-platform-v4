@@ -27,7 +27,7 @@ defineProps<{
 .question-answer-shell {
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .question-answer-shell__header {
@@ -40,13 +40,13 @@ defineProps<{
 
 .question-answer-shell__title {
   margin-bottom: 8px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-weight: 700;
 }
 
 .question-answer-shell__hint {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   line-height: var(--line-height-body);
 }
 
@@ -56,7 +56,7 @@ defineProps<{
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--color-border);
   color: #334155;
   font-size: var(--font-size-sm);
   font-weight: 700;

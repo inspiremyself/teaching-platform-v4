@@ -197,6 +197,14 @@
   cursor: not-allowed;
 }
 
+/* 尺寸变体：仅覆盖尺寸，不覆盖 tone 色板与 border；供原 ExamListPanel 等 40px 按钮使用 */
+.action-button--roomy {
+  min-height: 40px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  font-size: var(--font-size-base);
+}
+
 .action-button--ghost { background: #f8fafc; border-color: var(--wb-border); color: #475569; }
 .action-button--success { background: var(--wb-primary-soft); color: var(--wb-primary); }
 .action-button--warning { background: var(--wb-warning-soft); color: var(--wb-warning); }

@@ -33,7 +33,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-else description="暂无活动数据" :image-size="48" />
+      <AppEmptyState v-else description="暂无活动数据" />
     </article>
 
     <el-dialog v-model="dialogVisible" title="未开始名单" width="860px" @closed="closeDetail">
@@ -51,7 +51,7 @@
           <template #default="scope">{{ scope.row.submittedAt || '-' }}</template>
         </el-table-column>
       </el-table>
-      <el-empty v-else-if="!error" description="暂无学生名单" :image-size="48" />
+      <AppEmptyState v-else-if="!error" description="暂无学生名单" />
     </el-dialog>
   </section>
 </template>
@@ -60,6 +60,7 @@
 import { useTeacherParticipation } from '@/composables/useTeacherParticipation';
 import type { TeacherParticipationOverview } from '@/types/analysis';
 import { formatScore } from '@/utils/format';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 withDefaults(defineProps<{ overview: TeacherParticipationOverview }>(), { overview: () => [] });
 
@@ -82,7 +83,7 @@ const completionLabel = (value: 'COMPLETED' | 'IN_PROGRESS') =>
   padding: 16px;
   border: 1px solid var(--el-border-color-lighter, #ebeef5);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .participation-panel__header {

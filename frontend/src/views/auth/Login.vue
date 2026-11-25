@@ -294,7 +294,7 @@ onMounted(async () => {
 .login-left {
   flex: 1;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, rgba(20, 184, 166, 0.28), transparent 35%), linear-gradient(135deg, #0f172a 0%, #0f766e 100%);
+  background: radial-gradient(circle at top left, rgba(20, 184, 166, 0.28), transparent 35%), linear-gradient(135deg, var(--color-text-primary) 0%, var(--color-brand-teacher) 100%);
   display: flex;
   align-items: center;
   justify-content: center;

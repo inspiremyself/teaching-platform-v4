@@ -12,8 +12,6 @@ export type StatusKind = 'activity' | 'submission' | 'examSubmission'
 export type StatusScene = 'teacher' | 'student'
 /** 展示色板语义 */
 export type StatusTone = 'neutral' | 'success' | 'info' | 'warning' | 'danger'
-/** 原生 el-tag 支持的 theme 五值 */
-export type ElTagType = 'primary' | 'success' | 'info' | 'warning' | 'danger'
 
 export interface StatusPresentation {
   label: string
@@ -102,7 +100,95 @@ export function resolveStatusPresentation(input: StatusPresentationInput): Statu
   return { label: unknownLabel ?? status, tone: 'neutral' }
 }
 
-/** 把展示色板转成原生 el-tag 的 theme 值；neutral 按调用页现网默认落 primary 或 info */
-export function toElTagType(tone: StatusTone, neutralAs: Extract<ElTagType, 'primary' | 'info'>): ElTagType {
-  return tone === 'neutral' ? neutralAs : tone
+/**
+ * 非枚举族状态分组：key 为页面语义，不参与 StatusKind 体系。
+ * 用于组织、平台内容、评分来源、行为风险、实验时间门禁、编辑态、小结要求、重判判定等直接登记状态。
+ */
+export type StatusGroup =
+  | 'orgSchoolStatus'
+  | 'orgTeacherStatus'
+  | 'orgStudentStatus'
+  | 'orgClassStatus'
+  | 'orgSubjectStatus'
+  | 'platformSubjectStatus'
+  | 'coursewareStatus'
+  | 'scoreSource'
+  | 'behaviorRisk'
+  | 'labTimeGate'
+  | 'labEditMode'
+  | 'labSummaryRequirement'
+  | 'regradeDecision'
+
+/** 直接登记表：按数据库真实取值写死，与枚举族基表互不影响 */
+const DIRECT: Record<StatusGroup, Record<string, StatusPresentation>> = {
+  orgSchoolStatus: {
+    ACTIVE: { label: '启用', tone: 'success' },
+    DISABLED: { label: '停用', tone: 'info' },
+  },
+  orgTeacherStatus: {
+    ACTIVE: { label: '在职', tone: 'success' },
+    DISABLED: { label: '停用', tone: 'info' },
+  },
+  orgStudentStatus: {
+    ACTIVE: { label: '启用', tone: 'success' },
+    DISABLED: { label: '停用', tone: 'info' },
+  },
+  orgClassStatus: {
+    ACTIVE: { label: '启用中', tone: 'success' },
+    ARCHIVED: { label: '已归档', tone: 'info' },
+  },
+  orgSubjectStatus: {
+    ACTIVE: { label: '启用中', tone: 'success' },
+    DISABLED: { label: '已停用', tone: 'info' },
+  },
+  platformSubjectStatus: {
+    ACTIVE: { label: '启用', tone: 'success' },
+    DISABLED: { label: '停用', tone: 'info' },
+  },
+  coursewareStatus: {
+    PUBLISHED: { label: '已发布', tone: 'success' },
+    DRAFT: { label: '草稿', tone: 'info' },
+  },
+  scoreSource: {
+    AUTO: { label: '自动评分', tone: 'success' },
+    AUTO_ACCEPTED: { label: '已采纳自动分', tone: 'success' },
+    SUGGESTED: { label: '建议评分', tone: 'warning' },
+    RECOMMENDED: { label: '建议评分', tone: 'warning' },
+    TEACHER: { label: '教师评分', tone: 'info' },
+  },
+  behaviorRisk: {
+    HIGH: { label: '高风险', tone: 'danger' },
+    MEDIUM: { label: '中风险', tone: 'warning' },
+    LOW: { label: '低风险', tone: 'info' },
+    NO_BEHAVIOR_DATA: { label: '无数据', tone: 'info' },
+  },
+  labTimeGate: {
+    NOT_STARTED: { label: '未开始', tone: 'info' },
+    OVERDUE: { label: '已截止', tone: 'warning' },
+  },
+  labEditMode: {
+    READONLY: { label: '只读', tone: 'info' },
+    EDITABLE: { label: '可编辑', tone: 'success' },
+  },
+  labSummaryRequirement: {
+    REQUIRED: { label: '必填', tone: 'warning' },
+    OPTIONAL: { label: '选填', tone: 'info' },
+  },
+  regradeDecision: {
+    ACCEPTED: { label: '是', tone: 'success' },
+    REJECTED: { label: '否', tone: 'info' },
+  },
+}
+
+/**
+ * 直接登记表解析：未命中返回 unknownLabel 或原值，tone 统一 neutral。
+ * 与 resolveStatusPresentation 互补：枚举族状态继续走上者，非枚举族状态走本函数。
+ */
+export function resolveStatusOf(
+  group: StatusGroup,
+  value?: string | null,
+  unknownLabel?: string,
+): StatusPresentation {
+  const hit = value ? DIRECT[group][value] : undefined
+  return hit ?? { label: unknownLabel ?? (value ?? ''), tone: 'neutral' }
 }

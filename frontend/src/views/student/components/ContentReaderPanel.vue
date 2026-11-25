@@ -3,7 +3,7 @@
     <div class="content-reader__layout">
       <aside class="content-reader__sidebar">
         <h3 class="content-reader__heading">学习任务</h3>
-        <el-empty v-if="reader.groups.value.length === 0" description="暂无布置的学习内容" />
+        <AppEmptyState v-if="reader.groups.value.length === 0" description="暂无布置的学习内容" />
         <el-card
           v-for="group in reader.groups.value"
           :key="group.assignmentGroupId"
@@ -27,7 +27,7 @@
       </aside>
 
       <section class="content-reader__main" v-loading="reader.loading.value">
-        <el-empty v-if="!reader.sectionContent.value" description="请选择左侧小节开始阅读" />
+        <AppEmptyState v-if="!reader.sectionContent.value" description="请选择左侧小节开始阅读" />
         <template v-else>
           <h2 class="content-reader__title">{{ reader.sectionContent.value.heading }}</h2>
           <div ref="readerRef" class="content-reader__math">
@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { parseParagraphs, studentContentKey } from '@/composables/useStudentContent';
 import type { StudentAssignmentGroup } from '@/types/studentContent';
 

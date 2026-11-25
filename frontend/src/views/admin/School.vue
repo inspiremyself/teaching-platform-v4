@@ -18,7 +18,7 @@
           <el-input v-model="school.code" disabled />
         </el-form-item>
         <el-form-item label="状态">
-          <el-tag :type="school.status === 'ACTIVE' ? 'success' : 'info'">{{ school.status === 'ACTIVE' ? '启用' : '停用' }}</el-tag>
+          <AppStatusTag v-bind="resolveStatusOf('orgSchoolStatus', school.status)" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
@@ -30,6 +30,8 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import { ElMessage } from 'element-plus';
 import { getSchool, updateSchool } from '@/api/admin';
 import type { SchoolInfo } from '@/types/admin';
@@ -73,9 +75,9 @@ onMounted(fetchSchool);
 .school-card {
   max-width: 520px;
   padding: 24px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 

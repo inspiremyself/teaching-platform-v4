@@ -2,8 +2,8 @@
 import type { ActionTone } from './types'
 
 withDefaults(
-  defineProps<{ label: string; tone: ActionTone; disabled?: boolean }>(),
-  { disabled: false },
+  defineProps<{ label: string; tone: ActionTone; disabled?: boolean; size?: 'default' | 'roomy' }>(),
+  { disabled: false, size: 'default' },
 )
 const emit = defineEmits<{ click: [] }>()
 </script>
@@ -11,7 +11,7 @@ const emit = defineEmits<{ click: [] }>()
 <template>
   <button
     class="action-button"
-    :class="`action-button--${tone}`"
+    :class="[`action-button--${tone}`, { 'action-button--roomy': size === 'roomy' }]"
     type="button"
     :disabled="disabled"
     @click="emit('click')"

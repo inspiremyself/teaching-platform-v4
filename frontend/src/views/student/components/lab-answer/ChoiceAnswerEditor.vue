@@ -119,10 +119,10 @@ const toggleOption = (key: string) => {
   align-items: center;
   width: 100%;
   padding: 14px 16px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 16px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
   text-align: left;
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
@@ -134,8 +134,8 @@ const toggleOption = (key: string) => {
 }
 
 .choice-answer-editor__option.is-selected {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--color-brand-student-border);
+  background: var(--color-brand-student-soft);
 }
 
 .choice-answer-editor__option.is-disabled {
@@ -149,14 +149,14 @@ const toggleOption = (key: string) => {
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--color-border);
   color: #334155;
   font-weight: var(--font-weight-bold);
 }
 
 .choice-answer-editor__option.is-selected .choice-answer-editor__marker {
-  background: #2563eb;
-  color: #fff;
+  background: var(--color-brand-student-border);
+  color: var(--color-text-inverse);
 }
 
 .choice-answer-editor__label {
@@ -165,20 +165,20 @@ const toggleOption = (key: string) => {
 }
 
 .choice-answer-editor__state {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .choice-answer-editor__option.is-selected .choice-answer-editor__state {
-  color: #1d4ed8;
+  color: var(--color-brand-student);
 }
 
 .choice-answer-editor__empty {
   padding: 12px 14px;
   border: 1px solid #fdba74;
   border-radius: 16px;
-  background: #fff7ed;
+  background: var(--color-warning-soft);
   color: #9a3412;
   font-size: var(--font-size-base);
 }

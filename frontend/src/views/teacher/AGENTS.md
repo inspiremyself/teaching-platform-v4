@@ -30,7 +30,7 @@ SFC 风格、`composables/` 薄壳拆分、数据流与依赖方向见 `.cursor/
 
 ## CONVENTIONS
 
-- 页面骨架优先统一为：`page-header` / 摘要区 / 筛选工具条 / 数据区 / 详情或动作区。
+- 页面骨架优先统一为：`workbench-header` / 摘要区 / 筛选工具条 / 数据区 / 详情或动作区。
 - 教师端优先使用 `Summary Cards`、`Filter Toolbar`、`Dense Data Table`、`Status Chips`。
 - 管理页先保证操作效率、信息并列比较、批量处理路径，再考虑装饰层。
 - 操作成功反馈普遍使用 `ElMessage.success`；延续现有即时反馈模式。

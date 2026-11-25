@@ -120,7 +120,7 @@
                   </div>
                 </div>
               </div>
-              <el-empty v-else description="暂无趋势数据" />
+              <AppEmptyState v-else description="暂无趋势数据" />
             </el-card>
 
             <el-card class="analysis-card" shadow="never">
@@ -144,7 +144,7 @@
                   <p>{{ item.gradedCount }} 条评分记录</p>
                 </div>
               </div>
-              <el-empty v-else description="暂无班级对比数据" />
+              <AppEmptyState v-else description="暂无班级对比数据" />
             </el-card>
 
             <ParticipationPanel v-if="participationOverview.length" :overview="participationOverview" />
@@ -166,7 +166,7 @@
                   <span class="breakdown-score">{{ formatScore(item.avgScore) }}</span>
                 </div>
               </div>
-              <el-empty v-else description="暂无类型分布" />
+              <AppEmptyState v-else description="暂无类型分布" />
             </el-card>
 
             <el-card class="analysis-card" shadow="never">
@@ -181,7 +181,7 @@
                   <p>{{ item.description }}</p>
                 </div>
               </div>
-              <el-empty v-else description="暂无洞察信息" />
+              <AppEmptyState v-else description="暂无洞察信息" />
             </el-card>
           </aside>
         </div>
@@ -280,12 +280,12 @@ onMounted(loadAnalysis);
 
 .analysis-header h1 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .analysis-header p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -306,9 +306,9 @@ onMounted(loadAnalysis);
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #ffffff;
+  background: var(--color-surface);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
@@ -319,13 +319,13 @@ onMounted(loadAnalysis);
   place-items: center;
   border-radius: 12px;
   background: #ecfeff;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   flex-shrink: 0;
 }
 
 .analysis-summary-card__label {
   display: block;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -333,13 +333,13 @@ onMounted(loadAnalysis);
 .analysis-summary-card strong {
   display: block;
   margin-top: 4px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-2xl);
 }
 
 .analysis-scope-note {
   margin: 0 0 2px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -352,7 +352,7 @@ onMounted(loadAnalysis);
 }
 
 .analysis-card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
@@ -366,14 +366,14 @@ onMounted(loadAnalysis);
 
 .card-header-row p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
 .section-title {
   font-size: var(--font-size-lg);
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .trend-card-panel {
@@ -393,9 +393,9 @@ onMounted(loadAnalysis);
   flex-direction: column;
   gap: 4px;
   padding: 14px 16px;
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-bg-app));
 }
 
 .trend-overview-chip--accent {
@@ -405,7 +405,7 @@ onMounted(loadAnalysis);
 
 .trend-overview-chip span,
 .trend-overview-chip small {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .trend-overview-chip span {
@@ -416,7 +416,7 @@ onMounted(loadAnalysis);
 }
 
 .trend-overview-chip strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-2xl);
   line-height: var(--line-height-tight);
 }
@@ -437,7 +437,7 @@ onMounted(loadAnalysis);
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -450,7 +450,7 @@ onMounted(loadAnalysis);
 }
 
 .trend-legend__swatch--bars {
-  background: linear-gradient(90deg, #0f766e, #14b8a6);
+  background: linear-gradient(90deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
 }
 
 .trend-legend__swatch--score {
@@ -458,8 +458,8 @@ onMounted(loadAnalysis);
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  background: #ffffff;
-  border: 3px solid #0f172a;
+  background: var(--color-surface);
+  border: 3px solid var(--color-text-primary);
   box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
 }
 
@@ -469,10 +469,9 @@ onMounted(loadAnalysis);
   gap: 12px;
   height: 240px;
   padding: 16px 18px 14px 14px;
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98)),
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.98)),
     radial-gradient(circle at top left, rgba(20, 184, 166, 0.08), transparent 42%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
@@ -487,7 +486,7 @@ onMounted(loadAnalysis);
 }
 
 .trend-y-axis span {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -537,13 +536,13 @@ onMounted(loadAnalysis);
 }
 
 .trend-bar-meta strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-tight);
 }
 
 .trend-bar-meta span {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: 600;
 }
@@ -584,15 +583,15 @@ onMounted(loadAnalysis);
 }
 
 .trend-chart__line-dot {
-  fill: #ffffff;
-  stroke: #0f766e;
+  fill: var(--color-text-inverse);
+  stroke: var(--color-brand-teacher);
   stroke-width: 1.5;
   filter: drop-shadow(0 2px 5px rgba(15, 118, 110, 0.18));
 }
 
 .trend-bar-label {
   font-size: var(--font-size-sm);
-  color: #475569;
+  color: var(--color-text-secondary);
   font-weight: 700;
 }
 
@@ -609,7 +608,7 @@ onMounted(loadAnalysis);
 .insight-item {
   padding: 16px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .comparison-item__header {
@@ -630,21 +629,21 @@ onMounted(loadAnalysis);
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--color-border);
   overflow: hidden;
 }
 
 .comparison-progress-fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #004d64, #14b8a6);
+  background: linear-gradient(90deg, #004d64, var(--color-brand-teacher-accent));
 }
 
 .comparison-item p,
 .breakdown-item p,
 .insight-item p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -656,8 +655,8 @@ onMounted(loadAnalysis);
 }
 
 .insight-item--positive { background: #ecfeff; }
-.insight-item--highlight { background: #eff6ff; }
-.insight-item--warning { background: #fff7ed; }
+.insight-item--highlight { background: var(--color-info-soft); }
+.insight-item--warning { background: var(--color-warning-soft); }
 
 @media (max-width: 1024px) {
   .analysis-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

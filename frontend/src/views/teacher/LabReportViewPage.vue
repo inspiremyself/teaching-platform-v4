@@ -1,7 +1,7 @@
 <template>
   <div class="lab-report-view" v-loading="loading">
     <AppBreadcrumb />
-    <el-empty v-if="!loading && !detail" description="未获取到实验报告" />
+    <AppEmptyState v-if="!loading && !detail" description="未获取到实验报告" />
 
     <article v-else-if="detail" class="lab-report-sheet workbench-panel">
       <div class="lab-report-sheet__body">
@@ -64,6 +64,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { useRoute } from 'vue-router';
 import { getTeacherLabReportView } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
@@ -119,18 +120,18 @@ onMounted(fetchDetail);
   text-align: center;
   margin-bottom: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .lab-report-header h1 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-family: 'DM Sans', 'Inter', sans-serif;
 }
 
 .lab-report-header p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-md);
 }
 
@@ -152,7 +153,7 @@ onMounted(fetchDetail);
 
 .lab-report-section h2 {
   margin: 0 0 12px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-family: 'DM Sans', 'Inter', sans-serif;
 }
 
@@ -161,8 +162,8 @@ onMounted(fetchDetail);
   word-break: break-word;
   padding: 14px 16px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
   color: #334155;
   line-height: var(--line-height-body);
   font-size: var(--font-size-md);
@@ -176,9 +177,9 @@ onMounted(fetchDetail);
 .lab-report-step {
   padding: 16px 18px;
   margin-bottom: 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .lab-report-step:last-child {
@@ -187,7 +188,7 @@ onMounted(fetchDetail);
 
 .lab-report-step h3 {
   margin: 0 0 12px;
-  color: #0f172a;}
+  color: var(--color-text-primary);}
 
 .lab-report-step__badge {
   display: inline-block;
@@ -195,7 +196,7 @@ onMounted(fetchDetail);
   padding: 2px 8px;
   border-radius: 6px;
   background: #ecfeff;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
   font-weight: 700;
   vertical-align: middle;
@@ -205,8 +206,8 @@ onMounted(fetchDetail);
   margin: 0 0 12px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
   color: #334155;
   white-space: pre-wrap;
   word-break: break-word;
@@ -216,7 +217,7 @@ onMounted(fetchDetail);
 
 .lab-report-label {
   margin: 0 0 6px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-wide);
@@ -226,9 +227,9 @@ onMounted(fetchDetail);
   min-height: 48px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #dbe4f0;
-  color: #0f172a;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border-soft);
+  color: var(--color-text-primary);
   white-space: pre-wrap;
   word-break: break-word;
   line-height: var(--line-height-body);
@@ -247,7 +248,7 @@ onMounted(fetchDetail);
 
 @media print {
   .lab-report-view {
-    background: #fff;
+    background: var(--color-surface);
     padding: 0;
   }
 

@@ -189,7 +189,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   overflow: hidden;
   border: 1px solid #1e293b;
   border-radius: 16px;
-  background: #0f172a;
+  background: var(--color-text-primary);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
@@ -248,7 +248,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 .code-editor-shell__title,
 .code-editor-shell__count {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-sm);
 }
 
@@ -261,7 +261,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 .code-editor-shell__status--idle {
   background: rgba(148, 163, 184, 0.14);
-  color: #cbd5e1;
+  color: var(--color-border-strong);
 }
 
 .code-editor-shell__status--editing {
@@ -276,14 +276,14 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 .code-editor-shell__status--readonly {
   background: rgba(148, 163, 184, 0.16);
-  color: #e2e8f0;
+  color: var(--color-border);
 }
 
 .code-editor-shell__readonly {
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.16);
-  color: #cbd5e1;
+  color: var(--color-border-strong);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -314,7 +314,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   gap: 0;
   padding: 16px 8px 16px 0;
   background: rgba(15, 23, 42, 0.95);
-  color: #64748b;
+  color: var(--color-text-muted);
   font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Consolas, monospace;
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
@@ -330,7 +330,7 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 .code-editor-shell__line-numbers span.is-active {
-  color: #f8fafc;
+  color: var(--color-bg-app);
   background: rgba(59, 130, 246, 0.18);
 }
 
@@ -342,7 +342,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   resize: vertical;
   outline: none;
   background: transparent;
-  color: #e2e8f0;
+  color: var(--color-border);
   font-family: ui-monospace, SFMono-Regular, SFMono, Menlo, Consolas, monospace;
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
@@ -355,17 +355,17 @@ const handleKeydown = (event: KeyboardEvent) => {
 }
 
 .code-editor-shell__textarea::placeholder {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .code-editor-shell__textarea:disabled {
-  color: #cbd5e1;
+  color: var(--color-border-strong);
   cursor: not-allowed;
   background: rgba(15, 23, 42, 0.35);
 }
 
 .code-editor-shell__textarea:disabled::placeholder {
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .code-editor-shell__footer {
@@ -374,7 +374,7 @@ const handleKeydown = (event: KeyboardEvent) => {
   gap: 12px;
   padding: 10px 14px 12px;
   border-top: 1px solid rgba(148, 163, 184, 0.14);
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   background: rgba(15, 23, 42, 0.92);
 }

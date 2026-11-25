@@ -21,7 +21,7 @@
       </div>
     </section>
 
-    <section class="materials-toolbar-card">
+    <AppToolbarCard class="materials-toolbar-card">
       <div class="materials-toolbar-card__main">
         <div class="toolbar-search">
           <span class="material-symbols-outlined">search</span>
@@ -49,7 +49,7 @@
           <span>{{ visibilityFilter ? visibilityLabel(visibilityFilter) : '全部范围' }} · {{ activeCategoryLabel }}</span>
           <el-button link type="primary" @click="resetFilters">清空筛选</el-button>
         </div>
-      </section>
+      </AppToolbarCard>
 
       <section class="materials-console">
         <header class="materials-console__header">
@@ -249,6 +249,7 @@ import { listSubjects } from '@/api/admin';
 import type { AdminSubject } from '@/types/admin';
 import type { MaterialItem, MaterialVisibility } from '@/types/material';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 
 const loading = ref(false);
 const uploading = ref(false);
@@ -495,13 +496,6 @@ onMounted(() => {
   row-gap: 10px;
 }
 
-.materials-toolbar-card {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-}
-
 .materials-console {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -513,7 +507,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 18px 20px;
 }
 
 .materials-toolbar-card__main {
@@ -598,12 +591,12 @@ onMounted(() => {
 
 .materials-console__header h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .materials-console__header p {
   margin: 4px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
@@ -621,7 +614,7 @@ onMounted(() => {
   align-items: center;
   padding: 14px 16px;
   border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  background: linear-gradient(180deg, var(--color-surface), #fbfdff);
   border: 1px solid #e5edf7;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -645,12 +638,12 @@ onMounted(() => {
   font-size: var(--font-size-2xl);
 }
 
-.material-row__icon--red { background: #fef2f2; color: #dc2626; }
-.material-row__icon--orange { background: #fff7ed; color: #ea580c; }
-.material-row__icon--emerald { background: #ecfdf5; color: #059669; }
-.material-row__icon--violet { background: #f5f3ff; color: #7c3aed; }
+.material-row__icon--red { background: var(--color-danger-soft); color: var(--color-danger-strong); }
+.material-row__icon--orange { background: var(--color-warning-soft); color: #ea580c; }
+.material-row__icon--emerald { background: var(--color-status-active-soft); color: #059669; }
+.material-row__icon--violet { background: var(--color-brand-admin-soft); color: var(--color-brand-admin); }
 .material-row__icon--cyan { background: #ecfeff; color: #0891b2; }
-.material-row__icon--blue { background: #eff6ff; color: #2563eb; }
+.material-row__icon--blue { background: var(--color-info-soft); color: var(--color-brand-student-border); }
 
 .material-row__primary {
   min-width: 0;
@@ -665,14 +658,14 @@ onMounted(() => {
 
 .material-row__title-line h3 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .material-row__description {
   margin: 6px 0 0;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-caption);
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .material-row__meta {
@@ -687,7 +680,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .material-row__meta .material-symbols-outlined {
@@ -702,7 +695,7 @@ onMounted(() => {
 }
 
 .material-row__visibility small {
-  color: #64748b;
+  color: var(--color-text-muted);
   line-height: var(--line-height-heading);
   font-size: var(--font-size-sm);
 }
@@ -727,18 +720,18 @@ onMounted(() => {
 }
 
 .material-chip--category {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-info-soft);
+  color: var(--color-info);
 }
 
 .material-chip--public {
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
   color: #047857;
 }
 
 .material-chip--teacher {
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--color-warning-soft);
+  color: var(--color-warning-strong);
 }
 
 .material-chip__dot {
@@ -766,14 +759,14 @@ onMounted(() => {
   flex-direction: column;
   gap: 18px;
   padding: 24px;
-  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  background: linear-gradient(180deg, var(--color-surface), #f8fbff);
 }
 
 .materials-dialog__header,
 .materials-dialog__context-card,
 .materials-dialog__group,
 .materials-dialog__footer {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
@@ -788,7 +781,7 @@ onMounted(() => {
 
 .materials-dialog__eyebrow,
 .materials-dialog__label {
-  color: #2563eb;
+  color: var(--color-brand-student-border);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
@@ -797,12 +790,12 @@ onMounted(() => {
 
 .materials-dialog__header h2 {
   margin: 8px 0 0;
-  color: #0f172a;}
+  color: var(--color-text-primary);}
 
 .materials-dialog__desc {
   margin: 8px 0 0;
   max-width: 540px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -822,14 +815,14 @@ onMounted(() => {
   padding: 0 12px;
   border-radius: 999px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
 }
 
 .materials-dialog__badge--muted {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 
 .materials-dialog__context-grid,
@@ -847,21 +840,21 @@ onMounted(() => {
 .materials-dialog__context-card strong {
   display: block;
   margin-top: 8px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
 
 .materials-dialog__context-card p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
 
 .materials-dialog__group-title {
   margin-bottom: 14px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
@@ -878,7 +871,7 @@ onMounted(() => {
 
 .materials-dialog__form :deep(.el-form-item__label) {
   margin-bottom: 8px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -887,8 +880,8 @@ onMounted(() => {
 .materials-dialog__form :deep(.el-select__wrapper),
 .materials-dialog__form :deep(.el-textarea__inner) {
   border-radius: 16px;
-  box-shadow: 0 0 0 1px #e2e8f0 inset;
-  background: #f8fafc;
+  box-shadow: 0 0 0 1px var(--color-border) inset;
+  background: var(--color-bg-app);
 }
 
 .materials-dialog__file-input {
@@ -897,7 +890,7 @@ onMounted(() => {
   padding: 10px 12px;
   border: 1px dashed #bfdbfe;
   border-radius: 16px;
-  background: #eff6ff;
+  background: var(--color-info-soft);
   color: #334155;
 }
 
@@ -910,7 +903,7 @@ onMounted(() => {
 }
 
 .materials-dialog__footer-note {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -954,7 +947,6 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .materials-toolbar-card,
   .materials-console {
     padding: 18px;
     border-radius: var(--radius-xl);

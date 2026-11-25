@@ -8,6 +8,11 @@ const homeworks = () => source('../Homeworks.vue')
 const exams = () => source('../exams/List.vue')
 
 describe('学生端三域任务列表页 UI 一致性', () => {
+  it('页头骨架统一为 workbench-header', () => {
+    expect(labs()).toContain('workbench-header')
+    expect(labs()).toContain('labs-header-card')
+  })
+
   it('统计胶囊统一为 AppMetaChip', () => {
     for (const page of [labs(), homeworks(), exams()]) {
       expect(page).toContain('AppMetaChip')

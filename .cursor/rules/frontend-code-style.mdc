@@ -32,7 +32,7 @@ frontend/src/
 
 - 大页面按已定稿技术方案 TD19 的唯一形态拆：主文件只挂 `<XxxPanel />`、调用 `use<页面名>()`、用 `InjectionKey` `provide`；Panel 承载整块 `<template>` 与全部 `<style scoped>`（避免 scoped 作用域 id 失配），composable 承载全部逻辑。
 - `<style scoped>` 的作用域 id 按 SFC 文件生成，禁止把模板片段单独抽到子组件却保留父级前缀选择器。
-- 设计体系四层单向依赖：`assets/tokens.css`（唯一 token 源）→ `assets/layout.css`（`.page` / `.page-header` / `.toolbar-card` / `.table-card` / `.state-card` 等共享骨架）→ `components/ui/`（`AppPageHeader` / `AppToolbarCard` / `AppTableCard` / `AppStatusTag` / `AppEmptyState` / `AppMetaChip`）→ `views/**`；页面骨架不得在 `<style scoped>` 内重复定义，`tokens.css` 之外的自定义属性右值必须引用 `var()`。
+- 设计体系四层单向依赖：`assets/tokens.css`（唯一 token 源）→ `assets/layout.css`（`.page` / `.toolbar-card` / `.table-card` / `.state-card` 等共享骨架；页头唯一骨架为 `global.css` 的 `.workbench-header`）→ `components/ui/`（`AppToolbarCard` / `AppTableCard` / `AppStatusTag` / `AppEmptyState` / `AppMetaChip`）→ `views/**`；页面骨架不得在 `<style scoped>` 内重复定义，`tokens.css` 之外的自定义属性右值必须引用 `var()`。
 - 设计门禁为 `src/assets/__tests__/designTokens.spec.ts`：校验 token 引入顺序、views 十六进制字面量、`!important`、断点 `{640,768,900,1024,1280}`、EP 图标引用、骨架类重复定义与字号 / 圆角阶梯；历史遗留量只写入 `src/assets/__tests__/designTokenBaseline.json` 且只降不升，重测用 `DESIGN_TOKEN_BASELINE_WRITE=1 npm test`。
 
 ## 3. 数据流与依赖方向

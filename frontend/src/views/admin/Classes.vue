@@ -54,9 +54,7 @@
         <el-table-column prop="studentCount" label="学生" width="90" />
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
-              {{ row.status === 'ACTIVE' ? '启用中' : '已归档' }}
-            </el-tag>
+            <AppStatusTag v-bind="resolveStatusOf('orgClassStatus', row.status)" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" align="right" fixed="right">
@@ -152,6 +150,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   createAdminClass,
@@ -403,7 +403,7 @@ onMounted(refresh);
 .teachers-section {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-border);
 }
 
 .teachers-section__header {

@@ -78,7 +78,7 @@ teaching-platform-v4/
 | 前端接口契约 | `frontend/src/api/` | 真实 API 调用入口，不要绕过 |
 | 前端契约类型 | `frontend/src/types/` | 与后端 DTO/枚举同步 |
 | 设计体系分层 | `frontend/src/assets/tokens.css`、`frontend/src/assets/layout.css`、`frontend/src/components/ui/` | L0 token → L1 骨架类 → L2 共享组件 → L3 页面，单向依赖 |
-| 设计门禁与基线 | `frontend/src/assets/__tests__/designTokens.spec.ts`、`designTokenBaseline.json` | 11 条断言约束 token/断点/图标/排版/尺寸；基线只降不升 |
+| 设计门禁与基线 | `frontend/src/assets/__tests__/designTokens.spec.ts`、`designTokenBaseline.json` | 14 条断言约束 token/断点/图标/排版/尺寸/页头/按钮/空态；基线只降不升 |
 | 教师端页面 | `frontend/src/views/teacher/` | 管理型、高密度；考试页在 `exams/` |
 | 学生端页面 | `frontend/src/views/student/` | 任务型；考试页在 `exams/` |
 | 校管端页面 | `frontend/src/views/admin/` | 学校、教师、学科、班级、学生、审计日志 |

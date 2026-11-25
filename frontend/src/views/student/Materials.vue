@@ -126,13 +126,14 @@
         </article>
       </template>
 
-      <el-empty v-else description="暂无匹配资料" />
+      <AppEmptyState v-else description="暂无匹配资料" />
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { ElMessage } from 'element-plus';
 import { downloadMaterial, listMaterials } from '@/api/materials';
 import type { MaterialItem, MaterialVisibility } from '@/types/material';
@@ -253,8 +254,7 @@ onMounted(fetchData);
   gap: 18px;
   padding: 30px 32px;
   border-radius: 16px;
-  background:
-    radial-gradient(circle at top right, rgba(45, 212, 191, 0.18), transparent 28%),
+  background: radial-gradient(circle at top right, rgba(45, 212, 191, 0.18), transparent 28%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 253, 250, 0.96));
 }
 
@@ -340,13 +340,13 @@ onMounted(fetchData);
   align-items: flex-start;
   padding: 20px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #0f766e, #115e59);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), #115e59);
+  color: var(--color-text-inverse);
 }
 
 .student-materials-hero__panel strong,
 .student-materials-hero__panel p {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .student-materials-hero__panel-icon {
@@ -377,7 +377,7 @@ onMounted(fetchData);
 }
 
 .student-materials-section-head__eyebrow {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .student-materials-section-head__headline {
@@ -393,7 +393,7 @@ onMounted(fetchData);
   min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
   color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
@@ -496,8 +496,8 @@ onMounted(fetchData);
   min-height: 24px;
   padding: 0 10px;
   border-radius: 999px;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -538,13 +538,13 @@ onMounted(fetchData);
   flex: 1;
   min-height: 52px;
   padding: 0 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .student-materials-search .material-symbols-outlined {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .student-materials-search :deep(.el-input__wrapper) {
@@ -573,7 +573,7 @@ onMounted(fetchData);
 .student-materials-toolbar__divider {
   width: 1px;
   height: 14px;
-  background: #cbd5e1;
+  background: var(--color-border-strong);
 }
 
 .student-materials-summary-grid {
@@ -590,14 +590,14 @@ onMounted(fetchData);
 }
 
 .materials-summary-card--primary {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
   border: none;
 }
 
 .materials-summary-card--primary .materials-summary-card__label,
 .materials-summary-card--primary .materials-summary-card__value,
 .materials-summary-card--primary .materials-summary-card__desc {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .materials-summary-card--focus {
@@ -617,16 +617,16 @@ onMounted(fetchData);
 
 .materials-summary-card--primary .materials-summary-card__icon {
   background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .materials-summary-card__icon--teal {
   background: #ecfeff;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .materials-summary-card__label {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .materials-summary-card__value {
@@ -658,7 +658,7 @@ onMounted(fetchData);
   justify-content: center;
   padding: 6px 12px;
   border-radius: 999px;
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
   color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
   font-weight: 700;
@@ -704,8 +704,8 @@ onMounted(fetchData);
   justify-content: center;
   padding: 5px 10px;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
@@ -718,7 +718,7 @@ onMounted(fetchData);
   flex-wrap: wrap;
   gap: 16px;
   margin-top: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -739,7 +739,7 @@ onMounted(fetchData);
   gap: 14px;
   padding: 16px 18px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .material-row-card__action-text {
@@ -774,14 +774,14 @@ onMounted(fetchData);
 
 .update-card__icon--red,
 .material-row-card__icon--red {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-danger-soft);
+  color: var(--color-danger-strong);
 }
 
 .update-card__icon--blue,
 .material-row-card__icon--blue {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-brand-student-soft);
+  color: var(--color-brand-student-border);
 }
 
 .update-card__icon--indigo,
@@ -798,14 +798,14 @@ onMounted(fetchData);
 
 .update-card__icon--slate,
 .material-row-card__icon--slate {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 
 .update-card__icon--teal,
 .material-row-card__icon--teal {
-  background: #ecfdf5;
-  color: #0f766e;
+  background: var(--color-status-active-soft);
+  color: var(--color-brand-teacher);
 }
 
 @media (max-width: 1280px) {

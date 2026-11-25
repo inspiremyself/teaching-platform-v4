@@ -66,9 +66,7 @@
               </div>
               <div class="student-homework-card__title-row">
                 <h2>{{ row.title }}</h2>
-                <el-tag :type="statusTagType(row.submissionStatus)" effect="light">
-                  {{ submissionStatusLabel(row.submissionStatus) }}
-                </el-tag>
+                <AppStatusTag :tone="statusTone(row.submissionStatus)" :label="submissionStatusLabel(row.submissionStatus)" />
               </div>
                 <p class="student-homework-card__desc">
                   {{ row.description || '暂无补充说明，进入详情页查看完整作答区与反馈信息。' }}
@@ -111,8 +109,9 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listStudentHomeworks } from '@/api/homeworks';
 import type { HomeworkListItem, HomeworkStatus, HomeworkSubmissionStatus } from '@/types/homework';
-import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
 import AppMetaChip from '@/components/ui/AppMetaChip.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 import { formatDateTime } from '@/utils/format';
@@ -192,7 +191,7 @@ const submissionStatusOf = (status: string) => resolveStatusPresentation({ modul
 
 const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => (status ? submissionStatusOf(status).label : '未开始');
 
-const statusTagType = (status?: HomeworkSubmissionStatus | null) => (status ? toElTagType(submissionStatusOf(status).tone, 'primary') : 'primary');
+const statusTone = (status?: HomeworkSubmissionStatus | null) => (status ? submissionStatusOf(status).tone : 'neutral');
 
 const dueHint = (value?: string | null) => {
   if (!value) return '时间待定';
@@ -225,8 +224,7 @@ onMounted(fetchData);
   align-items: stretch;
   padding: 30px 32px;
   border-radius: 16px;
-  background:
-    radial-gradient(circle at top right, rgba(191, 219, 254, 0.4), transparent 28%),
+  background: radial-gradient(circle at top right, rgba(191, 219, 254, 0.4), transparent 28%),
     linear-gradient(135deg, rgba(255,255,255,0.95), rgba(219,234,254,0.9));
   border: 1px solid rgba(191, 219, 254, 0.7);
   box-shadow: 0 20px 44px rgba(30, 41, 59, 0.08);
@@ -235,7 +233,7 @@ onMounted(fetchData);
 .student-homeworks-hero__eyebrow {
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #2563eb;
+  color: var(--color-brand-student-border);
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
 }
@@ -248,7 +246,7 @@ onMounted(fetchData);
 .student-homeworks-hero p {
   margin: 10px 0 0;
   max-width: 720px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-lg);
   line-height: var(--line-height-body);
 }
@@ -261,8 +259,8 @@ onMounted(fetchData);
   min-width: 150px;
   padding: 18px;
   border-radius: 16px;
-  background: #0f172a;
-  color: #ffffff;
+  background: var(--color-text-primary);
+  color: var(--color-text-inverse);
 }
 
 .student-homeworks-hero__badge .material-symbols-outlined {
@@ -296,8 +294,8 @@ onMounted(fetchData);
 }
 
 .student-summary-card--primary {
-  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-brand-student), var(--color-brand-student-accent));
+  color: var(--color-text-inverse);
 }
 
 .student-summary-card__icon {
@@ -308,13 +306,13 @@ onMounted(fetchData);
   height: 54px;
   border-radius: 16px;
   background: rgba(37, 99, 235, 0.12);
-  color: #2563eb;
+  color: var(--color-brand-student-border);
   flex-shrink: 0;
 }
 
 .student-summary-card--primary .student-summary-card__icon {
   background: rgba(255,255,255,0.16);
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .student-summary-card__icon--amber {
@@ -330,13 +328,13 @@ onMounted(fetchData);
 .student-summary-card__label {
   font-size: var(--font-size-base);
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .student-summary-card--primary .student-summary-card__label,
 .student-summary-card--primary .student-summary-card__desc,
 .student-summary-card--primary .student-summary-card__value {
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .student-summary-card__value {
@@ -348,7 +346,7 @@ onMounted(fetchData);
 
 .student-summary-card__desc {
   margin-top: 8px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -379,8 +377,8 @@ onMounted(fetchData);
   padding: 0 16px;
   min-height: 52px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .student-toolbar-search :deep(.el-input__wrapper) {
@@ -401,14 +399,14 @@ onMounted(fetchData);
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
 .student-toolbar-divider {
   width: 1px;
   height: 14px;
-  background: #cbd5e1;
+  background: var(--color-border-strong);
 }
 
 .student-homework-list {
@@ -440,7 +438,7 @@ onMounted(fetchData);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .student-homework-card__header h2 {
@@ -450,7 +448,7 @@ onMounted(fetchData);
 
 .student-homework-card__desc {
   margin: 0;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-md);
   line-height: var(--line-height-body);
 }
@@ -464,8 +462,8 @@ onMounted(fetchData);
 .student-homework-card__meta-grid > div {
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .student-homework-card__label {
@@ -475,7 +473,7 @@ onMounted(fetchData);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .student-homework-card__meta-grid strong {
@@ -496,8 +494,8 @@ onMounted(fetchData);
   gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-brand-student-soft);
+  color: var(--color-brand-student);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -552,9 +550,9 @@ onMounted(fetchData);
   min-height: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #f8fafc;
-  border: 1px solid #dbe4f0;
-  color: #475569;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border-soft);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 700;
   white-space: nowrap;
@@ -659,8 +657,8 @@ onMounted(fetchData);
 .homework-info-chip {
   padding: 7px 9px;
   border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .homework-info-chip strong {

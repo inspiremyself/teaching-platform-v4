@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 /**
  * 设计体系门禁（PRD FR-20 / FR-22 / 技术方案 §5.1）
  *
- * 11 条断言把「token 唯一来源、骨架类去重、断点收敛、图标统一、尺寸阶梯、排版归一」变成可执行约束。
+ * 14 条断言把「token 唯一来源、骨架类去重、断点收敛、图标统一、尺寸阶梯、排版归一、组件唯一化」变成可执行约束。
  * 历史遗留量记录在 designTokenBaseline.json，只允许下降；新增违规会直接让 npm test 失败。
  */
 
@@ -36,6 +36,7 @@ interface Baseline {
     importantCount: number;
     nonStandardBreakpoints: number[];
     elIconRefs: number;
+    emptyStateLiterals: number;
   };
   skeletonDuplicatesOutsideAssets: number;
   nonStandardFontSizes: number[];
@@ -79,6 +80,12 @@ const styleScopeFiles = [
 const skeletonScanFiles = walk(SRC).filter(
   file => !file.includes(`${sep}assets${sep}`) && /\.(vue|css)$/.test(file),
 );
+
+const countEmptyStates = (source: string): number =>
+  matchAll(source, /<el-(?:empty|result)\b/g).length;
+
+/** 空态计数范围：views/** + components/ui/**，排除 AppEmptyState.vue 自身实现 */
+const emptyStateFiles = [...viewsFiles, ...uiFiles].filter(file => !file.endsWith('AppEmptyState.vue'));
 
 const matchAll = (source: string, pattern: RegExp): RegExpMatchArray[] => Array.from(source.matchAll(pattern));
 
@@ -197,6 +204,7 @@ const measure = (): Omit<Baseline, 'version' | 'generatedAt'> => {
         .filter(value => !ALLOWED_BREAKPOINTS.includes(value))
         .sort((a, b) => a - b),
       elIconRefs: countElIconRefs(viewsSource),
+      emptyStateLiterals: countEmptyStates(emptyStateFiles.map(read).join('\n')),
     },
     skeletonDuplicatesOutsideAssets: countSkeletonDuplicates(skeletonScanSource),
     nonStandardFontSizes: [...new Set(collectNonStandardFontSizes(styleScopeSource))].sort((a, b) => a - b),
@@ -223,7 +231,7 @@ const measure = (): Omit<Baseline, 'version' | 'generatedAt'> => {
 if (process.env.DESIGN_TOKEN_BASELINE_WRITE === '1') {
   const measured = measure();
   const payload: Baseline = {
-    version: 2,
+    version: 3,
     generatedAt: new Date().toISOString().slice(0, 10),
     ...measured,
   };
@@ -305,7 +313,7 @@ describe('设计体系门禁', () => {
     expect(measured.nonStandardLetterSpacings).toBeLessThanOrEqual(baseline.nonStandardLetterSpacings);
   });
 
-  it('#11 标题层级唯一：无 h5/h6；每文件 h1 数不超过白名单；AppPageHeader 标题节点为 h1', () => {
+  it('#11 标题层级唯一：无 h5/h6；每文件 h1 数不超过白名单；页头骨架为 workbench-header', () => {
     const problems: string[] = [];
     for (const file of [...viewsFiles, ...uiFiles]) {
       const source = read(file);
@@ -316,9 +324,54 @@ describe('设计体系门禁', () => {
       const limit = H1_WHITELIST[relative] ?? 1;
       if (h1Count > limit) problems.push(`${relative}: h1 x${h1Count} > ${limit}`);
     }
-    const pageHeader = read(join(SRC, 'components/ui/AppPageHeader.vue'));
-    if (!/<h1[\s>]/.test(pageHeader)) problems.push('AppPageHeader.vue: 标题节点不是 h1');
-    if (/<h2[\s>]/.test(pageHeader)) problems.push('AppPageHeader.vue: 仍存在 h2');
+    const globalCss = read(join(SRC, 'assets/global.css'));
+    if (!/\.workbench-header\s*\{/.test(globalCss)) problems.push('global.css: 缺少 .workbench-header 骨架');
+    if (!/\.workbench-header__main h1/.test(globalCss)) problems.push('global.css: 缺少 .workbench-header__main h1 标题规则');
+    if (existsSync(join(SRC, 'components/ui/AppPageHeader.vue'))) problems.push('AppPageHeader.vue: 应已删除');
     expect(problems).toEqual([]);
+  });
+
+  it('#12 页头唯一性：components/ui 无零引用组件；全站无 page-header；labs-header-card 与 workbench-header 同现', () => {
+    const problems: string[] = [];
+    const allSources = walk(SRC).filter(file => /\.(vue|ts)$/.test(file) && !file.includes(`${sep}__tests__${sep}`));
+    for (const file of uiFiles) {
+      const name = file.split(sep).pop()!.replace('.vue', '');
+      if (!allSources.some(item => item !== file && read(item).includes(name))) {
+        problems.push(`${file.replace(SRC, '')}: components/ui 零引用组件`);
+      }
+    }
+    const styleFiles = [
+      ...viewsFiles,
+      ...uiFiles,
+      ...viewsCssFiles,
+      join(SRC, 'assets/global.css'),
+      join(SRC, 'assets/layout.css'),
+    ];
+    for (const file of styleFiles) {
+      if (/\.page-header\b/.test(read(file))) problems.push(`${file.replace(SRC, '')}: 仍存在 .page-header 选择器`);
+    }
+    const labs = read(join(SRC, 'views/student/Labs.vue'));
+    if (labs.includes('labs-header-card') && !labs.includes('workbench-header')) {
+      problems.push('student/Labs.vue: labs-header-card 未与 workbench-header 同现');
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('#13 action-button 写法唯一：全站仅 ActionButton.vue 与 workbench.css 可出现', () => {
+    const workbenchDir = join(SRC, 'views/teacher/components/workbench') + sep;
+    const allowed = new Set([
+      join(workbenchDir, 'ActionButton.vue'),
+      join(workbenchDir, 'workbench.css'),
+    ]);
+    const violations = walk(SRC)
+      .filter(file => /\.(vue|css)$/.test(file) && !file.includes(`${sep}__tests__${sep}`))
+      .filter(file => !file.startsWith(workbenchDir) || !allowed.has(file))
+      .filter(file => read(file).includes('action-button'))
+      .map(file => file.replace(SRC, ''));
+    expect(violations).toEqual([]);
+  });
+
+  it('#14 空态计数不超过基线（AppEmptyState 自身实现不计入）', () => {
+    expect(measure().views.emptyStateLiterals).toBeLessThanOrEqual(baseline.views.emptyStateLiterals);
   });
 });

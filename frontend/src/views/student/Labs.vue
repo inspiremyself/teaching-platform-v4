@@ -1,14 +1,16 @@
 <template>
   <div class="student-labs-page">
-    <section class="labs-header-card">
-      <div class="labs-header-card__main">
-        <h1>实验任务</h1>
-        <p>查看实验状态、题项数量、截止时间和实验小结要求后，直接进入作答。</p>
-      </div>
-      <div class="labs-header-card__stats">
-        <AppMetaChip :value="String(rows.length)" label="全部实验" />
-        <AppMetaChip :value="String(activeCount)" label="进行中" tone="accent" />
-        <AppMetaChip :label="`${activeFilterLabel} · ${filteredRows.length} 项`" />
+    <section class="workbench-header labs-header-card">
+      <div class="workbench-header__top">
+        <div class="workbench-header__main">
+          <h1>实验任务</h1>
+          <p>查看实验状态、题项数量、截止时间和实验小结要求后，直接进入作答。</p>
+        </div>
+        <div class="labs-header-card__stats">
+          <AppMetaChip :value="String(rows.length)" label="全部实验" />
+          <AppMetaChip :value="String(activeCount)" label="进行中" tone="accent" />
+          <AppMetaChip :label="`${activeFilterLabel} · ${filteredRows.length} 项`" />
+        </div>
       </div>
     </section>
 
@@ -50,7 +52,7 @@
                 <h3>{{ row.title }}</h3>
                 <p>{{ row.description || '进入实验后按题项逐个保存作答，并在确认实验小结后统一提交。' }}</p>
               </div>
-              <el-tag :type="submissionTagType(row)" effect="light">{{ taskStatusLabel(row) }}</el-tag>
+              <AppStatusTag v-bind="labStatusOf(row)" />
             </div>
 
             <div class="app-task-meta-grid student-lab-card__meta-grid">
@@ -65,8 +67,8 @@
               <div>
                 <span class="meta-label">截止</span>
                 <strong>{{ formatDateTime(row.dueAt) }}</strong>
-                <el-tag v-if="labTimeState(row) === 'NOT_STARTED'" size="small" type="info" effect="light">未开始</el-tag>
-                <el-tag v-else-if="labTimeState(row) === 'OVERDUE'" size="small" type="warning" effect="light">已截止</el-tag>
+                <AppStatusTag v-if="labTimeState(row) === 'NOT_STARTED'" size="small" v-bind="resolveStatusOf('labTimeGate', 'NOT_STARTED')" />
+                <AppStatusTag v-else-if="labTimeState(row) === 'OVERDUE'" size="small" v-bind="resolveStatusOf('labTimeGate', 'OVERDUE')" />
               </div>
               <div>
                 <span class="meta-label">结果</span>
@@ -104,9 +106,10 @@ import { useRouter } from 'vue-router';
 import { listStudentLabs } from '@/api/labs';
 import type { StudentLabListItem } from '@/types/lab';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
 import AppMetaChip from '@/components/ui/AppMetaChip.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
-import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
+import { resolveStatusPresentation, resolveStatusOf } from '@/components/ui/statusPresentation';
 import { formatDateTime } from '@/utils/format';
 import { useKeywordFilter } from '@/composables/useKeywordFilter';
 
@@ -174,8 +177,6 @@ const labStatusOf = (row: StudentLabListItem) => {
   const status = filter === 'TODO' ? '' : filter === 'ACTIVE' ? SUBMISSION_STATUS.SAVED : filter;
   return resolveStatusPresentation({ module: 'lab', kind: 'submission', scene: 'student', status, unknownLabel: '待开始' });
 };
-const submissionTagType = (row: StudentLabListItem) => toElTagType(labStatusOf(row).tone, 'info');
-const taskStatusLabel = (row: StudentLabListItem) => labStatusOf(row).label;
 
 const progressText = (row: StudentLabListItem) => {
   if (row.submissionStatus === SUBMISSION_STATUS.GRADED) return '已批改，可查看题项反馈与实验小结';
@@ -210,7 +211,6 @@ onMounted(fetchData);
   gap: 14px;
 }
 
-.labs-header-card,
 .student-lab-card {
   border: 1px solid var(--color-border-soft);
   border-radius: var(--radius-xl);
@@ -219,11 +219,6 @@ onMounted(fetchData);
 }
 
 .labs-header-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
-  padding: 18px 20px;
   background: linear-gradient(180deg, rgba(239, 246, 255, 0.92), rgba(255, 255, 255, 1));
 }
 
@@ -243,7 +238,6 @@ onMounted(fetchData);
 .student-labs-page h1 {color: var(--color-text-primary);
 }
 
-.labs-header-card p,
 .student-lab-card p,
 .student-lab-card small,
 .labs-toolbar-meta {
@@ -252,9 +246,7 @@ onMounted(fetchData);
 }
 
 .labs-header-card p {
-  margin: 6px 0 0;
   max-width: 720px;
-  font-size: var(--font-size-base);
 }
 
 .labs-header-card__stats {
@@ -423,8 +415,7 @@ onMounted(fetchData);
 }
 
 @media (max-width: 900px) {
-  .labs-header-card {
-    grid-template-columns: 1fr;
+  .workbench-header__top {
     flex-direction: column;
   }
 

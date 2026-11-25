@@ -50,9 +50,7 @@
         <el-table-column prop="assignmentCount" label="班级指派" width="120" />
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
-              {{ row.status === 'ACTIVE' ? '启用中' : '已停用' }}
-            </el-tag>
+            <AppStatusTag v-bind="resolveStatusOf('orgSubjectStatus', row.status)" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" align="right" fixed="right">
@@ -104,6 +102,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import { ElMessage } from 'element-plus';
 import {
   changeSubjectStatus,

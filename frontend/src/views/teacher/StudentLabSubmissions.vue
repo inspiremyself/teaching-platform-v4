@@ -18,14 +18,14 @@
             <p>{{ row.className || '未标注班级' }}</p>
           </div>
           <div class="submission-row__meta">
-            <el-tag :type="statusTagType(row.submitStatus)" effect="light">{{ statusLabel(row.submitStatus) }}</el-tag>
+            <AppStatusTag :tone="statusTone(row.submitStatus)" :label="statusLabel(row.submitStatus)" />
             <span>总分 {{ row.totalScore ?? '-' }}</span>
             <span>{{ formatDateTime(row.submitStatus, row.submittedAt) }}</span>
           </div>
           <el-button type="primary" plain @click="goReportDetail(row.submissionId)">查看报告</el-button>
         </article>
       </template>
-      <el-empty v-else-if="!loading" description="该学生暂无实验提交记录" />
+      <AppEmptyState v-else-if="!loading" description="该学生暂无实验提交记录" />
     </section>
   </div>
 </template>
@@ -33,10 +33,12 @@
 <script setup lang="ts">
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, ref } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { listTeacherStudentLabSubmissions } from '@/api/labs';
 import type { LabReportStatus, StudentLabSubmissionItem } from '@/types/lab';
-import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 
 const route = useRoute();
 const router = useRouter();
@@ -73,7 +75,7 @@ const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', 
 
 const statusLabel = (status?: LabReportStatus) => (status ? statusOf(status).label : '未知');
 
-const statusTagType = (status?: LabReportStatus) => (status ? toElTagType(statusOf(status).tone, 'info') : 'info');
+const statusTone = (status?: LabReportStatus) => (status ? statusOf(status).tone : 'neutral');
 
 const formatDateTime = (status?: LabReportStatus, value?: string | null) => {
   if (status === SUBMISSION_STATUS.SAVED) {
@@ -113,7 +115,7 @@ onMounted(() => {
 
 .student-submissions-header p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .student-submissions-list {
@@ -128,9 +130,9 @@ onMounted(() => {
   gap: 16px;
   align-items: center;
   padding: 16px 20px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .submission-row h3 {
@@ -139,7 +141,7 @@ onMounted(() => {
 
 .submission-row p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -147,7 +149,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
   align-items: flex-start;
 }

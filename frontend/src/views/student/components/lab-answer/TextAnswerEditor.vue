@@ -427,7 +427,7 @@ onBeforeUnmount(() => {
 }
 
 .text-answer-editor__compression-hint {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
   font-weight: 500;
 }
@@ -449,8 +449,8 @@ onBeforeUnmount(() => {
   height: 112px;
   object-fit: cover;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   cursor: zoom-in;
 }
 
@@ -462,7 +462,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   padding: 2px 8px;
   background: rgba(15, 23, 42, 0.72);
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: var(--font-size-sm);
   cursor: pointer;
 }
@@ -470,7 +470,7 @@ onBeforeUnmount(() => {
 .text-answer-editor__badge {
   display: inline-block;
   margin-top: 6px;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
 }
 
@@ -491,7 +491,7 @@ onBeforeUnmount(() => {
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid #99f6e4;
-  background: #f0fdfa;
+  background: var(--color-brand-teacher-soft);
   color: #115e59;
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
@@ -499,7 +499,7 @@ onBeforeUnmount(() => {
 
 .text-answer-editor__upload-tip strong {
   font-weight: 600;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .text-answer-editor__upload-tip kbd {
@@ -508,7 +508,7 @@ onBeforeUnmount(() => {
   padding: 1px 6px;
   border: 1px solid #5eead4;
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-surface);
   color: #134e4a;
   font-family: inherit;
   font-size: var(--font-size-sm);

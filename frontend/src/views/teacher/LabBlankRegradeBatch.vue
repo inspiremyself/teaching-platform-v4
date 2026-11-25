@@ -234,7 +234,7 @@ initialize();
 .blank-batch-panel {
   border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
@@ -297,8 +297,8 @@ initialize();
 .blank-batch-chip {
   min-height: 28px;
   padding: 0 10px;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
 }
 
 .blank-batch-chip strong {
@@ -348,13 +348,13 @@ initialize();
 .blank-batch-answer-chip {
   min-height: 24px;
   padding: 0 8px;
-  background: #dcfce7;
+  background: var(--color-success-soft);
   color: #166534;
 }
 
 .blank-batch-answer-chip--muted {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--color-bg-app);
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 900px) {

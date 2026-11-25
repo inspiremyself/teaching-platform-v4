@@ -301,9 +301,8 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   overflow: hidden;
   border-radius: 16px;
   padding: 30px 32px;
-  background:
-    radial-gradient(circle at top right, rgba(96, 165, 250, 0.22), transparent 28%),
-    linear-gradient(135deg, #0f172a, #1d4ed8 58%, #3b82f6);
+  background: radial-gradient(circle at top right, rgba(96, 165, 250, 0.22), transparent 28%),
+    linear-gradient(135deg, var(--color-text-primary), var(--color-info) 58%, var(--color-brand-student-accent));
   box-shadow: 0 20px 50px rgba(30, 64, 175, 0.22);
 }
 
@@ -313,7 +312,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   display: flex;
   flex-direction: column;
   gap: 22px;
-  color: #eff6ff;
+  color: var(--color-info-soft);
 }
 
 .homeworks-hero__eyebrow {
@@ -333,7 +332,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homeworks-hero__heading h1 {
   margin: 0;
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .homeworks-hero__heading p {
@@ -370,7 +369,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .context-item strong {
   display: block;
   font-size: var(--font-size-md);
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .context-item p {
@@ -389,8 +388,8 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .summary-card--primary {
   display: flex;
   gap: 16px;
-  color: #ffffff;
-  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: var(--color-text-inverse);
+  background: linear-gradient(135deg, var(--color-info), var(--color-brand-student-accent));
 }
 
 .summary-card--light,
@@ -407,7 +406,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   height: 54px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  color: var(--color-text-inverse);
   flex-shrink: 0;
 }
 
@@ -424,20 +423,20 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .summary-card__label {
   font-size: var(--font-size-base);
   font-weight: 600;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .summary-card--primary .summary-card__label,
 .summary-card--primary .summary-card__desc,
 .summary-card--primary .summary-card__value {
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .summary-card__value {
   margin-top: 8px;
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .summary-card__value--small {
@@ -448,7 +447,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   margin-top: 8px;
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .summary-card__desc--spaced {
@@ -468,7 +467,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   padding: 6px 12px;
   border-radius: 999px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -488,12 +487,12 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   padding: 0 16px;
   min-height: 52px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .toolbar-search .material-symbols-outlined {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .toolbar-search :deep(.el-input__wrapper) {
@@ -514,14 +513,14 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
 .toolbar-divider {
   width: 1px;
   height: 14px;
-  background: #cbd5e1;
+  background: var(--color-border-strong);
 }
 
 .homeworks-console {
@@ -532,12 +531,12 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homeworks-console__header h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .homeworks-console__header p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-md);
 }
 
@@ -573,12 +572,12 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homework-row__title-line h3 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .homework-row__title-line p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-md);
   line-height: var(--line-height-body);
 }
@@ -592,8 +591,8 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homework-row__meta-grid > div {
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .homework-row__label {
@@ -603,11 +602,11 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .homework-row__meta-grid strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-md);
 }
 
@@ -624,13 +623,13 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   padding: 8px 12px;
   border-radius: 999px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .homework-chip--muted {
-  background: #eff6ff;
+  background: var(--color-info-soft);
 }
 
 .homework-row__actions {
@@ -663,14 +662,14 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   flex-direction: column;
   gap: 18px;
   padding: 24px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-bg-app));
 }
 
 .homework-dialog__header,
 .homework-dialog__summary-card,
 .homework-dialog__group,
 .homework-dialog__footer {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
@@ -685,7 +684,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homework-dialog__eyebrow,
 .homework-dialog__label {
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
@@ -694,12 +693,12 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homework-dialog__header h2 {
   margin: 8px 0 0;
-  color: #0f172a;}
+  color: var(--color-text-primary);}
 
 .homework-dialog__desc {
   margin: 8px 0 0;
   max-width: 560px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -719,14 +718,14 @@ const formatWindow = (start?: string | null, end?: string | null) =>
   padding: 0 12px;
   border-radius: 999px;
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
 }
 
 .homework-dialog__badge--muted {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 
 .homework-dialog__summary-grid,
@@ -753,14 +752,14 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homework-dialog__summary-card strong {
   display: block;
   margin-top: 8px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
 
 .homework-dialog__summary-card p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -773,7 +772,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homework-dialog__group-title {
   margin-bottom: 14px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
@@ -793,7 +792,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homework-dialog__group-desc {
   margin: 0;
   max-width: 560px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -820,7 +819,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 
 .homework-dialog__form :deep(.el-form-item__label) {
   margin-bottom: 8px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -829,8 +828,8 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 .homework-dialog__form :deep(.el-select__wrapper),
 .homework-dialog__form :deep(.el-textarea__inner) {
   border-radius: 16px;
-  box-shadow: 0 0 0 1px #e2e8f0 inset;
-  background: #f8fafc;
+  box-shadow: 0 0 0 1px var(--color-border) inset;
+  background: var(--color-bg-app);
 }
 
 .homework-dialog__footer {
@@ -842,7 +841,7 @@ const formatWindow = (start?: string | null, end?: string | null) =>
 }
 
 .homework-dialog__footer-note {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }

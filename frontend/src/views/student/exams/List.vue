@@ -543,7 +543,7 @@ onMounted(loadExams)
 
 .start-dialog__warn {
   margin: 0;
-  color: #c2410c;
+  color: var(--color-warning-strong);
   font-size: var(--font-size-base);
 }
 

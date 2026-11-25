@@ -52,7 +52,7 @@
                 <span class="material-symbols-outlined student-task-card__arrow">arrow_forward_ios</span>
               </button>
             </div>
-            <el-empty v-else description="当前没有待办任务" />
+            <AppEmptyState v-else description="当前没有待办任务" />
           </el-card>
 
           <el-card class="student-card" shadow="never">
@@ -70,7 +70,7 @@
                 </div>
               </div>
             </div>
-            <el-empty v-else description="暂时没有新的评分反馈" />
+            <AppEmptyState v-else description="暂时没有新的评分反馈" />
           </el-card>
         </section>
 

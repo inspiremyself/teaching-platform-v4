@@ -151,7 +151,7 @@ onMounted(loadSummary);
 }
 
 .summary-card__label {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
@@ -161,14 +161,14 @@ onMounted(loadSummary);
 .summary-card__value {
   display: block;
   margin-top: 4px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
 }
 
 .summary-card p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 

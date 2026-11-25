@@ -24,7 +24,7 @@
       </div>
     </section>
 
-    <section class="question-console__filter-panel">
+    <AppToolbarCard>
       <div class="question-console__filter-header">
         <div>
           <p class="question-console__section-kicker">高级筛选</p>
@@ -79,7 +79,7 @@
           </div>
         </div>
       </div>
-    </section>
+    </AppToolbarCard>
 
     <section class="question-console__config-shell">
       <div class="question-console__config-header">
@@ -105,7 +105,7 @@
       />
     </section>
 
-    <section class="question-console__table-shell">
+    <AppTableCard>
       <div class="question-console__table-header">
         <div>
           <p class="question-console__section-kicker">资产目录</p>
@@ -208,7 +208,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </section>
+    </AppTableCard>
 
     <QuestionEditorDialog
       v-model:visible="dialogVisible"
@@ -238,6 +238,8 @@ import { createQuestion, deleteQuestion, listQuestions, updateQuestion } from '@
 import { listSubjects } from '@/api/admin';
 import type { AdminSubject } from '@/types/admin';
 import QuestionConfigList from '@/components/question-config/QuestionConfigList.vue';
+import AppTableCard from '@/components/ui/AppTableCard.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 import { isQuestionType, type CreateQuestionPayload, type QuestionDifficulty, type QuestionItem, type QuestionType } from '@/types/question';
 import type { ConfiguredQuestionItem } from '@/types/question-config';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
@@ -698,10 +700,8 @@ onMounted(() => {
   gap: 16px;
 }
 
-.question-console__filter-panel,
-.question-console__config-shell,
-.question-console__table-shell {
-  border: 1px solid #e2e8f0;
+.question-console__config-shell {
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
@@ -712,7 +712,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
@@ -732,14 +732,14 @@ onMounted(() => {
   margin: 0;
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  color: #0f172a;
+  color: var(--color-text-primary);
   letter-spacing: var(--letter-spacing-tight);
 }
 
 .question-console__subtitle {
   margin: 8px 0 0;
   max-width: 720px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-md);
   line-height: var(--line-height-body);
 }
@@ -760,33 +760,31 @@ onMounted(() => {
 }
 
 .question-console__ghost-button {
-  border-color: #cbd5e1;
+  border-color: var(--color-border-strong);
   color: #334155;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .question-console__primary-button {
-  border-color: #0f766e;
-  background: linear-gradient(135deg, #0f766e, #115e59);
+  border-color: var(--color-brand-teacher);
+  background: linear-gradient(135deg, var(--color-brand-teacher), #115e59);
 }
 
-.question-console__filter-panel,
-.question-console__config-shell,
-.question-console__table-shell {
+.question-console__config-shell {
   padding: 18px 20px;
 }
 
 .question-console__config-subtitle {
   margin: 8px 0 0;
   max-width: 760px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
 
 .question-console__section-title {
   margin: 6px 0 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-tight);
@@ -806,8 +804,8 @@ onMounted(() => {
   align-items: center;
   padding: 5px 10px;
   border-radius: 999px;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-wide);
@@ -816,7 +814,7 @@ onMounted(() => {
 
 .question-console__summary-text,
 .question-console__table-count {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
   font-weight: 600;
 }
@@ -836,7 +834,7 @@ onMounted(() => {
 }
 
 .question-console__field-label {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
@@ -852,9 +850,9 @@ onMounted(() => {
 .question-console__quick-tag {
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-surface);
   color: #334155;
   font-size: var(--font-size-sm);
   font-weight: 700;
@@ -879,7 +877,7 @@ onMounted(() => {
 }
 
 .question-row__identity-main {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
   font-family: 'DM Sans', 'Inter', sans-serif;
@@ -907,17 +905,17 @@ onMounted(() => {
 
 .question-chip--type {
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-info);
 }
 
 .question-chip--score {
   background: #ecfeff;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .question-chip--source {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 
 .question-row__stem {
@@ -936,7 +934,7 @@ onMounted(() => {
 
 .question-row__stem-subtext {
   margin: 0;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -955,7 +953,7 @@ onMounted(() => {
 }
 
 .question-row__difficulty-label {
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -966,18 +964,18 @@ onMounted(() => {
 }
 
 .question-row__difficulty-star {
-  color: #cbd5e1;
+  color: var(--color-border-strong);
   font-size: var(--font-size-md);
 }
 
 .question-row__difficulty-star.is-filled {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .question-row__metric-pill {
-  background: #f8fafc;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
 }
 
 .question-row__health-line {
@@ -1008,7 +1006,7 @@ onMounted(() => {
 
 .question-row__health-dot.is-warning,
 .question-row__health-bar-fill.is-warning {
-  background: #f59e0b;
+  background: var(--color-warning);
 }
 
 .question-row__health-text.is-warning {
@@ -1017,11 +1015,11 @@ onMounted(() => {
 
 .question-row__health-dot.is-draft,
 .question-row__health-bar-fill.is-draft {
-  background: #94a3b8;
+  background: var(--color-text-placeholder);
 }
 
 .question-row__health-text.is-draft {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .question-row__health-bar {
@@ -1029,7 +1027,7 @@ onMounted(() => {
   height: 6px;
   border-radius: 999px;
   overflow: hidden;
-  background: #e2e8f0;
+  background: var(--color-border);
 }
 
 .question-row__health-bar-fill {
@@ -1050,8 +1048,8 @@ onMounted(() => {
   height: 34px;
   border: 1px solid #ccfbf1;
   border-radius: 12px;
-  background: #f0fdfa;
-  color: #0f766e;
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -1062,15 +1060,15 @@ onMounted(() => {
 }
 
 .question-row__icon-button--neutral {
-  border-color: #e2e8f0;
-  background: #fff;
-  color: #475569;
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
 }
 
 .question-row__icon-button--danger {
   border-color: #fecaca;
   background: #fff1f2;
-  color: #dc2626;
+  color: var(--color-danger-strong);
 }
 
 @media (max-width: 1280px) {
@@ -1080,11 +1078,6 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .question-console__filter-panel,
-  .question-console__table-shell {
-    padding: 18px;
-  }
-
   .question-console__filter-header,
   .question-console__config-header,
   .question-console__table-header,

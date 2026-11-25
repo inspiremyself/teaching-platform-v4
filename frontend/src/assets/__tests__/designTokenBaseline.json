@@ -1,11 +1,12 @@
 {
-  "version": 2,
+  "version": 3,
   "generatedAt": "2026-11-25",
   "views": {
-    "hexColorLiterals": 1279,
+    "hexColorLiterals": 308,
     "importantCount": 14,
     "nonStandardBreakpoints": [],
-    "elIconRefs": 0
+    "elIconRefs": 0,
+    "emptyStateLiterals": 0
   },
   "skeletonDuplicatesOutsideAssets": 0,
   "nonStandardFontSizes": [],

@@ -427,7 +427,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   align-items: flex-start;
   gap: 20px;
   padding: 18px 20px;
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
@@ -448,7 +448,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__section-kicker {
   margin: 0 0 8px;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
@@ -457,7 +457,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__title {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-3xl);
   line-height: var(--line-height-tight);
   font-weight: var(--font-weight-bold);
@@ -466,7 +466,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__subtitle {
   margin: 8px 0 0;
   max-width: 780px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -498,22 +498,22 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__meta-chip,
 .lab-steps-console__summary-chip {
-  background: #f0fdfa;
-  color: #0f766e;
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
 }
 
 .lab-steps-console__meta-chip--accent {
-  background: #0f766e;
-  color: #fff;
+  background: var(--color-brand-teacher);
+  color: var(--color-text-inverse);
 }
 
 .lab-steps-console__save-indicator {
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--color-warning-soft);
+  color: var(--color-warning-strong);
 }
 
 .lab-steps-console__save-indicator.is-ready {
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
   color: #047857;
 }
 
@@ -535,7 +535,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 }
 
 .lab-steps-console__panel {
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
@@ -555,7 +555,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   justify-content: space-between;
   gap: 12px;
   padding: 16px 18px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .lab-steps-console__panel-header--editor {
@@ -564,7 +564,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__section-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
 }
@@ -608,9 +608,9 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__step-card,
 .lab-steps-console__add-step {
   width: 100%;
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
 }
@@ -631,8 +631,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 }
 
 .lab-steps-console__step-card.is-active {
-  border-color: #14b8a6;
-  background: #f0fdfa;
+  border-color: var(--color-brand-teacher-accent);
+  background: var(--color-brand-teacher-soft);
 }
 
 .lab-steps-console__step-card-top,
@@ -650,16 +650,16 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   width: 34px;
   height: 34px;
   border-radius: 12px;
-  background: #e2e8f0;
-  color: #0f172a;
+  background: var(--color-border);
+  color: var(--color-text-primary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   flex-shrink: 0;
 }
 
 .lab-steps-console__step-card.is-active .lab-steps-console__step-index {
-  background: #0f766e;
-  color: #fff;
+  background: var(--color-brand-teacher);
+  color: var(--color-text-inverse);
 }
 
 .lab-steps-console__step-copy {
@@ -672,7 +672,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 6px;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-wide);
@@ -681,14 +681,14 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__step-copy strong {
   display: block;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-md);
   line-height: var(--line-height-caption);
 }
 
 .lab-steps-console__step-copy p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -699,14 +699,14 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--color-warning-soft);
+  color: var(--color-warning-strong);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .lab-steps-console__step-state.is-ready {
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
   color: #047857;
 }
 
@@ -718,8 +718,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   height: 30px;
   border: none;
   border-radius: 12px;
-  background: #f8fafc;
-  color: #ef4444;
+  background: var(--color-bg-app);
+  color: var(--color-danger);
   cursor: pointer;
 }
 
@@ -730,13 +730,13 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   gap: 8px;
   padding: 14px;
   border-style: dashed;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-base);
   font-weight: 700;
 }
 
 .lab-steps-console__group--muted {
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .lab-steps-console__check-grid {
@@ -747,14 +747,14 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__check-card {
   padding: 12px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .lab-steps-console__check-card span {
   display: block;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-wide);
@@ -764,7 +764,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__check-card strong {
   display: block;
   margin-top: 6px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-md);
   line-height: var(--line-height-caption);
 }
@@ -773,7 +773,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__blank-summary,
 .lab-steps-console__switch-row p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -784,9 +784,9 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .lab-steps-console__switch-row--compact {
@@ -821,15 +821,15 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   padding: 0 10px;
   border: 1px solid #ccfbf1;
   border-radius: 12px;
-  background: #f0fdfa;
-  color: #0f766e;
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;
 }
 
 .lab-steps-console__inline-copy:hover {
-  border-color: #14b8a6;
+  border-color: var(--color-brand-teacher-accent);
   background: #ccfbf1;
 }
 
@@ -839,7 +839,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .question-dialog__group,
 .question-dialog__validation {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
@@ -879,7 +879,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .question-dialog__group-title {
   margin-bottom: 12px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
@@ -906,10 +906,10 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 }
 
 .question-dialog__group-actions :deep(.el-button--primary) {
-  --el-button-bg-color: #0f766e;
-  --el-button-border-color: #0f766e;
-  --el-button-hover-bg-color: #0d9488;
-  --el-button-hover-border-color: #0d9488;
+  --el-button-bg-color: var(--color-brand-teacher);
+  --el-button-border-color: var(--color-brand-teacher);
+  --el-button-hover-bg-color: var(--color-brand-teacher-border);
+  --el-button-hover-border-color: var(--color-brand-teacher-border);
   --el-button-active-bg-color: #115e59;
   --el-button-active-border-color: #115e59;
   min-height: 34px;
@@ -948,7 +948,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-steps-console__form :deep(.el-form-item__label) {
   margin-bottom: 8px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -958,14 +958,14 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 .lab-steps-console__form :deep(.el-textarea__inner),
 .lab-steps-console__form :deep(.el-input-number) {
   border-radius: 16px;
-  box-shadow: 0 0 0 1px #e2e8f0 inset;
-  background: #f8fafc;
+  box-shadow: 0 0 0 1px var(--color-border) inset;
+  background: var(--color-bg-app);
 }
 
 .question-dialog__validation {
   padding: 14px 16px;
   border-color: #fed7aa;
-  background: #fff7ed;
+  background: var(--color-warning-soft);
 }
 
 .question-dialog__validation-title {
@@ -994,19 +994,19 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   flex-direction: column;
   gap: 14px;
   padding: 18px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-bg-app));
 }
 
 .lab-step-copy-dialog__header {
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(240, 253, 250, 0.95));
 }
 
 .lab-step-copy-dialog__eyebrow {
   margin: 0;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
@@ -1015,11 +1015,11 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 
 .lab-step-copy-dialog__header h2 {
   margin: 6px 0 0;
-  color: #0f172a;}
+  color: var(--color-text-primary);}
 
 .lab-step-copy-dialog__desc {
   margin: 6px 0 0;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -1030,9 +1030,9 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   gap: 10px;
   margin: 0;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .lab-step-copy-dialog__list > div {
@@ -1040,7 +1040,7 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px dashed #e2e8f0;
+  border-bottom: 1px dashed var(--color-border);
 }
 
 .lab-step-copy-dialog__list > div:last-child {
@@ -1049,14 +1049,14 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
 }
 
 .lab-step-copy-dialog__list dt {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .lab-step-copy-dialog__list dd {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
   word-break: break-word;
@@ -1067,8 +1067,8 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   margin: 0 8px 6px 0;
   padding: 2px 10px;
   border-radius: 999px;
-  background: #f0fdfa;
-  color: #0f766e;
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -1078,21 +1078,21 @@ const { ref, QuestionPickerDialog, FillBlankEditor, ObjectiveEditor, SubjectiveE
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .lab-step-copy-dialog__code span {
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .lab-step-copy-dialog__code :deep(.el-input__wrapper) {
   border-radius: 16px;
-  box-shadow: 0 0 0 1px #e2e8f0 inset;
-  background: #f8fafc;
+  box-shadow: 0 0 0 1px var(--color-border) inset;
+  background: var(--color-bg-app);
 }
 
 .lab-step-copy-dialog__footer {

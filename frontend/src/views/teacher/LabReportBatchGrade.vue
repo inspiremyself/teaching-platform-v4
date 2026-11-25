@@ -1,12 +1,12 @@
 <template>
   <GradingWorkspace>
     <template #headerActions>
-      <button class="action-button action-button--ghost" type="button" :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</button>
-      <button class="action-button action-button--ghost" type="button" :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</button>
-      <button class="action-button action-button--ghost" type="button" :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</button>
-      <button class="action-button action-button--ghost" type="button" :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</button>
-      <button class="action-button action-button--ghost" type="button" @click="goDetail()">回到详细批改</button>
-      <button class="action-button action-button--primary" type="button" :loading="submitting" :disabled="isReadOnly" @click="submitGrade">提交全部评分</button>
+      <ActionButton label="上一个班级" tone="ghost" :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)" />
+      <ActionButton label="上一个学生" tone="ghost" :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)" />
+      <ActionButton label="下一个学生" tone="ghost" :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)" />
+      <ActionButton label="下一个班级" tone="ghost" :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)" />
+      <ActionButton label="回到详细批改" tone="ghost" @click="goDetail()" />
+      <ActionButton label="提交全部评分" tone="primary" :disabled="isReadOnly" @click="submitGrade" />
     </template>
 
     <template #queue>
@@ -23,7 +23,7 @@
 
     <template #detail>
     <div class="batch-grade-page" v-loading="loading">
-    <el-empty v-if="!loading && !detail" description="未获取到报告详情" />
+    <AppEmptyState v-if="!loading && !detail" description="未获取到报告详情" />
 
     <template v-else>
       <BehaviorSummaryCard v-if="detail" :submission-id="reportId" :step-list="stepList" />
@@ -119,7 +119,7 @@
         <p class="grading-summary__progress">
           {{ scoringSummary.hasManual ? `评分进度 ${scoringSummary.completed}/${scoringSummary.total}` : scoringSummary.noManualText }}
         </p>
-        <button class="action-button action-button--primary" type="button" :disabled="isReadOnly" @click="submitGrade">提交全部评分</button>
+        <ActionButton label="提交全部评分" tone="primary" :disabled="isReadOnly" @click="submitGrade" />
       </section>
     </template>
   </GradingWorkspace>
@@ -128,11 +128,13 @@
 <script setup lang="ts">
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, reactive, ref, watch } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
+import ActionButton from './components/workbench/ActionButton.vue';
 import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
 import { submissionAdapterOf } from './components/workbench/submissionAdapters';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
@@ -152,7 +154,6 @@ const route = useRoute();
 const router = useRouter();
 
 const loading = ref(false);
-const submitting = ref(false);
 const detail = ref<LabReportDetail | null>(null);
 const reports = ref<LabReportItem[]>([]);
 const reportComment = ref('');
@@ -381,17 +382,12 @@ const submitGrade = async () => {
     return;
   }
 
-  submitting.value = true;
-  try {
-    await gradeTeacherLabReport(reportId.value, {
-      items,
-      teacherComment: reportComment.value.trim(),
-    });
-    ElMessage.success('评分已保存，报告已结案');
-    await fetchData();
-  } finally {
-    submitting.value = false;
-  }
+  await gradeTeacherLabReport(reportId.value, {
+    items,
+    teacherComment: reportComment.value.trim(),
+  });
+  ElMessage.success('评分已保存，报告已结案');
+  await fetchData();
 };
 
 watch(() => route.params.id, () => fetchData());
@@ -409,7 +405,7 @@ fetchData();
 .batch-grade-panel {
   border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
@@ -499,8 +495,8 @@ fetchData();
   min-height: 28px;
   padding: 0 10px;
   border-radius: 999px;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }

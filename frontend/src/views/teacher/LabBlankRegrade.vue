@@ -124,9 +124,7 @@
             <el-table-column prop="count" label="人数" width="100" />
             <el-table-column label="当前判对" width="120">
               <template #default="scope">
-                <el-tag :type="scope.row.accepted ? 'success' : 'info'" effect="light">
-                  {{ scope.row.accepted ? '是' : '否' }}
-                </el-tag>
+                <AppStatusTag v-bind="resolveStatusOf('regradeDecision', scope.row.accepted ? 'ACCEPTED' : 'REJECTED')" />
               </template>
             </el-table-column>
           </el-table>
@@ -143,6 +141,8 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import type { ElTable } from 'element-plus';
@@ -337,7 +337,7 @@ initialize();
 .blank-regrade-panel {
   border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
@@ -447,8 +447,8 @@ initialize();
 }
 
 .blank-regrade-chip--soft {
-  background: #f8fafc;
-  color: #475569;
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
 }
 
 .blank-regrade-item-list {
@@ -465,7 +465,7 @@ initialize();
   padding: 12px;
   border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   text-align: left;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -473,7 +473,7 @@ initialize();
 
 .blank-regrade-item-card:hover,
 .blank-regrade-item-card.is-active {
-  border-color: #14b8a6;
+  border-color: var(--color-brand-teacher-accent);
   box-shadow: 0 14px 28px rgba(20, 184, 166, 0.12);
 }
 
@@ -488,8 +488,8 @@ initialize();
   display: grid;
   place-items: center;
   border-radius: 12px;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -500,7 +500,7 @@ initialize();
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
@@ -516,7 +516,7 @@ initialize();
   margin-bottom: 12px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .blank-regrade-current-item__summary {
@@ -557,15 +557,15 @@ initialize();
   min-height: 24px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #dcfce7;
+  background: var(--color-success-soft);
   color: #166534;
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
 .blank-regrade-answer-chip--muted {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--color-bg-app);
+  color: var(--color-text-muted);
 }
 
 .blank-regrade-table {
@@ -579,7 +579,7 @@ initialize();
   padding: 14px 16px;
   border: 1px dashed var(--color-border-soft);
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .blank-regrade-empty strong {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import './workbench.css'
+import ActionButton from './ActionButton.vue'
 
 defineProps<{ modelValue: boolean; title: string }>()
 const emit = defineEmits<{
@@ -34,8 +35,8 @@ const emit = defineEmits<{
       </div>
       <footer class="task-editor-dialog__footer">
         <slot name="footer">
-          <button class="action-button action-button--ghost" type="button" @click="emit('update:modelValue', false)">取消</button>
-          <button class="action-button action-button--primary" type="button" @click="emit('submit')">保存</button>
+          <ActionButton label="取消" tone="ghost" @click="emit('update:modelValue', false)" />
+          <ActionButton label="保存" tone="primary" @click="emit('submit')" />
         </slot>
       </footer>
     </div>

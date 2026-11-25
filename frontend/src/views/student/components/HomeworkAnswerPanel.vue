@@ -1,6 +1,6 @@
 <template>
   <div class="student-homework-detail" v-loading="loading">
-    <el-empty v-if="!loading && !detail" description="未获取到作业详情" />
+    <AppEmptyState v-if="!loading && !detail" description="未获取到作业详情" />
 
     <template v-else-if="detail">
       <section class="detail-hero">
@@ -343,6 +343,7 @@
 
 <script setup lang="ts">
 import { inject } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { HomeworkDetailKey } from '@/composables/useHomeworkDetail';
 import { formatDateTime } from '@/utils/format';
 const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, loading, submitting, detail, currentQuestionIndex, form, autoSaveStatus, lastSavedDraft, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, submitForm, restoreSavedDraft, submissionStatusLabel, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, showQuestionFeedback, answerHint, questionTypeLabel } = inject(HomeworkDetailKey)!;
@@ -358,8 +359,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-hero {
   padding: 14px 16px;
   border-radius: 16px;
-  background:
-    radial-gradient(circle at top right, rgba(191, 219, 254, 0.28), transparent 24%),
+  background: radial-gradient(circle at top right, rgba(191, 219, 254, 0.28), transparent 24%),
     linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
   border: 1px solid rgba(191, 219, 254, 0.72);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
@@ -407,7 +407,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-hero__desc {
   margin: 0;
   max-width: 680px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-heading);
 }
@@ -425,7 +425,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   gap: 8px;
   padding: 6px 9px;
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--color-surface);
   color: #334155;
   font-size: var(--font-size-sm);
   font-weight: 700;
@@ -433,7 +433,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 
 .detail-chip--status {
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-brand-student);
 }
 
 .info-card__label,
@@ -444,7 +444,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .detail-card__eyebrow--light {
@@ -494,13 +494,13 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-meta-item {
   padding: 8px 10px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .detail-meta-item span {
   display: block;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-wide);
@@ -515,17 +515,17 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .detail-meta-item--accent {
-  background: #eff6ff;
+  background: var(--color-brand-student-soft);
 }
 
 .detail-card--dark {
-  background: linear-gradient(135deg, #0f172a, #1e3a8a);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-text-primary), #1e3a8a);
+  color: var(--color-text-inverse);
 }
 
 .detail-card--dark h2,
 .detail-card--dark p {
-  color: #ffffff;
+  color: var(--color-text-inverse);
 }
 
 .detail-card__header {
@@ -547,7 +547,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .detail-card__tip {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-heading);
   max-width: 140px;
@@ -557,7 +557,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 .detail-card__paragraph,
 .detail-card__muted {
   margin: 0;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-heading);
 }
@@ -571,8 +571,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   gap: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-brand-student-soft);
+  color: var(--color-brand-student);
 }
 
 .attachment-note strong {
@@ -609,9 +609,9 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   align-items: center;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-surface);
   text-align: left;
   cursor: pointer;
   transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
@@ -623,8 +623,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .homework-question-wheel__item.is-active {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: var(--color-brand-student-border);
+  background: var(--color-brand-student-soft);
 }
 
 .homework-question-wheel__item.is-done:not(.is-active) {
@@ -638,20 +638,20 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #e2e8f0;
+  background: var(--color-border);
   color: #334155;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
 }
 
 .homework-question-wheel__item.is-active .homework-question-wheel__badge {
-  background: #2563eb;
-  color: #fff;
+  background: var(--color-brand-student-border);
+  color: var(--color-text-inverse);
 }
 
 .homework-question-wheel__item.is-done:not(.is-active) .homework-question-wheel__badge {
-  background: #16a34a;
-  color: #fff;
+  background: var(--color-success-strong);
+  color: var(--color-text-inverse);
 }
 
 .homework-question-wheel__body {
@@ -662,7 +662,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .homework-question-wheel__state {
-  color: #2563eb;
+  color: var(--color-brand-student-border);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -673,7 +673,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .homework-question-wheel__body small {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
 
@@ -681,7 +681,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   margin-bottom: 12px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .homework-question-prompt__label {
@@ -695,8 +695,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   margin-bottom: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-brand-student-soft);
+  color: var(--color-brand-student);
 }
 
 .code-callout__title {
@@ -714,8 +714,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .homework-question-feedback__meta {
@@ -723,14 +723,14 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 6px;
-  color: #1d4ed8;
+  color: var(--color-brand-student);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .homework-question-feedback p {
   margin: 0;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-caption);
   white-space: pre-wrap;
@@ -751,9 +751,9 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   gap: 10px;
   padding: 8px 10px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
@@ -775,12 +775,12 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   gap: 4px;
   padding: 8px 10px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .feedback-pill span {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
@@ -793,7 +793,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .feedback-pill--blue {
-  background: #eff6ff;
+  background: var(--color-brand-student-soft);
 }
 
 .homework-question-list {
@@ -808,8 +808,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   gap: 8px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .progress-panel__header {
@@ -833,20 +833,20 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  background: linear-gradient(135deg, var(--color-brand-student-border), #38bdf8);
 }
 
 .progress-panel p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
 
 .result-question-card {
   padding: 10px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 .result-question-card__header {
@@ -862,8 +862,8 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
   align-items: center;
   padding: 4px 8px;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-brand-student-soft);
+  color: var(--color-brand-student);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -874,7 +874,7 @@ const { SUBMISSION_STATUS, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInl
 }
 
 .result-question-card__score {
-  color: #1d4ed8;
+  color: var(--color-brand-student);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }

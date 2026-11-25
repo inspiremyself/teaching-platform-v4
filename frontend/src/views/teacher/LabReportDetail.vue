@@ -1,17 +1,17 @@
 <template>
   <GradingWorkspace>
     <template #headerActions>
-      <div class="page-header__meta" v-if="detail">
-        <span class="page-header__meta-item"><strong>{{ detail.studentName || '-' }}</strong>{{ detail.studentNo || detail.studentUsername || '未标注学号' }}</span>
-        <span class="page-header__meta-item">{{ statusLabel(detail.submitStatus) }}</span>
-        <span class="page-header__meta-item page-header__meta-item--accent">当前总分 {{ detail.totalScore ?? '-' }}</span>
+      <div class="workbench-meta" v-if="detail">
+        <span class="workbench-meta__item"><strong>{{ detail.studentName || '-' }}</strong>{{ detail.studentNo || detail.studentUsername || '未标注学号' }}</span>
+        <span class="workbench-meta__item">{{ statusLabel(detail.submitStatus) }}</span>
+        <span class="workbench-meta__item workbench-meta__item--accent">当前总分 {{ detail.totalScore ?? '-' }}</span>
       </div>
-      <button class="action-button action-button--ghost" type="button" :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)">上一个班级</button>
-      <button class="action-button action-button--ghost" type="button" :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)">上一个学生</button>
-      <button class="action-button action-button--ghost" type="button" :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)">下一个学生</button>
-      <button class="action-button action-button--ghost" type="button" :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)">下一个班级</button>
-      <button class="action-button action-button--warning" type="button" :disabled="!canReturn" @click="handleReturn">打回</button>
-      <button class="action-button action-button--ghost" type="button" @click="goBatchGrade">批量快捷批改</button>
+      <ActionButton label="上一个班级" tone="ghost" :disabled="!previousClassReport" @click="goReport(previousClassReport?.id)" />
+      <ActionButton label="上一个学生" tone="ghost" :disabled="!previousStudentReport" @click="goReport(previousStudentReport?.id)" />
+      <ActionButton label="下一个学生" tone="ghost" :disabled="!nextStudentReport" @click="goReport(nextStudentReport?.id)" />
+      <ActionButton label="下一个班级" tone="ghost" :disabled="!nextClassReport" @click="goReport(nextClassReport?.id)" />
+      <ActionButton label="打回" tone="warning" :disabled="!canReturn" @click="handleReturn" />
+      <ActionButton label="批量快捷批改" tone="ghost" @click="goBatchGrade" />
     </template>
 
     <template #queue>
@@ -28,7 +28,7 @@
 
     <template #detail>
     <div class="detail-page" v-loading="loading">
-    <el-empty v-if="!loading && !detail" description="未获取到报告详情" />
+    <AppEmptyState v-if="!loading && !detail" description="未获取到报告详情" />
 
     <template v-else-if="detail">
       <div v-if="isSavedPreview" class="preview-banner">
@@ -98,9 +98,7 @@
               <strong>实验小结</strong>
             </div>
             <div class="sidebar-card__meta-row sidebar-card__meta-row--top">
-              <el-tag :type="detail.summaryRequired ? 'warning' : 'info'" effect="light">
-                {{ detail.summaryRequired ? '要求实验小结' : '实验小结非必填' }}
-              </el-tag>
+              <AppStatusTag v-bind="resolveStatusOf('labSummaryRequirement', detail.summaryRequired ? 'REQUIRED' : 'OPTIONAL')" />
               <span class="sidebar-card__hint">{{ summaryStatusLabel }}</span>
             </div>
             <p class="detail-summary-text-card__body">{{ summaryPreview }}</p>
@@ -121,9 +119,7 @@
                 <h3>{{ item.stepTitle || item.title || '未命名题项' }}</h3>
               </div>
               <div class="answer-card__header-meta">
-                <el-tag :type="scoreSourceTagType(item.scoreSource)" effect="light">
-                  {{ scoreSourceLabel(item.scoreSource) }}
-                </el-tag>
+                <AppStatusTag v-bind="resolveStatusOf('scoreSource', item.scoreSource, '未标注')" />
                 <span class="answer-card__max-score">满分 {{ itemMaxScore(item) }}</span>
               </div>
             </header>
@@ -223,7 +219,7 @@
         <p class="grading-summary__progress">
           {{ scoringSummary.hasManual ? `评分进度 ${scoringSummary.completed}/${scoringSummary.total}` : scoringSummary.noManualText }}
         </p>
-        <button class="action-button action-button--primary" type="button" :disabled="isReadOnly" @click="submitGrade">提交评分</button>
+        <ActionButton label="提交评分" tone="primary" :disabled="isReadOnly" @click="submitGrade" />
       </section>
     </template>
   </GradingWorkspace>
@@ -232,25 +228,26 @@
 <script setup lang="ts">
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { confirmTeacherLabStepScore, getTeacherLabReportDetail, gradeTeacherLabReport, listTeacherLabReportQueue, returnTeacherLabReport } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
+import ActionButton from './components/workbench/ActionButton.vue';
 import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
 import { submissionAdapterOf } from './components/workbench/submissionAdapters';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
 import { formatDateTime } from '@/utils/format';
-import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
+import { resolveStatusOf, resolveStatusPresentation } from '@/components/ui/statusPresentation';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
 import {
   buildScoringSummary,
   createGradingDraft,
   formatJudgeDetail,
   hasDraftChanges,
   questionTypeLabel,
-  scoreSourceLabel,
-  scoreSourceTagType,
   scoringStrategyOf,
   type GradingDraftState,
 } from './components/scoreDisplay';
@@ -688,7 +685,7 @@ fetchData();
 .final-card {
   border: 1px solid var(--color-border-soft);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 .summary-tile {
@@ -700,12 +697,12 @@ fetchData();
 }
 .summary-tile--primary {
   border: none;
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
 }
 .summary-tile--primary .summary-tile__label,
 .summary-tile--primary strong,
 .summary-tile--primary small {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 .summary-tile strong,
 .answer-card__max-score,
@@ -772,7 +769,7 @@ fetchData();
   padding: 10px 12px;
   border: 1px solid var(--color-border-soft);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   text-align: left;
   cursor: pointer;
 }
@@ -787,7 +784,7 @@ fetchData();
   color: var(--color-brand-teacher);
 }
 .sidebar-step__score {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 .detail-main {
@@ -825,7 +822,7 @@ fetchData();
 .answer-pane {
   padding: 14px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 .pane-title {
   margin-bottom: 8px;
@@ -857,10 +854,10 @@ fetchData();
   padding: 14px;
   border-radius: 16px;
   border: 1px solid var(--color-border-soft);
-  background: #fff;
+  background: var(--color-surface);
 }
 .insight-card--grading {
-  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  background: linear-gradient(180deg, var(--color-surface), #fbfdff);
 }
 .insight-line {
   display: flex;

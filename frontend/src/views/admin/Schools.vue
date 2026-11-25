@@ -10,15 +10,13 @@
       </div>
     </section>
 
-    <section class="schools-card" v-loading="loading">
+    <AppTableCard v-loading="loading">
       <el-table :data="schools" border stripe>
         <el-table-column prop="name" label="学校名称" min-width="160" />
         <el-table-column prop="code" label="学校编码" min-width="140" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
-              {{ row.status === 'ACTIVE' ? '启用' : '停用' }}
-            </el-tag>
+            <AppStatusTag v-bind="resolveStatusOf('orgSchoolStatus', row.status)" />
           </template>
         </el-table-column>
         <el-table-column prop="adminUsername" label="首位校管" min-width="140" />
@@ -37,7 +35,7 @@
           </template>
         </el-table-column>
       </el-table>
-    </section>
+    </AppTableCard>
 
     <el-dialog v-model="dialogVisible" title="开通学校" width="480px" @closed="resetForm">
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
@@ -64,6 +62,9 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import AppTableCard from '@/components/ui/AppTableCard.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import type { FormInstance } from 'element-plus';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import {
@@ -165,13 +166,3 @@ const formatTime = (value: string) => (value ? value.replace('T', ' ').slice(0, 
 
 onMounted(loadSchools);
 </script>
-
-<style scoped>
-.schools-card {
-  padding: 20px;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-}
-</style>

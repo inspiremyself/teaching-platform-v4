@@ -163,11 +163,11 @@
                     </div>
                   </div>
 
-                  <el-empty v-else description="该分组暂无最近评分记录" />
+                  <AppEmptyState v-else description="该分组暂无最近评分记录" />
                 </section>
               </div>
 
-              <el-empty v-else description="暂无分组表现数据" />
+              <AppEmptyState v-else description="暂无分组表现数据" />
             </el-card>
 
             <el-card class="scores-card" shadow="never">
@@ -191,7 +191,7 @@
                 </article>
               </div>
 
-              <el-empty v-else description="暂无最近评分记录" />
+              <AppEmptyState v-else description="暂无最近评分记录" />
             </el-card>
           </section>
 
@@ -226,7 +226,7 @@
                 </div>
               </div>
 
-              <el-empty v-else description="暂无反馈说明" />
+              <AppEmptyState v-else description="暂无反馈说明" />
             </el-card>
 
             <el-card class="scores-card" shadow="never">
@@ -285,9 +285,9 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   min-height: 22px;
   padding: 0 7px;
   border-radius: 999px;
-  background: #f8fafc;
-  border: 1px solid #dbe4f0;
-  color: #475569;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border-soft);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 700;
   white-space: nowrap;
@@ -299,8 +299,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   gap: 20px;
   padding: 30px 32px;
   border-radius: 16px;
-  background:
-    radial-gradient(circle at top right, rgba(45, 212, 191, 0.16), transparent 30%),
+  background: radial-gradient(circle at top right, rgba(45, 212, 191, 0.16), transparent 30%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 253, 250, 0.92));
   border: 1px solid rgba(153, 246, 228, 0.6);
   box-shadow: 0 20px 44px rgba(15, 23, 42, 0.08);
@@ -310,7 +309,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 .scores-hero__title {
   margin: 10px 0 0;
@@ -322,7 +321,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 .scores-hero__subtitle {
   margin: 12px 0 0;
   max-width: 820px;
-  color: #475569;
+  color: var(--color-text-secondary);
   line-height: var(--line-height-body);
 }
 .scores-hero__actions {
@@ -342,8 +341,8 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   min-height: 320px;
   padding: 30px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #0d9488, #14b8a6 58%, #5eead4);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher-border), var(--color-brand-teacher-accent) 58%, #5eead4);
+  color: var(--color-text-inverse);
   box-shadow: 0 24px 54px rgba(13, 148, 136, 0.28);
 }
 .overall-card__content {
@@ -459,7 +458,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   color: #0052ae;
 }
 .metric-card__icon--1 {
-  background: #dcfce7;
+  background: var(--color-success-soft);
   color: #15803d;
 }
 .metric-card__icon--2 {
@@ -468,7 +467,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .metric-card__label {
   font-size: var(--font-size-base);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 .metric-card__value {
   margin-top: 6px;
@@ -479,7 +478,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .metric-card__desc {
   margin-top: 8px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -498,8 +497,8 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -509,7 +508,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 .metric-card__bullets {
   margin: 14px 0 0;
   padding-left: 18px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -551,7 +550,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .header-meta {
   font-size: var(--font-size-sm);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 .group-section-list {
@@ -563,7 +562,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   padding: 20px;
   border-radius: 16px;
   background: #fbfdff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 .group-section__header {
   display: flex;
@@ -588,15 +587,15 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .group-section__icon--lab {
   background: #ccfbf1;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 .group-section__icon--homework {
   background: #dbeafe;
-  color: #1d4ed8;
+  color: var(--color-brand-student);
 }
 .group-section__icon--exam {
   background: #ffedd5;
-  color: #c2410c;
+  color: var(--color-warning-strong);
 }
 .group-section h3 {
   margin: 0;
@@ -604,7 +603,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .group-section__title-wrap p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 .group-section__meta {
@@ -618,8 +617,8 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -630,13 +629,13 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   color: #191c22;
 }
 .group-section__meta small {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
 .record-table {
   overflow: hidden;
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 .record-table__head,
 .record-table__row {
@@ -647,8 +646,8 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .record-table__head {
   padding: 14px 18px;
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--color-bg-app);
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-wide);
@@ -659,7 +658,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   border-top: 1px solid #eef2f7;
 }
 .record-table__cell {
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -667,7 +666,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   color: #191c22;
 }
 .record-table__cell--score {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: var(--font-weight-bold);
 }
 .exam-record-grid {
@@ -679,7 +678,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   padding: 18px;
   border-radius: 16px;
   border: 1px solid #fed7aa;
-  background: linear-gradient(180deg, #fff, #fff7ed);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-warning-soft));
 }
 .exam-record-card__header {
   display: flex;
@@ -693,7 +692,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .exam-record-card p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 .score-pill {
@@ -703,11 +702,11 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   border-radius: 16px;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   background: #ccfbf1;
 }
 .score-pill--exam {
-  color: #c2410c;
+  color: var(--color-warning-strong);
   background: #ffedd5;
 }
 .exam-record-card__footer {
@@ -729,15 +728,15 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   align-items: center;
   padding: 18px 20px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 .recent-record-item__type {
   display: inline-flex;
   align-items: center;
   padding: 5px 9px;
   border-radius: 999px;
-  background: #e2e8f0;
-  color: #475569;
+  background: var(--color-border);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -747,14 +746,14 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .recent-record-item p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 .recent-record-item__score {
   flex-shrink: 0;
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 .feedback-panel {
   display: flex;
@@ -767,7 +766,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   align-items: flex-start;
   padding: 18px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+  background: linear-gradient(135deg, var(--color-brand-teacher-soft), #ecfeff);
 }
 .feedback-hero__avatar {
   width: 46px;
@@ -777,13 +776,13 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   align-items: center;
   justify-content: center;
   background: #ccfbf1;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   flex-shrink: 0;
 }
 .feedback-hero__label {
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 .feedback-hero h3 {
   margin: 8px 0 0;
@@ -793,7 +792,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 .feedback-item p,
 .action-item p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   line-height: var(--line-height-body);
   font-size: var(--font-size-base);
 }
@@ -809,15 +808,15 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .feedback-item--positive,
 .action-item--positive {
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
 }
 .feedback-item--highlight,
 .action-item--highlight {
-  background: #eff6ff;
+  background: var(--color-brand-student-soft);
 }
 .feedback-item--warning,
 .action-item--warning {
-  background: #fff7ed;
+  background: var(--color-warning-soft);
 }
 @media (max-width: 1280px) {
   .overview-grid,
@@ -989,7 +988,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   padding: 16px 18px;
 }
 .overall-card--plain {
-  background: #ffffff;
+  background: var(--color-surface);
   color: #191c22;
   border: 1px solid rgba(193, 198, 214, 0.45);
   box-shadow: 0 8px 24px rgba(25, 28, 34, 0.05);
@@ -1013,20 +1012,20 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .overall-card--plain .overall-card__label,
 .overall-card--plain .overall-card__desc {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 .overall-card--plain .overall-card__badge {
   align-self: flex-start;
   justify-self: end;
   background: #ecfeff;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 .overall-card--plain .overall-stat {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 .overall-card--plain .overall-stat span {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 .metric-stack--grid {
   display: grid;
@@ -1074,7 +1073,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   min-height: 0;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--color-surface);
   color: #191c22;
   border: 1px solid rgba(193, 198, 214, 0.45);
   box-shadow: 0 8px 24px rgba(25, 28, 34, 0.05);
@@ -1098,7 +1097,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .overall-card__flat-score-label {
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
   font-weight: 700;
 }
 .overall-card__flat-score strong {
@@ -1114,7 +1113,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .overall-card__desc--flat {
   margin-top: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   line-height: var(--line-height-heading);
   font-size: var(--font-size-xs);
 }

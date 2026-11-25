@@ -4,8 +4,8 @@
     description="围绕发布、进行、收卷和批改入口维护考试闭环。"
   >
     <template #actions>
-      <ActionButton label="刷新列表" tone="ghost" :disabled="loading" @click="fetchExams" />
-      <ActionButton label="新建考试" tone="primary" @click="openCreateDialog" />
+      <ActionButton label="刷新列表" tone="ghost" size="roomy" :disabled="loading" @click="fetchExams" />
+      <ActionButton label="新建考试" tone="primary" size="roomy" @click="openCreateDialog" />
     </template>
     <template #meta>
       <span class="workbench-meta__item"><strong>{{ workbench.meta.value.total }}</strong> 任务总数</span>
@@ -110,6 +110,7 @@
                 :key="item.key"
                 :label="item.label"
                 :tone="item.tone"
+                size="roomy"
                 @click="item.handler(row)"
               />
             </div>
@@ -278,7 +279,7 @@
                 </div>
               </article>
             </div>
-            <el-empty v-else description="请先在左侧题目池中选择试题" />
+            <AppEmptyState v-else description="请先在左侧题目池中选择试题" />
           </section>
         </aside>
       </div>
@@ -318,6 +319,7 @@
 
 <script setup lang="ts">
 import { inject } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { ExamListKey } from '@/composables/useExamList';
 import WorkbenchShell from './workbench/WorkbenchShell.vue';
 import ActionButton from './workbench/ActionButton.vue';
@@ -331,7 +333,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 <style scoped>
 .exams-console {
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .console-hero {
@@ -351,11 +353,11 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   align-items: center;
   gap: 8px;
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .console-breadcrumb .is-current {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
@@ -371,7 +373,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .console-title-row p {
   margin: 10px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   max-width: 720px;
 }
 
@@ -399,8 +401,8 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .console-button--primary {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
   box-shadow: 0 16px 36px rgba(15, 118, 110, 0.24);
 }
 
@@ -409,7 +411,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   justify-content: space-between;
   gap: 20px;
   border: 1px solid #dbeafe;
-  background: linear-gradient(135deg, #eff6ff, #ecfeff 55%, #f8fafc);
+  background: linear-gradient(135deg, var(--color-info-soft), #ecfeff 55%, var(--color-bg-app));
   border-radius: 16px;
   padding: 22px 24px;
 }
@@ -424,8 +426,8 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -436,7 +438,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-caps);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
@@ -448,7 +450,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .context-strip__meta {
   margin-top: 6px;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .context-strip__stats {
@@ -468,7 +470,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .mini-stat__label {
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .mini-stat__value {
@@ -492,20 +494,20 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .summary-card {
   border-radius: 16px;
   padding: 24px;
-  color: #fff;
+  color: var(--color-text-inverse);
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.09);
 }
 
 .summary-card--teal {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
 }
 
 .summary-card--slate {
-  background: linear-gradient(135deg, #0f172a, #334155);
+  background: linear-gradient(135deg, var(--color-text-primary), #334155);
 }
 
 .summary-card--line {
-  background: linear-gradient(135deg, #1d4ed8, #38bdf8);
+  background: linear-gradient(135deg, var(--color-info), #38bdf8);
 }
 
 .summary-card__eyebrow {
@@ -528,9 +530,9 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .selection-panel {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
 }
 
@@ -548,13 +550,13 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   align-items: center;
   gap: 12px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   padding: 0 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 .toolbar-search > .material-symbols-outlined {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .toolbar-search :deep(.el-input__wrapper) {
@@ -578,7 +580,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .toolbar-filter label {
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
   font-weight: 700;
 }
 
@@ -588,14 +590,14 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   gap: 10px;
   flex-wrap: wrap;
   font-size: var(--font-size-base);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .toolbar-card__dot {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: #14b8a6;
+  background: var(--color-brand-teacher-accent);
 }
 
 .table-card__header {
@@ -611,7 +613,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .table-card__header p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .table-card__chips {
@@ -623,8 +625,8 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .table-chip {
   padding: 8px 12px;
   border-radius: 999px;
-  background: #f0fdfa;
-  color: #0f766e;
+  background: var(--color-brand-teacher-soft);
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -646,18 +648,18 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .exam-cell__icon.is-draft {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 
 .exam-cell__icon.is-published {
-  background: #ecfdf5;
-  color: #0f766e;
+  background: var(--color-status-active-soft);
+  color: var(--color-brand-teacher);
 }
 
 .exam-cell__icon.is-closed {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-info-soft);
+  color: var(--color-info);
 }
 
 .exam-cell__body {
@@ -674,7 +676,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .exam-cell__title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .exam-cell__meta,
@@ -688,7 +690,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -698,7 +700,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .exam-cell__desc {
   margin: 10px 0 0;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -706,31 +708,31 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .timeline-item {
   padding: 10px 12px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .timeline-item__label {
   display: block;
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
   margin-bottom: 6px;
 }
 
 .timeline-item strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .submission-cell {
   padding: 14px;
   border-radius: 16px;
-  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
-  border: 1px solid #e2e8f0;
+  background: linear-gradient(180deg, var(--color-bg-app), var(--color-bg-subtle));
+  border: 1px solid var(--color-border);
 }
 
 .submission-cell__count {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-bold);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .submission-cell__label {
@@ -738,13 +740,13 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-caps);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
 .submission-cell__hint {
   margin-top: 10px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-caption);
 }
@@ -754,35 +756,6 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.action-button {
-  border: none;
-  border-radius: 16px;
-  padding: 10px 12px;
-  font-size: var(--font-size-base);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.action-button--ghost {
-  background: #f8fafc;
-  color: #334155;
-}
-
-.action-button--success {
-  background: #ecfdf5;
-  color: #0f766e;
-}
-
-.action-button--warning {
-  background: #fff7ed;
-  color: #c2410c;
-}
-
-.action-button--primary {
-  background: #0f766e;
-  color: #fff;
 }
 
 .exam-dialog :deep(.el-dialog) {
@@ -803,13 +776,13 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   flex-direction: column;
   gap: 18px;
   padding: 24px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-bg-app));
 }
 
 .exam-dialog__header,
 .exam-dialog__summary-card,
 .exam-dialog__footer {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
 }
@@ -824,7 +797,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .exam-dialog__eyebrow,
 .exam-dialog__label {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-caps);
@@ -833,12 +806,12 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .exam-dialog__header h2 {
   margin: 8px 0 0;
-  color: #0f172a;}
+  color: var(--color-text-primary);}
 
 .exam-dialog__desc {
   margin: 8px 0 0;
   max-width: 620px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -864,8 +837,8 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .exam-dialog__badge--muted {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
 }
 
 .exam-dialog__summary-grid {
@@ -881,14 +854,14 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .exam-dialog__summary-card strong {
   display: block;
   margin-top: 8px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
 
 .exam-dialog__summary-card p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -921,21 +894,21 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .dialog-block {
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
 }
 
 .dialog-block__title,
 .selection-panel__title {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  color: #0f172a;
+  color: var(--color-text-primary);
   margin-bottom: 0;
 }
 
 .dialog-block__desc {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
 }
@@ -948,7 +921,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .exam-dialog__hint {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }
@@ -981,7 +954,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .exam-dialog__form :deep(.el-form-item__label) {
   margin-bottom: 8px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -991,8 +964,8 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .exam-dialog__form :deep(.el-textarea__inner),
 .exam-dialog__form :deep(.el-input-number) {
   border-radius: 16px;
-  box-shadow: 0 0 0 1px #e2e8f0 inset;
-  background: #f8fafc;
+  box-shadow: 0 0 0 1px var(--color-border) inset;
+  background: var(--color-bg-app);
 }
 
 .selection-panel__header {
@@ -1005,15 +978,15 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 
 .selection-panel__header p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
 .selection-panel__badge {
   padding: 6px 10px;
   border-radius: 999px;
-  background: #ecfdf5;
-  color: #0f766e;
+  background: var(--color-status-active-soft);
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-sm);
   font-weight: 700;
 }
@@ -1027,13 +1000,13 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .selection-card {
   padding: 14px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .selection-card__stem {
   font-size: var(--font-size-base);
   line-height: var(--line-height-body);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .selection-card__controls {
@@ -1046,12 +1019,12 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 .selection-card__controls label {
   display: block;
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
   margin-bottom: 6px;
 }
 
 .selection-card__controls strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
 }
 
@@ -1064,7 +1037,7 @@ const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
 }
 
 .exam-dialog__footer-note {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }

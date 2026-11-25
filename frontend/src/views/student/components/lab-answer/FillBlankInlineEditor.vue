@@ -154,7 +154,7 @@ const updateBlank = (index: number, value: string) => {
 
 .fill-blank-inline-editor__prompt {
   line-height: var(--line-height-body);
-  color: #0f172a;
+  color: var(--color-text-primary);
   white-space: pre-wrap;
 }
 
@@ -176,19 +176,19 @@ const updateBlank = (index: number, value: string) => {
   border: none;
   border-bottom: 2px solid #60a5fa;
   background: transparent;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font: inherit;
   outline: none;
 }
 
 .fill-blank-inline-editor__input:focus {
-  border-bottom-color: #2563eb;
-  box-shadow: inset 0 -1px 0 #2563eb;
+  border-bottom-color: var(--color-brand-student-border);
+  box-shadow: inset 0 -1px 0 var(--color-brand-student-border);
 }
 
 .fill-blank-inline-editor__input:disabled {
-  color: #64748b;
-  border-bottom-color: #cbd5e1;
+  color: var(--color-text-muted);
+  border-bottom-color: var(--color-border-strong);
 }
 
 .fill-blank-inline-editor__fallback {

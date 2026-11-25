@@ -7,9 +7,7 @@
       </div>
       <div class="behavior-summary-card__actions">
         <el-tooltip :content="riskTagTooltip(metrics)" placement="top">
-          <el-tag :type="riskTagType(metrics)" effect="light" :class="{ 'risk-tag--muted': hasNoBehaviorData(metrics) }">
-            {{ riskTagLabel(metrics) }}
-          </el-tag>
+          <AppStatusTag v-bind="resolveStatusOf('behaviorRisk', riskKeyOf(metrics))" :class="{ 'risk-tag--muted': hasNoBehaviorData(metrics) }" />
         </el-tooltip>
         <el-button plain size="small" :disabled="!detail" @click="drawerVisible = true">行为时间线</el-button>
       </div>
@@ -66,7 +64,7 @@
         </article>
       </div>
     </template>
-    <el-empty v-else-if="!loading" description="暂无行为数据（历史提交或未采集）" :image-size="60" />
+    <AppEmptyState v-else-if="!loading" description="暂无行为数据（历史提交或未采集）" />
 
     <BehaviorTimelineDrawer
       v-model="drawerVisible"
@@ -80,6 +78,9 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import { getTeacherLabReportBehavior } from '@/api/labs';
 import type { LabReportBehaviorDetail } from '@/types/lab';
 import {
@@ -88,9 +89,8 @@ import {
   formatBehaviorTime,
   formatTotalDuration,
   hasNoBehaviorData,
-  riskTagLabel,
+  riskKeyOf,
   riskTagTooltip,
-  riskTagType,
 } from './behaviorDisplay';
 import BehaviorTimelineDrawer from './BehaviorTimelineDrawer.vue';
 
@@ -146,7 +146,7 @@ onMounted(() => {
 .behavior-summary-card {
   border: 1px solid #dbe5ef;
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   padding: 12px 14px;
   display: flex;
@@ -166,13 +166,13 @@ onMounted(() => {
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   margin-bottom: 2px;
 }
 
 .behavior-summary-card__header h3 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .behavior-summary-card__actions {
@@ -197,19 +197,19 @@ onMounted(() => {
   flex-direction: column;
   gap: 3px;
   padding: 8px 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  background: linear-gradient(180deg, var(--color-surface), #fbfdff);
 }
 
 .behavior-metric__label {
   font-size: var(--font-size-xs);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .behavior-metric strong {
   font-size: var(--font-size-lg);
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .behavior-metric__value--small {
@@ -218,7 +218,7 @@ onMounted(() => {
 
 .behavior-metric small {
   font-size: var(--font-size-xs);
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   line-height: var(--line-height-heading);
 }
 

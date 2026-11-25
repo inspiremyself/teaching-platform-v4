@@ -52,9 +52,7 @@
         </el-table-column>
         <el-table-column label="状态" width="110">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'">
-              {{ row.status === 'ACTIVE' ? '启用' : '停用' }}
-            </el-tag>
+            <AppStatusTag v-bind="resolveStatusOf('orgStudentStatus', row.status)" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220" align="right" fixed="right">
@@ -193,6 +191,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
+import { resolveStatusOf } from '@/components/ui/statusPresentation';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { UploadFile } from 'element-plus';
 import {
@@ -490,7 +490,7 @@ onMounted(async () => {
 
 .import-section__title {
   margin-bottom: 8px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
   font-weight: 700;
 }
@@ -505,13 +505,13 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--color-border-strong);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .import-file-panel.is-dragover {
-  border-color: var(--primary-color, #14b8a6);
+  border-color: var(--primary-color, var(--color-brand-teacher-accent));
   background: rgba(20, 184, 166, 0.08);
   box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
 }
@@ -524,7 +524,7 @@ onMounted(async () => {
 }
 
 .import-file-panel__meta strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
   font-size: var(--font-size-base);
   font-weight: 700;
   word-break: break-all;
@@ -532,7 +532,7 @@ onMounted(async () => {
 
 .import-file-panel__meta span,
 .import-file-panel__tips {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-caption);
 }
@@ -555,8 +555,8 @@ onMounted(async () => {
   margin-top: 16px;
   padding: 12px;
   border-radius: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--color-bg-app);
+  border: 1px solid var(--color-border);
 }
 
 @media (max-width: 640px) {

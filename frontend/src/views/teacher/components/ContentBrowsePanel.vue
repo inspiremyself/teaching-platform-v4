@@ -89,7 +89,7 @@
     </section>
 
     <section class="teacher-content__list" v-loading="teacherContent.loading.value">
-      <el-empty v-if="teacherContent.coursewares.value.length === 0" description="暂无可浏览的课件" />
+      <AppEmptyState v-if="teacherContent.coursewares.value.length === 0" description="暂无可浏览的课件" />
       <el-card
         v-for="item in teacherContent.coursewares.value"
         :key="item.id"
@@ -164,6 +164,7 @@
 
 <script setup lang="ts">
 import { inject, ref } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import { ElMessage } from 'element-plus';
 import { listClasses } from '@/api/classes';
 import { getTeacherCoursewareVisibility } from '@/api/teacherContent';

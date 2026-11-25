@@ -13,21 +13,6 @@ export interface ScoreDisplayItem {
   stepScore?: number | null
 }
 
-export const scoreSourceLabel = (source?: string | null) => {
-  if (source === 'AUTO') return '自动评分';
-  if (source === 'AUTO_ACCEPTED') return '已采纳自动分';
-  if (source === 'SUGGESTED' || source === 'RECOMMENDED') return '建议评分';
-  if (source === 'TEACHER') return '教师评分';
-  return '未标注';
-};
-
-export const scoreSourceTagType = (source?: string | null): 'success' | 'warning' | 'info' | 'default' => {
-  if (source === 'AUTO' || source === 'AUTO_ACCEPTED') return 'success';
-  if (source === 'SUGGESTED' || source === 'RECOMMENDED') return 'warning';
-  if (source === 'TEACHER') return 'info';
-  return 'default';
-};
-
 export const displaySuggestedScore = (item: ScoreDisplayItem) => {
   if (item.autoScore !== null && item.autoScore !== undefined) return `自动 ${item.autoScore}`;
   if (item.suggestedScore !== null && item.suggestedScore !== undefined) return `建议 ${item.suggestedScore}`;

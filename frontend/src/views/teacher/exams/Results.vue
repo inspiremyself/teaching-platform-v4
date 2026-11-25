@@ -7,10 +7,8 @@
         <span class="workbench-meta__item"><strong>{{ gradedCount }}</strong> 已评分</span>
         <span class="workbench-meta__item workbench-meta__item--accent">{{ activeStudentLabel }}</span>
       </div>
-      <button class="action-button action-button--warning" type="button" :disabled="releasing" @click="releaseScores">
-        {{ scoreReleased ? '重新发布成绩' : '发布成绩' }}
-      </button>
-      <button class="action-button action-button--primary" type="button" @click="refreshResults" :disabled="loading">刷新结果</button>
+      <ActionButton :label="scoreReleased ? '重新发布成绩' : '发布成绩'" tone="warning" :disabled="releasing" @click="releaseScores" />
+      <ActionButton label="刷新结果" tone="primary" :disabled="loading" @click="refreshResults" />
     </template>
 
     <template #queue>
@@ -125,9 +123,7 @@
                 </div>
                 <div v-else class="auto-grade-tip auto-grade-tip--stack">
                   <span class="material-symbols-outlined">smart_toy</span>
-                  <el-tag :type="scoreSourceTagType(answer.scoreSource)" effect="light">
-                    {{ scoreSourceLabel(answer.scoreSource) }}
-                  </el-tag>
+                  <AppStatusTag v-bind="resolveStatusOf('scoreSource', answer.scoreSource, '未标注')" />
                   <span>{{ formatJudgeDetail(answer.judgeDetail) }}</span>
                   <span>客观题由系统判分，不支持修改</span>
                 </div>
@@ -225,14 +221,16 @@ import { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { formatJudgeDetail, scoreSourceLabel, scoreSourceTagType } from '../components/scoreDisplay'
+import { formatJudgeDetail } from '../components/scoreDisplay'
 import { scoringStrategyOf } from '../components/scoringStrategies'
 import { useGradingWorkspace, type DraftPort } from '../components/workbench/useWorkbench'
 import GradingWorkspace from '../components/workbench/GradingWorkspace.vue'
 import SubmissionQueue from '../components/workbench/SubmissionQueue.vue'
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
 import { formatShortDateTime } from '@/utils/format'
-import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
+import { resolveStatusOf, resolveStatusPresentation } from '@/components/ui/statusPresentation'
+import AppStatusTag from '@/components/ui/AppStatusTag.vue'
+import ActionButton from '../components/workbench/ActionButton.vue'
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
@@ -609,8 +607,8 @@ onMounted(fetchData)
 .question-card,
 .score-panel,
 .action-panel {
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   border-radius: 16px;
   box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
 }
@@ -628,22 +626,22 @@ onMounted(fetchData)
   align-items: center;
   gap: 8px;
   font-size: var(--font-size-sm);
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .grading-breadcrumb .is-current {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
 .grading-header-card h1 {
   margin: 8px 0 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .grading-header-card p {
   margin: 10px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .grading-header-actions {
@@ -665,13 +663,13 @@ onMounted(fetchData)
 }
 
 .header-button--secondary {
-  background: #f8fafc;
+  background: var(--color-bg-app);
   color: #334155;
 }
 
 .header-button--primary {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
 }
 
 .grading-summary-grid {
@@ -686,23 +684,23 @@ onMounted(fetchData)
 }
 
 .summary-card--teal {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
 }
 
 .summary-card--amber {
-  background: linear-gradient(135deg, #c2410c, #f59e0b);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-warning-strong), var(--color-warning));
+  color: var(--color-text-inverse);
 }
 
 .summary-card--slate {
-  background: linear-gradient(135deg, #0f172a, #334155);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-text-primary), #334155);
+  color: var(--color-text-inverse);
 }
 
 .summary-card--light {
-  background: #fff;
-  color: #0f172a;
+  background: var(--color-surface);
+  color: var(--color-text-primary);
 }
 
 .summary-card__label {
@@ -731,7 +729,7 @@ onMounted(fetchData)
 
 .score-panel h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .queue-search {
@@ -739,8 +737,8 @@ onMounted(fetchData)
   align-items: center;
   gap: 10px;
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-app);
   padding: 0 14px;
 }
 
@@ -758,7 +756,7 @@ onMounted(fetchData)
   justify-content: space-between;
   gap: 12px;
   margin-top: 10px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
@@ -767,8 +765,8 @@ onMounted(fetchData)
   width: 44px;
   height: 44px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -784,23 +782,23 @@ onMounted(fetchData)
 }
 
 .queue-status--success {
-  background: #ecfdf5;
-  color: #0f766e;
+  background: var(--color-status-active-soft);
+  color: var(--color-brand-teacher);
 }
 
 .queue-status--warning {
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--color-warning-soft);
+  color: var(--color-warning-strong);
 }
 
 .queue-status--danger {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-danger-soft);
+  color: var(--color-danger-strong);
 }
 
 .queue-status--info {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-info-soft);
+  color: var(--color-info);
 }
 
 .submission-panel__inner {
@@ -828,11 +826,11 @@ onMounted(fetchData)
 
 .submission-context-card p {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .submission-context-card__nav {
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-md);
   font-weight: 700;
 }
@@ -853,7 +851,7 @@ onMounted(fetchData)
 }
 
 .question-card--auto {
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .question-card__header {
@@ -872,8 +870,8 @@ onMounted(fetchData)
   min-width: 34px;
   height: 34px;
   border-radius: 12px;
-  background: #0f766e;
-  color: #fff;
+  background: var(--color-brand-teacher);
+  color: var(--color-text-inverse);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -882,7 +880,7 @@ onMounted(fetchData)
 }
 
 .question-card--auto .question-badge {
-  background: #94a3b8;
+  background: var(--color-text-placeholder);
 }
 
 .question-card h3 {
@@ -890,7 +888,7 @@ onMounted(fetchData)
 
 .question-card p {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -902,18 +900,18 @@ onMounted(fetchData)
 }
 
 .question-status--manual {
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--color-warning-soft);
+  color: var(--color-warning-strong);
 }
 
 .question-status--correct {
-  background: #ecfdf5;
-  color: #0f766e;
+  background: var(--color-status-active-soft);
+  color: var(--color-brand-teacher);
 }
 
 .question-status--wrong {
-  background: #fef2f2;
-  color: #dc2626;
+  background: var(--color-danger-soft);
+  color: var(--color-danger-strong);
 }
 
 .question-card__body {
@@ -925,26 +923,26 @@ onMounted(fetchData)
 
 .answer-block {
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   padding: 16px;
 }
 
 .answer-block--light {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 .answer-block__label {
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-caps);
-  color: #64748b;
+  color: var(--color-text-muted);
   font-weight: 700;
 }
 
 .answer-block__value {
   margin-top: 10px;
-  color: #0f172a;
+  color: var(--color-text-primary);
   line-height: var(--line-height-body);
   white-space: pre-wrap;
 }
@@ -958,13 +956,13 @@ onMounted(fetchData)
 .manual-grade-box {
   border-radius: 16px;
   border: 1px solid #ccfbf1;
-  background: #f0fdfa;
+  background: var(--color-brand-teacher-soft);
   padding: 16px;
 }
 
 .manual-grade-suggestion {
   margin: 0 0 12px;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-base);
   font-weight: 700;
 }
@@ -987,7 +985,7 @@ onMounted(fetchData)
 
 .manual-grade-field label {
   font-size: var(--font-size-sm);
-  color: #475569;
+  color: var(--color-text-secondary);
   font-weight: 700;
 }
 
@@ -997,9 +995,9 @@ onMounted(fetchData)
   gap: 8px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
 }
 
@@ -1016,7 +1014,7 @@ onMounted(fetchData)
 
 .score-panel__subtitle {
   margin: 6px 0 0;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -1033,12 +1031,12 @@ onMounted(fetchData)
   align-items: center;
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .score-summary-item--total {
-  background: linear-gradient(135deg, #0f172a, #334155);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-text-primary), #334155);
+  color: var(--color-text-inverse);
 }
 
 .score-summary-item strong {
@@ -1053,7 +1051,7 @@ onMounted(fetchData)
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
   font-weight: 700;
 }
@@ -1063,14 +1061,14 @@ onMounted(fetchData)
   width: 100%;
   height: 10px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--color-border);
   overflow: hidden;
 }
 
 .completion-bar__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #0f766e, #14b8a6);
+  background: linear-gradient(90deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
 }
 
 .completion-block__hint,
@@ -1083,7 +1081,7 @@ onMounted(fetchData)
 
 .completion-block__hint,
 .completion-block--empty {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .grade-draft-hint {
@@ -1092,8 +1090,8 @@ onMounted(fetchData)
 }
 
 .action-panel {
-  background: linear-gradient(180deg, #0f172a, #1e293b);
-  color: #fff;
+  background: linear-gradient(180deg, var(--color-text-primary), #1e293b);
+  color: var(--color-text-inverse);
 }
 
 .action-panel__primary,
@@ -1108,8 +1106,8 @@ onMounted(fetchData)
 }
 
 .action-panel__primary {
-  background: #14b8a6;
-  color: #fff;
+  background: var(--color-brand-teacher-accent);
+  color: var(--color-text-inverse);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1119,7 +1117,7 @@ onMounted(fetchData)
 .action-panel__secondary {
   margin-top: 10px;
   background: rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
+  color: var(--color-border);
 }
 
 .action-panel__primary:disabled,
@@ -1131,8 +1129,8 @@ onMounted(fetchData)
 .grading-readonly-alert {
   margin-bottom: 12px;
   --el-alert-bg-color: rgba(148, 163, 184, 0.16);
-  --el-alert-title-text-color: #e2e8f0;
-  --el-alert-description-text-color: #cbd5e1;
+  --el-alert-title-text-color: var(--color-border);
+  --el-alert-description-text-color: var(--color-border-strong);
 }
 
 .action-panel__meta {
@@ -1144,7 +1142,7 @@ onMounted(fetchData)
 .action-panel__tip {
   display: flex;
   gap: 10px;
-  color: #cbd5e1;
+  color: var(--color-border-strong);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-body);
 }

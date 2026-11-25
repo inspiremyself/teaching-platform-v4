@@ -284,11 +284,11 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 
 <style scoped>
 .lab-row__subcopy {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .lab-meta-chip--success {
-  background: #ecfdf5;
+  background: var(--color-status-active-soft);
   color: #047857;
 }
 
@@ -301,7 +301,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   padding: 10px 12px;
   border: 1px dashed var(--color-border-soft);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .lab-copy-preview {
@@ -313,7 +313,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   padding: 10px 12px;
   border: 1px dashed var(--color-border-soft);
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .lab-copy-preview__warn {
@@ -423,8 +423,8 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   min-height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--color-bg-app);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -471,8 +471,8 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 }
 
 .summary-card--primary {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
   border: none;
 }
 
@@ -488,7 +488,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 }
 
 .summary-card__icon--amber {
-  background: #fff7ed !important;
+  background: var(--color-warning-soft) !important;
   color: #d97706 !important;
 }
 
@@ -498,8 +498,8 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 }
 
 .summary-card__icon--violet {
-  background: #f5f3ff !important;
-  color: #7c3aed !important;
+  background: var(--color-brand-admin-soft) !important;
+  color: var(--color-brand-admin) !important;
 }
 
 .summary-card__label {
@@ -508,7 +508,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .summary-card__value {
@@ -524,7 +524,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 
 .summary-card__desc {
   margin-top: 2px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-heading);
 }
@@ -558,7 +558,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   left: 12px;
   transform: translateY(-50%);
   z-index: 1;
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 
 .toolbar-search :deep(.el-input__wrapper) {
@@ -580,7 +580,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   gap: 8px;
   align-items: center;
   margin-top: 6px;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-xs);
 }
 
@@ -624,7 +624,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   padding: 10px 12px;
   border: 1px solid var(--color-border-soft);
   border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  background: linear-gradient(180deg, var(--color-surface), #fbfdff);
 }
 
 .lab-row__identity {
@@ -653,20 +653,20 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
   min-height: 20px;
   padding: 0 7px;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-info-soft);
+  color: var(--color-info);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
 
 .lab-meta-chip--violet {
-  background: #f5f3ff;
-  color: #7c3aed;
+  background: var(--color-brand-admin-soft);
+  color: var(--color-brand-admin);
 }
 
 .lab-meta-chip--muted {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--color-bg-app);
+  color: var(--color-text-muted);
 }
 
 .lab-row h3 {
@@ -683,8 +683,8 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 .lab-class-chip {
   padding: 2px 7px;
   border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
@@ -697,7 +697,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 }
 
 .meta-label {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
   font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
@@ -711,7 +711,7 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 
 .lab-row__type small,
 .lab-row__status small {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-heading);
 }
@@ -723,15 +723,15 @@ const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWe
 }
 
 .status-dot--success {
-  background: #22c55e;
+  background: var(--color-success);
 }
 
 .status-dot--warning {
-  background: #f59e0b;
+  background: var(--color-warning);
 }
 
 .status-dot--muted {
-  background: #94a3b8;
+  background: var(--color-text-placeholder);
 }
 
 .lab-row__actions {

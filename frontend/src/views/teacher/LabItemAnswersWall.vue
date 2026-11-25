@@ -23,9 +23,7 @@
               <span>{{ entry.studentNo }}</span>
             </div>
             <div class="answers-wall-card__meta">
-              <el-tag v-if="entry.submitStatus" :type="statusTagType(entry.submitStatus)" effect="light">
-                {{ statusLabel(entry.submitStatus) }}
-              </el-tag>
+              <AppStatusTag v-if="entry.submitStatus" :tone="statusTone(entry.submitStatus)" :label="statusLabel(entry.submitStatus)" />
               <span v-else class="answers-wall-muted">未提交</span>
               <span v-if="entry.score != null">得分 {{ entry.score }}</span>
             </div>
@@ -39,7 +37,7 @@
           <p v-if="entry.teacherComment" class="answers-wall-comment">教师评语：{{ entry.teacherComment }}</p>
         </article>
       </template>
-      <el-empty v-else-if="!loading" description="暂无学生答案" />
+      <AppEmptyState v-else-if="!loading" description="暂无学生答案" />
     </section>
   </div>
 </template>
@@ -47,11 +45,13 @@
 <script setup lang="ts">
 import { SUBMISSION_STATUS } from '@/types/enums';
 import { onMounted, ref } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppStatusTag from '@/components/ui/AppStatusTag.vue';
 import { useRoute } from 'vue-router';
 import { getTeacherLabItemAnswers } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabItemAnswerWall, LabReportStatus } from '@/types/lab';
-import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 
 const route = useRoute();
 const loading = ref(false);
@@ -73,7 +73,7 @@ const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', 
 
 const statusLabel = (status?: LabReportStatus | null) => (status ? statusOf(status).label : '未知');
 
-const statusTagType = (status?: LabReportStatus | null) => (status ? toElTagType(statusOf(status).tone, 'info') : 'info');
+const statusTone = (status?: LabReportStatus | null) => (status ? statusOf(status).tone : 'neutral');
 
 onMounted(() => {
   void fetchWall();
@@ -99,13 +99,13 @@ onMounted(() => {
 
 .answers-wall-header p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .answers-wall-prompt {
   margin: 0;
   padding: 12px 16px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   border-radius: 12px;
   color: #334155;
   line-height: var(--line-height-body);
@@ -119,9 +119,9 @@ onMounted(() => {
 
 .answers-wall-card {
   padding: 18px 20px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .answers-wall-card__header {
@@ -138,7 +138,7 @@ onMounted(() => {
 }
 
 .answers-wall-card__header span {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -147,7 +147,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   align-items: flex-end;
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: var(--font-size-base);
 }
 
@@ -159,11 +159,11 @@ onMounted(() => {
 
 .answers-wall-comment {
   margin: 12px 0 0;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: var(--font-size-base);
 }
 
 .answers-wall-muted {
-  color: #94a3b8;
+  color: var(--color-text-placeholder);
 }
 </style>

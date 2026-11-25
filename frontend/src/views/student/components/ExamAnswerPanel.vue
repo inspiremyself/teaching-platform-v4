@@ -451,7 +451,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .intro-card--hero {
-  background: linear-gradient(135deg, #ffffff, #f0fdfa 50%, #f8fafc);
+  background: linear-gradient(135deg, var(--color-surface), var(--color-brand-teacher-soft) 50%, var(--color-bg-app));
 }
 
 .intro-card__topline {
@@ -467,7 +467,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: var(--letter-spacing-caps);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
@@ -497,7 +497,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   gap: 6px;
   padding: 7px 10px;
   border-radius: 12px;
-  background: #fff7ed;
+  background: var(--color-warning-soft);
   border: 1px solid #fed7aa;
   color: #9a3412;
   font-size: var(--font-size-sm);
@@ -505,9 +505,9 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .intro-notice--info {
-  background: #eff6ff;
+  background: var(--color-brand-student-soft);
   border-color: #bfdbfe;
-  color: #1d4ed8;
+  color: var(--color-brand-student);
 }
 
 .legacy-notice {
@@ -529,9 +529,9 @@ function resultMapItemClass(question: { questionId: number }): string {
 .intro-metric,
 .result-summary-card {
   border-radius: 12px;
-  background: #fff;
+  background: var(--color-surface);
   padding: 7px 9px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 .intro-metric span,
@@ -559,8 +559,8 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .result-summary-card--status {
-  background: linear-gradient(135deg, #0d9488, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher-border), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
 }
 
 .result-summary-card--status .result-summary-card__label,
@@ -570,7 +570,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .result-summary-card--accent {
-  background: linear-gradient(135deg, #eff6ff, #f8fafc);
+  background: linear-gradient(135deg, var(--color-brand-student-soft), var(--color-bg-app));
 }
 
 .intro-actions,
@@ -594,8 +594,8 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .primary-action {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
+  color: var(--color-text-inverse);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -603,11 +603,11 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .primary-action--danger {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
+  background: linear-gradient(135deg, var(--color-danger-strong), var(--color-danger));
 }
 
 .secondary-action {
-  background: #f8fafc;
+  background: var(--color-bg-app);
   color: #334155;
 }
 
@@ -620,7 +620,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .side-card--accent {
-  background: linear-gradient(135deg, #eff6ff, #ecfeff);
+  background: linear-gradient(135deg, var(--color-brand-student-soft), #ecfeff);
 }
 
 .side-card__title,
@@ -674,23 +674,23 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .timer-shell .material-symbols-outlined {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .timer-shell strong {
   display: block;
   font-size: var(--font-size-xl);
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-variant-numeric: tabular-nums;
 }
 
 .timer-shell small {
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-weight: 700;
 }
 
 .timer-shell--urgent {
-  background: #fef2f2;
+  background: var(--color-danger-soft);
   border-color: #fecaca;
 }
 
@@ -704,7 +704,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   margin-bottom: 12px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
 }
 
 .exam-question-prompt__label {
@@ -718,8 +718,8 @@ function resultMapItemClass(question: { questionId: number }): string {
   margin-bottom: 12px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #eff6ff;
-  color: #0f766e;
+  background: var(--color-brand-student-soft);
+  color: var(--color-brand-teacher);
 }
 
 .exam-code-callout__title {
@@ -744,18 +744,18 @@ function resultMapItemClass(question: { questionId: number }): string {
   justify-content: space-between;
   gap: 10px;
   align-items: center;
-  background: linear-gradient(135deg, #eff6ff, #ecfeff);
+  background: linear-gradient(135deg, var(--color-brand-student-soft), #ecfeff);
 }
 
 .exam-banner strong {
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .exam-banner__warn {
   border-radius: 999px;
   padding: 6px 10px;
-  background: #fff7ed;
-  color: #c2410c;
+  background: var(--color-warning-soft);
+  color: var(--color-warning-strong);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -768,7 +768,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid #fecaca;
-  background: #fef2f2;
+  background: var(--color-danger-soft);
   color: #b91c1c;
 }
 
@@ -793,7 +793,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   border-radius: 999px;
   padding: 6px 10px;
   background: #ecfeff;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
   font-size: var(--font-size-xs);
   font-weight: 700;
 }
@@ -808,7 +808,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 .result-question-card__score {
   font-size: var(--font-size-sm);
   font-weight: 700;
-  color: #0f766e;
+  color: var(--color-brand-teacher);
 }
 
 .question-card__body {
@@ -823,10 +823,10 @@ function resultMapItemClass(question: { questionId: number }): string {
 
 .option-card {
   margin: 0;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 9px 10px;
-  background: #fff;
+  background: var(--color-surface);
   width: 100%;
 }
 
@@ -837,7 +837,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   width: 24px;
   height: 24px;
   border-radius: 12px;
-  background: #f1f5f9;
+  background: var(--color-bg-subtle);
   color: #334155;
   margin-right: 10px;
   font-weight: 700;
@@ -872,14 +872,14 @@ function resultMapItemClass(question: { questionId: number }): string {
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #e2e8f0;
+  background: var(--color-border);
   overflow: hidden;
 }
 
 .progress-track__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #0f766e, #14b8a6);
+  background: linear-gradient(90deg, var(--color-brand-teacher), var(--color-brand-teacher-accent));
 }
 
 .question-map-grid {
@@ -892,28 +892,28 @@ function resultMapItemClass(question: { questionId: number }): string {
 .question-map-item {
   aspect-ratio: 1;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
   font-weight: 700;
   font-size: var(--font-size-xs);
   cursor: pointer;
 }
 
 .question-map-item.is-done {
-  background: #0f766e;
-  border-color: #0f766e;
-  color: #fff;
+  background: var(--color-brand-teacher);
+  border-color: var(--color-brand-teacher);
+  color: var(--color-text-inverse);
 }
 
 .question-map-item.is-current {
   background: #ecfeff;
-  border: 2px solid #14b8a6;
-  color: #0f766e;
+  border: 2px solid var(--color-brand-teacher-accent);
+  color: var(--color-brand-teacher);
 }
 
 .question-map-item.is-empty {
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .map-legend {
@@ -922,7 +922,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   flex-direction: column;
   gap: 4px;
   font-size: var(--font-size-xs);
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .dot {
@@ -934,15 +934,15 @@ function resultMapItemClass(question: { questionId: number }): string {
 }
 
 .dot--done {
-  background: #0f766e;
+  background: var(--color-brand-teacher);
 }
 
 .dot--current {
-  background: #14b8a6;
+  background: var(--color-brand-teacher-accent);
 }
 
 .dot--empty {
-  background: #cbd5e1;
+  background: var(--color-border-strong);
 }
 
 .submit-card__stats {
@@ -957,7 +957,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   justify-content: space-between;
   gap: 12px;
   padding: 5px 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .submit-card__stats div:last-child {
@@ -989,14 +989,14 @@ function resultMapItemClass(question: { questionId: number }): string {
 .result-answer-block,
 .teacher-comment-box {
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--color-bg-app);
   padding: 8px 10px;
   margin-top: 6px;
 }
 
 .result-answer-block--light {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
 }
 
 .result-answer-block--full {
@@ -1086,58 +1086,58 @@ function resultMapItemClass(question: { questionId: number }): string {
 
 .result-answer-block--correct .result-answer-block__label,
 .result-answer-block--correct .result-answer-block__value {
-  color: #16a34a;
+  color: var(--color-success-strong);
 }
 
 .result-answer-block--wrong {
-  background: #fef2f2;
+  background: var(--color-danger-soft);
 }
 
 .result-answer-block--wrong .result-answer-block__label,
 .result-answer-block--wrong .result-answer-block__value {
-  color: #dc2626;
+  color: var(--color-danger-strong);
 }
 
 .result-question-card__score--correct {
-  color: #16a34a;
+  color: var(--color-success-strong);
 }
 
 .result-question-card__score--wrong {
-  color: #dc2626;
+  color: var(--color-danger-strong);
 }
 
 .result-question-card__score--manual {
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .question-map-item.is-correct {
-  background: #16a34a;
-  border-color: #16a34a;
-  color: #fff;
+  background: var(--color-success-strong);
+  border-color: var(--color-success-strong);
+  color: var(--color-text-inverse);
 }
 
 .question-map-item.is-wrong {
-  background: #dc2626;
-  border-color: #dc2626;
-  color: #fff;
+  background: var(--color-danger-strong);
+  border-color: var(--color-danger-strong);
+  color: var(--color-text-inverse);
 }
 
 .question-map-item.is-manual {
-  background: #f1f5f9;
-  border-color: #e2e8f0;
-  color: #64748b;
+  background: var(--color-bg-subtle);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
 }
 
 .dot--correct {
-  background: #16a34a;
+  background: var(--color-success-strong);
 }
 
 .dot--wrong {
-  background: #dc2626;
+  background: var(--color-danger-strong);
 }
 
 .dot--manual {
-  background: #64748b;
+  background: var(--color-text-muted);
 }
 
 @media (max-width: 1024px) {
