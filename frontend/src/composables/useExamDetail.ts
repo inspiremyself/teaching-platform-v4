@@ -15,6 +15,7 @@ import { useAuthStore } from '@/stores/auth'
 import { shuffleExamQuestions } from '@/utils/examShuffle'
 import { parseQuestionOptions } from '@/utils/examAnswer'
 import { formatShortDateTime } from '@/utils/format'
+import { planTotalScore as sumPlanTotalScore } from '@/utils/questionConfig'
 import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 import type { ExamAnswerDetail, ExamDetail, ExamQuestionView } from '@/types/exam'
 import type { StudentChoiceOption, StudentLabStepItem } from '@/types/lab'
@@ -117,10 +118,7 @@ const resultMode = computed<'result' | 'grading' | 'pending'>(() => {
 })
 /** 计划满分 = Σ 每题快照分值；计划满分 0 时成绩页不显示分母 */
 const planTotalScore = computed(() =>
-  questions.value.reduce(
-    (sum, question) => sum + (Number(question.questionScore ?? question.score) || 0),
-    0,
-  ),
+  sumPlanTotalScore(questions.value, question => question.questionScore ?? question.score),
 )
 /** 总分卡文案：成绩未发布但答卷已提交/已批改时，明确提示等待教师发布。 */
 const totalScoreText = computed(() => {

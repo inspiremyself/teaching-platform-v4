@@ -18,7 +18,12 @@ import type { ConfiguredQuestionItem } from '@/types/question-config'
 import type { CreateExamPayload, ExamListItem, ExamQuestionView, ScoreVisibilityMode, UpdateExamPayload } from '@/types/exam'
 import type { QuestionItem } from '@/types/question'
 import { buildQuestionPayloadFromDraft } from '@/components/typed-editor/adapters/questionAdapter'
-import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion'
+import {
+  mapOptionsForList,
+  mergeConfiguredQuestions,
+  planTotalScore as sumPlanTotalScore,
+  resequenceConfiguredQuestions,
+} from '@/utils/questionConfig'
 import { useWorkbenchList } from '@/views/teacher/components/workbench/useWorkbench'
 import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 import { formatDateTime } from '@/utils/format'
@@ -58,9 +63,6 @@ const questionPool = ref<QuestionItem[]>([])
 const configuredQuestions = ref<ConfiguredQuestionItem[]>([])
 /** 历史内联题：不进入组卷提交，必须先删除并从题库重新选择 */
 const legacyInlineQuestions = ref<Array<{ localId: string; stem: string }>>([])
-const searchQuery = ref('')
-const statusFilter = ref<ExamListItem['status'] | ''>('')
-const classFilter = ref<number | null>(null)
 const activeConfiguredQuestionLocalId = ref<string | null>(null)
 
 const form = ref<ExamFormState>({
@@ -74,28 +76,6 @@ const form = ref<ExamFormState>({
   shuffleQuestions: false,
   subjectId: subjectOptions.value[0]?.id ?? 0,
   })
-
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase()
-  return rows.value.filter(row => {
-    const matchesKeyword = !keyword || [row.title, row.className ?? '', examDescription(row)].some(item => item.toLowerCase().includes(keyword))
-    const matchesStatus = !statusFilter.value || row.status === statusFilter.value
-    const matchesClass = !classFilter.value || row.classId === classFilter.value
-    return matchesKeyword && matchesStatus && matchesClass
-  })
-})
-
-const draftCount = computed(() => rows.value.filter(row => row.status === ACTIVITY_STATUS.DRAFT).length)
-const publishedCount = computed(() => rows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length)
-const totalSubmissionCount = computed(() => rows.value.reduce((sum, row) => sum + (row.submissionCount ?? 0), 0))
-const highlightedExam = computed(() => filteredRows.value[0] ?? rows.value[0] ?? null)
-const highlightedExamTitle = computed(() => highlightedExam.value?.title ?? '暂无考试记录')
-const highlightedExamMeta = computed(() => {
-  if (!highlightedExam.value) {
-    return '创建考试后即可在这里看到发布节奏、班级归属和批改入口。'
-  }
-  return `${highlightedExam.value.className || '未绑定班级'} · ${statusLabel(highlightedExam.value.status)} · ${submissionHint(highlightedExam.value)}`
-})
 
 const headerCellStyle = () => ({
   background: '#f8fafc',
@@ -127,20 +107,7 @@ const currentEditorQuestion = computed<QuestionEditorDialogValue | null>(() => {
     code: matchedRow.code,
     difficulty: matchedRow.difficulty as QuestionEditorDialogValue['difficulty'],
     analysisText: matchedRow.analysisText,
-    options: parseQuestionAnswerArray(matchedRow.optionsJson).map((option, index) => {
-      if (option && typeof option === 'object') {
-        const record = option as Record<string, unknown>
-        return {
-          key: String(record.key ?? String.fromCharCode(65 + index)),
-          label: String(record.content ?? record.label ?? record.text ?? ''),
-        }
-      }
-
-      return {
-        key: String.fromCharCode(65 + index),
-        label: String(option ?? ''),
-      }
-    }),
+    options: mapOptionsForList(matchedRow.optionsJson),
     answerJson: matchedRow.answerJson,
   }
 })
@@ -184,23 +151,6 @@ const fetchClasses = async () => {
 
 const fetchQuestions = async () => {
   questionPool.value = await listQuestions()
-}
-
-const resequenceConfiguredQuestions = (items: ConfiguredQuestionItem[]) =>
-  items.map((item, index) => ({
-    ...item,
-    sortOrder: index + 1,
-  }))
-
-const mergeConfiguredQuestions = (items: ConfiguredQuestionItem[]) => {
-  const existingByBankId = new Map(
-    configuredQuestions.value.filter(item => item.questionBankId).map(item => [item.questionBankId, item]),
-  )
-  const merged = items
-    .filter(item => item.questionBankId)
-    .map(item => existingByBankId.get(item.questionBankId) ?? item)
-
-  configuredQuestions.value = resequenceConfiguredQuestions(merged)
 }
 
 const resetForm = () => {
@@ -263,20 +213,7 @@ const openEditDialog = async (row: ExamListItem) => {
       stem: q.stem,
       sortOrder: index + 1,
       score: q.questionScore ?? q.score ?? 0,
-      options: q.options ?? parseQuestionAnswerArray(q.optionsJson ?? null).map((option, optionIndex) => {
-        if (option && typeof option === 'object') {
-          const record = option as Record<string, unknown>
-          return {
-            key: String(record.key ?? String.fromCharCode(65 + optionIndex)),
-            label: String(record.content ?? record.label ?? record.text ?? ''),
-          }
-        }
-
-        return {
-          key: String.fromCharCode(65 + optionIndex),
-          label: String(option ?? ''),
-        }
-      }),
+      options: q.options ?? mapOptionsForList(q.optionsJson),
       answerJson: q.answerJson ?? null,
       scoringConfigJson: null,
     })),
@@ -289,7 +226,7 @@ const openQuestionPicker = () => {
 }
 
 const applyPickedQuestions = (items: ConfiguredQuestionItem[]) => {
-  mergeConfiguredQuestions(items)
+  configuredQuestions.value = mergeConfiguredQuestions(configuredQuestions.value, items, { includeInline: false })
   ElMessage.success(`已带入 ${items.length} 道题目配置`)
 }
 
@@ -337,20 +274,7 @@ const syncConfiguredBankQuestion = (question: QuestionItem) => {
           ...item,
           questionType: question.type,
           stem: question.stem,
-          options: parseQuestionAnswerArray(question.optionsJson).map((option, index) => {
-            if (option && typeof option === 'object') {
-              const record = option as Record<string, unknown>
-              return {
-                key: String(record.key ?? String.fromCharCode(65 + index)),
-                label: String(record.content ?? record.label ?? record.text ?? ''),
-              }
-            }
-
-            return {
-              key: String.fromCharCode(65 + index),
-              label: String(option ?? ''),
-            }
-          }),
+          options: mapOptionsForList(question.optionsJson),
           answerJson: question.answerJson,
         }
       : item,
@@ -550,16 +474,6 @@ const formatWindow = (startAt?: string | null, endAt?: string | null) => {
   return `${formatDateTime(startAt, { fallback: '未设置' })} 至 ${formatDateTime(endAt, { fallback: '未设置' })}`
 }
 
-const examDescription = (row: ExamListItem) => {
-  if (row.status === ACTIVITY_STATUS.DRAFT) {
-    return '草稿阶段，可继续补充题目、时间与考试说明。'
-  }
-  if (row.status === ACTIVITY_STATUS.PUBLISHED) {
-    return '考试已对学生开放，建议关注提交进度与异常关闭操作。'
-  }
-  return '考试流程已收口，可进入结果页进行总览与主观题评分。'
-}
-
 const submissionHint = (row: ExamListItem) => {
   const count = row.submissionCount ?? 0
   if (row.status === ACTIVITY_STATUS.DRAFT) {
@@ -572,9 +486,7 @@ const submissionHint = (row: ExamListItem) => {
 }
 
 /** 计划满分 = Σ 每题配置分值；只做展示，不参与提交 */
-const planTotalScore = computed(() =>
-  configuredQuestions.value.reduce((total, item) => total + (Number(item.score) || 0), 0),
-)
+const planTotalScore = computed(() => sumPlanTotalScore(configuredQuestions.value, item => item.score))
 
 const workbench = useWorkbenchList<ExamListItem>({
   domain: 'EXAM',
@@ -594,7 +506,7 @@ onMounted(async () => {
   await fetchExams()
 })
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatWindow, examDescription, submissionHint, subjectOptions, fetchSubjects, workbench };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, planTotalScore, legacyInlineQuestions, activeConfiguredQuestionLocalId, form, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatWindow, submissionHint, subjectOptions, fetchSubjects, workbench };
 }
 
 export type ExamListState = ReturnType<typeof useExamList>;

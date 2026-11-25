@@ -19,6 +19,7 @@ import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraf
 import { useLabAnswerDrafts } from '@/views/student/components/lab-answer/useLabAnswerDrafts';
 import { behaviorCollector } from '@/utils/behaviorCollector';
 import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
+import { planTotalScore as sumPlanTotalScore } from '@/utils/questionConfig';
 import type { InjectionKey } from 'vue';
 
 export function useStudentLabSteps() {
@@ -114,9 +115,7 @@ const progressText = computed(() => {
 // 是否已产生总分（批改后才回填 totalScore），用于页头与题项得分展示
 const showLabScore = computed(() => typeof detail.value?.totalScore === 'number');
 /** 计划满分 = Σ 题项分值；为 0（全 0 分实验）时只显示得分，避免出现 `/ 0` */
-const planTotalScore = computed(() =>
-  labItems.value.reduce((sum, item) => sum + (Number(item.stepScore) || 0), 0),
-);
+const planTotalScore = computed(() => sumPlanTotalScore(labItems.value, item => item.stepScore));
 const showLabFeedback = computed(() => !!detail.value?.teacherComment || showLabScore.value);
 const hasGuidanceFile = computed(() =>
   Boolean(detail.value?.materialId && detail.value?.materialDownloadUrl && detail.value?.materialFileName),

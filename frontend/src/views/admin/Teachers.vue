@@ -74,7 +74,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+        <el-button type="primary" :loading="submitting" @click="submit(submitHandlers)">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -87,12 +87,8 @@ import { changeTeacherStatus, createTeacher, listTeachers, updateTeacher } from 
 import type { AdminTeacher, TeacherStatus } from '@/types/admin';
 import AppTableCard from '@/components/ui/AppTableCard.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
+import { useCrudTable, type CrudSubmitHandlers } from '@/composables/useCrudTable';
 
-const loading = ref(false);
-const submitting = ref(false);
-const dialogVisible = ref(false);
-const editingId = ref<number | null>(null);
-const rows = ref<AdminTeacher[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref<TeacherStatus | ''>('');
 
@@ -102,85 +98,52 @@ const form = reactive({
   password: '123456',
 });
 
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase();
-  return rows.value.filter(row => {
-    const matchesKeyword =
-      !keyword ||
-      row.username.toLowerCase().includes(keyword) ||
-      row.displayName.toLowerCase().includes(keyword);
-    const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
-    return matchesKeyword && matchesStatus;
+const { loading, submitting, dialogVisible, editingId, rows, filteredRows, refresh, openCreateDialog, openEditDialog, submit, toggleStatus: runToggleStatus } =
+  useCrudTable<AdminTeacher, TeacherStatus>({
+    fetchRows: () => listTeachers(),
+    keyword: searchQuery,
+    statusFilter,
+    keywordFieldsOf: row => [row.username, row.displayName],
+    resetForm: () => {
+      form.username = '';
+      form.displayName = '';
+      form.password = '123456';
+      editingId.value = null;
+    },
+    fillEditForm: row => {
+      form.displayName = row.displayName;
+    },
   });
-});
 
 const activeCount = computed(() => rows.value.filter(item => item.status === 'ACTIVE').length);
 const disabledCount = computed(() => rows.value.filter(item => item.status === 'DISABLED').length);
 
-const resetForm = () => {
-  form.username = '';
-  form.displayName = '';
-  form.password = '123456';
-  editingId.value = null;
-};
-
-const fetchData = async () => {
-  loading.value = true;
-  try {
-    rows.value = await listTeachers();
-  } finally {
-    loading.value = false;
-  }
-};
-
-const openCreateDialog = () => {
-  resetForm();
-  dialogVisible.value = true;
-};
-
-const openEditDialog = (row: AdminTeacher) => {
-  editingId.value = row.id;
-  form.displayName = row.displayName;
-  dialogVisible.value = true;
-};
-
-const submit = async () => {
-  if (!form.displayName.trim()) {
-    ElMessage.warning('请输入教师姓名');
-    return;
-  }
-  if (!editingId.value && (!form.username.trim() || !form.password.trim())) {
-    ElMessage.warning('请填写账号和初始密码');
-    return;
-  }
-
-  submitting.value = true;
-  try {
-    if (editingId.value) {
-      await updateTeacher(editingId.value, { displayName: form.displayName.trim() });
-      ElMessage.success('教师信息已更新');
-    } else {
-      await createTeacher({
-        username: form.username.trim(),
-        displayName: form.displayName.trim(),
-        password: form.password.trim(),
-      });
-      ElMessage.success('教师创建成功');
+const submitHandlers: CrudSubmitHandlers = {
+  validate: () => {
+    if (!form.displayName.trim()) {
+      ElMessage.warning('请输入教师姓名');
+      return false;
     }
-    dialogVisible.value = false;
-    resetForm();
-    await fetchData();
-  } finally {
-    submitting.value = false;
-  }
+    if (!editingId.value && (!form.username.trim() || !form.password.trim())) {
+      ElMessage.warning('请填写账号和初始密码');
+      return false;
+    }
+    return true;
+  },
+  create: () => createTeacher({
+    username: form.username.trim(),
+    displayName: form.displayName.trim(),
+    password: form.password.trim(),
+  }),
+  update: id => updateTeacher(id, { displayName: form.displayName.trim() }),
+  createdMessage: '教师创建成功',
+  updatedMessage: '教师信息已更新',
 };
 
-const toggleStatus = async (row: AdminTeacher) => {
+const toggleStatus = (row: AdminTeacher) => {
   const nextStatus: TeacherStatus = row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
-  await changeTeacherStatus(row.id, nextStatus);
-  ElMessage.success('教师状态已更新');
-  await fetchData();
+  return runToggleStatus(row, () => changeTeacherStatus(row.id, nextStatus), '教师状态已更新');
 };
 
-onMounted(fetchData);
+onMounted(refresh);
 </script>

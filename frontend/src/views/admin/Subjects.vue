@@ -77,7 +77,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+        <el-button type="primary" :loading="submitting" @click="submit(submitHandlers)">保存</el-button>
       </template>
     </el-dialog>
 
@@ -116,12 +116,8 @@ import {
 import type { AdminSubject, PlatformSubject, SubjectStatus } from '@/types/admin';
 import AppTableCard from '@/components/ui/AppTableCard.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
+import { useCrudTable, type CrudSubmitHandlers } from '@/composables/useCrudTable';
 
-const loading = ref(false);
-const submitting = ref(false);
-const dialogVisible = ref(false);
-const editingId = ref<number | null>(null);
-const rows = ref<AdminSubject[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref<SubjectStatus | ''>('');
 const platformDialogVisible = ref(false);
@@ -135,86 +131,50 @@ const form = reactive({
   code: '',
 });
 
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase();
-  return rows.value.filter(row => {
-    const matchesKeyword =
-      !keyword ||
-      row.name.toLowerCase().includes(keyword) ||
-      row.code.toLowerCase().includes(keyword);
-    const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
-    return matchesKeyword && matchesStatus;
+const { loading, submitting, dialogVisible, editingId, rows, filteredRows, refresh, openCreateDialog, openEditDialog, submit, toggleStatus: runToggleStatus } =
+  useCrudTable<AdminSubject, SubjectStatus>({
+    fetchRows: () => listSubjects(),
+    keyword: searchQuery,
+    statusFilter,
+    keywordFieldsOf: row => [row.name, row.code],
+    resetForm: () => {
+      form.name = '';
+      form.code = '';
+      editingId.value = null;
+      codeLocked.value = false;
+    },
+    fillEditForm: row => {
+      form.name = row.name;
+      form.code = row.code;
+      codeLocked.value = row.globalSubjectId != null;
+    },
   });
-});
 
 const activeCount = computed(() => rows.value.filter(item => item.status === 'ACTIVE').length);
 const disabledCount = computed(() => rows.value.filter(item => item.status === 'DISABLED').length);
 
-const resetForm = () => {
-  form.name = '';
-  form.code = '';
-  editingId.value = null;
-  codeLocked.value = false;
-};
-
-const fetchData = async () => {
-  loading.value = true;
-  try {
-    rows.value = await listSubjects();
-  } finally {
-    loading.value = false;
-  }
-};
-
-const openCreateDialog = () => {
-  resetForm();
-  codeLocked.value = false;
-  dialogVisible.value = true;
-};
-
-const openEditDialog = (row: AdminSubject) => {
-  editingId.value = row.id;
-  form.name = row.name;
-  form.code = row.code;
-  codeLocked.value = row.globalSubjectId != null;
-  dialogVisible.value = true;
-};
-
-const submit = async () => {
-  if (!form.name.trim()) {
-    ElMessage.warning('请输入学科名称');
-    return;
-  }
-  if (!form.code.trim()) {
-    ElMessage.warning('请输入学科编码');
-    return;
-  }
-
-  submitting.value = true;
-  try {
-    const payload = { name: form.name.trim(), code: form.code.trim() };
-    if (editingId.value) {
-      await updateSubject(editingId.value, payload);
-      ElMessage.success('学科信息已更新');
-    } else {
-      await createSubject(payload);
-      ElMessage.success('学科创建成功');
+const submitHandlers: CrudSubmitHandlers = {
+  validate: () => {
+    if (!form.name.trim()) {
+      ElMessage.warning('请输入学科名称');
+      return false;
     }
-    dialogVisible.value = false;
-    resetForm();
-    await fetchData();
-  } catch {
-    // 全局拦截器已提示（40902 不在静默名单内），这里仅阻止异常冒泡并保持弹窗打开
-  } finally {
-    submitting.value = false;
-  }
+    if (!form.code.trim()) {
+      ElMessage.warning('请输入学科编码');
+      return false;
+    }
+    return true;
+  },
+  create: () => createSubject({ name: form.name.trim(), code: form.code.trim() }),
+  update: id => updateSubject(id, { name: form.name.trim(), code: form.code.trim() }),
+  createdMessage: '学科创建成功',
+  updatedMessage: '学科信息已更新',
+  swallowError: true,
 };
 
-const toggleStatus = async (row: AdminSubject) => {
+const toggleStatus = (row: AdminSubject) => {
   const nextStatus: SubjectStatus = row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
-  await changeSubjectStatus(row.id, nextStatus);
-  ElMessage.success('学科状态已更新');
-  await fetchData();
+  return runToggleStatus(row, () => changeSubjectStatus(row.id, nextStatus), '学科状态已更新');
 };
 
 const openPlatformDialog = async () => {
@@ -238,7 +198,7 @@ const submitPlatformEnable = async () => {
     ElMessage.success('平台学科已启用');
     platformDialogVisible.value = false;
     selectedPlatformId.value = null;
-    await fetchData();
+    await refresh();
   } catch {
     // 全局拦截器已提示，这里仅阻止异常冒泡并保持弹窗打开
   } finally {
@@ -246,5 +206,5 @@ const submitPlatformEnable = async () => {
   }
 };
 
-onMounted(fetchData);
+onMounted(refresh);
 </script>

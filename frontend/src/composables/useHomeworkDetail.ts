@@ -11,6 +11,7 @@ import { buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromS
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from '@/views/student/components/lab-answer/types';
 import { getStudentHomeworkDetail, saveStudentHomeworkDraft, submitHomework } from '@/api/homeworks';
 import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
+import { planTotalScore as sumPlanTotalScore } from '@/utils/questionConfig';
 import type { HomeworkQuestionItem, HomeworkSubmissionStatus, StudentHomeworkDetail, SubmitHomeworkRequest } from '@/types/homework';
 import type { StudentChoiceOption, StudentLabStepItem } from '@/types/lab';
 import type { InjectionKey } from 'vue';
@@ -71,9 +72,7 @@ const homeworkProgressPercent = computed(() => {
 const showHomeworkResult = computed(() => typeof detail.value?.totalScore === 'number' || !!detail.value?.teacherComment);
 
 /** 计划满分 = Σ 题目分值；附件型作业（无题目）为 0，成绩页不显示分母 */
-const planTotalScore = computed(() =>
-  (detail.value?.questions ?? []).reduce((sum, question) => sum + (Number(question.score) || 0), 0),
-);
+const planTotalScore = computed(() => sumPlanTotalScore(detail.value?.questions ?? [], question => question.score));
 
 const countdownLabel = computed(() => {
   const dueAt = detail.value?.dueAt;

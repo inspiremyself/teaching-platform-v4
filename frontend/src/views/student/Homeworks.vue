@@ -106,6 +106,7 @@ import { listStudentHomeworks } from '@/api/homeworks';
 import type { HomeworkListItem, HomeworkStatus, HomeworkSubmissionStatus } from '@/types/homework';
 import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
 import { formatDateTime } from '@/utils/format';
+import { useKeywordFilter } from '@/composables/useKeywordFilter';
 
 const router = useRouter();
 const loading = ref(false);
@@ -114,24 +115,22 @@ const searchQuery = ref('');
 const statusFilter = ref<HomeworkStatus | ''>('');
 const submissionFilter = ref<HomeworkSubmissionStatus | 'NONE' | ''>('');
 
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase();
+const { keywordMatchedRows } = useKeywordFilter(rows, searchQuery, row => [
+  row.title,
+  row.className,
+  row.description,
+]);
 
-  return rows.value.filter(row => {
-    const matchesKeyword =
-      !keyword ||
-      row.title.toLowerCase().includes(keyword) ||
-      row.className?.toLowerCase().includes(keyword) ||
-      row.description?.toLowerCase().includes(keyword);
-
+const filteredRows = computed(() =>
+  keywordMatchedRows.value.filter(row => {
     const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
     const matchesSubmission =
       !submissionFilter.value ||
       (submissionFilter.value === 'NONE' ? !row.submissionStatus : row.submissionStatus === submissionFilter.value);
 
-    return matchesKeyword && matchesStatus && matchesSubmission;
-  });
-});
+    return matchesStatus && matchesSubmission;
+  }),
+);
 
 const activeCount = computed(() => filteredRows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length);
 const completedCount = computed(() => filteredRows.value.filter(row => row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === SUBMISSION_STATUS.GRADED).length);

@@ -27,9 +27,6 @@ const subjectOptions = ref<AdminSubject[]>([]);
 const fetchSubjects = async () => {
   subjectOptions.value = await listSubjects('ACTIVE');
 };
-const searchKeyword = ref('');
-const statusFilter = ref<LabStatus | ''>('');
-const classFilter = ref('');
 const uploadingGuidance = ref(false);
 
 type CreateMode = 'blank' | 'copy';
@@ -60,10 +57,6 @@ const createForm = reactive<Omit<CreateLabPayload, 'classId'> & { classId?: numb
   subjectId: 0,
 });
 
-const publishedCount = computed(() => rows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length);
-const draftCount = computed(() => rows.value.filter(row => row.status !== ACTIVITY_STATUS.PUBLISHED).length);
-const summaryRequiredCount = computed(() => rows.value.filter(row => row.summaryRequired).length);
-
 // 复制模式：源实验从当前台账行直接取（stepCount/materialId/summaryRequired 等预览字段均在行内），不额外请求
 const sourceLab = computed(() => rows.value.find(row => row.id === sourceLabId.value) ?? null);
 
@@ -89,30 +82,6 @@ const handleSourceLabChange = (id: number) => {
   createForm.classId = sourceClassAvailable ? source.classId : classOptions.value[0]?.id;
   createForm.status = ACTIVITY_STATUS.DRAFT;
 };
-
-const filteredRows = computed(() => {
-  const keyword = searchKeyword.value.trim().toLowerCase();
-
-  return rows.value.filter(row => {
-    const matchesKeyword = !keyword
-      || row.title.toLowerCase().includes(keyword)
-      || row.description.toLowerCase().includes(keyword)
-      || (row.experimentContent || '').toLowerCase().includes(keyword)
-      || (row.className || '').toLowerCase().includes(keyword);
-    const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
-    const matchesClass = !classFilter.value || String(row.classId || '') === classFilter.value;
-    return matchesKeyword && matchesStatus && matchesClass;
-  });
-});
-
-const activeStatusLabel = computed(() => statusFilter.value ? statusLabel(statusFilter.value) : '全部状态');
-const activeClassLabel = computed(() => {
-  if (!classFilter.value) {
-    return '全部班级';
-  }
-
-  return classOptions.value.find(item => String(item.id) === classFilter.value)?.name || '全部班级';
-});
 
 const fetchData = async () => {
   loading.value = true;
@@ -144,9 +113,10 @@ const resetCreateForm = () => {
 };
 
 const resetFilters = () => {
-  searchKeyword.value = '';
-  statusFilter.value = '';
-  classFilter.value = '';
+  workbench.filters.keyword.value = '';
+  workbench.filters.status.value = '';
+  workbench.filters.classId.value = null;
+  workbench.filters.deadlineBucket.value = 'ALL';
 };
 
 const fetchClasses = async () => {
@@ -376,7 +346,7 @@ onMounted(async () => {
   await fetchData();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, scoreVisibilityLabel, updatedLabel, subjectOptions, fetchSubjects, workbench };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, uploadMaterial, changeTeacherLabStatus, copyTeacherLab, createTeacherLab, listTeacherLabs, updateTeacherLab, LAB_EXPERIMENT_TYPE_LABELS, router, loading, submitting, createDialogVisible, editingId, rows, classOptions, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, sourceLab, copyDefaultTitle, sourceLabLabel, handleSourceLabChange, fetchData, resetCreateForm, resetFilters, fetchClasses, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, scoreVisibilityLabel, updatedLabel, subjectOptions, fetchSubjects, workbench };
 }
 
 export type LabsState = ReturnType<typeof useLabs>;

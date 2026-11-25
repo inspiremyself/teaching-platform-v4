@@ -125,6 +125,7 @@ import type { ExamListItem } from '@/types/exam'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 import { formatShortDateTime } from '@/utils/format'
+import { useKeywordFilter } from '@/composables/useKeywordFilter'
 
 const router = useRouter()
 const rows = ref<ExamListItem[]>([])
@@ -146,15 +147,14 @@ const activeFilterLabel = computed(() => {
   return '全部考试'
 })
 
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase()
-  return rows.value.filter(row => {
-    const matchesKeyword = !keyword || [row.title, row.className ?? ''].some(item => item.toLowerCase().includes(keyword))
-    const stage = stageKey(row)
-    const matchesStage = !stageFilter.value || stage === stageFilter.value
-    return matchesKeyword && matchesStage
-  })
-})
+const { keywordMatchedRows } = useKeywordFilter(rows, searchQuery, row => [row.title, row.className])
+
+const filteredRows = computed(() =>
+  keywordMatchedRows.value.filter(row => {
+    const matchesStage = !stageFilter.value || stageKey(row) === stageFilter.value
+    return matchesStage
+  }),
+)
 
 const loadExams = async () => {
   loading.value = true

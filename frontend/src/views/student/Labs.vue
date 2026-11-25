@@ -108,6 +108,7 @@ import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppMetaChip from '@/components/ui/AppMetaChip.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 import { formatDateTime } from '@/utils/format';
+import { useKeywordFilter } from '@/composables/useKeywordFilter';
 
 type TaskFilter = '' | 'TODO' | 'ACTIVE' | SubmissionStatus;
 
@@ -117,19 +118,18 @@ const rows = ref<StudentLabListItem[]>([]);
 const searchKeyword = ref('');
 const statusFilter = ref<TaskFilter>('');
 
-const filteredRows = computed(() => {
-  const keyword = searchKeyword.value.trim().toLowerCase();
+const { keywordMatchedRows } = useKeywordFilter(rows, searchKeyword, row => [
+  row.title,
+  row.description,
+  row.className,
+]);
 
-  return rows.value.filter((row) => {
-    const matchesKeyword =
-      !keyword ||
-      row.title.toLowerCase().includes(keyword) ||
-      (row.description || '').toLowerCase().includes(keyword) ||
-      row.className.toLowerCase().includes(keyword);
+const filteredRows = computed(() =>
+  keywordMatchedRows.value.filter(row => {
     const matchesFilter = !statusFilter.value || taskFilterOf(row) === statusFilter.value;
-    return matchesKeyword && matchesFilter;
-  });
-});
+    return matchesFilter;
+  }),
+);
 
 const activeCount = computed(() => rows.value.filter((row) => taskFilterOf(row) === 'ACTIVE').length);
 const activeFilterLabel = computed(() => statusFilterLabel(statusFilter.value));

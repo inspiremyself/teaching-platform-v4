@@ -136,6 +136,7 @@ import { computed, onMounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { downloadMaterial, listMaterials } from '@/api/materials';
 import type { MaterialItem, MaterialVisibility } from '@/types/material';
+import { useKeywordFilter } from '@/composables/useKeywordFilter';
 
 const loading = ref(false);
 const materials = ref<MaterialItem[]>([]);
@@ -146,20 +147,19 @@ const rows = computed(() => materials.value.filter(item => item.visibility === '
 
 const categoryOptions = computed(() => Array.from(new Set(rows.value.map(item => item.category).filter(Boolean))));
 
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase();
+const { keywordMatchedRows } = useKeywordFilter(rows, searchQuery, item => [
+  item.title,
+  item.category,
+  item.description,
+  item.fileName,
+]);
 
-  return rows.value.filter(item => {
-    const matchesKeyword =
-      !keyword
-      || item.title.toLowerCase().includes(keyword)
-      || item.category.toLowerCase().includes(keyword)
-      || item.description.toLowerCase().includes(keyword)
-      || item.fileName.toLowerCase().includes(keyword);
+const filteredRows = computed(() =>
+  keywordMatchedRows.value.filter(item => {
     const matchesCategory = !categoryFilter.value || item.category === categoryFilter.value;
-    return matchesKeyword && matchesCategory;
-  });
-});
+    return matchesCategory;
+  }),
+);
 
 const highlightedRows = computed(() => filteredRows.value.slice(0, 3));
 

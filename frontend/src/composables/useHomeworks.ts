@@ -37,7 +37,12 @@ import type {
 } from '@/types/homework';
 import { ApiError } from '@/utils/request';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
-import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion';
+import {
+  mapOptionsForList,
+  mergeConfiguredQuestions,
+  planTotalScore as sumPlanTotalScore,
+  resequenceConfiguredQuestions,
+} from '@/utils/questionConfig';
 import { defaultScoreByType } from '@/constants/questionScoreDefaults';
 import { useWorkbenchList } from '@/views/teacher/components/workbench/useWorkbench';
 import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
@@ -67,10 +72,6 @@ const configuredQuestions = ref<ConfiguredQuestionItem[]>([]);
 const originalQuestionIds = ref<number[]>([]);
 /** 作业保存成功后是否把本次内联题复制到题库 */
 const saveToQuestionBank = ref(false);
-const searchQuery = ref('');
-const statusFilter = ref<HomeworkStatus | ''>('');
-const classFilter = ref('0');
-const dueFilter = ref<'upcoming' | 'overdue' | 'undated' | ''>('');
 const questionEditorMode = ref<'BANK' | 'INLINE'>('INLINE');
 const activeConfiguredQuestionLocalId = ref<string | null>(null);
 
@@ -88,45 +89,6 @@ const form = reactive<CreateHomeworkRequest>({
 
 /** 编辑态已存在的提交数量：>0 时锁定班级与“回退草稿”，与后端状态机保持一致。 */
 const editingSubmissionCount = ref(0);
-
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase();
-  const now = Date.now();
-
-  return rows.value.filter(row => {
-    const matchesKeyword =
-      !keyword ||
-      row.title.toLowerCase().includes(keyword) ||
-      row.className?.toLowerCase().includes(keyword) ||
-      row.description?.toLowerCase().includes(keyword);
-
-    const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
-    const matchesClass = classFilter.value === '0' || String(row.classId) === classFilter.value;
-
-    const dueTime = row.dueAt ? new Date(row.dueAt).getTime() : NaN;
-    const matchesDue =
-      !dueFilter.value ||
-      (dueFilter.value === 'undated' && !row.dueAt) ||
-      (dueFilter.value === 'upcoming' && row.dueAt && !Number.isNaN(dueTime) && dueTime >= now) ||
-      (dueFilter.value === 'overdue' && row.dueAt && !Number.isNaN(dueTime) && dueTime < now);
-
-    return matchesKeyword && matchesStatus && matchesClass && matchesDue;
-  });
-});
-
-const publishedCount = computed(() => filteredRows.value.filter(row => row.status === ACTIVITY_STATUS.PUBLISHED).length);
-const draftCount = computed(() => filteredRows.value.filter(row => row.status === ACTIVITY_STATUS.DRAFT).length);
-const totalSubmissionCount = computed(() => filteredRows.value.reduce((sum, row) => sum + (row.submissionCount ?? 0), 0));
-
-const activeStatusLabel = computed(() => {
-  if (!statusFilter.value) return '全部状态';
-  return statusLabel(statusFilter.value);
-});
-
-const classFilterLabel = computed(() => {
-  if (classFilter.value === '0') return '全部班级';
-  return classOptions.value.find(item => String(item.id) === classFilter.value)?.name || '当前班级';
-});
 
 const currentConfiguredQuestion = computed(
   () => configuredQuestions.value.find(item => item.localId === activeConfiguredQuestionLocalId.value) ?? null,
@@ -197,10 +159,10 @@ const resetForm = () => {
 };
 
 const resetFilters = () => {
-  searchQuery.value = '';
-  statusFilter.value = '';
-  classFilter.value = '0';
-  dueFilter.value = '';
+  workbench.filters.keyword.value = '';
+  workbench.filters.status.value = '';
+  workbench.filters.classId.value = null;
+  workbench.filters.deadlineBucket.value = 'ALL';
 };
 
 const buildPayload = (): CreateHomeworkRequest => ({
@@ -273,29 +235,6 @@ const openEditDialog = async (row: HomeworkListItem) => {
   }
 };
 
-const resequenceConfiguredQuestions = (items: ConfiguredQuestionItem[]) =>
-  items.map((item, index) => ({
-    ...item,
-    sortOrder: index + 1,
-  }));
-
-/** 把选择题 JSON 归一为配置清单使用的 {key,label} 结构 */
-const mapOptionsForList = (optionsJson?: string | null) =>
-  parseQuestionAnswerArray(optionsJson ?? null).map((option, index) => {
-    if (option && typeof option === 'object') {
-      const record = option as Record<string, unknown>;
-      return {
-        key: String(record.key ?? String.fromCharCode(65 + index)),
-        label: String(record.content ?? record.label ?? record.text ?? ''),
-      };
-    }
-
-    return {
-      key: String.fromCharCode(65 + index),
-      label: String(option ?? ''),
-    };
-  });
-
 const buildConfiguredInlineQuestion = (
   editorPayload: QuestionEditorDialogSubmitPayload,
   current?: ConfiguredQuestionItem | null,
@@ -336,24 +275,6 @@ const buildConfiguredBankQuestion = (
   homeworkQuestionId: current.homeworkQuestionId ?? null,
 });
 
-const mergeConfiguredQuestions = (items: ConfiguredQuestionItem[]) => {
-  const existingByBankId = new Map(
-    configuredQuestions.value.filter(item => item.questionBankId).map(item => [item.questionBankId, item]),
-  );
-  const inlineItems = configuredQuestions.value.filter(item => item.sourceType === 'INLINE');
-  const merged = [...inlineItems];
-
-  for (const item of items) {
-    if (item.questionBankId) {
-      merged.push(existingByBankId.get(item.questionBankId) ?? item);
-      continue;
-    }
-    merged.push(item);
-  }
-
-  configuredQuestions.value = resequenceConfiguredQuestions(merged);
-};
-
 const openQuestionPicker = () => {
   pickerVisible.value = true;
 };
@@ -365,7 +286,7 @@ const openInlineQuestionEditor = () => {
 };
 
 const applyPickedQuestions = (items: ConfiguredQuestionItem[]) => {
-  mergeConfiguredQuestions(items);
+  configuredQuestions.value = mergeConfiguredQuestions(configuredQuestions.value, items, { includeInline: true });
   ElMessage.success(`已带入 ${items.length} 道题目配置`);
 };
 
@@ -663,9 +584,7 @@ const dueHint = (value?: string | null) => {
 };
 
 /** 计划满分 = Σ 每题配置分值；只做展示，不参与提交 */
-const planTotalScore = computed(() =>
-  configuredQuestions.value.reduce((total, item) => total + (Number(item.score) || 0), 0),
-);
+const planTotalScore = computed(() => sumPlanTotalScore(configuredQuestions.value, item => item.score));
 
 const workbench = useWorkbenchList<HomeworkListItem>({
   domain: 'HOMEWORK',
@@ -685,7 +604,7 @@ onMounted(async () => {
   await fetchHomeworks();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, originalQuestionIds, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, resequenceConfiguredQuestions, mapOptionsForList, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, mergeConfiguredQuestions, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, dueHint, subjectOptions, fetchSubjects, workbench };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, originalQuestionIds, saveToQuestionBank, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, dueHint, subjectOptions, fetchSubjects, workbench };
 }
 
 export type HomeworksState = ReturnType<typeof useHomeworks>;

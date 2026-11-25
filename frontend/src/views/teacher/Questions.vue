@@ -243,6 +243,7 @@ import type { ConfiguredQuestionItem } from '@/types/question-config';
 import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/components/typed-editor/adapters/questionAdapter';
 import { defaultScoreByType } from '@/constants/questionScoreDefaults';
 import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion';
+import { resequenceConfiguredQuestions } from '@/utils/questionConfig';
 import { QUESTION_TYPED_EDITOR_KIND_OPTIONS, TYPED_EDITOR_LABELS } from '@/components/typed-editor/constants';
 import QuestionEditorDialog, {
   type QuestionEditorDialogSubmitPayload,
@@ -489,10 +490,7 @@ const openEditDialog = (row: QuestionItem) => {
 };
 
 const applyPickedQuestions = (items: ConfiguredQuestionItem[]) => {
-  configuredQuestions.value = items.map((item, index) => ({
-    ...item,
-    sortOrder: index + 1,
-  }));
+  configuredQuestions.value = resequenceConfiguredQuestions(items);
   ElMessage.success(`已带入 ${items.length} 道题目配置`);
 };
 
@@ -505,12 +503,9 @@ const handleConfiguredQuestionScoreChange = ({ localId, score }: { localId: stri
 };
 
 const removeConfiguredQuestion = (localId: string) => {
-  configuredQuestions.value = configuredQuestions.value
-    .filter(item => item.localId !== localId)
-    .map((item, index) => ({
-      ...item,
-      sortOrder: index + 1,
-    }));
+  configuredQuestions.value = resequenceConfiguredQuestions(
+    configuredQuestions.value.filter(item => item.localId !== localId),
+  );
 };
 
 const editConfiguredQuestion = (item: ConfiguredQuestionItem) => {

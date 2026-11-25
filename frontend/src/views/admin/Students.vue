@@ -22,7 +22,7 @@
     <AppToolbarCard>
       <div class="toolbar-row">
         <el-input v-model="searchQuery" placeholder="按账号、姓名或班级搜索" clearable class="app-search-field" />
-        <el-select v-model="selectedClassId" clearable placeholder="全部班级" class="app-filter-field--md" @change="fetchStudents">
+        <el-select v-model="selectedClassId" clearable placeholder="全部班级" class="app-filter-field--md" @change="refresh">
           <el-option v-for="item in classes" :key="item.id" :label="`${item.name} (${item.code})`" :value="item.id" />
         </el-select>
         <el-select v-model="statusFilter" clearable placeholder="全部状态" class="app-filter-field">
@@ -88,7 +88,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submit">保存</el-button>
+        <el-button type="primary" :loading="submitting" @click="submit(submitHandlers)">保存</el-button>
       </template>
     </el-dialog>
 
@@ -208,20 +208,16 @@ import type { AdminClass, AdminStudent, ImportStudentsResult } from '@/types/adm
 import type { ImportStudentRow, StudentStatus } from '@/types/student';
 import AppTableCard from '@/components/ui/AppTableCard.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
+import { useCrudTable, type CrudSubmitHandlers } from '@/composables/useCrudTable';
 import {
   downloadStudentImportTemplate,
   parseStudentExcelFile,
   parseStudentImportText,
 } from '@/utils/studentImport';
 
-const loading = ref(false);
-const submitting = ref(false);
 const importing = ref(false);
-const dialogVisible = ref(false);
 const importDialogVisible = ref(false);
-const editingId = ref<number | null>(null);
 const selectedClassId = ref<number | undefined>();
-const rows = ref<AdminStudent[]>([]);
 const classes = ref<AdminClass[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref<StudentStatus | ''>('');
@@ -247,46 +243,45 @@ const resetPasswordForm = reactive({
   confirmPassword: '',
 });
 
-const filteredRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase();
-  return rows.value
-    .filter(row => {
-      const matchesKeyword =
-        !keyword ||
-        row.username.toLowerCase().includes(keyword) ||
-        row.displayName.toLowerCase().includes(keyword) ||
-        (row.className?.toLowerCase().includes(keyword) ?? false) ||
-        (row.classCode?.toLowerCase().includes(keyword) ?? false);
-      const matchesStatus = !statusFilter.value || row.status === statusFilter.value;
-      return matchesKeyword && matchesStatus;
-    })
-    .sort((a, b) => a.username.localeCompare(b.username));
+const {
+  loading,
+  submitting,
+  dialogVisible,
+  editingId,
+  rows,
+  filteredRows,
+  resetForm,
+  refresh,
+  openCreateDialog,
+  openEditDialog,
+  submit,
+  toggleStatus: runToggleStatus,
+} = useCrudTable<AdminStudent, StudentStatus>({
+  fetchRows: () => listAdminStudents(selectedClassId.value),
+  keyword: searchQuery,
+  statusFilter,
+  keywordFieldsOf: row => [row.username, row.displayName, row.className, row.classCode],
+  refine: list => [...list].sort((a, b) => a.username.localeCompare(b.username)),
+  resetForm: () => {
+    form.username = '';
+    form.displayName = '';
+    form.password = '123456';
+    form.classId = selectedClassId.value ?? classes.value[0]?.id;
+    editingId.value = null;
+  },
+  fillEditForm: row => {
+    form.displayName = row.displayName;
+    form.classId = row.classId ?? selectedClassId.value ?? classes.value[0]?.id;
+  },
 });
 
 const activeCount = computed(() => filteredRows.value.filter(item => item.status === 'ACTIVE').length);
 const disabledCount = computed(() => filteredRows.value.filter(item => item.status === 'DISABLED').length);
 
-const resetForm = () => {
-  form.username = '';
-  form.displayName = '';
-  form.password = '123456';
-  form.classId = selectedClassId.value ?? classes.value[0]?.id;
-  editingId.value = null;
-};
-
 const fetchClasses = async () => {
   classes.value = await listAdminClasses();
   if (!selectedClassId.value && classes.value.length === 1) {
     selectedClassId.value = classes.value[0].id;
-  }
-};
-
-const fetchStudents = async () => {
-  loading.value = true;
-  try {
-    rows.value = await listAdminStudents(selectedClassId.value);
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -358,58 +353,35 @@ const handleImportDrop = async (event: DragEvent) => {
   await applyImportFile(file);
 };
 
-const openCreateDialog = () => {
-  resetForm();
-  dialogVisible.value = true;
-};
-
-const openEditDialog = (row: AdminStudent) => {
-  editingId.value = row.id;
-  form.displayName = row.displayName;
-  form.classId = row.classId ?? selectedClassId.value ?? classes.value[0]?.id;
-  dialogVisible.value = true;
-};
-
-const submit = async () => {
-  if (!form.displayName.trim() || !form.classId) {
-    ElMessage.warning('请填写姓名并选择班级');
-    return;
-  }
-  if (!editingId.value && (!form.username.trim() || !form.password.trim())) {
-    ElMessage.warning('请填写账号和初始密码');
-    return;
-  }
-
-  submitting.value = true;
-  try {
-    if (editingId.value) {
-      await updateAdminStudent(editingId.value, {
-        displayName: form.displayName.trim(),
-        classId: form.classId,
-      });
-      ElMessage.success('学生更新成功');
-    } else {
-      await createAdminStudent({
-        username: form.username.trim(),
-        displayName: form.displayName.trim(),
-        password: form.password.trim(),
-        classId: form.classId,
-      });
-      ElMessage.success('学生创建成功');
+const submitHandlers: CrudSubmitHandlers = {
+  validate: () => {
+    if (!form.displayName.trim() || !form.classId) {
+      ElMessage.warning('请填写姓名并选择班级');
+      return false;
     }
-    dialogVisible.value = false;
-    resetForm();
-    await fetchStudents();
-  } finally {
-    submitting.value = false;
-  }
+    if (!editingId.value && (!form.username.trim() || !form.password.trim())) {
+      ElMessage.warning('请填写账号和初始密码');
+      return false;
+    }
+    return true;
+  },
+  create: () => createAdminStudent({
+    username: form.username.trim(),
+    displayName: form.displayName.trim(),
+    password: form.password.trim(),
+    classId: form.classId!,
+  }),
+  update: id => updateAdminStudent(id, {
+    displayName: form.displayName.trim(),
+    classId: form.classId!,
+  }),
+  createdMessage: '学生创建成功',
+  updatedMessage: '学生更新成功',
 };
 
-const toggleStatus = async (row: AdminStudent) => {
+const toggleStatus = (row: AdminStudent) => {
   const nextStatus: StudentStatus = row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
-  await changeAdminStudentStatus(row.id, nextStatus);
-  ElMessage.success('学生状态更新成功');
-  await fetchStudents();
+  return runToggleStatus(row, () => changeAdminStudentStatus(row.id, nextStatus), '学生状态更新成功');
 };
 
 const openResetDialog = (row: AdminStudent) => {
@@ -481,7 +453,7 @@ const submitImport = async () => {
   try {
     importResult.value = await importAdminStudents({ classId: selectedClassId.value, rows: parsedRows });
     ElMessage.success('导入已完成');
-    await fetchStudents();
+    await refresh();
   } finally {
     importing.value = false;
   }
@@ -490,7 +462,7 @@ const submitImport = async () => {
 onMounted(async () => {
   await fetchClasses();
   resetForm();
-  await fetchStudents();
+  await refresh();
 });
 </script>
 
