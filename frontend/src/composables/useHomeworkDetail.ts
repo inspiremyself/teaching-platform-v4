@@ -10,6 +10,7 @@ import CodeLabAnswerEditor from '@/views/student/components/lab-answer/CodeLabAn
 import { buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromStep } from '@/views/student/components/lab-answer/answerPayload';
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from '@/views/student/components/lab-answer/types';
 import { getStudentHomeworkDetail, saveStudentHomeworkDraft, submitHomework } from '@/api/homeworks';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 import type { HomeworkQuestionItem, HomeworkSubmissionStatus, StudentHomeworkDetail, SubmitHomeworkRequest } from '@/types/homework';
 import type { StudentChoiceOption, StudentLabStepItem } from '@/types/lab';
 import type { InjectionKey } from 'vue';
@@ -277,12 +278,9 @@ const restoreSavedDraft = () => {
   });
 };
 
-const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => {
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  return '未开始';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'homework', kind: 'submission', scene: 'student', status, unknownLabel: '未开始' });
+
+const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => (status ? statusOf(status).label : '未开始');
 
 const toStudentLabStepItem = (question: HomeworkQuestionItem): StudentLabStepItem => ({
   id: question.id,
@@ -394,10 +392,6 @@ function questionTypeLabel(type?: string | null) {
   return '简答题';
 }
 
-const formatDateTime = (value?: string | null) => {
-  return value ? value.replace('T', ' ').slice(0, 16) : '-';
-};
-
 fetchData();
 
 // 逐题草稿与整份文本/附件任一变化都进入防抖自动保存。
@@ -426,7 +420,7 @@ onUnmounted(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 
-  return { ACTIVITY_STATUS, SUBMISSION_STATUS, computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, onBeforeRouteLeave, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromStep, isDraftAnswered, normalizeStudentAnswerQuestionType, getStudentHomeworkDetail, saveStudentHomeworkDraft, submitHomework, route, loading, submitting, detail, currentQuestionIndex, questionDrafts, form, autoSaveStatus, suppressAutoSave, lastSavedDraft, autoSaveTimer, draftFailureNotified, homeworkId, nowMs, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, syncForm, fetchData, buildDraftPayload, submitForm, clearAutoSaveTimer, saveDraft, isDraftResponseStale, scheduleAutoSave, flushDraft, restoreSavedDraft, submissionStatusLabel, toStudentLabStepItem, resolveQuestionOptions, parseJsonArray, ensureQuestionDraft, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, selectedOptionsOf, showQuestionFeedback, answerHint, questionTypeLabel, formatDateTime, handleBeforeUnload, clockTimer };
+  return { ACTIVITY_STATUS, SUBMISSION_STATUS, computed, nextTick, onMounted, onUnmounted, reactive, ref, watch, onBeforeRouteLeave, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromStep, isDraftAnswered, normalizeStudentAnswerQuestionType, getStudentHomeworkDetail, saveStudentHomeworkDraft, submitHomework, route, loading, submitting, detail, currentQuestionIndex, questionDrafts, form, autoSaveStatus, suppressAutoSave, lastSavedDraft, autoSaveTimer, draftFailureNotified, homeworkId, nowMs, isOverdue, isNotStarted, readonly, hasQuestionItems, currentQuestion, currentQuestionDraft, currentQuestionType, currentQuestionOptions, textHomeworkDraft, answeredQuestionCount, homeworkProgressPercent, showHomeworkResult, planTotalScore, countdownLabel, syncForm, fetchData, buildDraftPayload, submitForm, clearAutoSaveTimer, saveDraft, isDraftResponseStale, scheduleAutoSave, flushDraft, restoreSavedDraft, submissionStatusLabel, toStudentLabStepItem, resolveQuestionOptions, parseJsonArray, ensureQuestionDraft, isQuestionAnswered, updateCurrentQuestionDraft, updateTextHomeworkDraft, selectedOptionsOf, showQuestionFeedback, answerHint, questionTypeLabel, handleBeforeUnload, clockTimer };
 }
 
 export type HomeworkDetailState = ReturnType<typeof useHomeworkDetail>;

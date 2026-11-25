@@ -85,8 +85,8 @@
         <el-table-column label="任务节奏" min-width="260">
           <template #default="{ row }">
             <div class="workbench-timeline">
-              <div class="workbench-timeline__item"><span>开始</span><strong>{{ formatDateTime(row.startAt) }}</strong></div>
-              <div class="workbench-timeline__item"><span>结束</span><strong>{{ formatDateTime(row.endAt) }}</strong></div>
+              <div class="workbench-timeline__item"><span>开始</span><strong>{{ formatDateTime(row.startAt, { fallback: '未设置' }) }}</strong></div>
+              <div class="workbench-timeline__item"><span>结束</span><strong>{{ formatDateTime(row.endAt, { fallback: '未设置' }) }}</strong></div>
               <div class="workbench-timeline__item"><span>时长</span><strong>{{ row.raw.durationMinutes }} 分钟</strong></div>
             </div>
           </template>
@@ -323,7 +323,8 @@ import WorkbenchShell from './workbench/WorkbenchShell.vue';
 import ActionButton from './workbench/ActionButton.vue';
 import StatusPill from './workbench/StatusPill.vue';
 import TaskEditorDialog from './workbench/TaskEditorDialog.vue';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint, workbench } = inject(ExamListKey)!;
+import { formatDateTime } from '@/utils/format';
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, subjectOptions, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExamTitle, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, durationExceedsWindow, windowTruncationHint, fetchExams, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatWindow, examDescription, submissionHint, workbench } = inject(ExamListKey)!;
 const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   status === 'DRAFT' ? 'draft' : status === 'PUBLISHED' ? 'published' : status === 'CLOSED' ? 'closed' : 'warning';
 </script>

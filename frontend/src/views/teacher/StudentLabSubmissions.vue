@@ -36,6 +36,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { listTeacherStudentLabSubmissions } from '@/api/labs';
 import type { LabReportStatus, StudentLabSubmissionItem } from '@/types/lab';
+import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
 
 const route = useRoute();
 const router = useRouter();
@@ -68,19 +69,11 @@ const goReportDetail = (submissionId: number) => {
   router.push(`/teacher/lab-reports/${submissionId}`);
 };
 
-const statusLabel = (status?: LabReportStatus) => {
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
-  return status || '未知';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', kind: 'submission', scene: 'teacher', status });
 
-const statusTagType = (status?: LabReportStatus) => {
-  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
-  if (status === SUBMISSION_STATUS.GRADED) return 'success';
-  if (status === SUBMISSION_STATUS.SAVED) return 'info';
-  return 'info';
-};
+const statusLabel = (status?: LabReportStatus) => (status ? statusOf(status).label : '未知');
+
+const statusTagType = (status?: LabReportStatus) => (status ? toElTagType(statusOf(status).tone, 'info') : 'info');
 
 const formatDateTime = (status?: LabReportStatus, value?: string | null) => {
   if (status === SUBMISSION_STATUS.SAVED) {

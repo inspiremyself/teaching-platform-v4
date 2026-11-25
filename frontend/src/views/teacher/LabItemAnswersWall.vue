@@ -51,6 +51,7 @@ import { useRoute } from 'vue-router';
 import { getTeacherLabItemAnswers } from '@/api/labs';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import type { LabItemAnswerWall, LabReportStatus } from '@/types/lab';
+import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
 
 const route = useRoute();
 const loading = ref(false);
@@ -68,19 +69,11 @@ const fetchWall = async () => {
   }
 };
 
-const statusLabel = (status?: LabReportStatus | null) => {
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
-  return status || '未知';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', kind: 'submission', scene: 'teacher', status });
 
-const statusTagType = (status?: LabReportStatus | null) => {
-  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
-  if (status === SUBMISSION_STATUS.GRADED) return 'success';
-  if (status === SUBMISSION_STATUS.SAVED) return 'info';
-  return 'info';
-};
+const statusLabel = (status?: LabReportStatus | null) => (status ? statusOf(status).label : '未知');
+
+const statusTagType = (status?: LabReportStatus | null) => (status ? toElTagType(statusOf(status).tone, 'info') : 'info');
 
 onMounted(() => {
   void fetchWall();

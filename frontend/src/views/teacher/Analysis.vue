@@ -58,7 +58,7 @@
                   </article>
                   <article class="trend-overview-chip">
                     <span>平均分高点</span>
-                    <strong>{{ maxTrendScore.toFixed(1) }}</strong>
+                    <strong>{{ formatScore(maxTrendScore) }}</strong>
                     <small>当前周期最高均分</small>
                   </article>
                   <article class="trend-overview-chip">
@@ -110,7 +110,7 @@
                     <div v-for="point in trendChartPoints" :key="point.date" class="trend-bar-item">
                       <div class="trend-bar-meta">
                         <strong>{{ point.scoreCount }}</strong>
-                        <span>均分 {{ point.avgScore.toFixed(1) }}</span>
+                        <span>均分 {{ formatScore(point.avgScore) }}</span>
                       </div>
                       <div class="trend-bar-track">
                         <div class="trend-bar-fill" :style="{ height: `${Math.max((point.scoreCount / maxTrendCount) * 100, 8)}%` }"></div><!-- 动态值：按题量占比计算高度 -->
@@ -136,7 +136,7 @@
                 <div v-for="item in sectionComparison" :key="item.className" class="comparison-item">
                   <div class="comparison-item__header">
                     <span>{{ item.className }}</span>
-                    <span class="comparison-item__score">{{ item.avgScore.toFixed(1) }}</span>
+                    <span class="comparison-item__score">{{ formatScore(item.avgScore) }}</span>
                   </div>
                   <div class="comparison-progress-bg">
                     <div class="comparison-progress-fill" :style="{ width: `${Math.min(item.avgScore, 100)}%` }"></div><!-- 动态值：按平均分占比计算宽度 -->
@@ -163,7 +163,7 @@
                     <strong>{{ item.label }}</strong>
                     <p>{{ item.scoreCount }} 条评分记录</p>
                   </div>
-                  <span class="breakdown-score">{{ item.avgScore.toFixed(1) }}</span>
+                  <span class="breakdown-score">{{ formatScore(item.avgScore) }}</span>
                 </div>
               </div>
               <el-empty v-else description="暂无类型分布" />
@@ -196,6 +196,7 @@ import { getAnalysis } from '@/api/teacher';
 import ParticipationPanel from '@/views/teacher/components/ParticipationPanel.vue';
 import type { AnalysisInsight, AnalysisSummaryCard, TeacherAnalysisOverview, TeacherBusinessBreakdownItem, TeacherComparisonItem, TeacherTrendItem } from '@/types/analysis';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import { formatScore } from '@/utils/format';
 
 const loading = ref(false);
 const loaded = ref(false);

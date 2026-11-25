@@ -18,6 +18,7 @@ import {
 import { isDraftAnswered, normalizeStudentAnswerQuestionType, type LabAnswerDraft } from '@/views/student/components/lab-answer/types';
 import { useLabAnswerDrafts } from '@/views/student/components/lab-answer/useLabAnswerDrafts';
 import { behaviorCollector } from '@/utils/behaviorCollector';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 import type { InjectionKey } from 'vue';
 
 export function useStudentLabSteps() {
@@ -122,7 +123,6 @@ const hasGuidanceFile = computed(() =>
 );
 const experimentTypeLabel = (value?: number | null) =>
   LAB_EXPERIMENT_TYPE_LABELS[value || 1] || `类型 ${value}`;
-const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' ').slice(0, 16) : '-');
 const downloadGuidance = async () => {
   if (!detail.value?.materialId || !detail.value?.materialFileName) return;
   try {
@@ -474,12 +474,9 @@ const submitAll = async () => {
   }
 };
 
-const submissionLabel = (status?: LabReportStatus | null) => {
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存草稿';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  return '待开始';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', kind: 'submission', scene: 'student', status, unknownLabel: '待开始' });
+
+const submissionLabel = (status?: LabReportStatus | null) => (status ? statusOf(status).label : '待开始');
 
 const normalizedQuestionType = (type?: LabQuestionType) => {
   if (type === 'SHORT_ANSWER') return 'SHORT_ANSWER';
@@ -619,7 +616,7 @@ onBeforeUnmount(() => {
   behaviorCollector.stop();
 });
 
-  return { SUBMISSION_STATUS, computed, onBeforeUnmount, onMounted, reactive, ref, watch, useRoute, useRouter, onBeforeRouteLeave, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, getStudentLabDetail, saveStudentLabAnswer, submitStudentLab, hydrateDraftFromStep, buildAnswerPayloadJson, buildCompatibilityAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, useLabAnswerDrafts, behaviorCollector, route, router, loading, saving, submitting, detail, currentIndex, summaryDraft, itemAutosaveStates, autosaveTimer, saveQueue, clockTimer, nowMs, isNotStarted, isOverdue, labId, currentItemQueryId, labItems, currentItem, currentDraft, currentQuestionType, currentCodeEditorLanguage, currentItemCodeLanguage, readonly, canSubmit, submitHint, answeredCount, dirtyItemCount, progressPercent, progressText, submissionTagType, currentSaveStateLabel, saveStateClass, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, fetchData, syncDraftState, clearAutosaveTimer, queueSave, updateItemQuery, syncCurrentItemWithQuery, selectItem, draftAnswerOf, savedDraftOf, savedAnswerOf, hasSavedAnswer, isItemDirty, answerStateLabel, persistItem, persistCurrentItem, scheduleAutosave, saveCurrent, goPrev, goNext, persistDirtyItems, submitAll, submissionLabel, normalizedQuestionType, questionTypeLabel, answerHint, isChoiceWithoutOptions, itemFeedback, handleBeforeUnload, ensureDraft, getDraft, patchDraft, buildSavePayload, hydrateAllDrafts, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, formatDateTime, downloadGuidance };
+  return { SUBMISSION_STATUS, computed, onBeforeUnmount, onMounted, reactive, ref, watch, useRoute, useRouter, onBeforeRouteLeave, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, getStudentLabDetail, saveStudentLabAnswer, submitStudentLab, hydrateDraftFromStep, buildAnswerPayloadJson, buildCompatibilityAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, useLabAnswerDrafts, behaviorCollector, route, router, loading, saving, submitting, detail, currentIndex, summaryDraft, itemAutosaveStates, autosaveTimer, saveQueue, clockTimer, nowMs, isNotStarted, isOverdue, labId, currentItemQueryId, labItems, currentItem, currentDraft, currentQuestionType, currentCodeEditorLanguage, currentItemCodeLanguage, readonly, canSubmit, submitHint, answeredCount, dirtyItemCount, progressPercent, progressText, submissionTagType, currentSaveStateLabel, saveStateClass, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, fetchData, syncDraftState, clearAutosaveTimer, queueSave, updateItemQuery, syncCurrentItemWithQuery, selectItem, draftAnswerOf, savedDraftOf, savedAnswerOf, hasSavedAnswer, isItemDirty, answerStateLabel, persistItem, persistCurrentItem, scheduleAutosave, saveCurrent, goPrev, goNext, persistDirtyItems, submitAll, submissionLabel, normalizedQuestionType, questionTypeLabel, answerHint, isChoiceWithoutOptions, itemFeedback, handleBeforeUnload, ensureDraft, getDraft, patchDraft, buildSavePayload, hydrateAllDrafts, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, downloadGuidance };
 }
 
 export type StudentLabStepsState = ReturnType<typeof useStudentLabSteps>;

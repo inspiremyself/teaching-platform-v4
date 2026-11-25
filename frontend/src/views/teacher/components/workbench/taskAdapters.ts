@@ -1,4 +1,5 @@
 import type { DeadlineBucket, TaskFilterSnapshot, TaskRowVM, WorkbenchDomain } from './types'
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 
 type AdapterRecord = Record<string, unknown>
 
@@ -7,11 +8,7 @@ export interface TaskAdapter {
   filtersOf(raw: any): TaskFilterSnapshot
 }
 
-const ACTIVITY_LABELS: Record<string, string> = {
-  DRAFT: '草稿',
-  PUBLISHED: '已发布',
-  CLOSED: '已关闭',
-}
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'workbench', kind: 'activity', scene: 'teacher', status, unknownLabel: '未知' })
 
 const numberOrNull = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null
@@ -28,11 +25,12 @@ export function bucketOf(value: unknown): DeadlineBucket {
 }
 
 function adaptBase(raw: AdapterRecord): TaskRowVM {
+  const status = stringOrNull(raw.status) ?? ''
   return {
     id: numberOrNull(raw.id) ?? 0,
     title: stringOrNull(raw.title) ?? '',
-    status: stringOrNull(raw.status) ?? '',
-    statusLabel: ACTIVITY_LABELS[stringOrNull(raw.status) ?? ''] ?? '未知',
+    status,
+    statusLabel: status ? statusOf(status).label : '未知',
     className: stringOrNull(raw.className) ?? '未分配班级',
     startAt: stringOrNull(raw.startAt),
     endAt: stringOrNull(raw.endAt) ?? stringOrNull(raw.dueAt),

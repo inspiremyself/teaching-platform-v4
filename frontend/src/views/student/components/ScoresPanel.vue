@@ -119,7 +119,7 @@
                     </div>
                     <div class="group-section__meta">
                       <span class="group-section__badge">{{ section.scoreCount }} 条样本</span>
-                      <strong>{{ section.avgScore.toFixed(1) }}</strong>
+                      <strong>{{ formatScore(section.avgScore) }}</strong>
                       <small>组内均分</small>
                     </div>
                   </div>
@@ -130,9 +130,9 @@
                         <div class="exam-record-card__header">
                           <div>
                             <h4>{{ record.businessName }}</h4>
-                            <p>{{ formatDate(record.gradedAt) }}</p>
+                            <p>{{ formatDateTime(record.gradedAt) }}</p>
                           </div>
-                          <span class="score-pill score-pill--exam">{{ formatScore(record.score) }}</span>
+                          <span class="score-pill score-pill--exam">{{ scoreText(record.score) }}</span>
                         </div>
                         <div class="exam-record-card__footer">
                           <AppStatusTag tone="warning" :label="typeLabel(record.businessType)" size="small" />
@@ -154,8 +154,8 @@
                           <strong>{{ record.businessName }}</strong>
                         </div>
                         <div class="record-table__cell">{{ typeLabel(record.businessType) }}</div>
-                        <div class="record-table__cell">{{ formatDate(record.gradedAt) }}</div>
-                        <div class="record-table__cell record-table__cell--score">{{ formatScore(record.score) }}</div>
+                        <div class="record-table__cell">{{ formatDateTime(record.gradedAt) }}</div>
+                        <div class="record-table__cell record-table__cell--score">{{ scoreText(record.score) }}</div>
                         <div class="record-table__cell">
                           <AppStatusTag tone="success" label="已评分" size="small" />
                         </div>
@@ -185,9 +185,9 @@
                   <div class="recent-record-item__main">
                     <div class="recent-record-item__type">{{ typeLabel(record.businessType) }}</div>
                     <h3>{{ record.businessName }}</h3>
-                    <p>{{ formatDate(record.gradedAt) }} · 已纳入成绩总览</p>
+                    <p>{{ formatDateTime(record.gradedAt) }} · 已纳入成绩总览</p>
                   </div>
-                  <div class="recent-record-item__score">{{ formatScore(record.score) }}</div>
+                  <div class="recent-record-item__score">{{ scoreText(record.score) }}</div>
                 </article>
               </div>
 
@@ -258,7 +258,10 @@ import { inject } from 'vue';
 import { ScoresKey } from '@/composables/useScores';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppStatusTag from '@/components/ui/AppStatusTag.vue';
-const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, feedbackNotes, primarySummaryCard, secondarySummaryCards, completionRateNumeric, completionRateDisplay, completedItemsDisplay, strongestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel, formatScore, formatDate } = inject(ScoresKey)!;
+import { formatDateTime, formatScore } from '@/utils/format';
+const { loading, loaded, loadError, summaryCards, groupedScores, recentRecords, feedbackNotes, primarySummaryCard, secondarySummaryCards, completionRateNumeric, completionRateDisplay, completedItemsDisplay, strongestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel } = inject(ScoresKey)!;
+
+const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: true })} 分`;
 </script>
 
 <style scoped>

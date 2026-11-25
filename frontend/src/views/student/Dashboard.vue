@@ -47,7 +47,7 @@
                 </div>
                 <div>
                   <h3>{{ task.title }}</h3>
-                  <p>{{ localizedTaskType(task.type) }} · {{ formatTimeLabel(task.dueAt) }}</p>
+                  <p>{{ localizedTaskType(task.type) }} · {{ formatShortDateTime(task.dueAt, { fallback: '时间待定' }) }}</p>
                 </div>
                 <span class="material-symbols-outlined student-task-card__arrow">arrow_forward_ios</span>
               </button>
@@ -66,7 +66,7 @@
                 <div class="feedback-item__dot"></div>
                 <div>
                   <strong>{{ item.businessName }}</strong>
-                  <p>{{ localizedTaskType(item.businessType) }} · 得分 {{ item.score }} · {{ formatTimeLabel(item.gradedAt) }}</p>
+                  <p>{{ localizedTaskType(item.businessType) }} · 得分 {{ item.score }} · {{ formatShortDateTime(item.gradedAt, { fallback: '时间待定' }) }}</p>
                 </div>
               </div>
             </div>
@@ -119,6 +119,7 @@ import { storeToRefs } from 'pinia';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import { getStudentDashboard } from '@/api/student';
+import { formatShortDateTime } from '@/utils/format';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 type SummaryCard = {
@@ -209,17 +210,6 @@ const loadDashboard = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-const formatTimeLabel = (value: string | null) => {
-  if (!value) {
-    return '时间待定';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
 
 onMounted(loadDashboard);

@@ -1,5 +1,6 @@
 import { computed, onMounted, ref } from 'vue';
 import { getScores } from '@/api/student';
+import { formatDateTime, formatScore } from '@/utils/format';
 import type { AnalysisInsight, AnalysisSummaryCard, StudentGroupedScore, StudentScoreOverview, StudentScoreRecord } from '@/types/analysis';
 import type { InjectionKey } from 'vue';
 
@@ -148,7 +149,7 @@ const actionableInsights = computed<AnalysisInsight[]>(() => {
     insights.push({
       tone: 'warning',
       title: `优先关注 ${weakestGroup.value.label}`,
-      description: `${weakestGroup.value.label} 当前均分为 ${weakestGroup.value.avgScore.toFixed(1)}，是三个成绩板块中最弱的一项，建议先按最近评分记录回看失分点。`,
+      description: `${weakestGroup.value.label} 当前均分为 ${formatScore(weakestGroup.value.avgScore)}，是三个成绩板块中最弱的一项，建议先按最近评分记录回看失分点。`,
     });
   }
 
@@ -171,7 +172,7 @@ const actionableInsights = computed<AnalysisInsight[]>(() => {
     insights.push({
       tone: 'positive',
       title: `保持 ${strongestGroup.value.label} 的优势节奏`,
-      description: `${strongestGroup.value.label} 当前均分达到 ${strongestGroup.value.avgScore.toFixed(1)}，可继续沿用这部分的复习与提交节奏，并把方法迁移到其他板块。`,
+      description: `${strongestGroup.value.label} 当前均分达到 ${formatScore(strongestGroup.value.avgScore)}，可继续沿用这部分的复习与提交节奏，并把方法迁移到其他板块。`,
     });
   }
 
@@ -199,26 +200,13 @@ const typeLabel = (type: StudentScoreRecord['businessType']) => {
   return '考试';
 };
 
-const formatScore = (score: number) => `${score.toFixed(1).replace(/\.0$/, '')} 分`;
-
-const formatDate = (value: string | null) => {
-  if (!value) {
-    return '-';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-};
-
 const scrollToFeedback = () => {
   document.getElementById('feedback-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 onMounted(loadScores);
 
-  return { computed, onMounted, ref, getScores, loading, loaded, loadError, scoreOverview, metricIcons, typeOrder, summaryCards, groupedScores, recentRecords, feedbackNotes, numberValue, primarySummaryCard, secondarySummaryCards, completionCard, completedCard, completionRateNumeric, completionRateDisplay, completedItemsDisplay, progressDetail, strongestGroup, weakestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, sectionIcon, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel, formatScore, formatDate, scrollToFeedback };
+  return { computed, onMounted, ref, getScores, loading, loaded, loadError, scoreOverview, metricIcons, typeOrder, summaryCards, groupedScores, recentRecords, feedbackNotes, numberValue, primarySummaryCard, secondarySummaryCards, completionCard, completedCard, completionRateNumeric, completionRateDisplay, completedItemsDisplay, progressDetail, strongestGroup, weakestGroup, scoreLevelLabel, overallInterpretation, recentHighlights, performanceLabel, sectionIcon, groupSections, actionableInsights, loadScores, secondaryMetricIcon, typeLabel, scrollToFeedback };
 }
 
 export type ScoresState = ReturnType<typeof useScores>;

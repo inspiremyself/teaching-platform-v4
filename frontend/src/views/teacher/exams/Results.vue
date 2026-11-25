@@ -231,6 +231,8 @@ import { useGradingWorkspace, type DraftPort } from '../components/workbench/use
 import GradingWorkspace from '../components/workbench/GradingWorkspace.vue'
 import SubmissionQueue from '../components/workbench/SubmissionQueue.vue'
 import { getExamDetail, getExamResults, getExamSubmissionDetail, gradeExamSubmission, releaseExamScores } from '@/api/exams'
+import { formatShortDateTime } from '@/utils/format'
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 import ExamOptionReview from '@/components/exam/ExamOptionReview.vue'
 import type { ExamAnswerDetail, ExamSubmissionDetail, ExamSubmissionListItem, GradeExamPayload } from '@/types/exam'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
@@ -429,20 +431,9 @@ const releaseScores = async () => {
   }
 }
 
-const submissionStatusLabel = (status: string) => {
-  if (status === EXAM_SUBMISSION_STATUS.IN_PROGRESS) return '进行中'
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '待评分'
-  if (status === SUBMISSION_STATUS.GRADED) return '已评分'
-  if (status === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return '超时提交'
-  return status || '未知'
-}
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'exam', kind: 'examSubmission', scene: 'teacher', status })
 
-const submissionStatusTone = (status: string) => {
-  if (status === SUBMISSION_STATUS.GRADED) return 'success'
-  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning'
-  if (status === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return 'danger'
-  return 'info'
-}
+const submissionStatusLabel = (status: string) => (status ? statusOf(status).label : '未知')
 
 const questionTypeLabel = (type: string) => {
   const map: Record<string, string> = {
@@ -552,11 +543,7 @@ const submissionTimeLabel = (row: ExamSubmissionListItem) => {
   if (!target) {
     return '时间未记录'
   }
-  const date = new Date(target)
-  if (Number.isNaN(date.getTime())) {
-    return target
-  }
-  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  return formatShortDateTime(target, { fallback: '时间未记录' })
 }
 
 const getAvatarText = (name: string, fallback: string) => {

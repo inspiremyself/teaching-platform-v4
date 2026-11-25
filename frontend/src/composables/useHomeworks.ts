@@ -40,6 +40,8 @@ import { buildQuestionPayloadFromDraft, normalizeQuestionType } from '@/componen
 import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion';
 import { defaultScoreByType } from '@/constants/questionScoreDefaults';
 import { useWorkbenchList } from '@/views/teacher/components/workbench/useWorkbench';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
+import { formatDateTime } from '@/utils/format';
 import type { InjectionKey } from 'vue';
 
 export function useHomeworks() {
@@ -638,18 +640,9 @@ const goSubmissions = (homeworkId: number) => {
   router.push(`/teacher/homeworks/${homeworkId}/submissions`);
 };
 
-const statusLabel = (status: HomeworkStatus) => {
-  if (status === ACTIVITY_STATUS.DRAFT) return '草稿';
-  if (status === ACTIVITY_STATUS.PUBLISHED) return '已发布';
-  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭';
-  return status || '未知';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'homework', kind: 'activity', scene: 'teacher', status });
 
-const statusTagType = (status: HomeworkStatus) => {
-  if (status === ACTIVITY_STATUS.PUBLISHED) return 'success';
-  if (status === ACTIVITY_STATUS.CLOSED) return 'info';
-  return 'warning';
-};
+const statusLabel = (status: HomeworkStatus) => (status ? statusOf(status).label : '未知');
 
 const dueHint = (value?: string | null) => {
   if (!value) return '未设置截止时间';
@@ -667,10 +660,6 @@ const dueHint = (value?: string | null) => {
     return '24 小时内截止';
   }
   return `${days} 天后截止`;
-};
-
-const formatDateTime = (value?: string | null) => {
-  return value ? value.replace('T', ' ').slice(0, 16) : '-';
 };
 
 /** 计划满分 = Σ 每题配置分值；只做展示，不参与提交 */
@@ -696,7 +685,7 @@ onMounted(async () => {
   await fetchHomeworks();
 });
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, originalQuestionIds, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, resequenceConfiguredQuestions, mapOptionsForList, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, mergeConfiguredQuestions, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, statusTagType, dueHint, formatDateTime, subjectOptions, fetchSubjects, workbench };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, reactive, ref, useRouter, ElMessage, listClasses, addHomeworkQuestionFromBank, addInlineHomeworkQuestion, changeHomeworkStatus, copyHomeworkQuestionToBank, createHomework, deleteHomeworkQuestion, getTeacherHomeworkDetail, listTeacherHomeworks, releaseHomeworkScores, updateHomework, updateHomeworkQuestion, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, ApiError, buildQuestionPayloadFromDraft, normalizeQuestionType, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, detailLoading, dialogVisible, pickerVisible, questionDialogVisible, editingId, originalStatus, rows, classOptions, configuredQuestions, planTotalScore, originalQuestionIds, saveToQuestionBank, searchQuery, statusFilter, classFilter, dueFilter, questionEditorMode, activeConfiguredQuestionLocalId, form, editingSubmissionCount, filteredRows, publishedCount, draftCount, totalSubmissionCount, activeStatusLabel, classFilterLabel, currentConfiguredQuestion, questionContentLocked, questionReorderLocked, questionLockHint, currentEditorQuestion, questionDialogDescription, questionDialogSubmitText, fetchHomeworks, fetchClasses, resetForm, resetFilters, buildPayload, openCreateDialog, openEditDialog, resequenceConfiguredQuestions, mapOptionsForList, buildConfiguredInlineQuestion, buildConfiguredBankQuestion, mergeConfiguredQuestions, openQuestionPicker, openInlineQuestionEditor, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, editConfiguredQuestion, submitConfiguredQuestion, buildQuestionSavePayload, persistConfiguredQuestions, copyInlineQuestionsAfterSave, copyConfiguredQuestionToBank, submitForm, toggleStatus, releaseScores, goSubmissions, statusLabel, dueHint, subjectOptions, fetchSubjects, workbench };
 }
 
 export type HomeworksState = ReturnType<typeof useHomeworks>;

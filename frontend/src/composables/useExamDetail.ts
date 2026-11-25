@@ -14,6 +14,8 @@ import { ApiError } from '@/utils/request'
 import { useAuthStore } from '@/stores/auth'
 import { shuffleExamQuestions } from '@/utils/examShuffle'
 import { parseQuestionOptions } from '@/utils/examAnswer'
+import { formatShortDateTime } from '@/utils/format'
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 import type { ExamAnswerDetail, ExamDetail, ExamQuestionView } from '@/types/exam'
 import type { StudentChoiceOption, StudentLabStepItem } from '@/types/lab'
 import type { InjectionKey } from 'vue';
@@ -71,7 +73,7 @@ const limitText = computed(() => {
   return `本次限时 ${limitMinutes.value} 分钟${windowTruncated.value ? '（窗口提前结束）' : ''}`
 })
 const deadlineText = computed(() => (
-  deadlineAt.value ? `截止 ${formatDateTime(deadlineAt.value)}` : '截止时间待同步'
+  deadlineAt.value ? `截止 ${formatShortDateTime(deadlineAt.value, { fallback: '未设置' })}` : '截止时间待同步'
 ))
 const isLegacyNoEndAt = computed(() => (
   detail.value?.status === ACTIVITY_STATUS.PUBLISHED && !detail.value?.endAt
@@ -425,14 +427,10 @@ function stopTimer() {
   }
 }
 
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'exam', kind: 'examSubmission', scene: 'student', status })
+
 function statusLabel(status?: string): string {
-  const map: Record<string, string> = {
-    IN_PROGRESS: '进行中',
-    SUBMITTED: '已提交',
-    AUTO_SUBMITTED: '自动提交',
-    GRADED: '已批改',
-  }
-  return status ? map[status] ?? status : '-'
+  return status ? statusOf(status).label : '-'
 }
 
 function formatDisplayAnswer(answer: string | null | undefined): string {
@@ -460,14 +458,7 @@ function loadSavedAnswers() {
 
 function formatWindow(startAt?: string | null, endAt?: string | null): string {
   if (!startAt && !endAt) return '时间待定'
-  return `${formatDateTime(startAt)} - ${formatDateTime(endAt)}`
-}
-
-function formatDateTime(value?: string | null): string {
-  if (!value) return '未设置'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+  return `${formatShortDateTime(startAt, { fallback: '未设置' })} - ${formatShortDateTime(endAt, { fallback: '未设置' })}`
 }
 
 function questionMapTone(questionId: number, index: number) {
@@ -758,7 +749,7 @@ onUnmounted(() => {
 })
 
   return { EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS, computed, onMounted, onUnmounted, ref, watch, useRoute, useRouter, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, buildAnswerPayloadJson, buildCompatibilityAnswerText, hydrateDraftFromAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, getExamDetail, startExam, submitExam, saveExamDraft, ApiError, useAuthStore, shuffleExamQuestions, route, authStore, examId, state, detail, questions, currentIndex, answers, remainingSeconds, starting, submitting, resultAnswerMap, timer, baselineSeconds, baselineAt, lastRemainingSeconds, deadlineAt, deadlineReached,
-  isTimerUrgent, limitMinutes, limitText, deadlineText, isLegacyNoEndAt, windowTruncated, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, planTotalScore, resultStatusDescription, qType, orderedQuestions, normalizeType, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, formatDateTime, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
+  isTimerUrgent, limitMinutes, limitText, deadlineText, isLegacyNoEndAt, windowTruncated, MAX_AUTO_RETRIES, RETRY_INTERVAL_MS, retryTimer, retryCount, deadlineSubmitFailed, DRAFT_DEBOUNCE_MS, draftTimer, draftQueue, draftErrorNotified, currentQuestion, notStarted, currentQuestionDraft, currentQuestionType, currentQuestionOptions, answeredCount, unansweredCount, progressPercent, canShowResult, resultMode, totalScoreText, planTotalScore, resultStatusDescription, qType, orderedQuestions, normalizeType, toStudentLabStepItem, resolveQuestionOptions, normalizeJudgeSavedValue, normalizeSavedAnswer, ensureDraft, updateCurrentQuestionDraft, buildSubmitPayload, flushDraft, scheduleDraftSave, selectedOptionsOf, hasAnswer, questionTypeLabel, answerHint, formatDraftAnswer, formatTime, startTimer, secondsUntil, stopTimer, statusLabel, formatDisplayAnswer, loadSavedAnswers, formatWindow, questionMapTone, displayScore, questionScoreText, referenceAnswerText, resultMetaText, analysisTextOf, resultTone, correctCount, scrollToResultQuestion, doStart, clearRetryTimer, resetSubmitFailure, isAlreadySubmittedError, isRetryableFailure, scheduleAutoRetry, doSubmit, confirmSubmit, autoSubmit, loadExam, onVisibilityChange };
 }
 
 export type ExamDetailState = ReturnType<typeof useExamDetail>;

@@ -7,8 +7,8 @@
           <h2 class="participation-panel__title">{{ row.label }}</h2>
         </div>
         <div class="participation-panel__rates">
-          <span>参与率 {{ row.participationRate.toFixed(1) }}%</span>
-          <span>完成率 {{ row.completionRate.toFixed(1) }}%</span>
+          <span>参与率 {{ formatScore(row.participationRate) }}%</span>
+          <span>完成率 {{ formatScore(row.completionRate) }}%</span>
         </div>
       </header>
 
@@ -59,6 +59,7 @@
 <script setup lang="ts">
 import { useTeacherParticipation } from '@/composables/useTeacherParticipation';
 import type { TeacherParticipationOverview } from '@/types/analysis';
+import { formatScore } from '@/utils/format';
 
 withDefaults(defineProps<{ overview: TeacherParticipationOverview }>(), { overview: () => [] });
 

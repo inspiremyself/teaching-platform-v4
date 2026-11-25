@@ -123,6 +123,8 @@ import { ElMessage } from 'element-plus'
 import { listExams, startExam } from '@/api/exams'
 import type { ExamListItem } from '@/types/exam'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
+import { formatShortDateTime } from '@/utils/format'
 
 const router = useRouter()
 const rows = ref<ExamListItem[]>([])
@@ -178,12 +180,9 @@ const stageLabel = (row: ExamListItem) => {
   return '尚未开放'
 }
 
-const statusLabel = (status: string) => {
-  if (status === ACTIVITY_STATUS.DRAFT) return '草稿'
-  if (status === ACTIVITY_STATUS.PUBLISHED) return '已发布'
-  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭'
-  return status
-}
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'exam', kind: 'activity', scene: 'student', status })
+
+const statusLabel = (status: string) => (status ? statusOf(status).label : '')
 
 const statusTone = (row: ExamListItem) => {
   if (row.canResume) return 'resume'
@@ -192,20 +191,11 @@ const statusTone = (row: ExamListItem) => {
   return 'locked'
 }
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '未设置'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 const formatWindow = (startAt?: string | null, endAt?: string | null) => {
   if (!startAt && !endAt) {
     return '时间待定'
   }
-  return `${formatDateTime(startAt)} - ${formatDateTime(endAt)}`
+  return `${formatShortDateTime(startAt, { fallback: '未设置' })} - ${formatShortDateTime(endAt, { fallback: '未设置' })}`
 }
 
 const availabilityHint = (row: ExamListItem) => {
@@ -215,7 +205,7 @@ const availabilityHint = (row: ExamListItem) => {
   }
   if (row.canResume) return '你已进入答题状态，可从上次进度继续。'
   if (row.startAt && new Date(row.startAt).getTime() > now) {
-    return `考试将于 ${formatDateTime(row.startAt)} 开始`
+    return `考试将于 ${formatShortDateTime(row.startAt, { fallback: '未设置' })} 开始`
   }
   if (!row.submissionStatus && row.endAt && new Date(row.endAt).getTime() <= now) {
     return '已错过考试时间'
@@ -249,7 +239,7 @@ const startDisabledReason = computed(() => {
   const row = startDialogRow.value
   if (!row?.startAt) return ''
   return new Date(row.startAt).getTime() > Date.now()
-    ? `考试将于 ${formatDateTime(row.startAt)} 开始`
+    ? `考试将于 ${formatShortDateTime(row.startAt, { fallback: '未设置' })} 开始`
     : ''
 })
 
@@ -267,7 +257,7 @@ const handleCardAction = (row: ExamListItem) => {
     return
   }
   if (row.startAt && new Date(row.startAt).getTime() > Date.now()) {
-    ElMessage.warning(`考试尚未开始，开始时间 ${formatDateTime(row.startAt)}`)
+    ElMessage.warning(`考试尚未开始，开始时间 ${formatShortDateTime(row.startAt, { fallback: '未设置' })}`)
   } else {
     ElMessage.warning('当前不在可参加或可查看结果的窗口')
   }

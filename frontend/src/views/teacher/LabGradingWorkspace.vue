@@ -144,6 +144,7 @@ import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
 import BehaviorSummaryCard from './components/BehaviorSummaryCard.vue';
 import LabAnswerImageGallery from '@/components/lab/LabAnswerImageGallery.vue';
 import { extractReportImages } from '@/utils/labReportImages';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 import { createSharedDraftPort, useGradingWorkspace } from './components/workbench/useWorkbench';
 import { questionTypeLabel, scoringStrategyOf } from './components/scoreDisplay';
 import type { GradingDraftState } from './components/scoreDisplay';
@@ -260,12 +261,9 @@ const canReturn = computed(() =>
 const pendingCount = computed(() => rawRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.SUBMITTED).length);
 const gradedCount = computed(() => rawRows.value.filter(row => row.submitStatus === SUBMISSION_STATUS.GRADED).length);
 
-const statusLabel = (status?: LabReportStatus | null) => {
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
-  return status || '未知';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', kind: 'submission', scene: 'teacher', status });
+
+const statusLabel = (status?: LabReportStatus | null) => (status ? statusOf(status).label : '未知');
 
 const itemMaxScore = (item: LabReportAnswerItem): number => labStrategy.adapt(item).maxScore ?? 0;
 

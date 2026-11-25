@@ -1,4 +1,5 @@
 import { scoringStrategyOf, type ScoreLineItem, type ScoringSummary } from '../scoringStrategies'
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 import type { QueueItemVM, WorkbenchDomain } from './types'
 
 type AdapterRecord = Record<string, unknown>
@@ -9,18 +10,13 @@ const numberOrNull = (value: unknown): number | null =>
 const stringOrNull = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null
 
-const EXAM_STATUS_LABELS: Record<string, string> = {
-  IN_PROGRESS: '进行中',
-  SUBMITTED: '待评分',
-  AUTO_SUBMITTED: '超时提交',
-  GRADED: '已评分',
-}
-
-const SUBMISSION_STATUS_LABELS: Record<string, string> = {
-  SAVED: '草稿',
-  SUBMITTED: '待评分',
-  GRADED: '已评分',
-}
+const statusOf = (status: string, domain: WorkbenchDomain) => resolveStatusPresentation({
+  module: 'workbench',
+  kind: domain === 'EXAM' ? 'examSubmission' : 'submission',
+  scene: 'teacher',
+  status,
+  unknownLabel: '未知',
+})
 
 export interface SubmissionAdapter {
   adapt(raw: any, options: { draftFlag?: boolean }): QueueItemVM
@@ -45,14 +41,13 @@ function adaptBase(raw: AdapterRecord, domain: WorkbenchDomain, draftFlag: boole
     domain === 'EXAM'
       ? stringOrNull(raw.status) ?? ''
       : stringOrNull(raw.submitStatus) ?? 'SAVED'
-  const labels = domain === 'EXAM' ? EXAM_STATUS_LABELS : SUBMISSION_STATUS_LABELS
   const scores = domain === 'HOMEWORK' ? homeworkScores(raw) : { objective: null, manual: null }
 
   return {
     id: (raw.submissionId ?? raw.id ?? '') as number | string,
     studentName: stringOrNull(raw.studentName) ?? stringOrNull(raw.studentUsername) ?? '未知学生',
     status,
-    statusLabel: labels[status] ?? '未知',
+    statusLabel: status ? statusOf(status, domain).label : '未知',
     objectiveScore:
       domain === 'EXAM' ? numberOrNull(raw.autoScore) : scores.objective,
     manualScore:

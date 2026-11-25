@@ -107,6 +107,7 @@ import type { StudentLabListItem } from '@/types/lab';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppMetaChip from '@/components/ui/AppMetaChip.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
+import { formatDateTime } from '@/utils/format';
 
 type TaskFilter = '' | 'TODO' | 'ACTIVE' | SubmissionStatus;
 
@@ -197,8 +198,6 @@ const actionLabel = (row: StudentLabListItem) => {
   if (row.submissionStatus === SUBMISSION_STATUS.SAVED) return '继续实验';
   return '开始实验';
 };
-
-const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' ').slice(0, 16) : '-');
 
 const labTimeState = (row: StudentLabListItem) => {
   const now = Date.now();

@@ -20,6 +20,8 @@ import type { QuestionItem } from '@/types/question'
 import { buildQuestionPayloadFromDraft } from '@/components/typed-editor/adapters/questionAdapter'
 import { parseQuestionAnswerArray } from '@/components/typed-editor/hydrators/fromQuestion'
 import { useWorkbenchList } from '@/views/teacher/components/workbench/useWorkbench'
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
+import { formatDateTime } from '@/utils/format'
 import type { InjectionKey } from 'vue';
 
 export function useExamList() {
@@ -537,27 +539,15 @@ const goResults = (id: number) => {
   router.push(`/teacher/exams/${id}/results`)
 }
 
-const statusLabel = (status: string) => {
-  if (status === ACTIVITY_STATUS.DRAFT) return '草稿'
-  if (status === ACTIVITY_STATUS.PUBLISHED) return '已发布'
-  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭'
-  return status || '未知'
-}
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'exam', kind: 'activity', scene: 'teacher', status })
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '未设置'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value.replace('T', ' ').slice(0, 16)
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
+const statusLabel = (status: string) => (status ? statusOf(status).label : '未知')
 
 const formatWindow = (startAt?: string | null, endAt?: string | null) => {
   if (!startAt && !endAt) {
     return '未配置考试窗口'
   }
-  return `${formatDateTime(startAt)} 至 ${formatDateTime(endAt)}`
+  return `${formatDateTime(startAt, { fallback: '未设置' })} 至 ${formatDateTime(endAt, { fallback: '未设置' })}`
 }
 
 const examDescription = (row: ExamListItem) => {
@@ -604,7 +594,7 @@ onMounted(async () => {
   await fetchExams()
 })
 
-  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatDateTime, formatWindow, examDescription, submissionHint, subjectOptions, fetchSubjects, workbench };
+  return { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, computed, onMounted, ref, useRouter, ElMessage, ElMessageBox, listClasses, listQuestions, updateQuestion, changeExamStatus, createExam, getExamDetail, listExams, updateExam, QuestionConfigList, QuestionEditorDialog, QuestionPickerDialog, buildQuestionPayloadFromDraft, parseQuestionAnswerArray, router, loading, submitting, questionSubmitting, dialogVisible, pickerVisible, questionDialogVisible, editingId, rows, classOptions, questionPool, configuredQuestions, planTotalScore, legacyInlineQuestions, searchQuery, statusFilter, classFilter, activeConfiguredQuestionLocalId, form, filteredRows, draftCount, publishedCount, totalSubmissionCount, highlightedExam, highlightedExamTitle, highlightedExamMeta, headerCellStyle, currentConfiguredQuestion, currentEditorQuestion, isLegacyScoreMode, legacyScoreModeLabel, hasSubjectiveQuestion, durationExceedsWindow, windowTruncationHint, fetchExams, fetchClasses, fetchQuestions, resequenceConfiguredQuestions, mergeConfiguredQuestions, resetForm, openCreateDialog, openEditDialog, openQuestionPicker, applyPickedQuestions, handleConfiguredQuestionsReorder, handleConfiguredQuestionScoreChange, removeConfiguredQuestion, removeLegacyInlineQuestion, editConfiguredQuestion, syncConfiguredBankQuestion, submitConfiguredQuestion, submitForm, publishExam, closeExam, goResults, statusLabel, formatWindow, examDescription, submissionHint, subjectOptions, fetchSubjects, workbench };
 }
 
 export type ExamListState = ReturnType<typeof useExamList>;

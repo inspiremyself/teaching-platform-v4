@@ -104,6 +104,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { listStudentHomeworks } from '@/api/homeworks';
 import type { HomeworkListItem, HomeworkStatus, HomeworkSubmissionStatus } from '@/types/homework';
+import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
+import { formatDateTime } from '@/utils/format';
 
 const router = useRouter();
 const loading = ref(false);
@@ -162,12 +164,9 @@ const resetFilters = () => {
   submissionFilter.value = '';
 };
 
-const statusLabel = (status: HomeworkStatus) => {
-  if (status === ACTIVITY_STATUS.PUBLISHED) return '进行中';
-  if (status === ACTIVITY_STATUS.CLOSED) return '已关闭';
-  if (status === ACTIVITY_STATUS.DRAFT) return '草稿';
-  return status || '未知';
-};
+const activityStatusOf = (status: HomeworkStatus) => resolveStatusPresentation({ module: 'homework', kind: 'activity', scene: 'student', status });
+
+const statusLabel = (status: HomeworkStatus) => (status ? activityStatusOf(status).label : '未知');
 
 const taskStageLabel = (row: HomeworkListItem) => {
   if (row.submissionStatus === SUBMISSION_STATUS.GRADED) return '已批改';
@@ -176,19 +175,11 @@ const taskStageLabel = (row: HomeworkListItem) => {
   return statusLabel(row.status);
 };
 
-const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => {
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  return '未开始';
-};
+const submissionStatusOf = (status: string) => resolveStatusPresentation({ module: 'homework', kind: 'submission', scene: 'student', status, unknownLabel: '未开始' });
 
-const statusTagType = (status?: HomeworkSubmissionStatus | null) => {
-  if (status === SUBMISSION_STATUS.GRADED) return 'success';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
-  if (status === SUBMISSION_STATUS.SAVED) return 'info';
-  return 'primary';
-};
+const submissionStatusLabel = (status?: HomeworkSubmissionStatus | null) => (status ? submissionStatusOf(status).label : '未开始');
+
+const statusTagType = (status?: HomeworkSubmissionStatus | null) => (status ? toElTagType(submissionStatusOf(status).tone, 'primary') : 'primary');
 
 const dueHint = (value?: string | null) => {
   if (!value) return '时间待定';
@@ -202,10 +193,6 @@ const dueHint = (value?: string | null) => {
   if (diff < 0) return `已截止 ${days} 天`;
   if (days <= 1) return '24 小时内截止';
   return `${days} 天后截止`;
-};
-
-const formatDateTime = (value?: string | null) => {
-  return value ? value.replace('T', ' ').slice(0, 16) : '-';
 };
 
 onMounted(fetchData);

@@ -214,6 +214,8 @@ import {
 } from '@/api/homeworks';
 import type { GradeHomeworkRequest, HomeworkQuestionAnswer, HomeworkSubmissionItem, HomeworkSubmissionStatus } from '@/types/homework';
 import { releaseHomeworkScores } from '@/api/homeworks';
+import { formatScore } from '@/utils/format';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 import { useGradingWorkspace, type DraftPort } from './components/workbench/useWorkbench';
 import GradingWorkspace from './components/workbench/GradingWorkspace.vue';
 import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
@@ -284,7 +286,7 @@ const averageScoreText = computed(() => {
   const scored = filteredRows.value.filter(row => typeof row.totalScore === 'number');
   if (!scored.length) return '-';
   const avg = scored.reduce((sum, row) => sum + (row.totalScore ?? 0), 0) / scored.length;
-  return `${avg.toFixed(1)} 分`;
+  return `${formatScore(avg)} 分`;
 });
 
 const fetchData = async () => {
@@ -451,21 +453,12 @@ const resetFilters = () => {
   statusFilter.value = '';
 };
 
-const submissionStatusLabel = (status: HomeworkSubmissionStatus) => {
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '待批改';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  return status || '未知';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'homework', kind: 'submission', scene: 'teacher', status });
 
-const submissionStatusTagType = (status: HomeworkSubmissionStatus) => {
-  if (status === SUBMISSION_STATUS.GRADED) return 'success';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
-  return 'info';
-};
+const submissionStatusLabel = (status: HomeworkSubmissionStatus) => (status ? statusOf(status).label : '未知');
 
 const scoreText = (score?: number | null) => {
-  return typeof score === 'number' ? score.toFixed(1) : '待评分';
+  return typeof score === 'number' ? formatScore(score) : '待评分';
 };
 
 const previewText = (text?: string | null) => {

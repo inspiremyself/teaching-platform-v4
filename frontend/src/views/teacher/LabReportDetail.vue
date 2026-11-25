@@ -241,6 +241,8 @@ import SubmissionQueue from './components/workbench/SubmissionQueue.vue';
 import { submissionAdapterOf } from './components/workbench/submissionAdapters';
 import type { LabQuestionType, LabReportAnswerItem, LabReportDetail, LabReportItem, LabReportStatus } from '@/types/lab';
 import { extractReportImages } from '@/utils/labReportImages';
+import { formatDateTime } from '@/utils/format';
+import { resolveStatusPresentation } from '@/components/ui/statusPresentation';
 import {
   buildScoringSummary,
   createGradingDraft,
@@ -358,12 +360,9 @@ const isValidItemId = (value: unknown): value is number => typeof value === 'num
 const itemKey = (item: LabReportAnswerItem) => String(resolveItemId(item) ?? 0);
 const gradeKey = (item: LabReportAnswerItem) => itemKey(item);
 
-const statusLabel = (status?: LabReportStatus) => {
-  if (status === SUBMISSION_STATUS.SAVED) return '已保存';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return '已提交';
-  if (status === SUBMISSION_STATUS.GRADED) return '已批改';
-  return status || '未知';
-};
+const statusOf = (status: string) => resolveStatusPresentation({ module: 'lab', kind: 'submission', scene: 'teacher', status });
+
+const statusLabel = (status?: LabReportStatus) => (status ? statusOf(status).label : '未知');
 
 const ensureGradeEntry = (item: LabReportAnswerItem) => {
   const key = gradeKey(item);
@@ -482,8 +481,6 @@ const fetchData = async () => {
   await restoreScrollContext();
   await scrollToQueryAnswer();
 };
-
-const formatDateTime = (value?: string | null) => value ? value.replace('T', ' ').slice(0, 16) : '-';
 
 const scrollToAnswer = (key: string) => {
   const element = document.getElementById(`answer-${key}`);

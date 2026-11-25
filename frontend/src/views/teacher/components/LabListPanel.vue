@@ -275,11 +275,11 @@ import WorkbenchShell from './workbench/WorkbenchShell.vue';
 import ActionButton from './workbench/ActionButton.vue';
 import StatusPill from './workbench/StatusPill.vue';
 import TaskEditorDialog from './workbench/TaskEditorDialog.vue';
-const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, subjectOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, statusTagType, statusTone, scoreVisibilityLabel, updatedLabel, workbench } = inject(LabsKey)!;
+import { formatDateTime } from '@/utils/format';
+const { ACTIVITY_STATUS, SCORE_VISIBILITY_MODE, loading, submitting, createDialogVisible, editingId, rows, classOptions, subjectOptions, searchKeyword, statusFilter, classFilter, uploadingGuidance, createMode, sourceLabId, experimentTypeOptions, createForm, publishedCount, draftCount, summaryRequiredCount, sourceLab, sourceLabLabel, handleSourceLabChange, filteredRows, activeStatusLabel, activeClassLabel, resetFilters, openCreateDialog, openEditDialog, experimentTypeLabel, handleGuidanceSelected, clearGuidance, submitCreate, goSteps, goResult, goBlankRegrade, toggleStatus, statusLabel, scoreVisibilityLabel, updatedLabel, workbench } = inject(LabsKey)!;
 const toneOf = (status: string): 'draft' | 'published' | 'closed' | 'warning' =>
   status === 'DRAFT' ? 'draft' : status === 'PUBLISHED' ? 'published' : status === 'CLOSED' ? 'closed' : 'warning';
 const headerCellStyle = () => ({ background: '#f8fafc', color: '#475569', fontWeight: 700 });
-const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' ').slice(0, 16) : '-');
 </script>
 
 <style scoped>

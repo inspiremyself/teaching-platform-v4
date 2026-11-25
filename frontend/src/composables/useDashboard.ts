@@ -1,6 +1,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { getTeacherDashboard } from '@/api/teacher';
+import { formatScore } from '@/utils/format';
 import type { InjectionKey } from 'vue';
 
 export function useDashboard() {
@@ -97,7 +98,7 @@ const trendAverageValue = computed(() => {
   }
   return trendTotalCount.value / trend.value.length;
 });
-const trendAverageText = computed(() => trend.value.length ? trendAverageValue.value.toFixed(1) : '0');
+const trendAverageText = computed(() => trend.value.length ? formatScore(trendAverageValue.value) : '0');
 const trendPulseShortText = computed(() => {
   if (trendPulseTitle.value === '存在明显评分高峰') return '有高峰';
   if (trendPulseTitle.value === '评分节奏总体平稳') return '平稳';
@@ -116,7 +117,7 @@ const peakTrendHint = computed(() => {
   if (!peakTrendItem.value) {
     return '当前还没有形成可对比的评分峰值。';
   }
-  return `${peakTrendItem.value.date.slice(5)} 共完成 ${peakTrendItem.value.scoreCount} 条评分记录，均分 ${peakTrendItem.value.avgScore.toFixed(1)}。`;
+  return `${peakTrendItem.value.date.slice(5)} 共完成 ${peakTrendItem.value.scoreCount} 条评分记录，均分 ${formatScore(peakTrendItem.value.avgScore)}。`;
 });
 const urgentTaskCount = computed(() => recentTasks.value.filter(task => /待|催|预警|逾期|异常|未/.test(`${task.label}${task.title}`)).length);
 const distinctActorsCount = computed(() => new Set(recentTasks.value.map(task => task.actor).filter(Boolean)).size);
@@ -201,7 +202,7 @@ const trendFocusDescription = computed(() => {
     return '当前首页已出现明确待办压力，建议先从待办与提醒面板进入对应页面处理。';
   }
   if (peakTrendItem.value) {
-    return `峰值日均分 ${peakTrendItem.value.avgScore.toFixed(1)}，可进一步结合业务页核对评分结果和提交质量。`;
+    return `峰值日均分 ${formatScore(peakTrendItem.value.avgScore)}，可进一步结合业务页核对评分结果和提交质量。`;
   }
   return '如果暂无显著峰值或任务，可从快捷入口继续巡视班级、题库和提交列表。';
 });
