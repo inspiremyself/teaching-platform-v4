@@ -35,8 +35,15 @@
     </AppToolbarCard>
 
     <section class="lab-list-shell" v-loading="loading">
-      <template v-if="filteredRows.length">
-        <article v-for="row in filteredRows" :key="row.id" class="student-lab-card">
+      <div v-if="loadError" class="state-card">
+        <AppEmptyState tone="error" title="实验任务加载失败" :description="loadError">
+          <template #actions>
+            <el-button type="primary" @click="fetchData">重新加载</el-button>
+          </template>
+        </AppEmptyState>
+      </div>
+      <template v-else-if="filteredRows.length">
+        <article v-for="row in filteredRows" :key="row.id" class="app-task-card student-lab-card">
           <div class="student-lab-card__main">
             <div class="student-lab-card__title-line">
               <div>
@@ -46,7 +53,7 @@
               <el-tag :type="submissionTagType(row)" effect="light">{{ taskStatusLabel(row) }}</el-tag>
             </div>
 
-            <div class="student-lab-card__meta-grid">
+            <div class="app-task-meta-grid student-lab-card__meta-grid">
               <div>
                 <span class="meta-label">班级</span>
                 <strong>{{ row.className }}</strong>
@@ -73,15 +80,7 @@
                   {{ row.summaryRequired ? '提交时需写实验小结' : '实验小结选填' }}
                 </span>
               </div>
-              <div class="student-lab-card__progress-row">
-                <div class="progress-header">
-                  <span>{{ progressText(row) }}</span>
-                  <span>{{ progressPercent(row) }}%</span>
-                </div>
-                <div class="progress-track">
-                  <span class="progress-fill" :style="{ width: `${progressPercent(row)}%` }"></span><!-- 动态值：按实验作答进度计算宽度 -->
-                </div>
-              </div>
+              <span class="lab-progress-text">{{ progressText(row) }}</span>
             </div>
           </div>
 
@@ -107,6 +106,7 @@ import type { StudentLabListItem } from '@/types/lab';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppMetaChip from '@/components/ui/AppMetaChip.vue';
 import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
+import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
 import { formatDateTime } from '@/utils/format';
 import { useKeywordFilter } from '@/composables/useKeywordFilter';
 
@@ -114,6 +114,7 @@ type TaskFilter = '' | 'TODO' | 'ACTIVE' | SubmissionStatus;
 
 const router = useRouter();
 const loading = ref(false);
+const loadError = ref('');
 const rows = ref<StudentLabListItem[]>([]);
 const searchKeyword = ref('');
 const statusFilter = ref<TaskFilter>('');
@@ -138,8 +139,11 @@ const keywordLabel = computed(() => (searchKeyword.value.trim() ? `关键词“$
 
 const fetchData = async () => {
   loading.value = true;
+  loadError.value = '';
   try {
     rows.value = await listStudentLabs();
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '实验任务加载失败';
   } finally {
     loading.value = false;
   }
@@ -165,23 +169,13 @@ const statusFilterLabel = (value: TaskFilter) => {
   return '全部任务';
 };
 
-const taskStatusLabel = (row: StudentLabListItem) => statusFilterLabel(taskFilterOf(row));
-
-const submissionTagType = (row: StudentLabListItem) => {
-  const status = taskFilterOf(row);
-  if (status === SUBMISSION_STATUS.GRADED) return 'success';
-  if (status === SUBMISSION_STATUS.SUBMITTED) return 'warning';
-  if (status === 'ACTIVE') return 'primary';
-  return 'info';
+const labStatusOf = (row: StudentLabListItem) => {
+  const filter = taskFilterOf(row);
+  const status = filter === 'TODO' ? '' : filter === 'ACTIVE' ? SUBMISSION_STATUS.SAVED : filter;
+  return resolveStatusPresentation({ module: 'lab', kind: 'submission', scene: 'student', status, unknownLabel: '待开始' });
 };
-
-const progressPercent = (row: StudentLabListItem) => {
-  const status = taskFilterOf(row);
-  if (status === SUBMISSION_STATUS.GRADED) return 100;
-  if (status === SUBMISSION_STATUS.SUBMITTED) return 88;
-  if (status === 'ACTIVE') return 54;
-  return 12;
-};
+const submissionTagType = (row: StudentLabListItem) => toElTagType(labStatusOf(row).tone, 'info');
+const taskStatusLabel = (row: StudentLabListItem) => labStatusOf(row).label;
 
 const progressText = (row: StudentLabListItem) => {
   if (row.submissionStatus === SUBMISSION_STATUS.GRADED) return '已批改，可查看题项反馈与实验小结';
@@ -388,32 +382,11 @@ onMounted(fetchData);
   margin-top: 12px;
 }
 
-.student-lab-card__progress-row {
-  min-width: 240px;
-}
-
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: var(--font-size-sm);
+.lab-progress-text {
+  margin-left: auto;
+  text-align: right;
   color: var(--color-text-muted);
-}
-
-.progress-track {
-  margin-top: 6px;
-  width: 100%;
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: rgba(148, 163, 184, 0.18);
-  overflow: hidden;
-}
-
-.progress-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--color-brand-student), var(--color-brand-student-accent));
+  font-size: var(--font-size-sm);
 }
 
 .student-lab-card__side {
@@ -447,20 +420,16 @@ onMounted(fetchData);
     flex-direction: column;
     align-items: stretch;
   }
-
-  .student-lab-card__progress-row {
-    min-width: 0;
-  }
 }
 
 @media (max-width: 900px) {
-  .labs-header-card,
-  .student-lab-card__meta-grid {
+  .labs-header-card {
     grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
-  .labs-header-card {
-    flex-direction: column;
+  .student-lab-card__meta-grid {
+    grid-template-columns: 1fr;
   }
 
   .labs-header-card__stats {

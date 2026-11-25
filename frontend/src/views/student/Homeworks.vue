@@ -11,14 +11,14 @@
       </div>
 
       <div class="workbench-meta student-homeworks-meta">
-        <span class="workbench-meta__item"><strong>{{ filteredRows.length }}</strong> 当前可见</span>
-        <span class="workbench-meta__item"><strong>{{ activeCount }}</strong> 进行中</span>
-        <span class="workbench-meta__item"><strong>{{ upcomingCount }}</strong> 即将截止</span>
-        <span class="workbench-meta__item workbench-meta__item--accent"><strong>{{ completedCount }}</strong> 已提交/批改</span>
+        <AppMetaChip :value="String(filteredRows.length)" label="当前可见" />
+        <AppMetaChip :value="String(activeCount)" label="进行中" />
+        <AppMetaChip :value="String(upcomingCount)" label="即将截止" />
+        <AppMetaChip :value="String(completedCount)" label="已提交/批改" tone="accent" />
       </div>
     </section>
 
-    <section class="student-toolbar-card">
+    <AppToolbarCard class="student-toolbar-card">
       <div class="student-toolbar-card__main">
         <div class="student-toolbar-search">
           <span class="material-symbols-outlined">search</span>
@@ -46,11 +46,18 @@
         <span>当前筛出 {{ filteredRows.length }} 条</span>
         <el-button link type="primary" @click="resetFilters">清空筛选</el-button>
       </div>
-    </section>
+    </AppToolbarCard>
 
     <section class="student-homework-list" v-loading="loading">
-      <template v-if="filteredRows.length">
-          <article v-for="row in filteredRows" :key="row.id" class="student-homework-card student-homework-card--compact">
+      <div v-if="loadError" class="state-card">
+        <AppEmptyState tone="error" title="作业任务加载失败" :description="loadError">
+          <template #actions>
+            <el-button type="primary" @click="fetchData">重新加载</el-button>
+          </template>
+        </AppEmptyState>
+      </div>
+      <template v-else-if="filteredRows.length">
+          <article v-for="row in filteredRows" :key="row.id" class="app-task-card student-homework-card student-homework-card--compact">
             <div class="student-homework-card__head">
               <div class="student-homework-card__title-wrap">
                 <div class="student-homework-card__topline">
@@ -72,7 +79,7 @@
               </div>
             </div>
 
-          <div class="student-homework-card__info-row">
+          <div class="app-task-meta-grid student-homework-card__info-row">
             <div class="homework-info-chip">
               <span class="student-homework-card__label">作业状态</span>
               <strong>{{ taskStageLabel(row) }}</strong>
@@ -93,7 +100,7 @@
         </article>
       </template>
 
-      <el-empty v-else description="暂无匹配作业" />
+      <AppEmptyState v-else description="暂无匹配作业" />
     </section>
   </div>
 </template>
@@ -105,11 +112,15 @@ import { useRouter } from 'vue-router';
 import { listStudentHomeworks } from '@/api/homeworks';
 import type { HomeworkListItem, HomeworkStatus, HomeworkSubmissionStatus } from '@/types/homework';
 import { resolveStatusPresentation, toElTagType } from '@/components/ui/statusPresentation';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppMetaChip from '@/components/ui/AppMetaChip.vue';
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue';
 import { formatDateTime } from '@/utils/format';
 import { useKeywordFilter } from '@/composables/useKeywordFilter';
 
 const router = useRouter();
 const loading = ref(false);
+const loadError = ref('');
 const rows = ref<HomeworkListItem[]>([]);
 const searchQuery = ref('');
 const statusFilter = ref<HomeworkStatus | ''>('');
@@ -146,8 +157,11 @@ const upcomingCount = computed(() => {
 
 const fetchData = async () => {
   loading.value = true;
+  loadError.value = '';
   try {
     rows.value = await listStudentHomeworks();
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '作业任务加载失败';
   } finally {
     loading.value = false;
   }

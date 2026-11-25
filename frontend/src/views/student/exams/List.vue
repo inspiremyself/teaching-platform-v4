@@ -12,14 +12,14 @@
       </div>
 
       <div class="workbench-meta student-exams-meta">
-        <span class="workbench-meta__item"><strong>{{ startableCount }}</strong> 可参加</span>
-        <span class="workbench-meta__item"><strong>{{ resumableCount }}</strong> 进行中</span>
-        <span class="workbench-meta__item"><strong>{{ resultCount }}</strong> 已出结果</span>
-        <span class="workbench-meta__item workbench-meta__item--accent">{{ activeFilterLabel }}</span>
+        <AppMetaChip :value="String(startableCount)" label="可参加" />
+        <AppMetaChip :value="String(resumableCount)" label="进行中" />
+        <AppMetaChip :value="String(resultCount)" label="已出结果" />
+        <AppMetaChip :label="activeFilterLabel" tone="accent" />
       </div>
     </section>
 
-    <section class="exams-toolbar-card">
+    <AppToolbarCard class="exams-toolbar-card">
       <div class="toolbar-search">
         <span class="material-symbols-outlined">search</span>
         <el-input v-model="searchQuery" placeholder="搜索考试标题或班级" clearable />
@@ -32,14 +32,18 @@
           <el-option label="暂不可用" value="locked" />
         </el-select>
       </div>
-    </section>
+    </AppToolbarCard>
 
-    <div v-if="loading && !rows.length" class="loading-shell">
-      <el-skeleton :rows="8" animated />
-    </div>
-
-    <section v-else class="exam-grid">
-      <article v-for="row in filteredRows" :key="row.id" class="exam-card exam-card--compact">
+    <section class="exam-grid" v-loading="loading">
+      <div v-if="loadError" class="state-card">
+        <AppEmptyState tone="error" title="考试任务加载失败" :description="loadError">
+          <template #actions>
+            <el-button type="primary" @click="loadExams">重新加载</el-button>
+          </template>
+        </AppEmptyState>
+      </div>
+      <template v-else-if="filteredRows.length">
+      <article v-for="row in filteredRows" :key="row.id" class="app-task-card exam-card exam-card--compact">
         <div class="exam-card__head">
           <div class="exam-card__title-wrap">
             <div class="exam-card__topline">
@@ -54,7 +58,7 @@
           </div>
         </div>
 
-        <div class="exam-card__info-row">
+        <div class="app-task-meta-grid exam-card__info-row">
           <div class="exam-info-chip">
             <span>考试窗口</span>
             <strong>{{ formatWindow(row.startAt, row.endAt) }}</strong>
@@ -71,14 +75,15 @@
 
         <div class="exam-card__footer exam-card__footer--compact">
           <span class="exam-inline-hint">{{ stageLabel(row) }} · {{ statusLabel(row.status) }}</span>
-          <button class="exam-action exam-action--compact" type="button" @click="handleCardAction(row)">
+          <el-button type="primary" @click="handleCardAction(row)">
             {{ actionText(row) }}
             <span class="material-symbols-outlined">arrow_forward</span>
-          </button>
+          </el-button>
         </div>
       </article>
+      </template>
 
-      <AppEmptyState v-if="!filteredRows.length" description="暂无匹配考试" class="empty-state" />
+      <AppEmptyState v-else description="暂无匹配考试" class="empty-state" />
     </section>
 
     <el-dialog v-model="startDialogVisible" title="确认开始考试" width="min(560px, calc(100vw - 40px))" destroy-on-close>
@@ -123,6 +128,8 @@ import { ElMessage } from 'element-plus'
 import { listExams, startExam } from '@/api/exams'
 import type { ExamListItem } from '@/types/exam'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
+import AppMetaChip from '@/components/ui/AppMetaChip.vue'
+import AppToolbarCard from '@/components/ui/AppToolbarCard.vue'
 import { resolveStatusPresentation } from '@/components/ui/statusPresentation'
 import { formatShortDateTime } from '@/utils/format'
 import { useKeywordFilter } from '@/composables/useKeywordFilter'
@@ -130,6 +137,7 @@ import { useKeywordFilter } from '@/composables/useKeywordFilter'
 const router = useRouter()
 const rows = ref<ExamListItem[]>([])
 const loading = ref(false)
+const loadError = ref('')
 const searchQuery = ref('')
 const stageFilter = ref<'start' | 'resume' | 'result' | 'locked' | ''>('')
 const startDialogVisible = ref(false)
@@ -158,8 +166,11 @@ const filteredRows = computed(() =>
 
 const loadExams = async () => {
   loading.value = true
+  loadError.value = ''
   try {
     rows.value = await listExams()
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '考试任务加载失败'
   } finally {
     loading.value = false
   }
@@ -469,25 +480,6 @@ onMounted(loadExams)
 .exam-inline-hint {
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
-}
-
-.exam-action {
-  border: none;
-  border-radius: var(--radius-lg);
-  background: #191c22;
-  color: var(--color-text-inverse);
-  padding: 8px 11px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.exam-action--compact {
-  width: auto;
 }
 
 .empty-state {

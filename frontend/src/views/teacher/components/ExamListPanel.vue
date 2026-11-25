@@ -5,7 +5,7 @@
   >
     <template #actions>
       <ActionButton label="刷新列表" tone="ghost" :disabled="loading" @click="fetchExams" />
-      <ActionButton label="创建考试" tone="primary" @click="openCreateDialog" />
+      <ActionButton label="新建考试" tone="primary" @click="openCreateDialog" />
     </template>
     <template #meta>
       <span class="workbench-meta__item"><strong>{{ workbench.meta.value.total }}</strong> 任务总数</span>

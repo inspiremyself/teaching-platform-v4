@@ -44,7 +44,7 @@ frontend/
 | 学生端页面 | `src/views/student/` | 其下已有学生页 AGENTS |
 | 全局样式与壳层 | `src/assets/` `src/layout/` | 页面骨架与全局视觉基础 |
 | 设计体系分层 | `src/assets/tokens.css` `src/assets/layout.css` `src/components/ui/` | token → 骨架类 → 共享组件 → 页面，单向依赖 |
-| 设计门禁与基线 | `src/assets/__tests__/designTokens.spec.ts` `designTokenBaseline.json` | 8 条断言约束 token/断点/图标/尺寸；基线只降不升 |
+| 设计门禁与基线 | `src/assets/__tests__/designTokens.spec.ts` `designTokenBaseline.json` | 11 条断言约束 token/断点/图标/排版/尺寸；基线只降不升 |
 
 ## 规范引用（细则不在本文件重复）
 
@@ -65,7 +65,7 @@ frontend/
 - 本地联调时，Vite 代理目标现在可通过 `VITE_API_TARGET` 覆盖，不必再假设后端固定跑在 `8080`。
 - 若需要接入 H2/test profile 后端，推荐：`cmd /c "set VITE_API_TARGET=http://127.0.0.1:18080 && npm run dev -- --host 127.0.0.1 --port 18081"`。
 - 具体 API 契约、教师页 / 学生页 / 校管页信息架构已下沉到子目录 AGENTS 与上表规则；这一层只负责运行与壳层组织，不重复细则。
-- 设计体系为四层单向依赖：`assets/tokens.css` → `assets/layout.css` → `components/ui/`（6 个 `App*` 组件）→ `views/**`；页面不再自建骨架类，`tokens.css` 之外的自定义属性右值必须引用 `var()`。
+- 设计体系为四层单向依赖：`assets/tokens.css` → `assets/layout.css` → `components/ui/`（6 个 `App*` 组件，`components/ui/statusPresentation.ts` 为跨三域状态语义层）→ `views/**`；页面不再自建骨架类，`tokens.css` 之外的自定义属性右值必须引用 `var()`。
 - `npm test` 含设计门禁 `src/assets/__tests__/designTokens.spec.ts`；历史遗留量记录在 `designTokenBaseline.json`，只允许下降，重测用 `DESIGN_TOKEN_BASELINE_WRITE=1 npm test`。
 
 ## ANTI-PATTERNS

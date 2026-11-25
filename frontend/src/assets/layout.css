@@ -103,6 +103,17 @@
   box-shadow: var(--shadow-md);
 }
 
+/* L1 骨架：学生端三域任务卡外壳与信息栅格（2026-11-25 PRD FR-3） */
+.app-task-card {
+  padding: var(--task-card-padding, var(--space-3) 14px);
+}
+
+.app-task-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--task-meta-columns, 4), minmax(0, 1fr));
+  gap: var(--task-meta-gap, var(--space-2));
+}
+
 .toolbar-row {
   display: flex;
   gap: var(--space-3);
