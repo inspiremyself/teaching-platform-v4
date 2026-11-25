@@ -27,7 +27,6 @@ const LEGACY_EYEBROWS: Array<[string, string]> = [
   ['../../views/student/Dashboard.vue', '学生空间 / 今日学习'],
   ['../../views/student/Materials.vue', '学生端 / 教学资料'],
   ['../../views/student/Labs.vue', '学生端 / 我的实验'],
-  ['../../views/student/LabDetail.vue', '学生端 / 实验题目索引'],
   ['../../views/student/Homeworks.vue', '学生端 / 我的作业'],
   ['../../views/student/components/ScoresPanel.vue', '学生端 / 成绩总览'],
   ['../../views/student/exams/List.vue', '学生空间 / 考试任务'],
@@ -44,9 +43,9 @@ const LEGACY_EYEBROWS: Array<[string, string]> = [
 ]
 
 describe('ROUTE_BREADCRUMBS 配置完整性', () => {
-  it('覆盖 40 条业务路由且每段数组非空', () => {
+  it('覆盖 39 条业务路由且每段数组非空', () => {
     const entries = Object.entries(ROUTE_BREADCRUMBS)
-    expect(entries).toHaveLength(40)
+    expect(entries).toHaveLength(39)
     entries.forEach(([, items]) => expect(items.length).toBeGreaterThan(0))
   })
 
@@ -72,7 +71,7 @@ describe('ROUTE_BREADCRUMBS 配置完整性', () => {
 })
 
 describe('router/index.ts 接入', () => {
-  it('40 条路由均引用配置表', () => {
+  it('39 条路由均引用配置表', () => {
     const router = routeSource()
     Object.keys(ROUTE_BREADCRUMBS).forEach(key => {
       expect(router).toContain(`breadcrumb: ROUTE_BREADCRUMBS['${key}']`)

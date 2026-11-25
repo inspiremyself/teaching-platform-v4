@@ -6,6 +6,12 @@
         <p>{{ detail?.description || '按题目顺序作答。' }}</p>
         <div v-if="detail" class="page-header__meta">
           <span class="header-meta-chip">{{ submissionLabel(detail.submissionStatus) }}</span>
+          <span class="header-meta-chip">{{ experimentTypeLabel(detail.experimentType) }}</span>
+          <span v-if="showLabScore" class="header-meta-chip">
+            总分 {{ detail.totalScore }}<template v-if="planTotalScore > 0"> / 计划满分 {{ planTotalScore }}</template>
+          </span>
+          <span class="header-meta-chip">开始：{{ detail.startAt ? formatDateTime(detail.startAt) : '不限' }}</span>
+          <span class="header-meta-chip">截止：{{ detail.dueAt ? formatDateTime(detail.dueAt) : '不限' }}</span>
           <span class="header-meta-chip">{{ currentIndex + 1 }}/{{ labItems.length }}</span>
           <span class="header-meta-chip">{{ detail.summaryRequired ? '实验小结必填' : '实验小结选填' }}</span>
           <span class="header-meta-chip">{{ readonly ? '只读' : '可编辑' }}</span>
@@ -24,6 +30,38 @@
     <el-empty v-if="!loading && !detail" description="未获取到实验题项数据" />
 
     <template v-else-if="detail">
+      <section class="lab-info-card">
+        <header class="lab-info-card__header">
+          <div>
+            <h3>实验信息</h3>
+            <p>先阅读实验要求与实验内容，再进入题目作答。</p>
+          </div>
+        </header>
+
+        <div class="lab-info-section">
+          <div class="lab-info-section__title">实验指导</div>
+          <div class="lab-info-guidance">
+            <span>{{ detail.materialFileName || '未提供实验指导文件' }}</span>
+            <el-button v-if="hasGuidanceFile" type="primary" plain size="small" @click="downloadGuidance">下载实验指导</el-button>
+          </div>
+        </div>
+
+        <div class="lab-info-section">
+          <div class="lab-info-section__title">实验要求</div>
+          <p>{{ detail.description || '暂无实验要求。' }}</p>
+        </div>
+
+        <div class="lab-info-section">
+          <div class="lab-info-section__title">实验内容</div>
+          <p>{{ detail.experimentContent || '暂无实验内容。' }}</p>
+        </div>
+
+        <div v-if="showLabFeedback" class="lab-info-comment">
+          <div class="lab-info-comment__title">教师总评</div>
+          <p>{{ detail.teacherComment || '当前尚未开放教师总评。' }}</p>
+        </div>
+      </section>
+
       <section class="steps-layout">
         <aside class="steps-sidebar">
           <article class="sidebar-card status-card">
@@ -72,7 +110,12 @@
                 <div class="workflow-item__body">
                   <span class="workflow-item__eyebrow">{{ answerStateLabel(item) }}</span>
                   <strong>{{ item.title }}</strong>
-                  <small>{{ questionTypeLabel(item.questionType) }} · {{ item.stepScore }} 分</small>
+                  <small>
+                    {{ questionTypeLabel(item.questionType) }} · {{ item.stepScore }} 分
+                    <template v-if="showLabScore && item.score !== null && item.score !== undefined">
+                      · 得分 {{ item.score }}<template v-if="item.stepScore > 0">/{{ item.stepScore }}</template>
+                    </template>
+                  </small>
                 </div>
               </button>
             </div>
@@ -250,7 +293,7 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { StudentLabStepsKey } from '@/composables/useStudentLabSteps';
-const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, loading, saving, submitting, detail, currentIndex, summaryDraft, isNotStarted, isOverdue, labId, labItems, currentItem, currentDraft, currentQuestionType, currentItemCodeLanguage, readonly, canSubmit, submitHint, progressPercent, progressText, submissionTagType, currentSaveStateLabel, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, selectItem, hasSavedAnswer, isItemDirty, answerStateLabel, saveCurrent, goPrev, goNext, submitAll, submissionLabel, questionTypeLabel, answerHint, itemFeedback } = inject(StudentLabStepsKey)!;
+const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, loading, saving, submitting, detail, currentIndex, summaryDraft, isNotStarted, isOverdue, labId, labItems, currentItem, currentDraft, currentQuestionType, currentItemCodeLanguage, readonly, canSubmit, submitHint, progressPercent, progressText, submissionTagType, currentSaveStateLabel, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, selectItem, hasSavedAnswer, isItemDirty, answerStateLabel, saveCurrent, goPrev, goNext, submitAll, submissionLabel, questionTypeLabel, answerHint, itemFeedback, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, formatDateTime, downloadGuidance } = inject(StudentLabStepsKey)!;
 </script>
 
 <style scoped>
@@ -279,6 +322,64 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   color: #334155;
   font-size: var(--font-size-sm);
   font-weight: 600;
+}
+/* 实验信息卡固定在题项区上方：本页为定高工作台布局，限制高度并内部滚动，避免挤压作答区 */
+.lab-info-card {
+  padding: 16px 18px;
+  flex-shrink: 0;
+  max-height: 38vh;
+  overflow-y: auto;
+}
+.lab-info-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.lab-info-card__header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+.lab-info-card__header p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: var(--font-size-base);
+}
+.lab-info-section {
+  margin-top: 14px;
+}
+.lab-info-section__title {
+  margin-bottom: 6px;
+  color: var(--color-action-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+.lab-info-section p {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--line-height-body);
+  white-space: pre-wrap;
+}
+.lab-info-guidance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lab-info-comment {
+  border-left: 3px solid #2f6fed;
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+.lab-info-comment__title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: #414753;
 }
 .status-card__eyebrow,
 .workflow-item__eyebrow,
@@ -319,6 +420,7 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   flex-shrink: 0;
 }
 .sidebar-card,
+.lab-info-card,
 .question-focus-strip,
 .question-card,
 .summary-card,

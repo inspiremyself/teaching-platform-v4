@@ -65,7 +65,6 @@ const router = createRouter({
         { path: 'materials', name: 'student-materials', component: () => import('@/views/student/Materials.vue'), meta: { breadcrumb: ROUTE_BREADCRUMBS['student-materials'] } },
         { path: 'content', name: 'student-content', component: () => import('@/views/student/Content.vue'), meta: { title: '学习内容', roles: ['STUDENT'], breadcrumb: ROUTE_BREADCRUMBS['student-content'] } },
         { path: 'labs', name: 'student-labs', component: () => import('@/views/student/Labs.vue'), meta: { breadcrumb: ROUTE_BREADCRUMBS['student-labs'] } },
-        { path: 'labs/:id', name: 'student-lab-detail', component: () => import('@/views/student/LabDetail.vue'), meta: { breadcrumb: ROUTE_BREADCRUMBS['student-lab-detail'] } },
         { path: 'labs/:id/steps', name: 'student-lab-steps', component: () => import('@/views/student/LabSteps.vue'), meta: { breadcrumb: ROUTE_BREADCRUMBS['student-lab-steps'] } },
         { path: 'homeworks', name: 'student-homeworks', component: () => import('@/views/student/Homeworks.vue'), meta: { breadcrumb: ROUTE_BREADCRUMBS['student-homeworks'] } },
         { path: 'homeworks/:id', name: 'student-homework-detail', component: () => import('@/views/student/HomeworkDetail.vue'), meta: { breadcrumb: ROUTE_BREADCRUMBS['student-homework-detail'] } },

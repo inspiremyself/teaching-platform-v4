@@ -8,7 +8,8 @@ import FillBlankInlineEditor from '@/views/student/components/lab-answer/FillBla
 import TextAnswerEditor from '@/views/student/components/lab-answer/TextAnswerEditor.vue';
 import CodeLabAnswerEditor from '@/views/student/components/lab-answer/CodeLabAnswerEditor.vue';
 import { getStudentLabDetail, saveStudentLabAnswer, submitStudentLab } from '@/api/labs';
-import type { LabQuestionType, LabReportStatus, StudentLabDetail, StudentLabStepItem } from '@/types/lab';
+import { downloadMaterial } from '@/api/materials';
+import { LAB_EXPERIMENT_TYPE_LABELS, type LabQuestionType, type LabReportStatus, type StudentLabDetail, type StudentLabStepItem } from '@/types/lab';
 import {
   hydrateDraftFromStep,
   buildAnswerPayloadJson,
@@ -109,6 +110,27 @@ const progressText = computed(() => {
   if (dirtyItemCount.value > 0) return `还有 ${dirtyItemCount.value} 道题未保存。`;
   return `已保存 ${answeredCount.value}/${labItems.value.length} 个题项。`;
 });
+// 是否已产生总分（批改后才回填 totalScore），用于页头与题项得分展示
+const showLabScore = computed(() => typeof detail.value?.totalScore === 'number');
+/** 计划满分 = Σ 题项分值；为 0（全 0 分实验）时只显示得分，避免出现 `/ 0` */
+const planTotalScore = computed(() =>
+  labItems.value.reduce((sum, item) => sum + (Number(item.stepScore) || 0), 0),
+);
+const showLabFeedback = computed(() => !!detail.value?.teacherComment || showLabScore.value);
+const hasGuidanceFile = computed(() =>
+  Boolean(detail.value?.materialId && detail.value?.materialDownloadUrl && detail.value?.materialFileName),
+);
+const experimentTypeLabel = (value?: number | null) =>
+  LAB_EXPERIMENT_TYPE_LABELS[value || 1] || `类型 ${value}`;
+const formatDateTime = (value?: string | null) => (value ? value.replace('T', ' ').slice(0, 16) : '-');
+const downloadGuidance = async () => {
+  if (!detail.value?.materialId || !detail.value?.materialFileName) return;
+  try {
+    await downloadMaterial(detail.value.materialId, detail.value.materialFileName);
+  } catch {
+    ElMessage.error('实验指导下载失败，请稍后重试');
+  }
+};
 const submissionTagType = computed(() => {
   if (detail.value?.submissionStatus === SUBMISSION_STATUS.GRADED) return 'success';
   if (detail.value?.submissionStatus === SUBMISSION_STATUS.SUBMITTED) return 'warning';
@@ -597,7 +619,7 @@ onBeforeUnmount(() => {
   behaviorCollector.stop();
 });
 
-  return { SUBMISSION_STATUS, computed, onBeforeUnmount, onMounted, reactive, ref, watch, useRoute, useRouter, onBeforeRouteLeave, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, getStudentLabDetail, saveStudentLabAnswer, submitStudentLab, hydrateDraftFromStep, buildAnswerPayloadJson, buildCompatibilityAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, useLabAnswerDrafts, behaviorCollector, route, router, loading, saving, submitting, detail, currentIndex, summaryDraft, itemAutosaveStates, autosaveTimer, saveQueue, clockTimer, nowMs, isNotStarted, isOverdue, labId, currentItemQueryId, labItems, currentItem, currentDraft, currentQuestionType, currentCodeEditorLanguage, currentItemCodeLanguage, readonly, canSubmit, submitHint, answeredCount, dirtyItemCount, progressPercent, progressText, submissionTagType, currentSaveStateLabel, saveStateClass, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, fetchData, syncDraftState, clearAutosaveTimer, queueSave, updateItemQuery, syncCurrentItemWithQuery, selectItem, draftAnswerOf, savedDraftOf, savedAnswerOf, hasSavedAnswer, isItemDirty, answerStateLabel, persistItem, persistCurrentItem, scheduleAutosave, saveCurrent, goPrev, goNext, persistDirtyItems, submitAll, submissionLabel, normalizedQuestionType, questionTypeLabel, answerHint, isChoiceWithoutOptions, itemFeedback, handleBeforeUnload, ensureDraft, getDraft, patchDraft, buildSavePayload, hydrateAllDrafts };
+  return { SUBMISSION_STATUS, computed, onBeforeUnmount, onMounted, reactive, ref, watch, useRoute, useRouter, onBeforeRouteLeave, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, getStudentLabDetail, saveStudentLabAnswer, submitStudentLab, hydrateDraftFromStep, buildAnswerPayloadJson, buildCompatibilityAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, useLabAnswerDrafts, behaviorCollector, route, router, loading, saving, submitting, detail, currentIndex, summaryDraft, itemAutosaveStates, autosaveTimer, saveQueue, clockTimer, nowMs, isNotStarted, isOverdue, labId, currentItemQueryId, labItems, currentItem, currentDraft, currentQuestionType, currentCodeEditorLanguage, currentItemCodeLanguage, readonly, canSubmit, submitHint, answeredCount, dirtyItemCount, progressPercent, progressText, submissionTagType, currentSaveStateLabel, saveStateClass, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, fetchData, syncDraftState, clearAutosaveTimer, queueSave, updateItemQuery, syncCurrentItemWithQuery, selectItem, draftAnswerOf, savedDraftOf, savedAnswerOf, hasSavedAnswer, isItemDirty, answerStateLabel, persistItem, persistCurrentItem, scheduleAutosave, saveCurrent, goPrev, goNext, persistDirtyItems, submitAll, submissionLabel, normalizedQuestionType, questionTypeLabel, answerHint, isChoiceWithoutOptions, itemFeedback, handleBeforeUnload, ensureDraft, getDraft, patchDraft, buildSavePayload, hydrateAllDrafts, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, formatDateTime, downloadGuidance };
 }
 
 export type StudentLabStepsState = ReturnType<typeof useStudentLabSteps>;

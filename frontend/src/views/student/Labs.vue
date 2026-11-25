@@ -145,7 +145,7 @@ const fetchData = async () => {
 };
 
 const goDetail = (id: number) => {
-  router.push(`/student/labs/${id}`);
+  router.push(`/student/labs/${id}/steps`);
 };
 
 const taskFilterOf = (row: StudentLabListItem): TaskFilter => {

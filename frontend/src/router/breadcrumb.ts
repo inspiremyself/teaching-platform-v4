@@ -38,7 +38,6 @@ export type BreadcrumbRouteName =
   | 'student-materials'
   | 'student-content'
   | 'student-labs'
-  | 'student-lab-detail'
   | 'student-lab-steps'
   | 'student-homeworks'
   | 'student-homework-detail'
@@ -56,7 +55,7 @@ export type BreadcrumbRouteName =
   | 'admin-platform-content'
   | 'profile'
 
-/** 40 条业务路由的面包屑配置（不含角色根；角色根由 resolveBreadcrumbTrail 注入）。 */
+/** 39 条业务路由的面包屑配置（不含角色根；角色根由 resolveBreadcrumbTrail 注入）。 */
 export const ROUTE_BREADCRUMBS: Record<BreadcrumbRouteName, readonly BreadcrumbConfigItem[]> = {
   // 教师端
   'teacher-dashboard': [{ label: '总览' }],
@@ -139,16 +138,8 @@ export const ROUTE_BREADCRUMBS: Record<BreadcrumbRouteName, readonly BreadcrumbC
   'student-materials': [{ label: '课程资料' }],
   'student-content': [{ label: '学习内容' }],
   'student-labs': [{ label: '实验任务' }],
-  'student-lab-detail': [
-    { label: '实验任务', to: () => '/student/labs' },
-    { label: '实验详情' },
-  ],
   'student-lab-steps': [
     { label: '实验任务', to: () => '/student/labs' },
-    {
-      label: '实验详情',
-      to: route => ({ name: 'student-lab-detail', params: { id: route.params.id } }),
-    },
     { label: '题项作答' },
   ],
   'student-homeworks': [{ label: '作业任务' }],

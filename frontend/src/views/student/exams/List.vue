@@ -71,7 +71,7 @@
 
         <div class="exam-card__footer exam-card__footer--compact">
           <span class="exam-inline-hint">{{ stageLabel(row) }} · {{ statusLabel(row.status) }}</span>
-          <button class="exam-action exam-action--compact" type="button" @click="goDetail(row)">
+          <button class="exam-action exam-action--compact" type="button" @click="handleCardAction(row)">
             {{ actionText(row) }}
             <span class="material-symbols-outlined">arrow_forward</span>
           </button>
@@ -80,6 +80,38 @@
 
       <AppEmptyState v-if="!filteredRows.length" description="暂无匹配考试" class="empty-state" />
     </section>
+
+    <el-dialog v-model="startDialogVisible" title="确认开始考试" width="min(560px, calc(100vw - 40px))" destroy-on-close>
+      <div v-if="startDialogRow" class="start-dialog">
+        <h3>{{ startDialogRow.title }}</h3>
+        <p class="start-dialog__class">{{ startDialogRow.className || '未绑定班级' }}</p>
+        <div class="start-dialog__grid">
+          <div class="start-dialog__item">
+            <span>考试窗口</span>
+            <strong>{{ formatWindow(startDialogRow.startAt, startDialogRow.endAt) }}</strong>
+          </div>
+          <div class="start-dialog__item">
+            <span>时长</span>
+            <strong>{{ startDialogRow.durationMinutes }} 分钟</strong>
+          </div>
+        </div>
+        <p v-if="startDialogRow.status === ACTIVITY_STATUS.PUBLISHED && !startDialogRow.endAt" class="start-dialog__notice">
+          本场未设置统一截止时间，按个人限时收卷；如教师需要统一截止时间，需新建考试。
+        </p>
+        <ul class="start-dialog__rules">
+          <li>开始后连续计时 {{ startDialogRow.durationMinutes }} 分钟；若考试窗口先结束，则按窗口结束时间收卷。</li>
+          <li>交卷后不可修改答案。</li>
+          <li>主观题结果可能稍后更新。</li>
+        </ul>
+        <p v-if="startDisabledReason" class="start-dialog__warn">{{ startDisabledReason }}</p>
+      </div>
+      <template #footer>
+        <el-button @click="startDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="starting" :disabled="!!startDisabledReason" @click="confirmStart">
+          开始考试
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -87,7 +119,8 @@
 import { ACTIVITY_STATUS, EXAM_SUBMISSION_STATUS, SUBMISSION_STATUS } from '@/types/enums';
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listExams } from '@/api/exams'
+import { ElMessage } from 'element-plus'
+import { listExams, startExam } from '@/api/exams'
 import type { ExamListItem } from '@/types/exam'
 import AppEmptyState from '@/components/ui/AppEmptyState.vue'
 
@@ -96,6 +129,9 @@ const rows = ref<ExamListItem[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const stageFilter = ref<'start' | 'resume' | 'result' | 'locked' | ''>('')
+const startDialogVisible = ref(false)
+const startDialogRow = ref<ExamListItem | null>(null)
+const starting = ref(false)
 
 const startableCount = computed(() => rows.value.filter(row => row.canStart).length)
 const resumableCount = computed(() => rows.value.filter(row => row.canResume).length)
@@ -194,22 +230,62 @@ const availabilityHint = (row: ExamListItem) => {
 
 const actionHint = (row: ExamListItem) => {
   if (row.canResume) return '进入后直接回到当前答题界面。'
-  if (row.canStart) return '进入详情页后可先查看说明，再开始考试。'
-  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return '进入详情页后可查看自动评分与当前批改进度。'
-  if (row.canViewResult) return '进入详情页后查看总分、题目反馈和状态。'
+  if (row.canStart) return '确认考试信息后进入答题，开始后连续计时。'
+  if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return '可查看自动评分与当前批改进度。'
+  if (row.canViewResult) return '可查看总分、题目反馈和状态。'
   return '当前仅展示考试信息。'
 }
 
 const actionText = (row: ExamListItem) => {
   if (row.canResume) return '继续考试'
-  if (row.canStart) return '查看并开始'
+  if (row.canStart) return '开始考试'
   if (row.submissionStatus === SUBMISSION_STATUS.SUBMITTED || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED) return '查看进度'
   if (row.canViewResult) return '查看结果'
-  return '查看详情'
+  return '暂不可用'
 }
 
-const goDetail = (row: ExamListItem) => {
-  router.push(`/student/exams/${row.id}`)
+// 弹窗内仅在开始时间晚于当前时刻时给出禁用提示，其余情况允许确认
+const startDisabledReason = computed(() => {
+  const row = startDialogRow.value
+  if (!row?.startAt) return ''
+  return new Date(row.startAt).getTime() > Date.now()
+    ? `考试将于 ${formatDateTime(row.startAt)} 开始`
+    : ''
+})
+
+// 列表行主操作：按行能力分流，直接进入考生只需要的状态，避免经过中间页
+const handleCardAction = (row: ExamListItem) => {
+  if (row.canStart) {
+    startDialogRow.value = row
+    startDialogVisible.value = true
+    return
+  }
+  const submitted = row.submissionStatus === SUBMISSION_STATUS.SUBMITTED
+    || row.submissionStatus === EXAM_SUBMISSION_STATUS.AUTO_SUBMITTED
+  if (row.canResume || row.canViewResult || submitted) {
+    router.push(`/student/exams/${row.id}`)
+    return
+  }
+  if (row.startAt && new Date(row.startAt).getTime() > Date.now()) {
+    ElMessage.warning(`考试尚未开始，开始时间 ${formatDateTime(row.startAt)}`)
+  } else {
+    ElMessage.warning('当前不在可参加或可查看结果的窗口')
+  }
+}
+
+const confirmStart = async () => {
+  const row = startDialogRow.value
+  if (!row || starting.value || startDisabledReason.value) return
+  starting.value = true
+  try {
+    await startExam(row.id)
+    startDialogVisible.value = false
+    router.push(`/student/exams/${row.id}`)
+  } catch {
+    // request.ts 已统一 toast；保留弹窗供重试或取消
+  } finally {
+    starting.value = false
+  }
 }
 
 onMounted(loadExams)
@@ -428,8 +504,75 @@ onMounted(loadExams)
   grid-column: 1 / -1;
 }
 
+.start-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #191c22;
+}
+
+.start-dialog h3 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.start-dialog__class {
+  margin: 0;
+  color: #414753;
+  font-size: var(--font-size-base);
+}
+
+.start-dialog__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.start-dialog__item {
+  background: #f7f8fa;
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.start-dialog__item span {
+  font-size: var(--font-size-sm);
+  color: #6b7280;
+}
+
+.start-dialog__notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  background: #fff7e6;
+  color: #9a5b00;
+  font-size: var(--font-size-base);
+}
+
+.start-dialog__rules {
+  margin: 0;
+  padding-left: 18px;
+  color: #414753;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+}
+
+.start-dialog__warn {
+  margin: 0;
+  color: #c2410c;
+  font-size: var(--font-size-base);
+}
+
 @media (max-width: 1024px) {
   .exam-card__info-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .start-dialog__grid {
     grid-template-columns: 1fr;
   }
 }

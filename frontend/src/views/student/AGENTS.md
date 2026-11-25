@@ -12,7 +12,7 @@
 |---|---|---|
 | 学生工作台 | `Dashboard.vue` | 当前任务、截止时间、主入口 |
 | 资料页 | `Materials.vue` | 资源获取与下载 |
-| 实验列表/作答 | `Labs.vue` `LabDetail.vue` `LabSteps.vue` | 列表、详情、分步作答 |
+| 实验列表/作答 | `Labs.vue` `LabSteps.vue` | 列表直达分步作答（无中转详情页） |
 | 实验作答编辑器 | `components/lab-answer/` | 分题型作答组件与载荷构造 |
 | 作业列表/提交 | `Homeworks.vue` `HomeworkDetail.vue` | 任务型页面 |
 | 考试列表/作答 | `exams/List.vue` `exams/Detail.vue` | 时间压力 + 提交语义 |
