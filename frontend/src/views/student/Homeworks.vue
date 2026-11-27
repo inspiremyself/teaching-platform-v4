@@ -469,7 +469,7 @@ onMounted(fetchData);
 .student-homework-card__label {
   display: block;
   margin-bottom: 6px;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: 700;
   letter-spacing: var(--letter-spacing-caps);
   text-transform: uppercase;
@@ -593,7 +593,7 @@ onMounted(fetchData);
 }
 
 .student-toolbar-card__meta {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   gap: 8px;
 }
 
@@ -640,7 +640,7 @@ onMounted(fetchData);
 
 .student-homework-card__desc {
   margin-top: 2px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-heading);
   display: -webkit-box;
   -webkit-line-clamp: 1;
@@ -663,7 +663,7 @@ onMounted(fetchData);
 
 .homework-info-chip strong {
   color: #191c22;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-md);
 }
 
 .homework-info-chip--status {
@@ -685,7 +685,7 @@ onMounted(fetchData);
 
 .student-homework-chip {
   padding: 5px 8px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 
 @media (max-width: 1024px) {

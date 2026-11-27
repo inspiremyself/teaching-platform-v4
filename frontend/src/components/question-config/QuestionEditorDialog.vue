@@ -452,7 +452,7 @@ watch(
 
 .question-editor-dialog__eyebrow {
   color: #0f766e;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -461,7 +461,7 @@ watch(
 .question-editor-dialog__header h2 {
   margin: 4px 0 0;
   color: #0f172a;
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   font-weight: 800;
 }
 
@@ -469,7 +469,7 @@ watch(
   margin: 4px 0 0;
   max-width: 560px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 
@@ -489,7 +489,7 @@ watch(
   border-radius: 999px;
   background: #ccfbf1;
   color: #115e59;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
 }
 
@@ -514,7 +514,7 @@ watch(
   border-radius: 999px;
   background: #ffffff;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -535,7 +535,7 @@ watch(
 .question-editor-dialog__group-title {
   margin-bottom: 10px;
   color: #0f172a;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 800;
 }
 
@@ -577,7 +577,7 @@ watch(
 .question-editor-dialog__form :deep(.el-form-item__label) {
   margin-bottom: 8px;
   color: #475569;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -599,7 +599,7 @@ watch(
 
 .question-editor-dialog__footer-note {
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   line-height: 1.5;
 }
 

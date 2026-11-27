@@ -44,9 +44,9 @@ const items = computed(() =>
   max-width: 1380px;
   margin: 0 auto;
   height: 34px;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   color: var(--primary-color, #0f766e);
 }
 
@@ -79,8 +79,8 @@ const items = computed(() =>
     min-height: 34px;
     flex-wrap: wrap;
     padding: 4px 0;
-    font-size: 11px;
-    letter-spacing: 0.04em;
+    font-size: var(--font-size-sm);
+    letter-spacing: var(--letter-spacing-wide);
   }
 }
 </style>

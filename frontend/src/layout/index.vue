@@ -221,11 +221,11 @@ const logout = async () => {
   color: var(--primary-color);
 }
 .brand-icon {
-  font-size: 1.75rem;
+  font-size: var(--font-size-2xl);
   font-variation-settings: 'FILL' 1;
 }
 .brand-text {
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   font-weight: 700;
   font-family: 'IBM Plex Sans', 'Plus Jakarta Sans', sans-serif;
   letter-spacing: -0.025em;
@@ -275,19 +275,19 @@ const logout = async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.85rem;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
 .user-profile__meta span {
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
 .user-profile__arrow {
   color: #94a3b8;
-  font-size: 1rem;
+  font-size: var(--font-size-base);
 }
 
 .avatar {
@@ -377,16 +377,16 @@ const logout = async () => {
   color: white;
 }
 .org-icon .material-symbols-outlined {
-  font-size: 1.125rem;
+  font-size: var(--font-size-md);
 }
 .org-name {
-  font-size: 1.125rem;
+  font-size: var(--font-size-md);
   font-weight: 800;
   color: #0f172a;
   line-height: 1.2;
 }
 .org-term {
-  font-size: 0.625rem;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #64748b;
@@ -408,7 +408,7 @@ const logout = async () => {
   padding: 0.5rem 0.75rem;
   color: #475569;
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: var(--font-size-base);
   font-weight: 500;
   border-radius: 0.5rem;
   transition: all 0.2s;
@@ -419,7 +419,7 @@ const logout = async () => {
 }
 .nav-item .material-symbols-outlined {
   color: #94a3b8;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   transition: color 0.2s;
 }
 
@@ -502,7 +502,7 @@ const logout = async () => {
   }
 
   .brand-text {
-    font-size: 1.05rem;
+    font-size: var(--font-size-base);
   }
 
   .user-profile {
@@ -543,12 +543,12 @@ const logout = async () => {
   border-radius: 0.9rem;
   color: #64748b;
   text-decoration: none;
-  font-size: 0.7rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
 .mobile-nav__item .material-symbols-outlined {
-  font-size: 1.3rem;
+  font-size: var(--font-size-lg);
 }
 
 .mobile-nav__item--active {

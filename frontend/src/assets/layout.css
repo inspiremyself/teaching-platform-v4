@@ -103,7 +103,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 28px;
+  min-height: var(--control-height-sm);
   padding: 0 10px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-border);
@@ -182,24 +182,24 @@
 
 /* 工具栏筛选控件固定宽度（替代内联静态尺寸） */
 .app-search-field {
-  max-width: 280px;
+  max-width: 320px;
 }
 
 .app-filter-field {
-  width: 140px;
+  width: 160px;
 }
 
 .app-filter-field--md {
-  width: 200px;
+  width: 220px;
 }
 
 .app-filter-field--wide {
-  width: 220px;
+  width: 260px;
 }
 
 /* 表格内评分输入宽度 */
 .app-score-input {
-  width: 120px;
+  width: 140px;
 }
 
 /* 静态下间距（替代内联 margin-top） */

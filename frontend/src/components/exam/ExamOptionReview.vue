@@ -44,9 +44,9 @@ const rows = computed(() => buildOptionReviewRows(props))
 
 <style scoped>
 .exam-option-review__title {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--letter-spacing-caps);
   color: #727785;
   font-weight: 700;
 }
@@ -90,7 +90,7 @@ const rows = computed(() => buildOptionReviewRows(props))
   border-radius: 8px;
   background: #f1f5f9;
   color: #334155;
-  font-size: 12px;
+  font-size: var(--font-size-base);
   font-weight: 700;
 }
 
@@ -98,7 +98,7 @@ const rows = computed(() => buildOptionReviewRows(props))
   flex: 1;
   min-width: 0;
   color: #191c22;
-  font-size: 13px;
+  font-size: var(--font-size-base);
   line-height: 1.5;
   word-break: break-word;
 }
@@ -107,7 +107,7 @@ const rows = computed(() => buildOptionReviewRows(props))
   flex: none;
   border-radius: 999px;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   white-space: nowrap;
 }

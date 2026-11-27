@@ -81,6 +81,43 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: var(--radius-sm) !important;
 }
 
+/* EP 组件字号：组件类自带的小字号变量由 L0 token 统一供给 */
+.el-tag {
+  --el-tag-font-size: var(--el-font-size-sm);
+}
+.el-checkbox {
+  --el-checkbox-font-size: var(--el-font-size-base);
+}
+.el-pagination {
+  --el-pagination-font-size: var(--el-font-size-base);
+}
+.el-select {
+  --el-select-input-font-size: var(--el-font-size-base);
+}
+.el-dialog {
+  --el-dialog-content-font-size: var(--el-font-size-base);
+}
+.el-collapse {
+  --el-collapse-header-font-size: var(--el-font-size-base);
+}
+.el-collapse {
+  --el-collapse-content-font-size: var(--el-font-size-base);
+}
+.el-alert {
+  --el-alert-title-font-size: var(--el-font-size-base);
+}
+.el-alert {
+  --el-alert-description-font-size: var(--el-font-size-base);
+}
+.el-input-tag,
+.el-input-tag--large,
+.el-input-tag--small {
+  --el-input-tag-font-size: var(--el-font-size-base);
+}
+.el-message-box {
+  --el-messagebox-error-font-size: var(--el-font-size-base);
+}
+
 /* ===== 教师端工作台骨架 ===== */
 .workbench-page {
   display: flex;
@@ -140,7 +177,7 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 32px;
+  min-height: var(--control-height-md);
   padding: 0 10px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--color-border-soft);

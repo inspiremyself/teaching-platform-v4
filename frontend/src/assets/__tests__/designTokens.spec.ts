@@ -16,10 +16,10 @@ const BASELINE_PATH = fileURLToPath(new URL('./designTokenBaseline.json', import
 /** 允许的断点集合（技术方案 §5.1 #4） */
 const ALLOWED_BREAKPOINTS = [640, 768, 900, 1024, 1280];
 
-/** 字号阶梯（PRD D7）：11 / 12 / 13 / 14 / 16 / 18 / 22 / 28 / 36 / 44 / 58 */
-const FONT_SIZE_LADDER = [11, 12, 13, 14, 16, 18, 22, 28, 36, 44, 58];
+/** 字号阶梯（2026-11-27 全站统一规格 TD1）：14 / 16 / 18 / 20 / 22 / 26 / 30 / 34 / 42 / 50 / 58 */
+const FONT_SIZE_LADDER = [14, 16, 18, 20, 22, 26, 30, 34, 42, 50, 58];
 
-/** 图标字号 24 按 PRD D17 固定，不参与阶梯归一 */
+/** 图标字号 24 按 PRD D17 固定；新阶梯不含 24，白名单保留供图标豁免 */
 const FONT_SIZE_WHITELIST = [...FONT_SIZE_LADDER, 24];
 
 /** 圆角阶梯（PRD D7）：999 / 16 / 12 / 8 / 6，另允许 0 */
@@ -373,5 +373,65 @@ describe('设计体系门禁', () => {
 
   it('#14 空态计数不超过基线（AppEmptyState 自身实现不计入）', () => {
     expect(measure().views.emptyStateLiterals).toBeLessThanOrEqual(baseline.views.emptyStateLiterals);
+  });
+
+  it('#15 字号阶梯与 EP 字号/尺寸变量由 tokens.css 单一来源供给', () => {
+    const tokensSource = read(join(SRC, 'assets/tokens.css'));
+    const declarationValue = (source: string, name: string): string | undefined =>
+      matchAll(source, new RegExp(`--${name}:\\s*([^;]+);`, 'g'))[0]?.[1].trim();
+
+    const ladderNames = ['xs', 'sm', 'base', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl'];
+    const measuredLadder = ladderNames.map(name =>
+      Number(matchAll(tokensSource, new RegExp(`--font-size-${name}:\\s*(\\d+)px`, 'g'))[0]?.[1] ?? NaN),
+    );
+    expect(measuredLadder).toEqual(FONT_SIZE_LADDER);
+
+    const epTokens: Record<string, string> = {
+      'el-font-size-extra-small': 'var(--font-size-xs)',
+      'el-font-size-small': 'var(--font-size-sm)',
+      'el-font-size-medium': 'var(--font-size-base)',
+      'el-font-size-base': 'var(--font-size-base)',
+      'el-font-size-large': 'var(--font-size-lg)',
+      'el-font-size-extra-large': 'var(--font-size-xl)',
+      'el-component-size': 'var(--control-height-md)',
+      'el-component-size-small': 'var(--control-height-sm)',
+      'el-component-size-large': 'var(--control-height-lg)',
+    };
+    for (const [name, value] of Object.entries(epTokens)) {
+      expect(declarationValue(tokensSource, name), `--${name}`).toBe(value);
+    }
+
+    const globalRules = splitRules(read(join(SRC, 'assets/global.css')));
+    const ruleSelectors = (selector: string): string[] =>
+      selector
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+    const epComponentTokens: Array<[string[], string, string]> = [
+      [['.el-tag'], '--el-tag-font-size', 'var(--el-font-size-sm)'],
+      [['.el-checkbox'], '--el-checkbox-font-size', 'var(--el-font-size-base)'],
+      [['.el-pagination'], '--el-pagination-font-size', 'var(--el-font-size-base)'],
+      [['.el-select'], '--el-select-input-font-size', 'var(--el-font-size-base)'],
+      [['.el-dialog'], '--el-dialog-content-font-size', 'var(--el-font-size-base)'],
+      [['.el-collapse'], '--el-collapse-header-font-size', 'var(--el-font-size-base)'],
+      [['.el-collapse'], '--el-collapse-content-font-size', 'var(--el-font-size-base)'],
+      [['.el-alert'], '--el-alert-title-font-size', 'var(--el-font-size-base)'],
+      [['.el-alert'], '--el-alert-description-font-size', 'var(--el-font-size-base)'],
+      [
+        ['.el-input-tag', '.el-input-tag--large', '.el-input-tag--small'],
+        '--el-input-tag-font-size',
+        'var(--el-font-size-base)',
+      ],
+      [['.el-message-box'], '--el-messagebox-error-font-size', 'var(--el-font-size-base)'],
+    ];
+    for (const [selectors, property, value] of epComponentTokens) {
+      const matched = globalRules.some(
+        rule =>
+          selectors.some(selector => ruleSelectors(rule.selector).includes(selector)) &&
+          matchAll(rule.body, new RegExp(`${property}:\\s*([^;]+);`, 'g')).some(hit => hit[1].trim() === value),
+      );
+      expect(matched, `${selectors.join(', ')} ${property}`).toBe(true);
+    }
   });
 });

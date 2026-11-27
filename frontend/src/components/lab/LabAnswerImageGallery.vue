@@ -170,7 +170,7 @@ onBeforeUnmount(() => {
 .lab-answer-image-gallery__caption {
   margin-top: 6px;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.4;
   word-break: break-all;
 }

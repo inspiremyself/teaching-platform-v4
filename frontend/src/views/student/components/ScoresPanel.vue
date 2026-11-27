@@ -954,7 +954,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   margin: 6px 0 0;}
 .overall-card__badge {
   padding: 5px 8px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 .metric-card__value {
   font-size: var(--font-size-2xl);
@@ -1161,14 +1161,14 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .card-header-row p {
   margin: 4px 0 0;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-heading);
 }
 .section-title {
   font-size: var(--font-size-lg);
 }
 .header-meta {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 .group-section-list {
   gap: 10px;
@@ -1190,7 +1190,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
   border-radius: 12px;
 }.group-section__title-wrap p {
   margin: 4px 0 0;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
 }
 .group-section__badge {
   padding: 4px 8px;
@@ -1263,7 +1263,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 .action-item p {
   margin: 4px 0 0;
   line-height: var(--line-height-caption);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
 }
 .feedback-item,
 .action-item {
@@ -1272,7 +1272,7 @@ const scoreText = (value: number) => `${formatScore(value, { stripTrailingZero: 
 }
 .feedback-item strong,
 .action-item strong {
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-md);
 }
 .metric-stack--flat .metric-card--progress {
   grid-column: 1 / -1;

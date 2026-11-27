@@ -221,7 +221,7 @@ const handleScoreChange = (localId: string, value: number | undefined) => {
   min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
 }
 
@@ -243,7 +243,7 @@ const handleScoreChange = (localId: string, value: number | undefined) => {
 .question-config-list__stem {
   margin: 0;
   color: #0f172a;
-  font-size: 15px;
+  font-size: var(--font-size-base);
   line-height: 1.6;
   font-weight: 700;
 }
@@ -263,7 +263,7 @@ const handleScoreChange = (localId: string, value: number | undefined) => {
 .question-config-list__hint {
   margin: 0;
   color: #b45309;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   line-height: 1.5;
 }
 
@@ -272,7 +272,7 @@ const handleScoreChange = (localId: string, value: number | undefined) => {
   flex-direction: column;
   gap: 8px;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -320,7 +320,7 @@ const handleScoreChange = (localId: string, value: number | undefined) => {
   border-radius: 18px;
   background: #ffffff;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
 }
 

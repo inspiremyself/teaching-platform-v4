@@ -332,7 +332,7 @@ watch(
 .question-picker-dialog__eyebrow {
   margin: 0;
   color: #0f766e;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -342,14 +342,14 @@ watch(
 .question-picker-dialog__selected-head h3 {
   margin: 4px 0 0;
   color: #0f172a;
-  font-size: 20px;
+  font-size: var(--font-size-lg);
   font-weight: 800;
 }
 
 .question-picker-dialog__desc {
   margin: 6px 0 0;
   color: #475569;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
 }
 
@@ -361,7 +361,7 @@ watch(
   border-radius: 999px;
   background: #ccfbf1;
   color: #115e59;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
 }
 
@@ -385,7 +385,7 @@ watch(
 
 .question-picker-dialog__field-label {
   color: #64748b;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -403,7 +403,7 @@ watch(
 
 .question-picker-dialog__cell-main strong {
   color: #0f766e;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .question-picker-dialog__cell-main span {
@@ -417,7 +417,7 @@ watch(
 
 .question-picker-dialog__footer-note {
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 

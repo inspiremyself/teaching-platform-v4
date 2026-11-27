@@ -58,10 +58,10 @@ const codeRules = [
 .question-import-spec__title {
   margin: 4px 0 0;
   color: #0f172a;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .question-import-spec__table {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 </style>

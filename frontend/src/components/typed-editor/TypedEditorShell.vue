@@ -60,7 +60,7 @@ defineProps<{
   margin: 10px 0 0;
   padding-left: 18px;
   color: #9a3412;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
 }
 

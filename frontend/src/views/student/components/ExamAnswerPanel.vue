@@ -626,7 +626,7 @@ function resultMapItemClass(question: { questionId: number }): string {
 .side-card__title,
 .map-card h3,
 .submit-card h3 {
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-md);
   font-weight: var(--font-weight-bold);
   color: #191c22;
 }
@@ -636,7 +636,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   padding-left: 16px;
   color: #414753;
   line-height: var(--line-height-heading);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-base);
 }
 
 .taking-layout {
@@ -794,7 +794,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   padding: 6px 10px;
   background: #ecfeff;
   color: var(--color-brand-teacher);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 700;
 }
 
@@ -896,7 +896,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   background: var(--color-surface);
   color: var(--color-text-muted);
   font-weight: 700;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
@@ -921,7 +921,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
@@ -1035,7 +1035,7 @@ function resultMapItemClass(question: { questionId: number }): string {
   margin-left: 8px;
   border-radius: var(--radius-pill);
   padding: 4px 9px;
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   vertical-align: middle;
 }

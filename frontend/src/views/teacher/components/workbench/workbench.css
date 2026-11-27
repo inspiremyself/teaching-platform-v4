@@ -182,11 +182,11 @@
 .status-pill--warning { background: var(--wb-warning-soft); color: var(--wb-warning); }
 
 .action-button {
-  min-height: 32px;
+  min-height: var(--control-height-md);
   padding: 0 12px;
   border-radius: 8px;
   border: 1px solid transparent;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: 700;
   cursor: pointer;
   transition: opacity 0.15s ease;
@@ -199,7 +199,7 @@
 
 /* 尺寸变体：仅覆盖尺寸，不覆盖 tone 色板与 border；供原 ExamListPanel 等 40px 按钮使用 */
 .action-button--roomy {
-  min-height: 40px;
+  min-height: var(--control-height-lg);
   padding: 10px 12px;
   border-radius: 16px;
   font-size: var(--font-size-base);

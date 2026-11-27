@@ -120,14 +120,14 @@ const updateOptionContent = (id: string, content: string) => {
 
 .question-dialog__editor-note {
   color: #0f172a;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 800;
   line-height: 1.4;
 }
 
 .question-dialog__editor-subnote {
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 
@@ -231,12 +231,12 @@ const updateOptionContent = (id: string, content: string) => {
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.08);
   color: inherit;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 800;
 }
 
 .question-dialog__option-state {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   line-height: 1.4;
 }
@@ -304,13 +304,13 @@ const updateOptionContent = (id: string, content: string) => {
 
 .question-dialog__judge-title {
   color: #0f172a;
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: 800;
 }
 
 .question-dialog__judge-desc {
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
 }
 

@@ -141,7 +141,7 @@ defineExpose({
 
 .question-dialog__blank-panel-title {
   color: #0f172a;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 800;
 }
 
@@ -173,7 +173,7 @@ defineExpose({
 
 .question-dialog__blank-card-head strong {
   color: #0f172a;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 800;
 }
 
@@ -223,7 +223,7 @@ defineExpose({
   border-radius: 16px;
   background: #ffffff;
   color: #64748b;
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
 }
 
