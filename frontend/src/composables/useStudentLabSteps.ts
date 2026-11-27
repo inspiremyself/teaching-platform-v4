@@ -130,6 +130,15 @@ const downloadGuidance = async () => {
     ElMessage.error('实验指导下载失败，请稍后重试');
   }
 };
+// 实验说明是否有实际内容：三项全空时面板展示单块空态，不逐块平铺「暂无」
+const hasLabIntro = computed(() => Boolean(
+  detail.value?.materialFileName || detail.value?.description || detail.value?.experimentContent,
+));
+// 实验信息卡折叠态：默认收起，保证作答区首屏高度；副标题常显提示先读要求
+const infoExpanded = ref(false);
+const toggleInfoExpanded = () => {
+  infoExpanded.value = !infoExpanded.value;
+};
 const currentSaveStateLabel = computed(() => {
   if (!currentItem.value) return '未选择题目';
   if (readonly.value) return '当前内容已锁定';
@@ -609,7 +618,7 @@ onBeforeUnmount(() => {
   behaviorCollector.stop();
 });
 
-  return { SUBMISSION_STATUS, computed, onBeforeUnmount, onMounted, reactive, ref, watch, useRoute, useRouter, onBeforeRouteLeave, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, getStudentLabDetail, saveStudentLabAnswer, submitStudentLab, hydrateDraftFromStep, buildAnswerPayloadJson, buildCompatibilityAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, useLabAnswerDrafts, behaviorCollector, route, router, loading, saving, submitting, detail, currentIndex, summaryDraft, itemAutosaveStates, autosaveTimer, saveQueue, clockTimer, nowMs, isNotStarted, isOverdue, labId, currentItemQueryId, labItems, currentItem, currentDraft, currentQuestionType, currentCodeEditorLanguage, currentItemCodeLanguage, readonly, canSubmit, submitHint, answeredCount, dirtyItemCount, progressPercent, progressText, currentSaveStateLabel, saveStateClass, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, fetchData, syncDraftState, clearAutosaveTimer, queueSave, updateItemQuery, syncCurrentItemWithQuery, selectItem, draftAnswerOf, savedDraftOf, savedAnswerOf, hasSavedAnswer, isItemDirty, answerStateLabel, persistItem, persistCurrentItem, scheduleAutosave, saveCurrent, goPrev, goNext, persistDirtyItems, submitAll, submissionLabel, normalizedQuestionType, questionTypeLabel, answerHint, isChoiceWithoutOptions, itemFeedback, handleBeforeUnload, ensureDraft, getDraft, patchDraft, buildSavePayload, hydrateAllDrafts, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, downloadGuidance };
+  return { SUBMISSION_STATUS, computed, onBeforeUnmount, onMounted, reactive, ref, watch, useRoute, useRouter, onBeforeRouteLeave, ElMessage, ElMessageBox, QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnswerEditor, CodeLabAnswerEditor, getStudentLabDetail, saveStudentLabAnswer, submitStudentLab, hydrateDraftFromStep, buildAnswerPayloadJson, buildCompatibilityAnswerText, isDraftAnswered, normalizeStudentAnswerQuestionType, useLabAnswerDrafts, behaviorCollector, route, router, loading, saving, submitting, detail, currentIndex, summaryDraft, itemAutosaveStates, autosaveTimer, saveQueue, clockTimer, nowMs, isNotStarted, isOverdue, labId, currentItemQueryId, labItems, currentItem, currentDraft, currentQuestionType, currentCodeEditorLanguage, currentItemCodeLanguage, readonly, canSubmit, submitHint, answeredCount, dirtyItemCount, progressPercent, progressText, currentSaveStateLabel, saveStateClass, focusStateClass, footerStatusText, updateCurrentDraft, onAnswerPaste, syncImagesAfterRemove, fetchData, syncDraftState, clearAutosaveTimer, queueSave, updateItemQuery, syncCurrentItemWithQuery, selectItem, draftAnswerOf, savedDraftOf, savedAnswerOf, hasSavedAnswer, isItemDirty, answerStateLabel, persistItem, persistCurrentItem, scheduleAutosave, saveCurrent, goPrev, goNext, persistDirtyItems, submitAll, submissionLabel, normalizedQuestionType, questionTypeLabel, answerHint, isChoiceWithoutOptions, itemFeedback, handleBeforeUnload, ensureDraft, getDraft, patchDraft, buildSavePayload, hydrateAllDrafts, showLabScore, planTotalScore, showLabFeedback, hasGuidanceFile, experimentTypeLabel, downloadGuidance, hasLabIntro, infoExpanded, toggleInfoExpanded };
 }
 
 export type StudentLabStepsState = ReturnType<typeof useStudentLabSteps>;
