@@ -68,19 +68,21 @@
               </div>
               <p>{{ detail.description }}</p>
             </article>
-            <article v-if="detail.experimentContent" class="lab-info-tile lab-info-section--wide">
+            <article v-if="detail.experimentContent" class="lab-info-tile">
               <div class="lab-info-section__title">
                 <span class="material-symbols-outlined">article</span>实验内容
               </div>
               <p>{{ detail.experimentContent }}</p>
             </article>
           </template>
-          <div v-else class="lab-info-empty lab-info-section--wide">
+          <div v-else class="lab-info-empty">
             <span class="material-symbols-outlined">description</span>
             <span>本实验暂未提供实验指导、要求与内容。</span>
           </div>
-          <div v-if="showLabFeedback" class="lab-info-comment lab-info-section--wide">
-            <div class="lab-info-comment__title">教师总评</div>
+          <div v-if="showLabFeedback" class="lab-info-tile lab-info-comment">
+            <div class="lab-info-section__title">
+              <span class="material-symbols-outlined">rate_review</span>教师总评
+            </div>
             <p>{{ detail.teacherComment || '当前尚未开放教师总评。' }}</p>
           </div>
         </div>
@@ -381,15 +383,12 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .lab-info-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 24px;
+  grid-template-columns: 1fr;
+  gap: 12px;
   margin-top: 12px;
 }
 .lab-info-section {
   margin-top: 0;
-}
-.lab-info-section--wide {
-  grid-column: 1 / -1;
 }
 .lab-info-tile {
   padding: 12px 14px;
@@ -439,16 +438,6 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
 }
 .lab-info-comment {
   border-left: 3px solid var(--color-brand-student-border);
-  padding-left: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 0;
-}
-.lab-info-comment__title {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-text-secondary);
 }
 .status-card__eyebrow,
 .workflow-item__eyebrow,
@@ -825,11 +814,6 @@ const { QuestionAnswerShell, ChoiceAnswerEditor, FillBlankInlineEditor, TextAnsw
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
-}
-@media (max-width: 640px) {
-  .lab-info-grid {
-    grid-template-columns: 1fr;
-  }
 }
 @media (max-width: 1280px) {
   .lab-steps-page {
